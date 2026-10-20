@@ -2,6 +2,7 @@ package dev.rubymod.game;
 
 import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.gun.Gunfire;
+import dev.rubymod.gun.LagCompensation;
 import dev.rubymod.item.BreachingChargeItem;
 import dev.rubymod.item.ExcavatorItem;
 import dev.rubymod.net.Payloads;
@@ -51,6 +52,7 @@ public final class GameEvents {
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 				Gunfire.tickPlayer(player);
 			}
+			LagCompensation.record(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
 			}

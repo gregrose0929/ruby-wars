@@ -23,7 +23,7 @@ def write(path, obj):
 
 
 # ---------------------------------------------------------------- items
-SIMPLE_ITEMS = ["ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
+SIMPLE_ITEMS = ["jeep", "tank", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
                 "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge"]
 HANDHELD_ITEMS = ["builders_wand", "excavator"]
 GUNS = ["service_pistol", "viper_smg", "combat_shotgun", "arr_rifle", "longshot_sniper", "bulldog_lmg", "ruby_blaster", "rocket_launcher"]
@@ -119,6 +119,36 @@ def gen_blocks(client_jar):
             "textures": {"bottom": f"{NS}:block/blast_door_bottom", "top": f"{NS}:block/blast_door_top"}})
     item_model("blast_door")
 
+    # Vehicles: never placed as blocks; VehicleRenderer draws these models scaled up.
+    def part(frm, to, tex):
+        return {"from": frm, "to": to, "faces": {f: {"texture": "#" + tex} for f in ("north", "south", "east", "west", "up", "down")}}
+
+    tex = {t: f"{NS}:block/vehicle_{t}" for t in ("olive", "olive_dark", "tread", "tire", "glass", "steel")}
+    tex["particle"] = f"{NS}:block/vehicle_olive"
+    # Front of the vehicle is the low-Z side.
+    write(f"{ASSETS}/models/block/tank_model.json", {"textures": tex, "elements": [
+        part([0, 0, 0], [4, 4, 16], "tread"),
+        part([12, 0, 0], [16, 4, 16], "tread"),
+        part([1, 3, 1], [15, 7, 15], "olive"),
+        part([4, 7, 4], [12, 10.5, 12], "olive_dark"),
+        part([7, 8, -10], [9, 9.5, 4], "steel"),
+        part([6, 10.5, 9], [8, 11.5, 11], "steel"),
+    ]})
+    write(f"{ASSETS}/models/block/jeep_model.json", {"textures": tex, "elements": [
+        part([0, 0, 1], [3, 4, 5], "tire"),
+        part([13, 0, 1], [16, 4, 5], "tire"),
+        part([0, 0, 11], [3, 4, 15], "tire"),
+        part([13, 0, 11], [16, 4, 15], "tire"),
+        part([2, 2.5, 0], [14, 6.5, 16], "olive"),
+        part([2, 6.5, 5], [14, 9.5, 5.5], "glass"),
+        part([2, 6.5, 11], [3, 12, 12], "steel"),
+        part([13, 6.5, 11], [14, 12, 12], "steel"),
+        part([2, 11, 11], [14, 12, 12], "steel"),
+        part([7.5, 12, 6], [8.5, 13, 12], "steel"),
+    ]})
+    for name in ("tank_model", "jeep_model"):
+        write(f"{ASSETS}/blockstates/{name}.json", {"variants": {"": {"model": f"{NS}:block/{name}"}}})
+
 
 # ---------------------------------------------------------------- language
 LANG = {
@@ -149,6 +179,12 @@ LANG = {
     "item.rubymod.breaching_charge": "Breaching Charge",
     "item.rubymod.builders_wand": "Builder's Wand",
     "item.rubymod.excavator": "Excavator Pickaxe",
+    "item.rubymod.jeep": "Jeep",
+    "item.rubymod.tank": "Tank",
+    "entity.rubymod.jeep": "Jeep",
+    "entity.rubymod.tank": "Tank",
+    "block.rubymod.jeep_model": "Jeep",
+    "block.rubymod.tank_model": "Tank",
     "block.rubymod.ruby_block": "Block of Ruby",
     "block.rubymod.ruby_ore": "Ruby Ore",
     "block.rubymod.deepslate_ruby_ore": "Deepslate Ruby Ore",

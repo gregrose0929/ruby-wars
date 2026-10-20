@@ -192,11 +192,11 @@ public final class BattleDirector {
 
 	public static void onLeave(MinecraftServer server, ServerPlayer player) {
 		Gunfire.forget(player.getUUID());
+		dev.rubymod.gun.LagCompensation.forget(player.getUUID());
 		SeasonData data = SeasonData.get();
 		if (data.phase == Phase.SUDDEN_DEATH || data.phase == Phase.FINAL_CIRCLE) {
 			SeasonData.PlayerRecord record = data.player(player.getUUID());
 			if (record != null && !record.eliminated) {
-				// Kill them so their items drop for everyone else.
 				eliminate(server, player.getUUID(), record, "left during " + data.phase.title());
 			}
 		}

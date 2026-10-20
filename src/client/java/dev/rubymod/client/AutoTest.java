@@ -45,8 +45,20 @@ public final class AutoTest {
 				message -> RubyMod.LOGGER.info("[autotest] screenshot {}: {}", name, message.getString()));
 	}
 
+	private static int waiting;
+
 	private static void tick(Minecraft mc) {
 		if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) {
+			// Still on a menu: report which one, so a stuck launch can be diagnosed.
+			if (++waiting % 100 == 0) {
+				String screen = mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getName();
+				RubyMod.LOGGER.info("[autotest] waiting on screen {}", screen);
+				shot(mc, "waiting-" + waiting);
+				if (waiting >= 1200) {
+					RubyMod.LOGGER.info("[autotest] gave up waiting");
+					mc.stop();
+				}
+			}
 			return;
 		}
 		tick++;
@@ -105,6 +117,8 @@ public final class AutoTest {
 				mc.options.setCameraType(CameraType.FIRST_PERSON);
 				command(mc, "execute at @p run summon rubymod:frag_grenade ~2 ~1.5 ~3 {NoGravity:1b}");
 				command(mc, "execute at @p run summon rubymod:cruise_missile ~-1 ~2 ~4 {NoGravity:1b}");
+				command(mc, "execute at @p run summon rubymod:tank ~-4 ~ ~8 {Rotation:[30f,0f]}");
+				command(mc, "execute at @p run summon rubymod:jeep ~5 ~ ~8 {Rotation:[-30f,0f]}");
 				command(mc, "rubywars phase war");
 			}
 			case 200 -> shot(mc, "6-war-hud");

@@ -55,7 +55,7 @@ public class VehicleRenderer extends EntityRenderer<VehicleEntity, VehicleRender
 	@Override
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
 		poseStack.pushPose();
-		poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - state.yaw));
+		poseStack.rotateDegrees(Axis.YP, 180.0F - state.yaw);
 		poseStack.scale(state.scale, state.scale, state.scale);
 		poseStack.translate(-0.5, 0.0, -0.5);
 		collector.submitMovingBlock(poseStack, state.block, state.outlineColor);
