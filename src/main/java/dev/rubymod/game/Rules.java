@@ -77,6 +77,20 @@ public final class Rules {
 		return SeasonData.get().claimAt(dim(level), pos.getX(), pos.getZ()) == null;
 	}
 
+	/** Is pos inside a claim that's currently protected from fire and explosions? */
+	public static boolean isProtectedFromGriefing(Level level, BlockPos pos) {
+		return !level.isClientSide() && phase().claimsProtected() && SeasonData.get().claimAt(dim(level), pos.getX(), pos.getZ()) != null;
+	}
+
+	/** Should fluid be stopped from flowing from one block into the next (crossing into a claim)? */
+	public static boolean blocksFlow(Level level, BlockPos from, BlockPos to) {
+		if (level.isClientSide() || !phase().claimsProtected()) {
+			return false;
+		}
+		SeasonData.Claim target = SeasonData.get().claimAt(dim(level), to.getX(), to.getZ());
+		return target != null && target != SeasonData.get().claimAt(dim(level), from.getX(), from.getZ());
+	}
+
 	/** Can attacker hurt victim? Only matters between two players. */
 	public static boolean canHurt(Entity attacker, Entity victim) {
 		if (!(attacker instanceof Player a) || !(victim instanceof Player v) || a == v) {

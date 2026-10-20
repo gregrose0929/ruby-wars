@@ -130,6 +130,17 @@ public final class SelfTest {
 		check("pvp: players can hurt each other in Open War", runAs(Phase.WAR, () -> Rules.canHurt(alpha, bravo)));
 		check("pvp: no PvP during Lockdown", runAs(Phase.LOCKDOWN, () -> !Rules.canHurt(alpha, bravo)));
 
+		// ----- Fire and fluids -----
+		data.phase = Phase.BUILD;
+		int edge = claim.radius();
+		BlockPos justInside = base.offset(edge, 0, 0);
+		BlockPos justOutside = base.offset(edge + 1, 0, 0);
+		check("griefing: lava can't flow into a claim", Rules.blocksFlow(level, justOutside, justInside));
+		check("griefing: fluids flow freely inside a claim", !Rules.blocksFlow(level, justInside, base.offset(1, 0, 0)));
+		check("griefing: fire can't burn blocks in a claim", Rules.isProtectedFromGriefing(level, justInside) && !Rules.isProtectedFromGriefing(level, justOutside));
+		data.phase = Phase.WAR;
+		check("griefing: lava flows anywhere on Battle Day", !Rules.blocksFlow(level, justOutside, justInside));
+
 		// ----- Explosions -----
 		BlockPos outside = surface(level, base.offset(150, 0, 0)).below();
 		data.phase = Phase.BUILD;
