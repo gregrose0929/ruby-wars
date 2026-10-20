@@ -4,9 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import dev.rubymod.net.Net;
 import dev.rubymod.net.Payloads;
-
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -60,7 +59,7 @@ public final class Alerts {
 	public static void sendRadar(ServerPlayer owner, int contacts, int nearest, int bearing, boolean missile) {
 		long last = LAST_INTRUDER.getOrDefault(owner.getUUID(), -1000L);
 		boolean intruder = owner.level().getGameTime() - last < 200;
-		ServerPlayNetworking.send(owner, new Payloads.Radar(contacts, nearest, bearing, missile, intruder));
+		Net.send(owner, new Payloads.Radar(contacts, nearest, bearing, missile, intruder));
 		if (missile && owner.tickCount % 40 < 20) {
 			ping(owner, 2.0F);
 		}

@@ -68,6 +68,8 @@ public final class RubyWarsCommand {
 								: ok(c, "A backup is already running.")))
 				.then(Commands.literal("revive").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.argument("player", EntityArgument.player()).executes(RubyWarsCommand::revive)))
+				.then(Commands.literal("selftest").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.executes(c -> SelfTest.run(c.getSource())))
 				.then(Commands.literal("reset").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.literal("confirm").executes(RubyWarsCommand::reset))));
 	}
@@ -216,6 +218,10 @@ public final class RubyWarsCommand {
 		data.season = nextSeason;
 		data.pastChampions = champions;
 		SeasonData.save();
+		GameConfig config = GameConfig.get();
+		var border = c.getSource().getServer().overworld().getWorldBorder();
+		border.setCenter(config.borderCenterX, config.borderCenterZ);
+		border.setSize(config.borderStartSize);
 		for (ServerPlayer player : c.getSource().getServer().getPlayerList().getPlayers()) {
 			if (player.isSpectator()) {
 				player.setGameMode(GameType.SURVIVAL);

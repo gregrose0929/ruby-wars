@@ -1,0 +1,1 @@
+rubywars selftest

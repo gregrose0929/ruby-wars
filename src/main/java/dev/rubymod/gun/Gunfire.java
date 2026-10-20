@@ -5,11 +5,11 @@ import java.util.Map;
 import java.util.UUID;
 
 import dev.rubymod.game.Rules;
+import dev.rubymod.net.Net;
 import dev.rubymod.net.Payloads;
 import dev.rubymod.registry.ModComponents;
 import dev.rubymod.registry.ModDamage;
 
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -87,7 +87,7 @@ public final class Gunfire {
 
 		RandomSource random = player.getRandom();
 		float kick = aiming ? stats.recoil() * 0.6F : stats.recoil();
-		ServerPlayNetworking.send(player, new Payloads.Recoil(kick, (random.nextFloat() - 0.5F) * kick * 0.5F));
+		Net.send(player, new Payloads.Recoil(kick, (random.nextFloat() - 0.5F) * kick * 0.5F));
 
 		if (ammo - 1 <= 0 && !player.isCreative()) {
 			startReload(player);
@@ -141,7 +141,7 @@ public final class Gunfire {
 		target.hurtServer(level, ModDamage.source(level, headshot ? ModDamage.HEADSHOT : ModDamage.BULLET, shooter, shooter), damage);
 		boolean killed = wasAlive && !target.isAlive();
 		level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, hitPos.x, hitPos.y, hitPos.z, 1, 0.1, 0.1, 0.1, 0.0);
-		ServerPlayNetworking.send(shooter, new Payloads.HitMarker(headshot, killed));
+		Net.send(shooter, new Payloads.HitMarker(headshot, killed));
 	}
 
 	private static boolean isBreachable(BlockState state) {
@@ -227,7 +227,7 @@ public final class Gunfire {
 		long finish = player.level().getGameTime() + stats.reloadTicks();
 		RELOADS.put(player.getUUID(), new Reload(player.getInventory().getSelectedSlot(), gun, finish));
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CROSSBOW_LOADING_START.value(), SoundSource.PLAYERS, 0.8F, 1.2F);
-		ServerPlayNetworking.send(player, new Payloads.ReloadState(stats.reloadTicks()));
+		Net.send(player, new Payloads.ReloadState(stats.reloadTicks()));
 	}
 
 	/** Called every server tick for each player. */
@@ -237,7 +237,7 @@ public final class Gunfire {
 			ItemStack held = player.getMainHandItem();
 			if (player.getInventory().getSelectedSlot() != reload.slot() || held.getItem() != reload.gun()) {
 				RELOADS.remove(player.getUUID());
-				ServerPlayNetworking.send(player, new Payloads.ReloadState(0));
+				Net.send(player, new Payloads.ReloadState(0));
 			} else if (player.level().getGameTime() >= reload.finishAt()) {
 				RELOADS.remove(player.getUUID());
 				finishReload(player, held, reload.gun().stats());
@@ -258,7 +258,7 @@ public final class Gunfire {
 		int taken = player.isCreative() ? needed : takeAmmo(player, stats.ammo(), needed);
 		stack.set(ModComponents.AMMO, current + taken);
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.PLAYERS, 0.8F, 1.3F);
-		ServerPlayNetworking.send(player, new Payloads.ReloadState(0));
+		Net.send(player, new Payloads.ReloadState(0));
 	}
 
 	private static int takeAmmo(ServerPlayer player, AmmoType type, int needed) {

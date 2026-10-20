@@ -150,6 +150,16 @@ public class SeasonData {
 		}
 	}
 
+	/** A copy of the whole season, for tests that need to put everything back afterwards. */
+	public static String snapshot() {
+		return GSON.toJson(current);
+	}
+
+	public static void restore(String json) {
+		current = GSON.fromJson(json, SeasonData.class);
+		markDirty();
+	}
+
 	public PlayerRecord player(UUID id, String name) {
 		PlayerRecord record = players.computeIfAbsent(id.toString(), k -> new PlayerRecord());
 		if (name != null && !name.equals(record.name)) {
