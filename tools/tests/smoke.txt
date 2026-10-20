@@ -1,0 +1,24 @@
+# Loads the mod, walks a season through every phase with short timers, and checks for errors.
+rubywars status
+rubywars start
+rubywars status
+rubywars phase lockdown
+rubywars phase war
+rubywars status
+rubywars phase sudden_death
+rubywars phase final_circle
+rubywars phase ended
+rubywars status
+rubywars reset confirm
+rubywars status
+rubywars backup
+wait 5
+# Spawn every projectile type to make sure they tick without crashing.
+summon rubymod:rocket 0 120 0
+summon rubymod:mortar_shell 0 120 0
+summon rubymod:cruise_missile 0 120 0
+summon rubymod:frag_grenade 0 120 0
+summon rubymod:bomb 0 120 0
+wait 8
+# Find some ruby ore near spawn.
+execute positioned 0 -40 0 run locate feature rubymod:ore_ruby

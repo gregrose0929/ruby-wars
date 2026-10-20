@@ -1,11 +1,24 @@
-"""Generate 16x16 pixel-art textures for Ruby Mod (pure Python, no deps)."""
-import struct, sys, zlib, os
+"""Generate Ruby Wars' 16x16 pixel-art textures (pure Python, no dependencies).
+
+Usage:  python tools/textures.py src/main/resources/assets/rubymod
+
+Item sprites are drawn as character grids below; block textures are
+procedural. Edit a grid and re-run to change the art.
+"""
+import os
+import random
+import struct
+import sys
+import zlib
+
 
 def write_png(path, pixels):
     h, w = len(pixels), len(pixels[0])
     raw = b"".join(b"\x00" + bytes(c for px in row for c in px) for row in pixels)
+
     def chunk(t, d):
         return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+
     data = (b"\x89PNG\r\n\x1a\n"
             + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(raw, 9))
@@ -14,58 +27,718 @@ def write_png(path, pixels):
     with open(path, "wb") as f:
         f.write(data)
 
+
 PAL = {
     ".": (0, 0, 0, 0),
-    "o": (58, 6, 18, 255),     # outline
-    "d": (120, 10, 30, 255),   # dark
-    "m": (180, 20, 45, 255),   # mid
-    "r": (225, 40, 65, 255),   # bright
-    "l": (255, 110, 130, 255), # light
-    "w": (255, 215, 225, 255), # highlight
+    "k": (28, 28, 32, 255),      # outline
+    "d": (58, 60, 66, 255),      # dark steel
+    "g": (96, 100, 108, 255),    # steel
+    "l": (150, 155, 165, 255),   # light steel
+    "w": (225, 230, 235, 255),   # highlight
+    "b": (100, 64, 36, 255),     # wood
+    "B": (140, 95, 55, 255),     # light wood
+    "o": (78, 92, 48, 255),      # olive
+    "O": (112, 130, 70, 255),    # light olive
+    "G": (48, 60, 30, 255),      # dark olive
+    "r": (210, 30, 55, 255),     # ruby
+    "R": (120, 10, 30, 255),     # dark ruby
+    "p": (255, 120, 140, 255),   # ruby highlight
+    "y": (190, 150, 50, 255),    # brass
+    "Y": (235, 200, 90, 255),    # light brass
+    "c": (180, 110, 50, 255),    # copper
+    "s": (205, 185, 135, 255),   # sand
+    "S": (160, 140, 95, 255),    # dark sand
+    "e": (255, 70, 40, 255),     # red light
+    "f": (255, 170, 40, 255),    # flame
+    "n": (60, 80, 110, 255),     # navy
+    "N": (95, 120, 160, 255),    # light navy
+    "x": (20, 200, 255, 255),    # lens cyan
 }
 
-RUBY = [
-    "................",
-    "................",
-    "....oooooooo....",
-    "...olwwlrrrmo...",
-    "..olwlrrrrmmdo..",
-    ".olllrrrrrmmmdo.",
-    ".oooooooooooooo.",
-    "..olrrrrrrmmdo..",
-    "...olrrrrmmdo...",
-    "....olrrrmdo....",
-    ".....olrmmdo....",
-    "......olmdo.....",
-    ".......omo......",
-    "........o.......",
-    "................",
-    "................",
-]
 
-BLOCK = [
-    "wwwwwwwwwwwwwwwl",
-    "wllllllllllllllm",
-    "wlrrrrrrrrrrrrmd",
-    "wlrlwlrrrrrrrmmd",
-    "wlrwlrrrrrrrmmmd",
-    "wlrlrrrrrrrrmmmd",
-    "wlrrrrrrrrrrmmmd",
-    "wlrrrrrrrrrmmmmd",
-    "wlrrrrrrrrmmmmmd",
-    "wlrrrrrrrmmmmmmd",
-    "wlrrrrrrmmmmmdmd",
-    "wlrrrrrmmmmmdmmd",
-    "wlrrrrmmmmmmmmmd",
-    "wlrmmmmmmmmmmmmd",
-    "wmddddddddddddmd",
-    "lddddddddddddddo",
-]
+def grid(rows):
+    assert len(rows) == 16, len(rows)
+    out = []
+    for r in rows:
+        r = r.ljust(16, ".")
+        assert len(r) == 16, r
+        out.append([PAL[c] for c in r])
+    return out
 
-root = sys.argv[1]
-write_png(os.path.join(root, "textures/item/ruby.png"), [[PAL[c] for c in row] for row in RUBY])
-write_png(os.path.join(root, "textures/block/ruby_block.png"), [[PAL[c] for c in row] for row in BLOCK])
-# Upscaled mod icon (128x128) from the gem sprite
-icon = [[PAL[RUBY[y // 8][x // 8]] for x in range(128)] for y in range(128)]
-write_png(os.path.join(root, "icon.png"), icon)
-print("textures written")
+
+ITEMS = {
+    "ruby": [
+        "................",
+        "................",
+        "....kkkkkkkk....",
+        "...kpwwprrrRk...",
+        "..kpwprrrrRRRk..",
+        ".kpppprrrrRRRRk.",
+        ".kkkkkkkkkkkkkk.",
+        "..kprrrrrrRRRk..",
+        "...kprrrrRRRk...",
+        "....kprrrRRk....",
+        ".....kprRRk.....",
+        "......kpRk......",
+        ".......kk.......",
+        "................",
+        "................",
+        "................",
+    ],
+    "service_pistol": [
+        "................",
+        "................",
+        "................",
+        "................",
+        "...kkkkkkkkkkk..",
+        "..kglllllllllgk.",
+        "..kgddddddddddk.",
+        "..kkkkdgdkkkkk..",
+        ".....kddk.......",
+        ".....kddk.......",
+        "....kbbdk.......",
+        "....kbbk........",
+        "....kbbk........",
+        "....kkkk........",
+        "................",
+        "................",
+    ],
+    "viper_smg": [
+        "................",
+        "................",
+        "................",
+        ".....kkk........",
+        "..kkkkgkkkkkkk..",
+        ".kddglllllllllkk",
+        ".kdddddddddddddk",
+        ".kkkkddkdddkkkk.",
+        ".....kdkdgk.....",
+        "....kdk.kdk.....",
+        "....kdk.kdk.....",
+        "...kddk..kk.....",
+        "...kkk..........",
+        "................",
+        "................",
+        "................",
+    ],
+    "combat_shotgun": [
+        "................",
+        "................",
+        "................",
+        "................",
+        "kkkkkkkkkkkkkkk.",
+        "kBBbkllllllllllk",
+        "kbbbkddddddddddk",
+        ".kbbkkdkbbbbkkk.",
+        "..kbbbdkBBBBk...",
+        "...kkkdkkkkk....",
+        "......kk........",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "arr_rifle": [
+        "................",
+        "................",
+        "......kkkk......",
+        "......kxdk......",
+        "kkk..kkkkkkkkk..",
+        "kOokkgllllllllkk",
+        "kooooddddddddddk",
+        ".kookkdkkdkkkkk.",
+        "..kk.kdk.kdk....",
+        ".....kdk.kok....",
+        ".....kkk.kok....",
+        "..........kk....",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "longshot_sniper": [
+        "................",
+        "................",
+        ".....kkkkkk.....",
+        "....kxddddxk....",
+        ".....kkkkkk.....",
+        "kkkk..kk........",
+        "kooookkkkkkkkkkk",
+        "kGooodglllllllll",
+        ".kGoodddkkkkkkkk",
+        "..kkkdkk........",
+        ".....kk.........",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "bulldog_lmg": [
+        "................",
+        "................",
+        "................",
+        "kkk..kkkkkk.....",
+        "kGokkgllllgkkkkk",
+        "kooooddddddddddk",
+        "kooookkdkkkkkkk.",
+        ".kkk.kddk.......",
+        ".....kyyYk......",
+        ".....kyyyk......",
+        ".....kyyyk......",
+        ".....kkkkk......",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "ruby_blaster": [
+        "................",
+        "................",
+        "................",
+        "....kkkkkkk.....",
+        "...kllllllkkk...",
+        "..klwwlllrrrrk..",
+        "..kgggggkrprpek.",
+        "..kkkdgkkrrrrk..",
+        "....kdgk.kkkk...",
+        "...kdgk.........",
+        "...kdgk.........",
+        "..kddk..........",
+        "..kkk...........",
+        "................",
+        "................",
+        "................",
+    ],
+    "light_ammo": [
+        "................",
+        "................",
+        "................",
+        "...kk..kk..kk...",
+        "..kYyk.kYyk.kYyk",
+        "..kyyk.kyyk.kyyk",
+        "..kyyk.kyyk.kyyk",
+        "..kcck.kcck.kcck",
+        "..kcck.kcck.kcck",
+        "..kcck.kcck.kcck",
+        "..kkkk.kkkk.kkkk",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "heavy_ammo": [
+        "................",
+        "...k...k...k....",
+        "..kYk.kYk.kYk...",
+        "..kyk.kyk.kyk...",
+        "..kyk.kyk.kyk...",
+        ".kcck.kcck.kcck.",
+        ".kcck.kcck.kcck.",
+        ".kcck.kcck.kcck.",
+        ".kcck.kcck.kcck.",
+        ".kcck.kcck.kcck.",
+        ".kyyk.kyyk.kyyk.",
+        ".kkkk.kkkk.kkkk.",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "shotgun_shell": [
+        "................",
+        "................",
+        "....kkkk.kkkk...",
+        "....keRk.keRk...",
+        "....keRk.keRk...",
+        "....keRk.keRk...",
+        "....keRk.keRk...",
+        "....keRk.keRk...",
+        "....kyyk.kyyk...",
+        "....kYyk.kYyk...",
+        "....kkkk.kkkk...",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "sniper_round": [
+        "................",
+        "......k.........",
+        ".....kgk........",
+        ".....kgk........",
+        ".....klk........",
+        "....kYyyk.......",
+        "....kyyyk.......",
+        "....kyyyk.......",
+        "....kyyyk.......",
+        "....kyyyk.......",
+        "....kyyyk.......",
+        "....kyyyk.......",
+        "....kYYYk.......",
+        "....kkkkk.......",
+        "................",
+        "................",
+    ],
+    "ruby_cell": [
+        "................",
+        "................",
+        ".....kkkkkk.....",
+        ".....kllllk.....",
+        "....kkkkkkkk....",
+        "....kdprrrdk....",
+        "....kdprrrdk....",
+        "....kdprrRdk....",
+        "....kdrrrRdk....",
+        "....kdrrRRdk....",
+        "....kdrRRRdk....",
+        "....kkkkkkkk....",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "frag_grenade": [
+        "................",
+        "......kkk.......",
+        ".....klllk......",
+        "....kkkgkkk.....",
+        "...kOOoooook....",
+        "..kOkokokoGk....",
+        "..kOoooooooGk...",
+        "..kOkokokoGk....",
+        "..kooooooooGk...",
+        "..kokokokoGGk...",
+        "...kooooooGk....",
+        "....kGGGGGk.....",
+        ".....kkkkk......",
+        "................",
+        "................",
+        "................",
+    ],
+    "smoke_grenade": [
+        "................",
+        "......kkk.......",
+        ".....klllk......",
+        "....kkkgkkk.....",
+        "....klllllk.....",
+        "....kwwwwlk.....",
+        "....kllllgk.....",
+        "....kddddgk.....",
+        "....klllllk.....",
+        "....kllllgk.....",
+        "....kllllgk.....",
+        "....kgggggk.....",
+        "....kkkkkkk.....",
+        "................",
+        "................",
+        "................",
+    ],
+    "air_strike_flare": [
+        "................",
+        ".......f........",
+        "......fef.......",
+        ".......f........",
+        "......kkk.......",
+        "......keek......",
+        "......keRk......",
+        "......keRk......",
+        "......keRk......",
+        "......keRk......",
+        "......keRk......",
+        "......keRk......",
+        "......kddk......",
+        "......kkkk......",
+        "................",
+        "................",
+    ],
+    "rocket_launcher": [
+        "................",
+        "................",
+        "................",
+        "kkkkkkkkkkkkkkkk",
+        "kGoooooooooooOkk",
+        "kdooooooooooooRk",
+        "kGooooooooooooRk",
+        "kkkkkdkkkdkkkkkk",
+        ".....kdk.kdk....",
+        ".....kdk.kok....",
+        ".....kkk.kok....",
+        "..........kk....",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "rocket": [
+        "................",
+        "................",
+        "................",
+        "................",
+        "..k.........kk..",
+        ".kgk.kkkkkkkrRk.",
+        "kgggkooooooorRRk",
+        "kgggkooooooorRRk",
+        ".kgk.kkkkkkkrRk.",
+        "..k.........kk..",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "mortar_shell": [
+        "................",
+        ".......kk.......",
+        "......kYYk......",
+        ".....kyyyyk.....",
+        ".....koooOk.....",
+        ".....koooOk.....",
+        ".....koooOk.....",
+        ".....koooOk.....",
+        ".....kGooOk.....",
+        "......kGok......",
+        ".......kk.......",
+        "......kggk......",
+        ".....kgkkgk.....",
+        ".....kk..kk.....",
+        "................",
+        "................",
+    ],
+    "cruise_missile": [
+        "................",
+        ".......kk.......",
+        "......kRRk......",
+        "......krRk......",
+        "......kwlk......",
+        "......kwlk......",
+        ".....kkwlkk.....",
+        "....kgkwlkgk....",
+        "......kwlk......",
+        "......kwlk......",
+        "......kwlk......",
+        ".....kkwlkk.....",
+        "....kgkddkgk....",
+        "......kffk......",
+        ".......ff.......",
+        "................",
+    ],
+    "rangefinder": [
+        "................",
+        "................",
+        "................",
+        "..kkkkk.kkkkk...",
+        ".kdddddkdddddk..",
+        ".kxNddkkkxNddk..",
+        ".kNxddkkkNxddk..",
+        ".kdddddkdddddk..",
+        "..kkkkkkkkkkk...",
+        "...kddddddddk...",
+        "....kkkkkkkk....",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "breaching_charge": [
+        "................",
+        "................",
+        "................",
+        "..kkkkkkkkkkk...",
+        "..ksssssssssk...",
+        "..ksSSSkeekSk...",
+        "..ksSSSkeekSk...",
+        "..ksSSSkkkkSk...",
+        "..ksssssssssk...",
+        "..kSSSSSSSSSk...",
+        "..kkkkkkkkkkk...",
+        "...kk.....kk....",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "builders_wand": [
+        "................",
+        "...........kk...",
+        "..........kprk..",
+        ".........kprrk..",
+        "..........krk...",
+        ".........kbk....",
+        "........kbk.....",
+        ".......kBk......",
+        "......kbk.......",
+        ".....kbk........",
+        "....kBk.........",
+        "...kbk..........",
+        "..kbk...........",
+        "..kk............",
+        "................",
+        "................",
+    ],
+    "excavator": [
+        "................",
+        "...kkkkkkkk.....",
+        "..krrrrrrrrk....",
+        "..kRkkkkkrRk....",
+        "...k...kbkRk....",
+        "......kbk.kk....",
+        ".....kbk........",
+        "....kbk.........",
+        "...kbk..........",
+        "..kbk...........",
+        ".kbk............",
+        ".kk.............",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+}
+
+
+def noise_tile(base, spread, seed):
+    rnd = random.Random(seed)
+    out = []
+    for y in range(16):
+        row = []
+        for x in range(16):
+            v = rnd.randint(-spread, spread)
+            row.append(tuple(max(0, min(255, c + v)) for c in base) + (255,))
+        out.append(row)
+    return out
+
+
+def put(img, x, y, color):
+    if 0 <= x < 16 and 0 <= y < 16:
+        img[y][x] = color if len(color) == 4 else color + (255,)
+
+
+def rect(img, x0, y0, x1, y1, color):
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            put(img, x, y, color)
+
+
+def outline(img, color=(28, 28, 32)):
+    rect(img, 0, 0, 15, 0, color)
+    rect(img, 0, 15, 15, 15, color)
+    rect(img, 0, 0, 0, 15, color)
+    rect(img, 15, 0, 15, 15, color)
+
+
+def ore(base_seed, stone, spread):
+    img = noise_tile(stone, spread, base_seed)
+    gems = [(3, 3), (10, 2), (6, 7), (12, 9), (2, 11), (8, 12)]
+    for gx, gy in gems:
+        put(img, gx, gy, (255, 120, 140))
+        put(img, gx + 1, gy, (210, 30, 55))
+        put(img, gx, gy + 1, (210, 30, 55))
+        put(img, gx + 1, gy + 1, (120, 10, 30))
+    return img
+
+
+def blocks():
+    b = {}
+    # Ruby block: faceted, bright edges.
+    img = noise_tile((200, 25, 50), 10, 1)
+    rect(img, 0, 0, 15, 0, (255, 120, 140))
+    rect(img, 0, 0, 0, 15, (255, 120, 140))
+    rect(img, 15, 0, 15, 15, (120, 10, 30))
+    rect(img, 0, 15, 15, 15, (120, 10, 30))
+    for i in range(2, 7):
+        put(img, i, 9 - i, (255, 180, 190))
+    b["ruby_block"] = img
+    b["ruby_ore"] = ore(2, (125, 125, 125), 12)
+    b["deepslate_ruby_ore"] = ore(3, (75, 75, 82), 10)
+
+    # Ruby Heart: dark frame with a glowing gem.
+    img = noise_tile((40, 30, 35), 6, 4)
+    outline(img, (90, 70, 40))
+    rect(img, 1, 1, 14, 1, (200, 160, 60))
+    rect(img, 1, 14, 14, 14, (200, 160, 60))
+    heart = ["..pp..pp..", ".prrrprrr.", "prrrrrrrrR", "prrrrrrrRR", ".prrrrrRR.", "..prrrRR..", "...prRR...", "....RR...."]
+    for y, line in enumerate(heart):
+        for x, ch in enumerate(line):
+            if ch != ".":
+                put(img, 3 + x, 4 + y, PAL[ch])
+    b["ruby_heart"] = img
+
+    # Armory: olive crate with a white stencil gun.
+    img = noise_tile((80, 95, 50), 8, 5)
+    outline(img, (40, 48, 25))
+    rect(img, 1, 7, 14, 8, (55, 66, 33))
+    rect(img, 3, 4, 12, 5, (220, 220, 210))
+    rect(img, 4, 6, 5, 6, (220, 220, 210))
+    rect(img, 3, 10, 12, 11, (220, 220, 210))
+    b["armory"] = img
+    img = noise_tile((80, 95, 50), 8, 6)
+    outline(img, (40, 48, 25))
+    rect(img, 1, 1, 14, 2, (55, 66, 33))
+    rect(img, 1, 13, 14, 14, (55, 66, 33))
+    b["armory_top"] = img
+
+    # Sandbags: rows of rounded tan bags.
+    img = noise_tile((195, 175, 125), 10, 7)
+    for row, y in enumerate((4, 9, 14)):
+        rect(img, 0, y, 15, y, (130, 110, 75))
+        offset = 0 if row % 2 == 0 else 4
+        for x in range(offset, 16, 8):
+            rect(img, x, y - 4, x, y, (150, 130, 90))
+    rect(img, 0, 15, 15, 15, (120, 100, 70))
+    b["sandbags"] = img
+
+    # Concrete wall: gray panel with seams.
+    img = noise_tile((140, 140, 138), 9, 8)
+    rect(img, 0, 7, 15, 7, (105, 105, 103))
+    rect(img, 7, 0, 7, 6, (105, 105, 103))
+    rect(img, 3, 8, 3, 15, (105, 105, 103))
+    rect(img, 12, 8, 12, 15, (105, 105, 103))
+    b["concrete_wall"] = img
+
+    # Reinforced concrete: darker with rebar grid.
+    img = noise_tile((110, 112, 115), 8, 9)
+    for i in (3, 8, 13):
+        rect(img, 0, i, 15, i, (80, 60, 45))
+        rect(img, i, 0, i, 15, (80, 60, 45))
+    outline(img, (70, 72, 75))
+    b["reinforced_concrete"] = img
+
+    # Blast door halves.
+    for half, seed in (("blast_door_top", 10), ("blast_door_bottom", 11)):
+        img = noise_tile((85, 90, 98), 6, seed)
+        outline(img, (40, 42, 46))
+        for y in range(2, 15, 4):
+            rect(img, 2, y, 13, y, (60, 63, 68))
+        if half == "blast_door_top":
+            rect(img, 4, 3, 11, 6, (40, 40, 45))
+            rect(img, 5, 4, 10, 5, (90, 200, 255))
+        else:
+            rect(img, 11, 4, 13, 6, (200, 160, 60))
+            for i in range(0, 16, 4):
+                rect(img, i, 13, min(15, i + 1), 14, (230, 190, 40))
+        b[half] = img
+
+    # Sentry turret.
+    img = noise_tile((70, 74, 80), 6, 12)
+    outline(img, (30, 30, 34))
+    rect(img, 6, 3, 9, 6, (30, 30, 34))
+    rect(img, 7, 4, 8, 5, (255, 60, 40))
+    rect(img, 2, 10, 13, 11, (200, 160, 60))
+    b["sentry_turret"] = img
+    img = noise_tile((70, 74, 80), 6, 13)
+    outline(img, (30, 30, 34))
+    rect(img, 5, 5, 10, 10, (45, 48, 52))
+    rect(img, 7, 0, 8, 7, (30, 30, 34))
+    b["sentry_turret_top"] = img
+
+    # Missile interceptor.
+    img = noise_tile((95, 100, 108), 6, 14)
+    outline(img, (30, 30, 34))
+    for x in (3, 7, 11):
+        rect(img, x, 2, x + 2, 9, (40, 42, 46))
+        rect(img, x + 1, 2, x + 1, 3, (220, 40, 40))
+    rect(img, 1, 12, 14, 13, (200, 160, 60))
+    b["missile_interceptor"] = img
+
+    # Radar station.
+    img = noise_tile((80, 85, 92), 6, 15)
+    outline(img, (30, 30, 34))
+    for r, col in ((6, (40, 160, 70)), (4, (30, 120, 55)), (2, (40, 200, 90))):
+        for x in range(16):
+            for y in range(16):
+                if abs(((x - 7.5) ** 2 + (y - 7.5) ** 2) ** 0.5 - r) < 0.5:
+                    put(img, x, y, col)
+    put(img, 10, 5, (200, 255, 200))
+    b["radar_station"] = img
+    img = noise_tile((80, 85, 92), 6, 16)
+    outline(img, (30, 30, 34))
+    rect(img, 3, 3, 12, 12, (220, 225, 230))
+    rect(img, 7, 7, 8, 8, (40, 42, 46))
+    b["radar_station_top"] = img
+
+    # Alarm block.
+    img = noise_tile((150, 30, 30), 8, 17)
+    outline(img, (60, 10, 10))
+    rect(img, 5, 4, 10, 11, (255, 210, 60))
+    rect(img, 6, 5, 9, 10, (255, 120, 40))
+    b["alarm_block"] = img
+
+    # Claymore.
+    img = noise_tile((70, 85, 45), 6, 18)
+    outline(img, (35, 45, 22))
+    rect(img, 3, 6, 12, 7, (200, 200, 190))
+    b["claymore"] = img
+
+    # Landmine.
+    img = noise_tile((70, 72, 70), 6, 19)
+    for x in range(16):
+        for y in range(16):
+            if ((x - 7.5) ** 2 + (y - 7.5) ** 2) ** 0.5 > 7:
+                img[y][x] = (0, 0, 0, 0)
+    rect(img, 6, 6, 9, 9, (40, 40, 40))
+    rect(img, 7, 7, 8, 8, (200, 40, 40))
+    b["landmine"] = img
+
+    # Barbed wire (transparent cross texture).
+    img = [[(0, 0, 0, 0)] * 16 for _ in range(16)]
+    for x in range(16):
+        y1 = 4 + int(1.5 * ((x % 4) - 1.5) ** 2 / 2)
+        y2 = 11 - int(1.5 * ((x % 4) - 1.5) ** 2 / 2)
+        put(img, x, y1, (150, 150, 155))
+        put(img, x, y2, (150, 150, 155))
+        if x % 4 == 1:
+            for dy in (-1, 1):
+                put(img, x, y1 + dy, (110, 110, 115))
+                put(img, x, y2 + dy, (110, 110, 115))
+    for y in range(16):
+        put(img, 2, y, (95, 80, 60))
+        put(img, 13, y, (95, 80, 60))
+    b["barbed_wire"] = img
+
+    # Mortar.
+    img = noise_tile((80, 95, 50), 7, 20)
+    outline(img, (40, 48, 25))
+    rect(img, 5, 1, 10, 14, (55, 66, 33))
+    rect(img, 6, 1, 9, 2, (30, 30, 30))
+    b["mortar"] = img
+    img = noise_tile((80, 95, 50), 7, 21)
+    outline(img, (40, 48, 25))
+    rect(img, 4, 4, 11, 11, (20, 20, 20))
+    b["mortar_top"] = img
+
+    # Missile silo.
+    img = noise_tile((105, 110, 115), 6, 22)
+    outline(img, (40, 42, 46))
+    for i in range(0, 16, 4):
+        rect(img, i, 1, min(15, i + 1), 2, (230, 190, 40))
+    b["missile_silo"] = img
+    img = noise_tile((105, 110, 115), 6, 23)
+    outline(img, (40, 42, 46))
+    rect(img, 3, 3, 12, 12, (60, 62, 66))
+    rect(img, 3, 7, 12, 8, (230, 190, 40))
+    rect(img, 7, 3, 8, 12, (230, 190, 40))
+    b["missile_silo_top"] = img
+    return b
+
+
+def main(root):
+    for name, rows in ITEMS.items():
+        write_png(os.path.join(root, "textures/item", name + ".png"), grid(rows))
+    # Door item icon reuses the door halves.
+    for name, img in blocks().items():
+        write_png(os.path.join(root, "textures/block", name + ".png"), img)
+    door = [row[:] for row in blocks()["blast_door_top"][:8]] + [row[:] for row in blocks()["blast_door_bottom"][8:]]
+    write_png(os.path.join(root, "textures/item", "blast_door.png"), door)
+    icon = [[PAL[ITEMS["ruby"][y // 8][x // 8]] for x in range(128)] for y in range(128)]
+    write_png(os.path.join(root, "icon.png"), icon)
+    print("textures written")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])

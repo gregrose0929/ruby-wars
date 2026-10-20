@@ -3,17 +3,16 @@
 	"pools": [
 		{
 			"rolls": 1,
+			"condition": {
+				"type": "minecraft:survives_explosion"
+			},
 			"entries": [
 				{
 					"type": "minecraft:item",
 					"name": "rubymod:ruby_block"
 				}
-			],
-			"conditions": [
-				{
-					"condition": "minecraft:survives_explosion"
-				}
 			]
 		}
-	]
+	],
+	"random_sequence": "rubymod:blocks/ruby_block"
 }

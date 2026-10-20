@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"pattern": [
+		"SSS",
+		"WWW"
+	],
+	"key": {
+		"S": "minecraft:sand",
+		"W": "#minecraft:wool"
+	},
+	"result": {
+		"id": "rubymod:sandbags",
+		"count": 6
+	}
+}

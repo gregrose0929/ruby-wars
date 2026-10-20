@@ -1,5 +1,19 @@
 {
 	"values": [
-		"rubymod:ruby_block"
+		"rubymod:ruby_block",
+		"rubymod:ruby_ore",
+		"rubymod:deepslate_ruby_ore",
+		"rubymod:armory",
+		"rubymod:concrete_wall",
+		"rubymod:reinforced_concrete",
+		"rubymod:blast_door",
+		"rubymod:sentry_turret",
+		"rubymod:missile_interceptor",
+		"rubymod:radar_station",
+		"rubymod:alarm_block",
+		"rubymod:claymore",
+		"rubymod:landmine",
+		"rubymod:mortar",
+		"rubymod:missile_silo"
 	]
 }

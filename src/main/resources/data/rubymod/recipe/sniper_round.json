@@ -1,0 +1,14 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		"minecraft:iron_ingot",
+		"minecraft:gold_nugget",
+		"minecraft:gunpowder",
+		"minecraft:gunpowder"
+	],
+	"result": {
+		"id": "rubymod:sniper_round",
+		"count": 8
+	}
+}

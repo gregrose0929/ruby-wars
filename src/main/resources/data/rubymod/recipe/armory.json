@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"pattern": [
+		"IRI",
+		"ICI",
+		"III"
+	],
+	"key": {
+		"I": "minecraft:iron_ingot",
+		"R": "rubymod:ruby",
+		"C": "minecraft:crafting_table"
+	},
+	"result": {
+		"id": "rubymod:armory",
+		"count": 1
+	}
+}

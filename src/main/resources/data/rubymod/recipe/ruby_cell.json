@@ -1,0 +1,13 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		"rubymod:ruby",
+		"minecraft:redstone",
+		"minecraft:copper_ingot"
+	],
+	"result": {
+		"id": "rubymod:ruby_cell",
+		"count": 8
+	}
+}

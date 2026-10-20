@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"pattern": [
+		"SGS",
+		"GSG",
+		"SGS"
+	],
+	"key": {
+		"S": "minecraft:stone",
+		"G": "minecraft:gravel"
+	},
+	"result": {
+		"id": "rubymod:concrete_wall",
+		"count": 4
+	}
+}

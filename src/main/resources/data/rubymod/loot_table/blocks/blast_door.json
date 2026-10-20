@@ -1,0 +1,25 @@
+{
+	"type": "minecraft:block",
+	"pools": [
+		{
+			"rolls": 1,
+			"condition": {
+				"type": "minecraft:survives_explosion"
+			},
+			"entries": [
+				{
+					"type": "minecraft:item",
+					"name": "rubymod:blast_door",
+					"condition": {
+						"type": "minecraft:match_block",
+						"blocks": "rubymod:blast_door",
+						"state": {
+							"half": "lower"
+						}
+					}
+				}
+			]
+		}
+	],
+	"random_sequence": "rubymod:blocks/blast_door"
+}

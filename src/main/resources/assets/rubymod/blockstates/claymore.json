@@ -1,0 +1,20 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "rubymod:block/claymore",
+			"y": 0
+		},
+		"facing=east": {
+			"model": "rubymod:block/claymore",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "rubymod:block/claymore",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "rubymod:block/claymore",
+			"y": 270
+		}
+	}
+}

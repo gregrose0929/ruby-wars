@@ -1,0 +1,43 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "rubymod:block/landmine",
+		"side": "rubymod:block/landmine",
+		"top": "rubymod:block/landmine"
+	},
+	"elements": [
+		{
+			"from": [
+				2,
+				0,
+				2
+			],
+			"to": [
+				14,
+				2,
+				14
+			],
+			"faces": {
+				"north": {
+					"texture": "#side"
+				},
+				"south": {
+					"texture": "#side"
+				},
+				"east": {
+					"texture": "#side"
+				},
+				"west": {
+					"texture": "#side"
+				},
+				"up": {
+					"texture": "#top"
+				},
+				"down": {
+					"texture": "#top",
+					"cullface": "down"
+				}
+			}
+		}
+	]
+}

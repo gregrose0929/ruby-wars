@@ -1,5 +1,9 @@
 {
 	"values": [
-		"rubymod:ruby_block"
+		"rubymod:ruby_block",
+		"rubymod:ruby_ore",
+		"rubymod:deepslate_ruby_ore",
+		"rubymod:reinforced_concrete",
+		"rubymod:blast_door"
 	]
 }

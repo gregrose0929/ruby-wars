@@ -2,8 +2,8 @@
 	"schemaVersion": 1,
 	"id": "rubymod",
 	"version": "${version}",
-	"name": "Ruby Mod",
-	"description": "Adds rubies and blocks of ruby to Minecraft.",
+	"name": "Ruby Wars",
+	"description": "A two-week modern-warfare season: build your base for 14 days, then survive Battle Day.",
 	"authors": [
 		"gregr"
 	],
@@ -23,5 +23,12 @@
 		"minecraft": "~26.3",
 		"java": ">=25",
 		"fabric-api": "*"
-	}
+	},
+	"mixins": [
+		"rubymod.mixins.json",
+		{
+			"config": "rubymod.client.mixins.json",
+			"environment": "client"
+		}
+	]
 }

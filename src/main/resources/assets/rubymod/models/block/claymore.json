@@ -1,0 +1,43 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "rubymod:block/claymore",
+		"side": "rubymod:block/claymore",
+		"top": "rubymod:block/claymore"
+	},
+	"elements": [
+		{
+			"from": [
+				4,
+				0,
+				7
+			],
+			"to": [
+				12,
+				6,
+				9
+			],
+			"faces": {
+				"north": {
+					"texture": "#side"
+				},
+				"south": {
+					"texture": "#side"
+				},
+				"east": {
+					"texture": "#side"
+				},
+				"west": {
+					"texture": "#side"
+				},
+				"up": {
+					"texture": "#top"
+				},
+				"down": {
+					"texture": "#top",
+					"cullface": "down"
+				}
+			}
+		}
+	]
+}
