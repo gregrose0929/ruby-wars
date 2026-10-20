@@ -16,6 +16,10 @@ import dev.rubymod.game.GameConfig;
 import dev.rubymod.game.Phase;
 import dev.rubymod.game.SeasonData;
 import dev.rubymod.game.SeasonTicker;
+import dev.rubymod.gun.GunItem;
+import dev.rubymod.registry.ModBlocks;
+import dev.rubymod.registry.ModComponents;
+import dev.rubymod.registry.ModItems;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -24,13 +28,16 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 
 /**
  * /rubywars — everything for running a season.
  *
  * Everyone: status, heart, trust, untrust, champions.
- * Admins: start, phase, timer, pause, resume, reload, backup, revive, reset.
+ * Admins: start, phase, timer, pause, resume, reload, backup, revive, reset, kit, selftest.
  */
 public final class RubyWarsCommand {
 	private RubyWarsCommand() {
@@ -70,6 +77,7 @@ public final class RubyWarsCommand {
 								: ok(c, "A backup is already running.")))
 				.then(Commands.literal("revive").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.argument("player", EntityArgument.player()).executes(RubyWarsCommand::revive)))
+				.then(Commands.literal("kit").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::kit))
 				.then(Commands.literal("selftest").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.executes(c -> SelfTest.run(c.getSource())))
 				.then(Commands.literal("reset").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
@@ -145,6 +153,41 @@ public final class RubyWarsCommand {
 					.withStyle(bounty.done ? ChatFormatting.GREEN : ChatFormatting.WHITE));
 		}
 		return 1;
+	}
+
+	/** Admin testing kit: every gun loaded, ammo, raid gear, attachments, vehicles, and a full set of ruby armor. */
+	private static int kit(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+		ServerPlayer player = c.getSource().getPlayerOrException();
+		Item[] guns = {ModItems.SERVICE_PISTOL, ModItems.VIPER_SMG, ModItems.COMBAT_SHOTGUN, ModItems.ARR_RIFLE, ModItems.LONGSHOT_SNIPER,
+				ModItems.BULLDOG_LMG, ModItems.RUBY_BLASTER};
+		for (Item gun : guns) {
+			ItemStack stack = new ItemStack(gun);
+			stack.set(ModComponents.AMMO, ((GunItem) gun).stats().magazine());
+			give(player, stack);
+		}
+		give(player, new ItemStack(ModItems.ROCKET_LAUNCHER));
+		give(player, new ItemStack(ModItems.FRAG_GRENADE, 16));
+		Object[][] stacks = {
+				{ModItems.LIGHT_AMMO, 64}, {ModItems.HEAVY_AMMO, 64}, {ModItems.SHOTGUN_SHELL, 64}, {ModItems.SNIPER_ROUND, 64},
+				{ModItems.RUBY_CELL, 64}, {ModItems.ROCKET, 16}, {ModItems.SMOKE_GRENADE, 16}, {ModItems.AIR_STRIKE_FLARE, 1},
+				{ModItems.RANGEFINDER, 1}, {ModItems.BREACHING_CHARGE, 8}, {ModItems.MORTAR_SHELL, 16}, {ModItems.CRUISE_MISSILE, 1},
+				{ModItems.EXTENDED_MAG, 4}, {ModItems.RED_DOT_SIGHT, 4}, {ModItems.VERTICAL_GRIP, 4}, {ModItems.SUPPRESSOR, 4},
+				{ModItems.JEEP, 1}, {ModItems.TANK, 1}, {ModItems.BUILDERS_WAND, 1}, {ModItems.EXCAVATOR, 1}, {ModItems.RUBY, 64},
+				{ModBlocks.ARMORY, 1}, {ModBlocks.MORTAR, 1}, {ModBlocks.MISSILE_SILO, 1}};
+		for (Object[] entry : stacks) {
+			give(player, new ItemStack((net.minecraft.world.level.ItemLike) entry[0], (Integer) entry[1]));
+		}
+		player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.RUBY_HELMET));
+		player.setItemSlot(EquipmentSlot.CHEST, new ItemStack(ModItems.RUBY_CHESTPLATE));
+		player.setItemSlot(EquipmentSlot.LEGS, new ItemStack(ModItems.RUBY_LEGGINGS));
+		player.setItemSlot(EquipmentSlot.FEET, new ItemStack(ModItems.RUBY_BOOTS));
+		return ok(c, "Kit delivered! Defenses and fortifications are in the Ruby Wars creative tab, or buy them at the Armory.");
+	}
+
+	private static void give(ServerPlayer player, ItemStack stack) {
+		if (!player.getInventory().add(stack)) {
+			player.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
+		}
 	}
 
 	private static int champions(CommandContext<CommandSourceStack> c) {

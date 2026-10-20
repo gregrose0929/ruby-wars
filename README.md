@@ -86,7 +86,8 @@ Everyone: `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubyw
 
 Admins: `start`, `phase <lobby|build|lockdown|war|sudden_death|final_circle|ended>`,
 `timer <minutes>`, `pause`, `resume`, `reload` (config), `backup`, `revive <player>`,
-`reset confirm` (new season), `selftest` (rule checks; use on a test world).
+`reset confirm` (new season), `kit` (every gun, ammo, raid gear, attachments,
+vehicles, and ruby armor, for testing), `selftest` (rule checks; use on a test world).
 
 ## Running the server (Linux)
 

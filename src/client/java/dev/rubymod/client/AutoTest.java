@@ -177,7 +177,22 @@ public final class AutoTest {
 			case 390 -> mc.gameMode.useItem(mc.player, InteractionHand.OFF_HAND);
 			case 400 -> RubyMod.LOGGER.info("[autotest] rifle attachments after fitting: {}",
 					mc.player.getMainHandItem().get(dev.rubymod.registry.ModComponents.ATTACHMENTS));
-			case 410 -> {
+			case 405 -> {
+				command(mc, "clear @a");
+				command(mc, "execute as @p run rubywars kit");
+			}
+			case 415 -> {
+				int stacks = 0;
+				for (int i = 0; i < mc.player.getInventory().getContainerSize(); i++) {
+					if (!mc.player.getInventory().getItem(i).isEmpty()) {
+						stacks++;
+					}
+				}
+				RubyMod.LOGGER.info("[autotest] kit gave {} inventory stacks", stacks);
+				mc.player.getInventory().setSelectedSlot(3);
+			}
+			case 425 -> shot(mc, "11-kit");
+			case 430 -> {
 				RubyMod.LOGGER.info("[autotest] done");
 				mc.stop();
 			}
