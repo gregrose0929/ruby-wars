@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"pattern": [
+		" R ",
+		"RAR",
+		" R "
+	],
+	"key": {
+		"R": "minecraft:redstone",
+		"A": "minecraft:amethyst_shard"
+	},
+	"result": {
+		"id": "rubymod:ruby",
+		"count": 1
+	}
+}

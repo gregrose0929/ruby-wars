@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "rubymod",
+	"version": "${version}",
+	"name": "Ruby Mod",
+	"description": "Adds rubies and blocks of ruby to Minecraft.",
+	"authors": [
+		"gregr"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/rubymod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.rubymod.RubyMod"
+		],
+		"client": [
+			"dev.rubymod.client.RubyModClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
