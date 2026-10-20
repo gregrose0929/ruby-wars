@@ -1,5 +1,6 @@
 package dev.rubymod.game;
 
+import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.gun.Gunfire;
 import dev.rubymod.item.BreachingChargeItem;
 import dev.rubymod.item.ExcavatorItem;
@@ -62,6 +63,11 @@ public final class GameEvents {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BattleDirector.onLeave(server, handler.getPlayer()));
 
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.Reload.TYPE, (payload, context) -> Gunfire.startReload(context.player()));
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleFire.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof VehicleEntity vehicle) {
+				vehicle.fireCannon(context.player());
+			}
+		});
 
 		// --- Combat ---
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> Rules.canHurt(source.getEntity(), entity));

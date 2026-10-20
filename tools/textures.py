@@ -481,6 +481,42 @@ ITEMS = {
         "................",
         "................",
     ],
+    "jeep": [
+        "................",
+        "................",
+        "................",
+        "........kkkk....",
+        "........kddk....",
+        ".......kxxxk....",
+        "......kxxxxk....",
+        "..kkkkkkkkkkkkk.",
+        ".kOOOOOOOOOOOOOk",
+        ".koooooooooooook",
+        ".kGGGGGGGGGGGGGk",
+        "..kkkk.....kkkk.",
+        "..kddk.....kddk.",
+        "..kddk.....kddk.",
+        "...kk.......kk..",
+        "................",
+    ],
+    "tank": [
+        "................",
+        "................",
+        "................",
+        "................",
+        "kkkkkkk.........",
+        "kgggggkkkkk.....",
+        ".kkkkkOOOOOk....",
+        "......kooooOk...",
+        "...kkkkkkkkkkkk.",
+        "..kOOOOOOOOOOOOk",
+        "..kooooooooooook",
+        ".kdkdkdkdkdkdkdk",
+        ".kdddddddddddddk",
+        "..kdkdkdkdkdkdk.",
+        "...kkkkkkkkkkk..",
+        "................",
+    ],
     "excavator": [
         "................",
         "...kkkkkkkk.....",
@@ -724,6 +760,21 @@ def blocks():
     rect(img, 3, 7, 12, 8, (230, 190, 40))
     rect(img, 7, 3, 8, 12, (230, 190, 40))
     b["missile_silo_top"] = img
+    # Vehicle parts (used by the jeep and tank block models).
+    b["vehicle_olive"] = noise_tile((88, 104, 56), 7, 30)
+    b["vehicle_olive_dark"] = noise_tile((62, 74, 38), 6, 31)
+    img = noise_tile((45, 45, 48), 5, 32)
+    for y in range(0, 16, 3):
+        rect(img, 0, y, 15, y, (25, 25, 28))
+    b["vehicle_tread"] = img
+    img = noise_tile((35, 35, 38), 4, 33)
+    rect(img, 5, 5, 10, 10, (120, 120, 125))
+    rect(img, 7, 7, 8, 8, (60, 60, 62))
+    b["vehicle_tire"] = img
+    img = noise_tile((140, 190, 210), 6, 34)
+    rect(img, 2, 2, 5, 3, (230, 245, 255))
+    b["vehicle_glass"] = img
+    b["vehicle_steel"] = noise_tile((70, 74, 80), 6, 35)
     return b
 
 

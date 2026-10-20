@@ -91,6 +91,15 @@ public class ModBlocks {
 			p -> new LauncherBlock(LauncherBlock.Kind.MISSILE_SILO, Shapes.block(), p),
 			props().mapColor(MapColor.METAL).strength(6.0F, 6.0F).sound(SoundType.METAL));
 
+	// --- Vehicle models (never placed; the vehicle renderers draw these block models) ---
+	public static final Block JEEP_MODEL = registerModelOnly("jeep_model");
+	public static final Block TANK_MODEL = registerModelOnly("tank_model");
+
+	private static Block registerModelOnly(String name) {
+		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, RubyMod.id(name));
+		return Registry.register(BuiltInRegistries.BLOCK, key, new Block(props().noOcclusion().noLootTable().setId(key)));
+	}
+
 	private static BlockBehaviour.Properties props() {
 		return BlockBehaviour.Properties.of();
 	}

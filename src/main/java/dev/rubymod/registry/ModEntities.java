@@ -8,6 +8,9 @@ import dev.rubymod.entity.CruiseMissileEntity;
 import dev.rubymod.entity.GrenadeEntity;
 import dev.rubymod.entity.MortarShellEntity;
 import dev.rubymod.entity.RocketEntity;
+import dev.rubymod.entity.VehicleEntity;
+
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -35,11 +38,18 @@ public class ModEntities {
 	public static final EntityType<BreachingChargeEntity> BREACHING_CHARGE = register("breaching_charge",
 			EntityType.Builder.<BreachingChargeEntity>of(BreachingChargeEntity::new, MobCategory.MISC).sized(0.4F, 0.4F).clientTrackingRange(8).updateInterval(20));
 
+	public static final EntityType<VehicleEntity> JEEP = register("jeep",
+			EntityType.Builder.<VehicleEntity>of(VehicleEntity::new, MobCategory.MISC).sized(2.4F, 1.6F).clientTrackingRange(10).updateInterval(1));
+	public static final EntityType<VehicleEntity> TANK = register("tank",
+			EntityType.Builder.<VehicleEntity>of(VehicleEntity::new, MobCategory.MISC).sized(3.0F, 2.0F).clientTrackingRange(10).updateInterval(1));
+
 	private static <T extends Entity> EntityType<T> register(String name, EntityType.Builder<T> builder) {
 		ResourceKey<EntityType<?>> key = ResourceKey.create(Registries.ENTITY_TYPE, RubyMod.id(name));
 		return Registry.register(BuiltInRegistries.ENTITY_TYPE, key, builder.build(key));
 	}
 
 	public static void initialize() {
+		FabricDefaultAttributeRegistry.register(JEEP, VehicleEntity.jeepAttributes());
+		FabricDefaultAttributeRegistry.register(TANK, VehicleEntity.tankAttributes());
 	}
 }

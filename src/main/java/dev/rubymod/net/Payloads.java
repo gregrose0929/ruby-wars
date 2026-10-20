@@ -22,6 +22,17 @@ public class Payloads {
 		}
 	}
 
+	/** Client -> server: the tank driver pressed attack (fire the main cannon). */
+	public record VehicleFire() implements CustomPacketPayload {
+		public static final Type<VehicleFire> TYPE = new Type<>(RubyMod.id("vehicle_fire"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, VehicleFire> CODEC = StreamCodec.unit(new VehicleFire());
+
+		@Override
+		public Type<VehicleFire> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: kick the camera after a shot. */
 	public record Recoil(float pitch, float yaw) implements CustomPacketPayload {
 		public static final Type<Recoil> TYPE = new Type<>(RubyMod.id("recoil"));
@@ -122,6 +133,7 @@ public class Payloads {
 
 	public static void register() {
 		PayloadTypeRegistry.serverboundPlay().register(Reload.TYPE, Reload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(VehicleFire.TYPE, VehicleFire.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Recoil.TYPE, Recoil.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ReloadState.TYPE, ReloadState.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HitMarker.TYPE, HitMarker.CODEC);
