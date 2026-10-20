@@ -31,8 +31,10 @@ GUNS = ["service_pistol", "viper_smg", "combat_shotgun", "arr_rifle", "longshot_
 
 # Guns are drawn sideways (barrel to the right). These transforms point the barrel forward in your hands.
 GUN_DISPLAY = {
-    "thirdperson_righthand": {"rotation": [0, -90, 90], "translation": [0, 3, 1], "scale": [0.85, 0.85, 0.85]},
-    "thirdperson_lefthand": {"rotation": [0, 90, -90], "translation": [0, 3, 1], "scale": [0.85, 0.85, 0.85]},
+    # Third person uses the crossbow's aiming transform (see AvatarRendererMixin), turned 45 degrees
+    # because the crossbow sprite is diagonal and ours are horizontal.
+    "thirdperson_righthand": {"rotation": [-90, 0, -105], "translation": [2, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
+    "thirdperson_lefthand": {"rotation": [-90, 0, 165], "translation": [2, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
     "firstperson_righthand": {"rotation": [0, -90, 5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
     "firstperson_lefthand": {"rotation": [0, 90, -5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
     "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},

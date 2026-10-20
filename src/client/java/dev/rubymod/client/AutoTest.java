@@ -46,6 +46,7 @@ public final class AutoTest {
 	}
 
 	private static int waiting;
+	private static net.minecraft.world.phys.Vec3 start;
 
 	private static void tick(Minecraft mc) {
 		if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) {
@@ -145,6 +146,31 @@ public final class AutoTest {
 			case 275 -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
 			case 290 -> shot(mc, "9-armor-third-person");
 			case 300 -> {
+				mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+				command(mc, "ride @p mount @e[type=rubymod:tank,limit=1,sort=nearest]");
+			}
+			case 310 -> {
+				if (mc.player.getVehicle() != null) {
+					start = mc.player.getVehicle().position();
+					RubyMod.LOGGER.info("[autotest] riding {}", mc.player.getVehicle().getType().getDescriptionId());
+				} else {
+					RubyMod.LOGGER.info("[autotest] FAIL: could not mount the tank");
+				}
+				mc.options.keyUp.setDown(true);
+				mc.options.keyLeft.setDown(true);
+			}
+			case 350 -> {
+				mc.options.keyUp.setDown(false);
+				mc.options.keyLeft.setDown(false);
+				if (mc.player.getVehicle() != null && start != null) {
+					RubyMod.LOGGER.info("[autotest] tank drove {} blocks, now facing {}",
+							String.format("%.1f", mc.player.getVehicle().position().distanceTo(start)), mc.player.getVehicle().getYRot());
+				}
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.Payloads.VehicleFire());
+			}
+			case 354 -> shot(mc, "10-tank-firing");
+			case 370 -> command(mc, "ride @p dismount");
+			case 380 -> {
 				RubyMod.LOGGER.info("[autotest] done");
 				mc.stop();
 			}

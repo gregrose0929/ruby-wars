@@ -3,7 +3,8 @@
 	"package": "dev.rubymod.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"AbstractClientPlayerMixin"
+		"AbstractClientPlayerMixin",
+		"AvatarRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
