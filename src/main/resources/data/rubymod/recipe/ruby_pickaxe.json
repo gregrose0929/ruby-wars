@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"RRR",
+		" S ",
+		" S "
+	],
+	"key": {
+		"R": "rubymod:ruby",
+		"S": "minecraft:stick"
+	},
+	"result": {
+		"id": "rubymod:ruby_pickaxe",
+		"count": 1
+	}
+}

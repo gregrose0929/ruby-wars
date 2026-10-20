@@ -25,15 +25,16 @@ def write(path, obj):
 # ---------------------------------------------------------------- items
 SIMPLE_ITEMS = ["jeep", "tank", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
                 "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge"]
-HANDHELD_ITEMS = ["builders_wand", "excavator"]
+HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe"]
+ARMOR_ITEMS = ["ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"]
 GUNS = ["service_pistol", "viper_smg", "combat_shotgun", "arr_rifle", "longshot_sniper", "bulldog_lmg", "ruby_blaster", "rocket_launcher"]
 
 # Guns are drawn sideways (barrel to the right). These transforms point the barrel forward in your hands.
 GUN_DISPLAY = {
-    "thirdperson_righthand": {"rotation": [0, -90, 0], "translation": [0, 3, 1.5], "scale": [0.9, 0.9, 0.9]},
-    "thirdperson_lefthand": {"rotation": [0, 90, 0], "translation": [0, 3, 1.5], "scale": [0.9, 0.9, 0.9]},
-    "firstperson_righthand": {"rotation": [0, -90, 5], "translation": [1.13, 3.2, 1.13], "scale": [0.85, 0.85, 0.85]},
-    "firstperson_lefthand": {"rotation": [0, 90, -5], "translation": [1.13, 3.2, 1.13], "scale": [0.85, 0.85, 0.85]},
+    "thirdperson_righthand": {"rotation": [0, -90, 90], "translation": [0, 3, 1], "scale": [0.85, 0.85, 0.85]},
+    "thirdperson_lefthand": {"rotation": [0, 90, -90], "translation": [0, 3, 1], "scale": [0.85, 0.85, 0.85]},
+    "firstperson_righthand": {"rotation": [0, -90, 5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
+    "firstperson_lefthand": {"rotation": [0, 90, -5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
     "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
     "gui": {"rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [1, 1, 1]},
     "fixed": {"rotation": [0, 180, 0], "scale": [1, 1, 1]},
@@ -179,6 +180,12 @@ LANG = {
     "item.rubymod.breaching_charge": "Breaching Charge",
     "item.rubymod.builders_wand": "Builder's Wand",
     "item.rubymod.excavator": "Excavator Pickaxe",
+    "item.rubymod.ruby_helmet": "Ruby Helmet",
+    "item.rubymod.ruby_chestplate": "Ruby Chestplate",
+    "item.rubymod.ruby_leggings": "Ruby Leggings",
+    "item.rubymod.ruby_boots": "Ruby Boots",
+    "item.rubymod.ruby_sword": "Ruby Sword",
+    "item.rubymod.ruby_pickaxe": "Ruby Pickaxe",
     "item.rubymod.jeep": "Jeep",
     "item.rubymod.tank": "Tank",
     "entity.rubymod.jeep": "Jeep",
@@ -248,6 +255,14 @@ def gen_recipes():
     shapeless("sniper_round", ["minecraft:iron_ingot", "minecraft:gold_nugget", "minecraft:gunpowder", "minecraft:gunpowder"],
               f"{NS}:sniper_round", 8)
     shapeless("ruby_cell", [f"{NS}:ruby", "minecraft:redstone", "minecraft:copper_ingot"], f"{NS}:ruby_cell", 8)
+    r = {"R": f"{NS}:ruby"}
+    rs = {"R": f"{NS}:ruby", "S": "minecraft:stick"}
+    shaped("ruby_helmet", ["RRR", "R R"], r, f"{NS}:ruby_helmet", category="equipment")
+    shaped("ruby_chestplate", ["R R", "RRR", "RRR"], r, f"{NS}:ruby_chestplate", category="equipment")
+    shaped("ruby_leggings", ["RRR", "R R", "R R"], r, f"{NS}:ruby_leggings", category="equipment")
+    shaped("ruby_boots", ["R R", "R R"], r, f"{NS}:ruby_boots", category="equipment")
+    shaped("ruby_sword", ["R", "R", "S"], rs, f"{NS}:ruby_sword", category="equipment")
+    shaped("ruby_pickaxe", ["RRR", " S ", " S "], rs, f"{NS}:ruby_pickaxe", category="equipment")
     shaped("sandbags", ["SSS", "WWW"], {"S": "minecraft:sand", "W": "#minecraft:wool"}, f"{NS}:sandbags", 6, "building")
     shaped("concrete_wall", ["SGS", "GSG", "SGS"], {"S": "minecraft:stone", "G": "minecraft:gravel"}, f"{NS}:concrete_wall", 4, "building")
 
@@ -295,6 +310,13 @@ def gen_tags():
           {"values": [f"{NS}:{n}" for n in ["ruby_block", "ruby_ore", "deepslate_ruby_ore", "reinforced_concrete", "blast_door"]]})
 
 
+def gen_item_tags():
+    write(f"{DATA}/{NS}/tags/item/ruby_repair_materials.json", {"values": [f"{NS}:ruby"]})
+    for tag, items in (("head_armor", ["ruby_helmet"]), ("chest_armor", ["ruby_chestplate"]), ("leg_armor", ["ruby_leggings"]),
+                       ("foot_armor", ["ruby_boots"]), ("swords", ["ruby_sword"]), ("pickaxes", ["ruby_pickaxe"])):
+        write(f"{DATA}/minecraft/tags/item/{tag}.json", {"values": [f"{NS}:{i}" for i in items]})
+
+
 def gen_worldgen():
     def rule(tag):
         return {"predicate_type": "minecraft:tag_match", "tag": tag}
@@ -324,6 +346,11 @@ def main():
         item_model(name)
     for name in HANDHELD_ITEMS:
         item_model(name, parent="minecraft:item/handheld")
+    for name in ARMOR_ITEMS:
+        item_model(name)
+    write(f"{ASSETS}/equipment/ruby.json", {"layers": {
+        "humanoid": [{"texture": f"{NS}:ruby"}],
+        "humanoid_leggings": [{"texture": f"{NS}:ruby"}]}})
     for name in GUNS:
         item_model(name, display=GUN_DISPLAY)
     gen_blocks(client_jar)
@@ -331,6 +358,7 @@ def main():
     gen_recipes()
     gen_loot()
     gen_tags()
+    gen_item_tags()
     gen_worldgen()
     gen_damage_types()
     print("assets and data written")

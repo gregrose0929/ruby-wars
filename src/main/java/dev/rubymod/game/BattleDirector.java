@@ -8,6 +8,10 @@ import java.util.Set;
 import java.util.UUID;
 
 import dev.rubymod.RubyMod;
+import dev.rubymod.entity.BombEntity;
+import dev.rubymod.net.Net;
+import dev.rubymod.net.Payloads;
+import dev.rubymod.registry.ModDamage;
 import dev.rubymod.gun.Gunfire;
 import dev.rubymod.registry.ModComponents;
 import dev.rubymod.registry.ModItems;
@@ -27,6 +31,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Relative;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
@@ -34,6 +39,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 
 /** Runs the season's phases: Battle Day stages, respawns, eliminations, supply drops, and the win. */
 public final class BattleDirector {
@@ -102,7 +108,9 @@ public final class BattleDirector {
 			case FINAL_CIRCLE -> {
 				WorldBorder border = overworld.getWorldBorder();
 				border.setSize(config.borderEndSize);
-				Alerts.broadcastTitle(server, "FINAL CIRCLE", "Everyone is glowing. Last one standing wins.", ChatFormatting.GOLD);
+				Alerts.broadcastTitle(server, "FINAL CIRCLE", "Everyone is glowing. Artillery incoming.", ChatFormatting.GOLD);
+				Alerts.broadcast(server, Component.literal("Artillery will shell the circle every 15 seconds. Keep moving!")
+						.withStyle(ChatFormatting.GOLD));
 			}
 			case ENDED -> {
 				announceWinner(server);
@@ -134,6 +142,9 @@ public final class BattleDirector {
 			supplyDrop(server.overworld());
 		}
 		if (data.phase == Phase.FINAL_CIRCLE) {
+			if (server.getTickCount() % 300 < 20) {
+				artillery(server.overworld());
+			}
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 				if (!Rules.isEliminated(player.getUUID()) && !player.isSpectator()) {
 					player.addEffect(new MobEffectInstance(MobEffects.GLOWING, 60, 0, false, false));
@@ -210,6 +221,9 @@ public final class BattleDirector {
 		record.killstreak = 0;
 		SeasonData.markDirty();
 
+		if (source.getEntity() instanceof ServerPlayer killer && killer != victim) {
+			broadcastKill(server, killer, victim, source);
+		}
 		if (source.getEntity() instanceof ServerPlayer killer && killer != victim && data.phase.pvp()) {
 			SeasonData.PlayerRecord k = data.player(killer.getUUID(), killer.getName().getString());
 			k.kills++;
@@ -245,7 +259,9 @@ public final class BattleDirector {
 			ServerLevel level = player.level().getServer().overworld();
 			BlockPos spot = safeSpotNear(level, claim.pos());
 			player.teleportTo(level, spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, Set.<Relative>of(), player.getYRot(), player.getXRot(), true);
-			player.sendSystemMessage(Component.literal("Respawned at your Ruby Heart.").withStyle(ChatFormatting.GREEN), true);
+			SpawnShield.grant(player);
+			player.sendSystemMessage(Component.literal("Respawned at your Ruby Heart. Spawn protection for "
+					+ SpawnShield.TICKS / 20 + "s (ends if you shoot).").withStyle(ChatFormatting.GREEN), true);
 		}
 	}
 
@@ -325,6 +341,37 @@ public final class BattleDirector {
 				.forEach(r -> Alerts.broadcast(server, Component.literal(r.name + ": " + r.kills + " kills, " + r.heartsDestroyed
 						+ " Hearts destroyed, best streak " + r.bestKillstreak).withStyle(ChatFormatting.YELLOW)));
 		SeasonData.save();
+	}
+
+	private static void broadcastKill(MinecraftServer server, ServerPlayer killer, ServerPlayer victim, DamageSource source) {
+		String weapon;
+		if (source.is(ModDamage.TURRET)) {
+			weapon = "Sentry Turret";
+		} else if (source.getDirectEntity() instanceof Projectile projectile) {
+			weapon = projectile.getName().getString();
+		} else {
+			ItemStack held = killer.getMainHandItem();
+			weapon = held.isEmpty() ? "Fists" : held.getHoverName().getString();
+		}
+		boolean headshot = source.is(ModDamage.HEADSHOT);
+		Payloads.KillFeed payload = new Payloads.KillFeed(killer.getName().getString(), victim.getName().getString(), weapon, headshot);
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			Net.send(player, payload);
+		}
+	}
+
+	/** Final Circle: artillery shells the circle every 15 seconds so nobody can turtle forever. */
+	private static void artillery(ServerLevel level) {
+		WorldBorder border = level.getWorldBorder();
+		RandomSource random = level.getRandom();
+		double half = border.getSize() / 2 - 4;
+		for (int i = 0; i < 4; i++) {
+			int x = (int) (border.getCenterX() + (random.nextDouble() * 2 - 1) * half);
+			int z = (int) (border.getCenterZ() + (random.nextDouble() * 2 - 1) * half);
+			int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) + 50;
+			level.addFreshEntity(BombEntity.drop(level, null, new Vec3(x + 0.5, y, z + 0.5)));
+		}
+		playToAll(level.getServer(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST_FAR, 0.5F);
 	}
 
 	private static void playToAll(MinecraftServer server, net.minecraft.sounds.SoundEvent sound, float pitch) {

@@ -65,6 +65,12 @@ public class RubyModClient implements ClientModInitializer {
 			ClientState.radar = payload;
 			ClientState.radarReceivedAt = System.currentTimeMillis();
 		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.KillFeed.TYPE, (payload, context) -> {
+			ClientState.KILLS.addFirst(new ClientState.Kill(payload, System.currentTimeMillis()));
+			while (ClientState.KILLS.size() > 5) {
+				ClientState.KILLS.removeLast();
+			}
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientState.reset());
 
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());

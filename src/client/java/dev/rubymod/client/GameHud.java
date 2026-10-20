@@ -42,6 +42,7 @@ public class GameHud implements HudElement {
 		drawReload(g, w, h);
 		drawHitMarker(g, w, h);
 		drawRadar(g, font, w);
+		drawKillFeed(g, font, w);
 
 		if (ClientState.hud != null && ClientState.hud.eliminated()) {
 			g.centeredText(font, Component.literal("ELIMINATED - spectating"), w / 2, h - 60, RED);
@@ -162,6 +163,20 @@ public class GameHud implements HudElement {
 		}
 		if (radar.intruder() && blink) {
 			g.centeredText(font, Component.literal("INTRUDER IN YOUR BASE"), w / 2, 52, GOLD);
+		}
+	}
+
+	private void drawKillFeed(GuiGraphicsExtractor g, Font font, int w) {
+		long now = System.currentTimeMillis();
+		ClientState.KILLS.removeIf(k -> now - k.at() > 7000);
+		int y = 104;
+		for (ClientState.Kill kill : ClientState.KILLS) {
+			var info = kill.info();
+			String text = info.killer() + "  [" + info.weapon() + (info.headshot() ? " - HEADSHOT" : "") + "]  " + info.victim();
+			int width = font.width(text);
+			g.fill(w - width - 10, y - 2, w - 4, y + 9, PANEL);
+			g.text(font, text, w - width - 7, y, info.headshot() ? GOLD : WHITE);
+			y += 12;
 		}
 	}
 

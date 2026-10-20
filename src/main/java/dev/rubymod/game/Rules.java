@@ -85,6 +85,9 @@ public final class Rules {
 		if (isEliminated(a.getUUID())) {
 			return false;
 		}
+		if (v instanceof net.minecraft.server.level.ServerPlayer sv && SpawnShield.isShielded(sv)) {
+			return false;
+		}
 		return phase().pvp();
 	}
 

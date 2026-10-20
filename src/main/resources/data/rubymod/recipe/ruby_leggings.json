@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "equipment",
+	"pattern": [
+		"RRR",
+		"R R",
+		"R R"
+	],
+	"key": {
+		"R": "rubymod:ruby"
+	},
+	"result": {
+		"id": "rubymod:ruby_leggings",
+		"count": 1
+	}
+}

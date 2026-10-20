@@ -131,6 +131,22 @@ public class Payloads {
 		}
 	}
 
+	/** Server -> client: someone was killed by a player. */
+	public record KillFeed(String killer, String victim, String weapon, boolean headshot) implements CustomPacketPayload {
+		public static final Type<KillFeed> TYPE = new Type<>(RubyMod.id("kill_feed"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, KillFeed> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, KillFeed::killer,
+				ByteBufCodecs.STRING_UTF8, KillFeed::victim,
+				ByteBufCodecs.STRING_UTF8, KillFeed::weapon,
+				ByteBufCodecs.BOOL, KillFeed::headshot,
+				KillFeed::new);
+
+		@Override
+		public Type<KillFeed> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
 		PayloadTypeRegistry.serverboundPlay().register(Reload.TYPE, Reload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(VehicleFire.TYPE, VehicleFire.CODEC);
@@ -139,5 +155,6 @@ public class Payloads {
 		PayloadTypeRegistry.clientboundPlay().register(HitMarker.TYPE, HitMarker.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HudSync.TYPE, HudSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Radar.TYPE, Radar.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(KillFeed.TYPE, KillFeed.CODEC);
 	}
 }

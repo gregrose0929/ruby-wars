@@ -51,6 +51,7 @@ public final class GameEvents {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 				Gunfire.tickPlayer(player);
+				SpawnShield.tick(player);
 			}
 			LagCompensation.record(server);
 			if (server.getTickCount() % 20 == 0) {

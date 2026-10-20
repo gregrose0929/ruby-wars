@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import dev.rubymod.game.Rules;
+import dev.rubymod.game.SpawnShield;
 import dev.rubymod.net.Net;
 import dev.rubymod.net.Payloads;
 import dev.rubymod.registry.ModComponents;
@@ -67,6 +68,7 @@ public final class Gunfire {
 		}
 
 		NEXT_SHOT.put(player.getUUID(), now + stats.fireInterval());
+		SpawnShield.clear(player);
 		if (!player.isCreative()) {
 			stack.set(ModComponents.AMMO, ammo - 1);
 		}

@@ -130,7 +130,21 @@ public final class AutoTest {
 				});
 			}
 			case 240 -> shot(mc, "7-armory");
-			case 260 -> {
+			case 250 -> {
+				mc.player.closeContainer();
+				command(mc, "kill @e[type=rubymod:cruise_missile]");
+				command(mc, "item replace entity @p armor.head with rubymod:ruby_helmet");
+				command(mc, "item replace entity @p armor.chest with rubymod:ruby_chestplate");
+				command(mc, "item replace entity @p armor.legs with rubymod:ruby_leggings");
+				command(mc, "item replace entity @p armor.feet with rubymod:ruby_boots");
+				command(mc, "execute as @p at @s run tp @s ~ ~ ~ 180 15");
+				command(mc, "execute at @p run summon rubymod:tank ~-3 ~ ~-9 {Rotation:[150f,0f]}");
+				command(mc, "execute at @p run summon rubymod:jeep ~4 ~ ~-7 {Rotation:[210f,0f]}");
+			}
+			case 270 -> shot(mc, "8-vehicles");
+			case 275 -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+			case 290 -> shot(mc, "9-armor-third-person");
+			case 300 -> {
 				RubyMod.LOGGER.info("[autotest] done");
 				mc.stop();
 			}

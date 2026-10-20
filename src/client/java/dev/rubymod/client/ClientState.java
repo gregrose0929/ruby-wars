@@ -1,5 +1,7 @@
 package dev.rubymod.client;
 
+import java.util.ArrayDeque;
+
 import dev.rubymod.game.Phase;
 import dev.rubymod.net.Payloads;
 
@@ -14,6 +16,12 @@ public final class ClientState {
 
 	public static long reloadStartedAt;
 	public static int reloadTicks;
+
+	public record Kill(Payloads.KillFeed info, long at) {
+	}
+
+	/** Recent kills, newest first. */
+	public static final ArrayDeque<Kill> KILLS = new ArrayDeque<>();
 
 	public static long hitMarkerAt;
 	public static boolean hitHeadshot;

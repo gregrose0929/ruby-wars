@@ -26,6 +26,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.ToolMaterial;
 import net.minecraft.world.item.component.UseEffects;
+import net.minecraft.world.item.equipment.ArmorType;
 
 public class ModItems {
 	/** Every item in creative-tab order. */
@@ -65,6 +66,20 @@ public class ModItems {
 	// --- Vehicles ---
 	public static final Item JEEP = register("jeep", p -> new VehicleItem(() -> ModEntities.JEEP, p), new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	public static final Item TANK = register("tank", p -> new VehicleItem(() -> ModEntities.TANK, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
+
+	// --- Ruby gear (between iron and diamond) ---
+	public static final Item RUBY_HELMET = register("ruby_helmet", Item::new,
+			new Item.Properties().humanoidArmor(ModMaterials.RUBY_ARMOR, ArmorType.HELMET));
+	public static final Item RUBY_CHESTPLATE = register("ruby_chestplate", Item::new,
+			new Item.Properties().humanoidArmor(ModMaterials.RUBY_ARMOR, ArmorType.CHESTPLATE));
+	public static final Item RUBY_LEGGINGS = register("ruby_leggings", Item::new,
+			new Item.Properties().humanoidArmor(ModMaterials.RUBY_ARMOR, ArmorType.LEGGINGS));
+	public static final Item RUBY_BOOTS = register("ruby_boots", Item::new,
+			new Item.Properties().humanoidArmor(ModMaterials.RUBY_ARMOR, ArmorType.BOOTS));
+	public static final Item RUBY_SWORD = register("ruby_sword", Item::new,
+			new Item.Properties().sword(ModMaterials.RUBY_TOOL, 3.0F, -2.4F));
+	public static final Item RUBY_PICKAXE = register("ruby_pickaxe", Item::new,
+			new Item.Properties().pickaxe(ModMaterials.RUBY_TOOL, 1.0F, -2.8F));
 
 	// --- Tools ---
 	public static final Item BUILDERS_WAND = register("builders_wand", BuildersWandItem::new, new Item.Properties().durability(1024));

@@ -100,6 +100,12 @@ public final class Shop {
 			// Row 5: tools and upgrades
 			item(36, ModItems.BUILDERS_WAND, 1, 6);
 			item(37, ModItems.EXCAVATOR, 1, 8);
+			item(45, ModItems.RUBY_HELMET, 1, 4);
+			item(46, ModItems.RUBY_CHESTPLATE, 1, 8);
+			item(47, ModItems.RUBY_LEGGINGS, 1, 7);
+			item(48, ModItems.RUBY_BOOTS, 1, 3);
+			item(50, ModItems.RUBY_SWORD, 1, 3);
+			item(51, ModItems.RUBY_PICKAXE, 1, 4);
 			entries.add(new Entry(40, 0, () -> named(Items.NETHER_STAR, "Upgrade Ruby Heart"), "heart_upgrade", Claims::upgrade));
 		}
 		return entries;
