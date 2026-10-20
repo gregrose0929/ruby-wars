@@ -11,6 +11,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import dev.rubymod.game.Backups;
 import dev.rubymod.game.BattleDirector;
+import dev.rubymod.game.Bounties;
 import dev.rubymod.game.GameConfig;
 import dev.rubymod.game.Phase;
 import dev.rubymod.game.SeasonData;
@@ -41,6 +42,7 @@ public final class RubyWarsCommand {
 				.then(Commands.literal("status").executes(RubyWarsCommand::status))
 				.then(Commands.literal("heart").executes(RubyWarsCommand::heart))
 				.then(Commands.literal("champions").executes(RubyWarsCommand::champions))
+				.then(Commands.literal("bounties").executes(RubyWarsCommand::bounties))
 				.then(Commands.literal("trust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, true))))
 				.then(Commands.literal("untrust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, false))))
 				.then(Commands.literal("start").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::start))
@@ -128,6 +130,20 @@ public final class RubyWarsCommand {
 		c.getSource().sendSystemMessage(Component.literal("Your Ruby Heart: " + claim.x + ", " + claim.y + ", " + claim.z
 				+ "  |  Tier " + claim.tier + "  |  HP " + claim.hp + "/" + claim.maxHp() + "  |  Radius " + claim.radius()));
 		c.getSource().sendSystemMessage(Component.literal("Trusted: " + (trusted.isEmpty() ? "nobody" : trusted.toString().trim())));
+		return 1;
+	}
+
+	private static int bounties(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
+		ServerPlayer player = c.getSource().getPlayerOrException();
+		if (SeasonData.get().phase != Phase.BUILD) {
+			c.getSource().sendSystemMessage(Component.literal("Bounties run during the build phase."));
+			return 0;
+		}
+		c.getSource().sendSystemMessage(Component.literal("Today's bounties (day " + SeasonTicker.currentDay() + "):").withStyle(ChatFormatting.AQUA));
+		for (Bounties.Bounty bounty : Bounties.today(player)) {
+			c.getSource().sendSystemMessage(Component.literal(" - " + bounty.describe())
+					.withStyle(bounty.done ? ChatFormatting.GREEN : ChatFormatting.WHITE));
+		}
 		return 1;
 	}
 

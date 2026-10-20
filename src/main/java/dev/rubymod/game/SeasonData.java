@@ -99,6 +99,8 @@ public class SeasonData {
 		public boolean heartGiven;
 		public int bestKillstreak;
 		public int lastHeartMoveDay = -1;
+		public int bountyDay = -1;
+		public List<Bounties.Bounty> bounties = new ArrayList<>();
 	}
 
 	public static SeasonData get() {

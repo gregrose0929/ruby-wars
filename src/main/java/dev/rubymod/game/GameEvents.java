@@ -8,6 +8,7 @@ import dev.rubymod.item.ExcavatorItem;
 import dev.rubymod.net.Payloads;
 import dev.rubymod.registry.ModBlocks;
 
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -79,6 +80,11 @@ public final class GameEvents {
 				BattleDirector.onDeath(player, source);
 			}
 		});
+		ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((level, killer, victim, source) -> {
+			if (killer instanceof ServerPlayer player) {
+				Bounties.onKill(player, victim);
+			}
+		});
 		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> BattleDirector.onRespawn(newPlayer));
 
 		// --- Claim protection ---
@@ -97,6 +103,7 @@ public final class GameEvents {
 		});
 		PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
 			if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
+				Bounties.onBlockBroken(serverPlayer, state);
 				ExcavatorItem.afterBreak(serverLevel, serverPlayer, pos, state);
 			}
 		});

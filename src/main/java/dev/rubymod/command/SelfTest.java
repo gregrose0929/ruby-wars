@@ -8,6 +8,7 @@ import com.mojang.authlib.GameProfile;
 
 import dev.rubymod.RubyMod;
 import dev.rubymod.game.BattleDirector;
+import dev.rubymod.game.Bounties;
 import dev.rubymod.game.Claims;
 import dev.rubymod.game.Explosions;
 import dev.rubymod.game.Phase;
@@ -180,6 +181,23 @@ public final class SelfTest {
 		alpha.getInventory().add(new ItemStack(ModItems.RUBY, 10));
 		check("shop: buying takes rubies", Shop.takeRubies(alpha, 7) && Shop.countRubies(alpha) == 3);
 		check("shop: can't buy without enough rubies", !Shop.takeRubies(alpha, 5) && Shop.countRubies(alpha) == 3);
+
+		// ----- Bounties -----
+		data.phase = Phase.BUILD;
+		data.buildStartedAt = SeasonTicker.now();
+		data.phaseEndsAt = SeasonTicker.now() + 14L * 24 * 3_600_000L;
+		var bounties = Bounties.today(alpha);
+		check("bounties: three handed out on day 1", bounties.size() == 3);
+		Bounties.Bounty kills = new Bounties.Bounty();
+		kills.type = Bounties.Type.KILL_MONSTERS;
+		kills.target = 2;
+		kills.reward = 3;
+		bounties.set(0, kills);
+		int rubiesBefore = Shop.countRubies(alpha);
+		Zombie victim = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
+		Bounties.onKill(alpha, victim);
+		Bounties.onKill(alpha, victim);
+		check("bounties: finishing one pays rubies", kills.done && Shop.countRubies(alpha) == rubiesBefore + 3);
 
 		// ----- Guns -----
 		data.phase = Phase.WAR;

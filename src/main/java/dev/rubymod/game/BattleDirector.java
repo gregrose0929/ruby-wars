@@ -195,6 +195,9 @@ public final class BattleDirector {
 		if (data.phase != Phase.LOBBY) {
 			giveHeartIfNeeded(player);
 		}
+		if (data.phase == Phase.BUILD) {
+			Bounties.today(player);
+		}
 		if (Rules.isEliminated(player.getUUID())) {
 			player.setGameMode(GameType.SPECTATOR);
 			player.sendSystemMessage(Component.literal("You've been eliminated this season. You can watch as a spectator.").withStyle(ChatFormatting.GRAY));

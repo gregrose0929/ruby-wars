@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import dev.rubymod.game.Bounties;
 import dev.rubymod.game.Rules;
 import dev.rubymod.game.SpawnShield;
 import dev.rubymod.net.Net;
@@ -166,6 +167,7 @@ public final class Gunfire {
 		boolean wasAlive = target.isAlive();
 		target.hurtServer(level, ModDamage.source(level, headshot ? ModDamage.HEADSHOT : ModDamage.BULLET, shooter, shooter), damage);
 		boolean killed = wasAlive && !target.isAlive();
+		Bounties.onGunHit(shooter, target, headshot);
 		level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, hitPos.x, hitPos.y, hitPos.z, 1, 0.1, 0.1, 0.1, 0.0);
 		Net.send(shooter, new Payloads.HitMarker(headshot, killed));
 	}
