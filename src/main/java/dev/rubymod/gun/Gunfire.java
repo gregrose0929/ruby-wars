@@ -26,14 +26,12 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -100,14 +98,12 @@ public final class Gunfire {
 		BlockHitResult blockHit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, shooter));
 		Vec3 blockEnd = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
 
-		AABB searchBox = new AABB(start, blockEnd).inflate(1.0);
-		EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(level, shooter, start, blockEnd, searchBox,
-				e -> e.isAlive() && e.isPickable() && !e.isSpectator() && e != shooter && !e.isPassengerOfSameVehicle(shooter), 0.1F);
+		Hit entityHit = findEntity(level, shooter, start, blockEnd, LagCompensation.rewindTicks(shooter));
 
 		Vec3 hitPos;
 		if (entityHit != null) {
-			hitPos = entityHit.getLocation();
-			hitEntity(level, shooter, stats, entityHit.getEntity(), hitPos);
+			hitPos = entityHit.location();
+			hitEntity(level, shooter, stats, entityHit.entity(), hitPos, entityHit.eyeY());
 		} else if (blockHit.getType() == HitResult.Type.BLOCK) {
 			hitPos = blockHit.getLocation();
 			BlockPos pos = blockHit.getBlockPos();
@@ -130,11 +126,39 @@ public final class Gunfire {
 		drawTracer(level, start, hitPos, stats);
 	}
 
-	private static void hitEntity(ServerLevel level, ServerPlayer shooter, GunStats stats, Entity target, Vec3 hitPos) {
+	private record Hit(Entity entity, Vec3 location, double eyeY) {
+	}
+
+	/**
+	 * The closest entity the bullet passes through. Players are tested where the
+	 * shooter saw them ({@code rewind} ticks ago, see {@link LagCompensation}).
+	 */
+	private static Hit findEntity(ServerLevel level, ServerPlayer shooter, Vec3 start, Vec3 end, int rewind) {
+		// Players may have moved up to ~1 block per tick since the shooter saw them, so search a wider box.
+		AABB searchBox = new AABB(start, end).inflate(1.0 + rewind);
+		Hit best = null;
+		double bestDistance = Double.MAX_VALUE;
+		for (Entity e : level.getEntities(shooter, searchBox,
+				e -> e.isAlive() && e.isPickable() && !e.isSpectator() && !e.isPassengerOfSameVehicle(shooter))) {
+			AABB box = LagCompensation.boxAt(e, rewind).inflate(0.1);
+			var clip = box.contains(start) ? java.util.Optional.of(start) : box.clip(start, end);
+			if (clip.isPresent()) {
+				double distance = start.distanceToSqr(clip.get());
+				if (distance < bestDistance) {
+					bestDistance = distance;
+					double eyeY = LagCompensation.positionAt(e, rewind).y + e.getEyeHeight();
+					best = new Hit(e, clip.get(), eyeY);
+				}
+			}
+		}
+		return best;
+	}
+
+	private static void hitEntity(ServerLevel level, ServerPlayer shooter, GunStats stats, Entity target, Vec3 hitPos, double eyeY) {
 		if (!Rules.canHurt(shooter, target)) {
 			return;
 		}
-		boolean headshot = target instanceof LivingEntity living && hitPos.y >= living.getEyeY() - 0.22;
+		boolean headshot = target instanceof LivingEntity && hitPos.y >= eyeY - 0.22;
 		float damage = stats.damage() * (headshot ? stats.headshot() : 1.0F);
 		target.setInvulnerableTime(0);
 		boolean wasAlive = target.isAlive();
