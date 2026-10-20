@@ -15,6 +15,7 @@ import dev.rubymod.item.ExcavatorItem;
 import dev.rubymod.item.RangefinderItem;
 import dev.rubymod.item.RocketLauncherItem;
 import dev.rubymod.item.ThrowableWeaponItem;
+import dev.rubymod.item.VehicleItem;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
@@ -60,6 +61,10 @@ public class ModItems {
 	public static final Item CRUISE_MISSILE = register("cruise_missile", Item::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item RANGEFINDER = register("rangefinder", RangefinderItem::new, new Item.Properties().stacksTo(1));
 	public static final Item BREACHING_CHARGE = register("breaching_charge", BreachingChargeItem::new, new Item.Properties().stacksTo(8).rarity(Rarity.RARE));
+
+	// --- Vehicles ---
+	public static final Item JEEP = register("jeep", p -> new VehicleItem(() -> ModEntities.JEEP, p), new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
+	public static final Item TANK = register("tank", p -> new VehicleItem(() -> ModEntities.TANK, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 
 	// --- Tools ---
 	public static final Item BUILDERS_WAND = register("builders_wand", BuildersWandItem::new, new Item.Properties().durability(1024));

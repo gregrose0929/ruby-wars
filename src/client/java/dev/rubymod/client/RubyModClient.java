@@ -3,6 +3,7 @@ package dev.rubymod.client;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import dev.rubymod.RubyMod;
+import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.net.Payloads;
 import dev.rubymod.registry.ModEntities;
 
@@ -33,6 +34,11 @@ public class RubyModClient implements ClientModInitializer {
 					ClientPlayNetworking.send(new Payloads.Reload());
 				}
 			}
+			// Tank drivers fire the main cannon with the attack button.
+			if (client.player != null && client.player.getVehicle() instanceof VehicleEntity vehicle && vehicle.isTank()
+					&& client.options.keyAttack.isDown() && client.player.tickCount % 5 == 0) {
+				ClientPlayNetworking.send(new Payloads.VehicleFire());
+			}
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Recoil.TYPE, (payload, context) -> {
@@ -62,6 +68,7 @@ public class RubyModClient implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientState.reset());
 
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
+		AutoTest.register();
 
 		EntityRendererRegistry.register(ModEntities.FRAG_GRENADE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.SMOKE_GRENADE, ThrownItemRenderer::new);
@@ -71,5 +78,7 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.BOMB, context -> new ThrownItemRenderer<>(context, 2.0F, false));
 		EntityRendererRegistry.register(ModEntities.AIR_STRIKE_FLARE, context -> new ThrownItemRenderer<>(context, 1.0F, true));
 		EntityRendererRegistry.register(ModEntities.BREACHING_CHARGE, ThrownItemRenderer::new);
+		EntityRendererRegistry.register(ModEntities.JEEP, VehicleRenderer::new);
+		EntityRendererRegistry.register(ModEntities.TANK, VehicleRenderer::new);
 	}
 }

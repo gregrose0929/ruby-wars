@@ -95,6 +95,8 @@ public final class Shop {
 			item(31, ModBlocks.LANDMINE, 1, 2);
 			item(32, ModBlocks.CLAYMORE, 1, 2);
 			item(33, ModBlocks.BARBED_WIRE, 8, 1);
+			item(34, ModItems.JEEP, 1, 40);
+			item(35, ModItems.TANK, 1, 100);
 			// Row 5: tools and upgrades
 			item(36, ModItems.BUILDERS_WAND, 1, 6);
 			item(37, ModItems.EXCAVATOR, 1, 8);
