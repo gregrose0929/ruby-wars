@@ -15,10 +15,14 @@ import dev.rubymod.game.Rules;
 import dev.rubymod.game.SeasonData;
 import dev.rubymod.game.SeasonTicker;
 import dev.rubymod.game.Shop;
+import dev.rubymod.game.SpawnShield;
 import dev.rubymod.gun.GunItem;
 import dev.rubymod.gun.Gunfire;
 import dev.rubymod.registry.ModBlocks;
+import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.registry.ModComponents;
+import dev.rubymod.registry.ModDamage;
+import dev.rubymod.registry.ModEntities;
 import dev.rubymod.registry.ModItems;
 
 import net.fabricmc.fabric.api.entity.FakePlayer;
@@ -199,6 +203,32 @@ public final class SelfTest {
 			target.discard();
 		}
 		check("guns: rifle hits a target 5 blocks away and uses a round [" + gunDetail + "]", gunWorks);
+
+		// ----- Spawn shield -----
+		data.phase = Phase.WAR;
+		SpawnShield.grant(bravo);
+		check("spawn shield: protects a freshly respawned player", !Rules.canHurt(alpha, bravo));
+		SpawnShield.clear(bravo);
+		check("spawn shield: ends when cleared", Rules.canHurt(alpha, bravo));
+
+		// ----- Vehicles -----
+		VehicleEntity tank = ModEntities.TANK.create(level, EntitySpawnReason.COMMAND);
+		if (tank != null) {
+			tank.setPos(range.getX() + 0.5, range.getY(), range.getZ() + 10.5);
+			level.addFreshEntity(tank);
+			float full = tank.getHealth();
+			tank.setInvulnerableTime(0);
+			tank.hurtServer(level, ModDamage.source(level, ModDamage.BULLET, null, null), 10.0F);
+			float afterBullet = tank.getHealth();
+			tank.setInvulnerableTime(0);
+			tank.hurtServer(level, level.damageSources().explosion(null, null), 10.0F);
+			float afterBlast = tank.getHealth();
+			check("vehicles: tank shrugs off bullets (" + (full - afterBullet) + " damage from a 10-damage bullet)", full - afterBullet < 1.0F);
+			check("vehicles: explosions hurt tanks (" + (afterBullet - afterBlast) + " damage from a 10-damage blast)", afterBullet - afterBlast > 1.0F);
+			tank.discard();
+		} else {
+			fail("vehicles: couldn't create a tank");
+		}
 
 		// ----- Elimination and winning -----
 		data.phase = Phase.WAR;

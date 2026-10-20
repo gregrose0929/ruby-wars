@@ -1,5 +1,1 @@
-summon rubymod:tank 5 100 5
-summon rubymod:jeep 12 100 5
-wait 3
-kill @e[type=rubymod:tank]
 rubywars selftest
