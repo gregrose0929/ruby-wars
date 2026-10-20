@@ -20,6 +20,7 @@ online-mode=false
 spawn-protection=0
 view-distance=6
 simulation-distance=6
+pause-when-empty-seconds=-1
 EOF
 
 LOG=run/test-output.log

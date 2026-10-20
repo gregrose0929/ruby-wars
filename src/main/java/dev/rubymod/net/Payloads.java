@@ -147,6 +147,20 @@ public class Payloads {
 		}
 	}
 
+	/** Server -> client: you took damage from something at this position (for the direction indicator). */
+	public record DamageFrom(double x, double z) implements CustomPacketPayload {
+		public static final Type<DamageFrom> TYPE = new Type<>(RubyMod.id("damage_from"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DamageFrom> CODEC = StreamCodec.composite(
+				ByteBufCodecs.DOUBLE, DamageFrom::x,
+				ByteBufCodecs.DOUBLE, DamageFrom::z,
+				DamageFrom::new);
+
+		@Override
+		public Type<DamageFrom> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
 		PayloadTypeRegistry.serverboundPlay().register(Reload.TYPE, Reload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(VehicleFire.TYPE, VehicleFire.CODEC);
@@ -156,5 +170,6 @@ public class Payloads {
 		PayloadTypeRegistry.clientboundPlay().register(HudSync.TYPE, HudSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Radar.TYPE, Radar.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(KillFeed.TYPE, KillFeed.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DamageFrom.TYPE, DamageFrom.CODEC);
 	}
 }

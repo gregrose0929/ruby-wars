@@ -371,6 +371,7 @@ public final class BattleDirector {
 		for (int i = 0; i < 4; i++) {
 			int x = (int) (border.getCenterX() + (random.nextDouble() * 2 - 1) * half);
 			int z = (int) (border.getCenterZ() + (random.nextDouble() * 2 - 1) * half);
+			level.getChunk(x >> 4, z >> 4);
 			int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) + 50;
 			level.addFreshEntity(BombEntity.drop(level, null, new Vec3(x + 0.5, y, z + 0.5)));
 		}
@@ -391,6 +392,7 @@ public final class BattleDirector {
 		double half = border.getSize() * 0.4;
 		int x = (int) (border.getCenterX() + (random.nextDouble() * 2 - 1) * half);
 		int z = (int) (border.getCenterZ() + (random.nextDouble() * 2 - 1) * half);
+		level.getChunk(x >> 4, z >> 4); // Load (or generate) the chunk so the heightmap is real.
 		BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
 		level.setBlockAndUpdate(top, Blocks.CHEST.defaultBlockState());
 		if (level.getBlockEntity(top) instanceof ChestBlockEntity chest) {

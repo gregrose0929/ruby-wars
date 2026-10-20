@@ -1,5 +1,6 @@
 package dev.rubymod.gun;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import dev.rubymod.registry.ModComponents;
@@ -31,8 +32,14 @@ public class GunItem extends Item {
 		this.stats = stats;
 	}
 
+	/** Base stats, without attachments. */
 	public GunStats stats() {
 		return stats;
+	}
+
+	/** Stats for this particular gun, including its attachments. */
+	public GunStats stats(ItemStack stack) {
+		return Attachment.apply(stats, stack.getOrDefault(ModComponents.ATTACHMENTS, List.<String>of()));
 	}
 
 	public static int ammo(ItemStack stack) {
@@ -81,7 +88,7 @@ public class GunItem extends Item {
 
 	@Override
 	public int getBarWidth(ItemStack stack) {
-		return Math.round(13.0F * ammo(stack) / stats.magazine());
+		return Math.min(13, Math.round(13.0F * ammo(stack) / stats(stack).magazine()));
 	}
 
 	@Override
@@ -92,7 +99,12 @@ public class GunItem extends Item {
 	@Override
 	@SuppressWarnings("deprecation")
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
+		GunStats stats = stats(stack);
 		builder.accept(Component.literal("Ammo: " + ammo(stack) + " / " + stats.magazine()).withStyle(ChatFormatting.GOLD));
+		for (String name : stack.getOrDefault(ModComponents.ATTACHMENTS, List.<String>of())) {
+			Attachment attachment = Attachment.valueOf(name);
+			builder.accept(Component.literal("+ " + attachment.title).withStyle(ChatFormatting.AQUA));
+		}
 		String dmg = stats.pellets() > 1 ? stats.damage() + " x" + stats.pellets() : String.valueOf(stats.damage());
 		builder.accept(Component.literal("Damage " + dmg + "  |  Range " + (int) stats.range()).withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal("Uses " + Component.translatable(stats.ammo().item().getDescriptionId()).getString())

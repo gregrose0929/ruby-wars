@@ -5,6 +5,7 @@ import dev.rubymod.gun.Gunfire;
 import dev.rubymod.gun.LagCompensation;
 import dev.rubymod.item.BreachingChargeItem;
 import dev.rubymod.item.ExcavatorItem;
+import dev.rubymod.net.Net;
 import dev.rubymod.net.Payloads;
 import dev.rubymod.registry.ModBlocks;
 
@@ -75,6 +76,11 @@ public final class GameEvents {
 
 		// --- Combat ---
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> Rules.canHurt(source.getEntity(), entity));
+		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamage, damageTaken, blocked) -> {
+			if (entity instanceof ServerPlayer player && damageTaken > 0 && source.getSourcePosition() != null) {
+				Net.send(player, new Payloads.DamageFrom(source.getSourcePosition().x, source.getSourcePosition().z));
+			}
+		});
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity instanceof ServerPlayer player) {
 				BattleDirector.onDeath(player, source);

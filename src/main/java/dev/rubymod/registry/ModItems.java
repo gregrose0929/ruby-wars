@@ -6,9 +6,11 @@ import java.util.function.Function;
 
 import dev.rubymod.RubyMod;
 import dev.rubymod.gun.AmmoType;
+import dev.rubymod.gun.Attachment;
 import dev.rubymod.gun.GunItem;
 import dev.rubymod.gun.GunStats;
 import dev.rubymod.gun.GunStats.Special;
+import dev.rubymod.item.AttachmentItem;
 import dev.rubymod.item.BreachingChargeItem;
 import dev.rubymod.item.BuildersWandItem;
 import dev.rubymod.item.ExcavatorItem;
@@ -62,6 +64,12 @@ public class ModItems {
 	public static final Item CRUISE_MISSILE = register("cruise_missile", Item::new, new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item RANGEFINDER = register("rangefinder", RangefinderItem::new, new Item.Properties().stacksTo(1));
 	public static final Item BREACHING_CHARGE = register("breaching_charge", BreachingChargeItem::new, new Item.Properties().stacksTo(8).rarity(Rarity.RARE));
+
+	// --- Gun attachments ---
+	public static final Item EXTENDED_MAG = register("extended_mag", p -> new AttachmentItem(Attachment.EXTENDED_MAG, p), new Item.Properties().stacksTo(16));
+	public static final Item RED_DOT_SIGHT = register("red_dot_sight", p -> new AttachmentItem(Attachment.RED_DOT, p), new Item.Properties().stacksTo(16));
+	public static final Item VERTICAL_GRIP = register("vertical_grip", p -> new AttachmentItem(Attachment.GRIP, p), new Item.Properties().stacksTo(16));
+	public static final Item SUPPRESSOR = register("suppressor", p -> new AttachmentItem(Attachment.SUPPRESSOR, p), new Item.Properties().stacksTo(16));
 
 	// --- Vehicles ---
 	public static final Item JEEP = register("jeep", p -> new VehicleItem(() -> ModEntities.JEEP, p), new Item.Properties().stacksTo(1).rarity(Rarity.RARE));

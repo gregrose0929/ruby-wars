@@ -21,7 +21,12 @@ Design doc: https://claude.ai/code/artifact/7412ee76-bb2f-47f6-8045-6372edb0be5d
      eliminates you. Supply drops land every 15 minutes.
    - **Sudden Death (20 min):** every Heart shatters, no more respawns, and the
      world border shrinks from 3000 to 200 blocks.
-   - **Final Circle:** everyone glows. Last one alive wins.
+   - **Final Circle:** everyone glows and artillery shells random spots every
+     15 seconds, so nobody can hide in a bunker. Last one alive wins.
+
+During the build phase everyone also gets three **daily bounties** (kill monsters,
+land gun hits, mine stone or ores) that pay rubies. See them with `/rubywars bounties`.
+Fire and lava can't spread into claims until Battle Day.
 
 All timings, prices, and sizes are in `config/rubywars.json`.
 
@@ -37,6 +42,9 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Fire a mortar / launch a missile | Right-click the Mortar or Missile Silo holding shells or a missile |
 | Load a turret | Right-click it with Heavy Ammo |
 | Recharge an interceptor | Right-click it with a Ruby |
+| Deploy a vehicle | Right-click the ground with a Jeep or Tank item |
+| Get in / drive / get out | Right-click the vehicle / W-S drive, A-D steer / Sneak |
+| Fire the tank cannon | Left-click while driving the Tank |
 
 ## What's in the Armory
 
@@ -51,9 +59,29 @@ Wand, Excavator Pickaxe, and Heart upgrades (bigger claim, more HP).
 Ammo can also be crafted (copper, iron, and gunpowder; check the recipe book).
 Killing 5 players in a row earns an Air Strike Flare.
 
+**Gun attachments** (Armory, row 5): Extended Mag (+50% magazine), Red Dot Sight
+(tighter spread, more zoom), Vertical Grip (-40% recoil), and Suppressor (quiet,
+no tracers, hides the sniper glint). Hold the gun in one hand and the attachment in
+the other, then right-click. Each gun takes one of each.
+
+Vehicles: the **Jeep** (fast, 4 seats) and the **Tank** (slow, 2 seats, main
+cannon, nearly bulletproof). Bullets barely scratch them; rockets, mines, and
+explosions are how you take them out. Ruby armor, sword, and pickaxe sit between
+iron and diamond.
+
+## Combat details
+
+- Guns are hitscan with **lag compensation**: the server checks your shot against
+  where targets were on your screen (up to 300 ms back), so 100 ms of ping doesn't
+  make you miss.
+- After respawning at your Heart you get 4 seconds of **spawn protection**. It ends
+  the moment you fire.
+- A **kill feed** in the top-right shows who killed whom, with which weapon, and
+  headshots.
+
 ## Commands
 
-Everyone: `/rubywars` (status), `/rubywars heart`, `/rubywars trust <player>`,
+Everyone: `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`.
 
 Admins: `start`, `phase <lobby|build|lockdown|war|sudden_death|final_circle|ended>`,
@@ -69,7 +97,9 @@ Admins: `start`, `phase <lobby|build|lockdown|war|sudden_death|final_circle|ende
 3. Put `rubymod-1.0.0.jar` and Fabric API (for 26.3) in the server's `mods/` folder.
 4. Start it again. Give yourself op (`op <name>` in the console), then `/rubywars start`
    when everyone's ready.
-5. Players need the same two jars in their own `mods/` folder (or a modpack).
+5. Players need the mod too. The easiest way: send them `dist/ruby-wars-1.0.0.mrpack`
+   (built with `python tools/make_mrpack.py`). They import it in Modrinth App or
+   Prism Launcher, which installs Fabric, Fabric API, and Ruby Wars in one click.
 
 The mod writes a zipped world backup to `backups/` every 24 hours and keeps the
 newest 7. Season state lives in `world/rubywars/season.json`.
@@ -84,6 +114,11 @@ Requires JDK 25.
     ./gradlew build        # jar in build/libs/
     ./gradlew runClient    # dev client
     tools/test-server.sh tools/tests/smoke.txt --fresh   # headless server test + /rubywars selftest
+    python tools/make_mrpack.py   # dist/ruby-wars-<version>.mrpack for players
+    RUBYMOD_AUTOTEST=1 ./gradlew runClient --args="--quickPlaySingleplayer autotest"
+                           # scripted client run that saves screenshots to run/screenshots/
 
 Art is generated: edit the pixel grids in `tools/textures.py` and models/data in
-`tools/gen_assets.py`, then run them from the project root.
+`tools/gen_assets.py`, then run them from the project root. `tools/recolor.py`
+makes the ruby armor and tool textures by recoloring Minecraft's diamond ones;
+swap in original art before publishing the mod publicly.

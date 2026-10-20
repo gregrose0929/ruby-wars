@@ -171,6 +171,13 @@ public final class AutoTest {
 			case 354 -> shot(mc, "10-tank-firing");
 			case 370 -> command(mc, "ride @p dismount");
 			case 380 -> {
+				mc.player.getInventory().setSelectedSlot(0);
+				command(mc, "item replace entity @p weapon.offhand with rubymod:extended_mag");
+			}
+			case 390 -> mc.gameMode.useItem(mc.player, InteractionHand.OFF_HAND);
+			case 400 -> RubyMod.LOGGER.info("[autotest] rifle attachments after fitting: {}",
+					mc.player.getMainHandItem().get(dev.rubymod.registry.ModComponents.ATTACHMENTS));
+			case 410 -> {
 				RubyMod.LOGGER.info("[autotest] done");
 				mc.stop();
 			}

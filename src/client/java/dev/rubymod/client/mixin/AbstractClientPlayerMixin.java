@@ -16,7 +16,7 @@ public abstract class AbstractClientPlayerMixin {
 	private void rubymod$aimZoom(boolean firstPerson, float effectScale, CallbackInfoReturnable<Float> cir) {
 		AbstractClientPlayer self = (AbstractClientPlayer) (Object) this;
 		if (firstPerson && self.isShiftKeyDown() && self.getMainHandItem().getItem() instanceof GunItem gun) {
-			cir.setReturnValue(cir.getReturnValueF() * gun.stats().zoom());
+			cir.setReturnValue(cir.getReturnValueF() * gun.stats(self.getMainHandItem()).zoom());
 		}
 	}
 }

@@ -59,7 +59,7 @@ public final class Gunfire {
 		if (now < NEXT_SHOT.getOrDefault(player.getUUID(), 0L)) {
 			return;
 		}
-		GunStats stats = gun.stats();
+		GunStats stats = gun.stats(stack);
 		int ammo = GunItem.ammo(stack);
 		if (ammo <= 0) {
 			NEXT_SHOT.put(player.getUUID(), now + 10);
@@ -79,12 +79,14 @@ public final class Gunfire {
 		Vec3 eye = player.getEyePosition();
 		for (int i = 0; i < stats.pellets(); i++) {
 			Vec3 dir = withSpread(player.getLookAngle(), spread, player.getRandom());
-			trace(level, player, gun, eye, dir, stats.range(), stats.special() == GunStats.Special.BOUNCE ? 1 : 0);
+			trace(level, player, stats, eye, dir, stats.range(), stats.special() == GunStats.Special.BOUNCE ? 1 : 0);
 		}
 
 		playShot(level, player, stats);
-		Vec3 muzzle = eye.add(player.getLookAngle().scale(0.8)).add(0, -0.15, 0);
-		level.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 2, 0.02, 0.02, 0.02, 0.01);
+		if (!stats.silenced()) {
+			Vec3 muzzle = eye.add(player.getLookAngle().scale(0.8)).add(0, -0.15, 0);
+			level.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 2, 0.02, 0.02, 0.02, 0.01);
+		}
 
 		RandomSource random = player.getRandom();
 		float kick = aiming ? stats.recoil() * 0.6F : stats.recoil();
@@ -95,8 +97,7 @@ public final class Gunfire {
 		}
 	}
 
-	private static void trace(ServerLevel level, ServerPlayer shooter, GunItem gun, Vec3 start, Vec3 dir, double range, int bounces) {
-		GunStats stats = gun.stats();
+	private static void trace(ServerLevel level, ServerPlayer shooter, GunStats stats, Vec3 start, Vec3 dir, double range, int bounces) {
 		Vec3 end = start.add(dir.scale(range));
 		BlockHitResult blockHit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, shooter));
 		Vec3 blockEnd = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
@@ -120,7 +121,7 @@ public final class Gunfire {
 				Vec3 normal = Vec3.atLowerCornerOf(blockHit.getDirection().getUnitVec3i());
 				Vec3 reflected = dir.subtract(normal.scale(2 * dir.dot(normal)));
 				drawTracer(level, start, hitPos, stats);
-				trace(level, shooter, gun, hitPos.add(normal.scale(0.05)), reflected, range - travelled, bounces - 1);
+				trace(level, shooter, stats, hitPos.add(normal.scale(0.05)), reflected, range - travelled, bounces - 1);
 				return;
 			}
 		} else {
@@ -177,6 +178,9 @@ public final class Gunfire {
 	}
 
 	private static void drawTracer(ServerLevel level, Vec3 from, Vec3 to, GunStats stats) {
+		if (stats.silenced()) {
+			return;
+		}
 		ParticleOptions particle = stats.ammo() == AmmoType.RUBY_CELL
 				? new DustParticleOptions(0xFF2040, 1.0F)
 				: ParticleTypes.ELECTRIC_SPARK;
@@ -222,6 +226,10 @@ public final class Gunfire {
 				pitch = 1.6F;
 			}
 		}
+		if (stats.silenced()) {
+			volume *= 0.25F;
+			pitch += 0.4F;
+		}
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, volume, pitch + (player.getRandom().nextFloat() - 0.5F) * 0.1F);
 	}
 
@@ -243,7 +251,7 @@ public final class Gunfire {
 		if (!(stack.getItem() instanceof GunItem gun)) {
 			return;
 		}
-		GunStats stats = gun.stats();
+		GunStats stats = gun.stats(stack);
 		if (GunItem.ammo(stack) >= stats.magazine()) {
 			return;
 		}
@@ -268,13 +276,13 @@ public final class Gunfire {
 				Net.send(player, new Payloads.ReloadState(0));
 			} else if (player.level().getGameTime() >= reload.finishAt()) {
 				RELOADS.remove(player.getUUID());
-				finishReload(player, held, reload.gun().stats());
+				finishReload(player, held, reload.gun().stats(held));
 			}
 		}
 
 		// Sniper glint: aiming a scoped rifle gives your position away.
 		if (player.tickCount % 10 == 0 && player.isShiftKeyDown()
-				&& player.getMainHandItem().getItem() instanceof GunItem gun && gun.stats().special() == GunStats.Special.GLINT) {
+				&& player.getMainHandItem().getItem() instanceof GunItem gun && gun.stats(player.getMainHandItem()).special() == GunStats.Special.GLINT) {
 			Vec3 p = player.getEyePosition().add(player.getLookAngle().scale(0.6));
 			((ServerLevel) player.level()).sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0, 0, 0, 0);
 		}

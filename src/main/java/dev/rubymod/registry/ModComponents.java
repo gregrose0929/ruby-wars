@@ -1,5 +1,7 @@
 package dev.rubymod.registry;
 
+import java.util.List;
+
 import com.mojang.serialization.Codec;
 
 import dev.rubymod.RubyMod;
@@ -15,6 +17,13 @@ public class ModComponents {
 			BuiltInRegistries.DATA_COMPONENT_TYPE,
 			RubyMod.id("ammo"),
 			DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());
+
+	/** Attachments fitted to a gun (names of {@link dev.rubymod.gun.Attachment} values). */
+	public static final DataComponentType<List<String>> ATTACHMENTS = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("attachments"),
+			DataComponentType.<List<String>>builder().persistent(Codec.STRING.listOf())
+					.networkSynchronized(ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list())).build());
 
 	public static void initialize() {
 	}

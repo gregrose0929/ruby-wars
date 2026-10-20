@@ -23,7 +23,7 @@ def write(path, obj):
 
 
 # ---------------------------------------------------------------- items
-SIMPLE_ITEMS = ["jeep", "tank", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
+SIMPLE_ITEMS = ["extended_mag", "red_dot_sight", "vertical_grip", "suppressor", "jeep", "tank", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
                 "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge"]
 HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe"]
 ARMOR_ITEMS = ["ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"]
@@ -188,6 +188,10 @@ LANG = {
     "item.rubymod.ruby_boots": "Ruby Boots",
     "item.rubymod.ruby_sword": "Ruby Sword",
     "item.rubymod.ruby_pickaxe": "Ruby Pickaxe",
+    "item.rubymod.extended_mag": "Extended Mag",
+    "item.rubymod.red_dot_sight": "Red Dot Sight",
+    "item.rubymod.vertical_grip": "Vertical Grip",
+    "item.rubymod.suppressor": "Suppressor",
     "item.rubymod.jeep": "Jeep",
     "item.rubymod.tank": "Tank",
     "entity.rubymod.jeep": "Jeep",

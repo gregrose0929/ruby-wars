@@ -99,6 +99,10 @@ public final class Shop {
 			item(35, ModItems.TANK, 1, 100);
 			// Row 5: tools and upgrades
 			item(36, ModItems.BUILDERS_WAND, 1, 6);
+			item(38, ModItems.EXTENDED_MAG, 1, 6);
+			item(39, ModItems.RED_DOT_SIGHT, 1, 5);
+			item(41, ModItems.VERTICAL_GRIP, 1, 5);
+			item(42, ModItems.SUPPRESSOR, 1, 8);
 			item(37, ModItems.EXCAVATOR, 1, 8);
 			item(45, ModItems.RUBY_HELMET, 1, 4);
 			item(46, ModItems.RUBY_CHESTPLATE, 1, 8);

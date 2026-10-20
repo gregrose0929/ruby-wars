@@ -1,0 +1,7 @@
+rubywars selftest
+rubywars reset confirm
+rubywars reload
+rubywars start
+wait 330
+rubywars status
+worldborder get

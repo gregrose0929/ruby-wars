@@ -18,6 +18,7 @@ package dev.rubymod.gun;
  * @param recoil        camera kick in degrees per shot
  * @param zoom          FOV multiplier while aiming (1.0 = no zoom)
  * @param special       extra behaviour
+ * @param silenced      fitted with a Suppressor: quiet, no tracers
  */
 public record GunStats(
 		float damage,
@@ -34,8 +35,15 @@ public record GunStats(
 		float moveSpeed,
 		float recoil,
 		float zoom,
-		Special special
+		Special special,
+		boolean silenced
 ) {
+	public GunStats(float damage, int fireInterval, int magazine, int reloadTicks, float hipSpread, float aimSpread, double range, int pellets,
+			AmmoType ammo, boolean automatic, float headshot, float moveSpeed, float recoil, float zoom, Special special) {
+		this(damage, fireInterval, magazine, reloadTicks, hipSpread, aimSpread, range, pellets, ammo, automatic, headshot, moveSpeed, recoil, zoom,
+				special, false);
+	}
+
 	public enum Special {
 		NONE,
 		/** Shotgun: breaks glass and doors it hits (only where blocks may be broken). */

@@ -41,6 +41,7 @@ public class GameHud implements HudElement {
 		drawAmmo(g, font, player, w, h);
 		drawReload(g, w, h);
 		drawHitMarker(g, w, h);
+		drawDamageDirection(g, player, w, h);
 		drawRadar(g, font, w);
 		drawKillFeed(g, font, w);
 
@@ -96,7 +97,7 @@ public class GameHud implements HudElement {
 		if (!(held.getItem() instanceof GunItem gun)) {
 			return;
 		}
-		GunStats stats = gun.stats();
+		GunStats stats = gun.stats(held);
 		int ammo = GunItem.ammo(held);
 		int reserve = player.getInventory().countItem(stats.ammo().item());
 		String mag = ammo + " / " + stats.magazine();
@@ -141,6 +142,30 @@ public class GameHud implements HudElement {
 			g.fill(cx - i, cy + i, cx - i + 1, cy + i + 1, color);
 			g.fill(cx + i, cy + i, cx + i + 1, cy + i + 1, color);
 		}
+	}
+
+	/** A red marker on a ring around the crosshair, pointing toward whatever just hurt you. */
+	private void drawDamageDirection(GuiGraphicsExtractor g, Player player, int w, int h) {
+		long age = System.currentTimeMillis() - ClientState.damagedAt;
+		if (age > 1500) {
+			return;
+		}
+		double dx = ClientState.damageX - player.getX();
+		double dz = ClientState.damageZ - player.getZ();
+		if (dx * dx + dz * dz < 1.0) {
+			return;
+		}
+		// Angle of the source relative to where the player is facing (0 = straight ahead).
+		double worldAngle = Math.toDegrees(Math.atan2(-dx, dz));
+		double relative = Math.toRadians(worldAngle - player.getYRot());
+		int radius = 40;
+		int cx = w / 2 + (int) Math.round(Math.sin(relative) * radius);
+		int cy = h / 2 - (int) Math.round(Math.cos(relative) * radius);
+		int alpha = (int) (255 * (1.0 - age / 1500.0));
+		int color = (alpha << 24) | 0xFF3030;
+		g.fill(cx - 3, cy - 3, cx + 3, cy + 3, color);
+		g.fill(cx - 1, cy - 5, cx + 1, cy + 5, color);
+		g.fill(cx - 5, cy - 1, cx + 5, cy + 1, color);
 	}
 
 	private void drawRadar(GuiGraphicsExtractor g, Font font, int w) {

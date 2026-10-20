@@ -18,8 +18,11 @@ import dev.rubymod.game.SeasonTicker;
 import dev.rubymod.game.Shop;
 import dev.rubymod.game.SpawnShield;
 import dev.rubymod.gun.GunItem;
+import dev.rubymod.gun.GunStats;
 import dev.rubymod.gun.Gunfire;
 import dev.rubymod.registry.ModBlocks;
+import dev.rubymod.block.DefenseBlockEntity;
+import dev.rubymod.entity.MortarShellEntity;
 import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.registry.ModComponents;
 import dev.rubymod.registry.ModDamage;
@@ -39,6 +42,7 @@ import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * /rubywars selftest: exercises the game rules on the live server with two
@@ -169,6 +173,30 @@ public final class SelfTest {
 		check("armor: Reinforced Concrete ignores grenades", grenadeProof);
 		check("armor: cruise missile breaks Reinforced Concrete at once", !Explosions.filter(level, List.of(reinforced), 7.0F).isEmpty());
 
+		// ----- Missile Interceptor -----
+		data.phase = Phase.WAR;
+		BlockPos interceptorPos = base.offset(-5, 1, -5);
+		level.setBlockAndUpdate(interceptorPos, ModBlocks.MISSILE_INTERCEPTOR.defaultBlockState());
+		placed.add(interceptorPos);
+		if (level.getBlockEntity(interceptorPos) instanceof DefenseBlockEntity interceptor) {
+			MortarShellEntity shell = MortarShellEntity.launch(level, bravo, Vec3.atCenterOf(interceptorPos).add(2, 12, 2), Vec3.atCenterOf(base));
+			level.addFreshEntity(shell);
+			DefenseBlockEntity.serverTick(level, interceptorPos, level.getBlockState(interceptorPos), interceptor);
+			check("defenses: interceptor shoots down an enemy mortar shell [alive=" + shell.isAlive() + ", charges=" + interceptor.charges
+					+ ", threatens=" + shell.threatens(claim) + ", inLevel=" + (level.getEntity(shell.getUUID()) != null) + ", claimHere="
+					+ (data.claimAt(Rules.dim(level), interceptorPos.getX(), interceptorPos.getZ()) != null) + "]",
+					!shell.isAlive() && interceptor.charges == DefenseBlockEntity.MAX_CHARGES - 1);
+			MortarShellEntity friendly = MortarShellEntity.launch(level, alpha, Vec3.atCenterOf(interceptorPos).add(2, 12, 2), Vec3.atCenterOf(base));
+			level.addFreshEntity(friendly);
+			for (int i = 0; i < 25; i++) {
+				DefenseBlockEntity.serverTick(level, interceptorPos, level.getBlockState(interceptorPos), interceptor);
+			}
+			check("defenses: interceptor ignores its owner's own shells", friendly.isAlive());
+			friendly.discard();
+		} else {
+			fail("defenses: interceptor has no block entity");
+		}
+
 		// ----- Hearts -----
 		data.phase = Phase.WAR;
 		Claims.damageHeart(level, claim, 50, null);
@@ -232,6 +260,11 @@ public final class SelfTest {
 			target.discard();
 		}
 		check("guns: rifle hits a target 5 blocks away and uses a round [" + gunDetail + "]", gunWorks);
+		ItemStack moddedRifle = new ItemStack(ModItems.ARR_RIFLE);
+		moddedRifle.set(ModComponents.ATTACHMENTS, List.of("EXTENDED_MAG", "SUPPRESSOR"));
+		GunStats modded = ((GunItem) ModItems.ARR_RIFLE).stats(moddedRifle);
+		check("attachments: Extended Mag makes a 30-round rifle hold " + modded.magazine(), modded.magazine() == 45);
+		check("attachments: Suppressor silences the gun", modded.silenced());
 
 		// ----- Spawn shield -----
 		data.phase = Phase.WAR;

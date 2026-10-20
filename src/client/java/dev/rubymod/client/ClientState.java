@@ -24,6 +24,9 @@ public final class ClientState {
 	public static final ArrayDeque<Kill> KILLS = new ArrayDeque<>();
 
 	public static long hitMarkerAt;
+	public static long damagedAt;
+	public static double damageX;
+	public static double damageZ;
 	public static boolean hitHeadshot;
 	public static boolean hitKill;
 
