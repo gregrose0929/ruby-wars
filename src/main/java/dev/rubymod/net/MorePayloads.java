@@ -172,7 +172,20 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: today's bounties as display lines ("Kill 20 monsters|12|20|3|done?"). */
+	public record BountySync(List<String> lines) implements CustomPacketPayload {
+		public static final Type<BountySync> TYPE = new Type<>(RubyMod.id("bounty_sync"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BountySync> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), BountySync::lines, BountySync::new);
+
+		@Override
+		public Type<BountySync> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(BountySync.TYPE, BountySync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaidStatus.TYPE, RaidStatus.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(CombatTagged.TYPE, CombatTagged.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BulletHole.TYPE, BulletHole.CODEC);

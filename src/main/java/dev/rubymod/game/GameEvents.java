@@ -79,6 +79,11 @@ public final class GameEvents {
 				TrainingGround.tick();
 				Waypoints.sync(server);
 				Raids.tick(server);
+				if (server.getTickCount() % 100 == 0) {
+					for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+						Bounties.sync(player);
+					}
+				}
 				if (SeasonData.get().phase == Phase.BUILD) {
 					for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 						Research.onDayLogin(player, SeasonTicker.currentDay());

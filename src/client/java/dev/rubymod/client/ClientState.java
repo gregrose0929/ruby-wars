@@ -21,6 +21,8 @@ public final class ClientState {
 	public static long lookAt;
 	/** When the current combat tag runs out (ms). */
 	public static long combatUntil;
+	/** Today's bounties (see Bounties.sync). */
+	public static java.util.List<String> bounties = java.util.List.of();
 	/** The raid on your side, if any, and when we last heard. */
 	public static dev.rubymod.net.MorePayloads.RaidStatus raid;
 	public static long raidAt;

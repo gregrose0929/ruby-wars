@@ -39,6 +39,7 @@ public class GameHud implements HudElement {
 		drawPhaseBanner(g, font, w);
 		drawHeart(g, font);
 		drawEconomy(g, font);
+		drawBounties(g, font);
 		drawAmmo(g, font, player, w, h);
 		drawReload(g, w, h);
 		drawHitMarker(g, w, h);
@@ -147,6 +148,38 @@ public class GameHud implements HudElement {
 	 * flashing red when empty), reserve ammo, a row of rounds, and fitted attachments. Launchers
 	 * show their rockets or missiles. A reload prompt appears under the crosshair when you're low.
 	 */
+	/** Today's bounties under the bank panel: what to do, progress bars, and the reward; done ones turn green. */
+	private void drawBounties(GuiGraphicsExtractor g, Font font) {
+		if (ClientState.bounties.isEmpty() || ClientState.phase() != Phase.BUILD) {
+			return;
+		}
+		int y = 58;
+		var e = ClientState.economy;
+		if (e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
+			y = 26;
+		}
+		panel(g, 4, y, 150, y + 12 + ClientState.bounties.size() * 17);
+		g.text(font, "DAILY BOUNTIES", 9, y + 3, 0xFF8B93A1, false);
+		int ly = y + 14;
+		for (String line : ClientState.bounties) {
+			String[] p = line.split("[|]");
+			if (p.length < 5) {
+				continue;
+			}
+			boolean done = Boolean.parseBoolean(p[4]);
+			int progress = Integer.parseInt(p[1]);
+			int target = Math.max(1, Integer.parseInt(p[2]));
+			String what = p[0].replace(" on monsters", "").replace(" of any kind", "").replace(" or deepslate", "");
+			String text = font.plainSubstrByWidth(what + "  " + progress + "/" + target, 116);
+			g.text(font, text, 9, ly, done ? 0xFF5BE37D : WHITE, false);
+			String reward = "+" + p[3];
+			g.text(font, reward, 146 - font.width(reward), ly, done ? 0xFF5BE37D : 0xFFFF5A82, false);
+			g.fill(9, ly + 10, 146, ly + 12, 0xFF2A2F35);
+			g.fill(9, ly + 10, 9 + Math.round(137 * Math.min(1.0F, progress / (float) target)), ly + 12, done ? 0xFF5BE37D : GOLD);
+			ly += 17;
+		}
+	}
+
 	private void drawAmmo(GuiGraphicsExtractor g, Font font, Player player, int w, int h) {
 		ItemStack held = player.getMainHandItem();
 		if (player.getVehicle() instanceof dev.rubymod.entity.AircraftEntity) {

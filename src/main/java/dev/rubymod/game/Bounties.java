@@ -61,6 +61,17 @@ public final class Bounties {
 	private Bounties() {
 	}
 
+	/** Send today's bounties to the player's HUD tracker (build phase only; empty otherwise). */
+	public static void sync(ServerPlayer player) {
+		List<String> lines = new ArrayList<>();
+		if (SeasonData.get().phase == Phase.BUILD) {
+			for (Bounty b : today(player)) {
+				lines.add(String.format(b.type.text, b.target) + "|" + Math.min(b.progress, b.target) + "|" + b.target + "|" + b.reward + "|" + b.done);
+			}
+		}
+		dev.rubymod.net.Net.send(player, new dev.rubymod.net.MorePayloads.BountySync(lines));
+	}
+
 	/** True when every one of today's bounties is done. */
 	public static boolean allDone(SeasonData.PlayerRecord record) {
 		return !record.bounties.isEmpty() && record.bounties.stream().allMatch(b -> b.done);
