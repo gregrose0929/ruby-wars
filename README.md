@@ -73,12 +73,72 @@ Killing 5 players in a row earns an Air Strike Flare.
 no tracers, hides the sniper glint). Hold the attachment in your main hand and the gun
 in your off hand, then right-click. Each gun takes one of each.
 
-The Armory has two pages: **Weapons & Base**, and **Vehicles & Air Defense**
-(the arrow in the bottom-right corner switches pages).
+The Armory has three pages: **Weapons & Base**, **Vehicles & Air Defense**, and
+**Industry & Building** (the arrows in the bottom corners switch pages). Purchases
+use the rubies you carry first, then your bank.
 
 Vehicles: the **Jeep** (fast, 4 seats) and the **Tank** (slow, 2 seats, a turret
 that follows your aim, main cannon, 3 smoke charges). Ruby armor, sword, and
 pickaxe sit between iron and diamond.
+
+## Economy and industry (the build phase)
+
+The two weeks of building run on one loop: **build machines, make stuff, sell it
+for rubies, upgrade the machines, repeat.** It borrows from tycoon "gen" servers
+(place a generator, sell, upgrade), Clash of Clans (collectors that fill up while
+you're away, a bank raiders want), and GregTech/Mekanism (tiered machines, ore
+processing that multiplies output), but kept small: one currency, one power
+number, no cables.
+
+**Power ("charge").** All of your machines share one power grid wherever they
+are. Generators add charge, machines draw it, Battery Banks raise how much it
+holds. The gauge on every machine screen (and the panel under your Heart HP)
+shows charge, capacity, and +/- per second.
+
+| Machine | What it does |
+| --- | --- |
+| Combustion Generator | Burns coal, charcoal, wood, blaze rods or lava: 60-140 charge/s |
+| Solar Panel | 20-100 charge/s in sunlight under open sky |
+| Battery Bank | +20,000 to +100,000 grid capacity |
+| Ruby Drill | Mines ore by itself (stone, coal, iron, copper, gold, redstone, lapis, diamonds and rubies). Below Y 0 it finds twice the rubies. Keeps digging at half speed while its chunk is unloaded (up to a day) |
+| Ore Refinery | Raw ore in, 2 ingots out (3 at Mk IV); ruby ore gives rubies; cobble to gravel to sand |
+| Ammo Factory | Metal + gunpowder in, ammo out: light, heavy, shells, sniper rounds, rockets, mortar shells |
+| Trade Depot | Sells anything it accepts; the rubies go straight into your bank |
+| Ruby Vault | Your bank: drop rubies in, withdraw with the buttons. Pays 2-6% interest per Minecraft day (capped). On Battle Day, a Vault blown open spills a quarter of its owner's bank |
+| Shield Generator | A dome (12-28 blocks) that destroys incoming rockets, shells and bombs; 1,500 charge per hit (6,000 for a cruise missile) |
+| Point Defense Gun | An automatic gatling that shoots down missiles, bombs and drones within 32-64 blocks |
+| Constructor | Builds a Blueprint, block by block, from chests next to it |
+
+**Upgrades.** Every machine goes from Mk I to Mk V. Click Upgrade on its screen:
+each tier costs twice the last, paid from your inventory, then your bank. A machine
+you pick up keeps its tier.
+
+**Automation.** Machines push their output into the machine or conveyor next to
+them first, and into chests after that, and they accept hoppers on every side. A
+Drill next to a Refinery next to a Trade Depot is a complete ore-to-rubies line.
+**Conveyor Belts** carry items (and people) and feed whatever is at their end.
+
+## Building tools
+
+| Tool | How it works |
+| --- | --- |
+| **Architect's Wand** | Right-click two corners to build a line, wall, floor, solid box or hollow room (sneak + right-click switches shape) out of the block in your off hand. A live outline shows exactly what you'll get. R undoes the last build and gives the blocks back |
+| **Remodeler** | Right-click a block to swap it and the connected blocks of the same kind (a 5x5x5 patch) for your off-hand block; sneak for just one. Turns a cobblestone wall into reinforced concrete in a few clicks |
+| **Blueprint** + **Constructor** | Right-click two corners to copy a structure (up to 24x24x24). Put the Blueprint in a Constructor, fill the chests next to it, and it builds a copy in front of itself, rotated the way it faces, with a ruby outline of where it'll go |
+| Builder's Wand | Extends a block 16 blocks in a line |
+| Excavator | Mines 3x3 |
+
+New building blocks: **Reinforced Glass** (a bulletproof window, about 30 rifle
+rounds or two blasts), **Floodlight**, and **Conveyor Belt**.
+
+## Heavy AA Gun
+
+A manned twin autocannon for your base. Right-click to man it; the mount turns to
+where you look, left-click fires (alternating barrels), hold right-click for the
+gun sight. Shells are proximity-fused flak: they burst near aircraft out to about
+300 blocks. The sight boxes every aircraft in range and shows a lead marker: put
+the reticle on it (it turns red: FIRE). The 40-round magazine reloads from 4 Heavy
+Ammo.
 
 ## Fighting vehicles and aircraft
 
@@ -180,10 +240,16 @@ Copy it into `.minecraft/saves/`. It has:
   apron with an Airfield Pad, a bombing range with ground targets, target drones
   circling overhead (they come back 30 seconds after you shoot them down), and an
   **air defense range** with a Flak Cannon and SAM Site to practice flares against;
-- a **Launchers** chest at the gun range with the Skyhammer, Lancer, C4 and mines.
+- a **Launchers** chest at the gun range with the Skyhammer, Lancer, C4 and mines;
+- an **Industry Yard** north of spawn: a powered production line (Drill, Refinery,
+  conveyor, Trade Depot, Vault), an Ammo Factory, a Constructor building a copy of a
+  pillbox from its Blueprint, a Shield Generator and Point Defense Gun, Heavy AA Guns
+  at the airfield, and chests with every machine and building tool.
+
+Machines placed by the training build are unowned and shared by everyone.
 
 On any world, an admin can build the same thing at their feet with
-`/rubywars training` (it flattens a 130 x 730 area). `/rubywars rearm` refills
+`/rubywars training` (it flattens a 130 x 780 area). `/rubywars rearm` refills
 and repairs the aircraft you're in.
 
 ## Combat details

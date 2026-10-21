@@ -286,6 +286,7 @@ public final class RubyWarsCommand {
 		int nextSeason = data.season + 1;
 		var champions = new java.util.ArrayList<>(data.pastChampions);
 		data.claims.clear();
+		dev.rubymod.industry.Grid.reset();
 		data.players.clear();
 		data.phase = Phase.LOBBY;
 		data.phaseEndsAt = 0;
