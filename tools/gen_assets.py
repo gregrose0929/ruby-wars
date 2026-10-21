@@ -241,6 +241,7 @@ LANG = {
     "key.rubymod.ping": "Ping (mark a spot for your squad)",
     "key.rubymod.map": "Open Map",
     "key.rubymod.minimap": "Toggle Minimap",
+    "key.rubymod.manual": "Field Manual",
     "block.rubymod.war_grave": "War Grave",
     "item.rubymod.field_pack": "Field Pack",
     "item.rubymod.field_radio": "Field Radio",

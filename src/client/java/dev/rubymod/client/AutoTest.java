@@ -301,6 +301,12 @@ public final class AutoTest {
 			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 50");
 		});
 		then(20, mc -> shot(mc, "features-blueprint-ghost"));
+		then(2, mc -> {
+			var manual = new ManualScreen();
+			manual.showPage(2);
+			mc.gui.setScreen(manual);
+		});
+		then(12, mc -> shot(mc, "features-manual"));
 		then(2, mc -> mc.gui.setScreen(new ResearchScreen()));
 		then(12, mc -> shot(mc, "features-research"));
 		then(2, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));

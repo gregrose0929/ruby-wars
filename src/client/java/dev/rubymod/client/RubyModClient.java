@@ -46,6 +46,7 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping mapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.map", InputConstants.KEY_M, CATEGORY));
 		KeyMapping researchKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.research", InputConstants.KEY_J, CATEGORY));
 		KeyMapping minimapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.minimap", InputConstants.KEY_N, CATEGORY));
+		KeyMapping manualKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.manual", InputConstants.KEY_H, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -65,6 +66,11 @@ public class RubyModClient implements ClientModInitializer {
 			}
 			while (minimapKey.consumeClick()) {
 				dev.rubymod.client.map.Minimap.enabled = !dev.rubymod.client.map.Minimap.enabled;
+			}
+			while (manualKey.consumeClick()) {
+				if (client.player != null && client.gui.screen() == null) {
+					client.gui.setScreen(new ManualScreen());
+				}
 			}
 			while (researchKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {
