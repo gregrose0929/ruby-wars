@@ -507,6 +507,12 @@ public final class AutoTest {
 		then(5, mc -> mc.gameMode.useItem(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND));
 		then(15, mc -> shot(mc, "gear-backpack"));
 		then(2, mc -> mc.player.closeContainer());
+		then(2, mc -> command(mc, "effect clear @a"));
+		then(2, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> server.getPlayerList().getPlayers().get(0).setHealth(4.0F));
+		});
+		then(10, mc -> shot(mc, "gear-lowhealth"));
 		then(2, mc -> {
 			command(mc, "gamerule keep_inventory false");
 			command(mc, "gamerule keepInventory false");

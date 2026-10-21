@@ -36,6 +36,7 @@ public class GameHud implements HudElement {
 		int w = g.guiWidth();
 		int h = g.guiHeight();
 
+		drawLowHealth(g, player, w, h);
 		drawPhaseBanner(g, font, w);
 		drawHeart(g, font);
 		drawEconomy(g, font);
@@ -148,6 +149,33 @@ public class GameHud implements HudElement {
 	 * flashing red when empty), reserve ammo, a row of rounds, and fitted attachments. Launchers
 	 * show their rockets or missiles. A reload prompt appears under the crosshair when you're low.
 	 */
+	/** Badly hurt (under 40% health): the screen edges bleed red, pulsing faster as you get closer to death. */
+	private void drawLowHealth(GuiGraphicsExtractor g, Player player, int w, int h) {
+		if (player.isCreative() || player.isSpectator()) {
+			return;
+		}
+		float health = player.getHealth() / Math.max(1.0F, player.getMaxHealth());
+		if (health >= 0.4F || player.isDeadOrDying()) {
+			return;
+		}
+		float severity = 1.0F - health / 0.4F;
+		double pulse = 0.75 + 0.25 * Math.sin(System.currentTimeMillis() / (220.0 - 120.0 * severity));
+		int alpha = (int) (Math.min(1.0F, 0.45F + severity * 0.55F) * pulse * 235);
+		int edge = (alpha << 24) | 0x8A0000;
+		int clear = 0x008A0000;
+		int band = Math.max(30, Math.min(w, h) / 3);
+		g.fillGradient(0, 0, w, band, edge, clear);
+		g.fillGradient(0, h - band, w, h, clear, edge);
+		// Sides: thin vertical bars stepping inward, since gradients only run top to bottom.
+		for (int i = 0; i < band; i += 2) {
+			double f = 1.0 - i / (double) band;
+			int a = (int) (alpha * f * f);
+			int c = (a << 24) | 0x8A0000;
+			g.fill(i, 0, i + 2, h, c);
+			g.fill(w - i - 2, 0, w - i, h, c);
+		}
+	}
+
 	/** Today's bounties under the bank panel: what to do, progress bars, and the reward; done ones turn green. */
 	private void drawBounties(GuiGraphicsExtractor g, Font font) {
 		if (ClientState.bounties.isEmpty() || ClientState.phase() != Phase.BUILD) {
