@@ -48,9 +48,25 @@ public class DefenseBlockEntity extends BlockEntity {
 	public int ammo;
 	public int charges = MAX_CHARGES;
 	private int cooldown;
+	/** Client: where the sentry last fired (degrees, Minecraft yaw) and when (game time). */
+	public float aimYaw;
+	public long lastShot = -1000;
 
 	public DefenseBlockEntity(BlockPos pos, BlockState state) {
 		super(ModBlockEntities.DEFENSE, pos, state);
+	}
+
+	/** Block event 1: the sentry fired toward this yaw (0-255 = 0-360 degrees). */
+	@Override
+	public boolean triggerEvent(int id, int param) {
+		if (id == 1) {
+			aimYaw = param * 360.0F / 256.0F;
+			if (level != null) {
+				lastShot = level.getGameTime();
+			}
+			return true;
+		}
+		return super.triggerEvent(id, param);
 	}
 
 	@Override
@@ -161,6 +177,8 @@ public class DefenseBlockEntity extends BlockEntity {
 		}
 		net.minecraft.world.entity.LivingEntity victim = target.get();
 		Vec3 aim = victim.position().add(0, victim.getBbHeight() * 0.6, 0);
+		float yaw = (float) Math.toDegrees(Math.atan2(-(aim.x - gun.x), aim.z - gun.z));
+		level.blockEvent(pos, getBlockState().getBlock(), 1, Math.floorMod(Math.round(yaw / 360.0F * 256.0F), 256));
 		victim.setInvulnerableTime(0);
 		victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, owner(level, claim)), TURRET_DAMAGE);
 		ammo--;

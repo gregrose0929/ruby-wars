@@ -116,6 +116,7 @@ public class ModBlocks {
 	public static final Block MORTAR_SHELL_MODEL = registerModelOnly("mortar_shell_model");
 	public static final Block CRUISE_MISSILE_MODEL = registerModelOnly("cruise_missile_model");
 	public static final Block BOMB_MODEL = registerModelOnly("bomb_model");
+	public static final Block SENTRY_HEAD = registerModelOnly("sentry_head");
 
 	/** Bulletproof window: see-through, shrugs off small arms (~30 rifle rounds) and takes two blasts. */
 	public static final Block REINFORCED_GLASS = register("reinforced_glass", net.minecraft.world.level.block.TransparentBlock::new,

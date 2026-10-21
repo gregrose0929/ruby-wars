@@ -213,6 +213,7 @@ public class RubyModClient implements ClientModInitializer {
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.rubymod.registry.ModMenus.ARMORY, ArmoryScreen::new);
 		AircraftRenderer.registerLayers();
 		VehicleRenderer.registerLayers();
+		net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry.register(dev.rubymod.registry.ModBlockEntities.DEFENSE, SentryRenderer::new);
 		DroneRenderer.registerLayer();
 		EntityRendererRegistry.register(ModEntities.SOLDIER, SoldierRenderer::new);
 		EntityRendererRegistry.register(ModEntities.RECON_DRONE, DroneRenderer::new);

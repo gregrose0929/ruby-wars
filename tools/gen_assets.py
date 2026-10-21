@@ -175,6 +175,7 @@ def gen_blocks(client_jar):
         if name != "claymore":
             simple_state(name)
 
+    client_item("sentry_turret", f"{NS}:block/sentry_turret_full")
     write(f"{ASSETS}/blockstates/claymore.json", {"variants": {
         f"facing={f}": {"model": f"{NS}:block/claymore", "y": y} for f, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270))}})
     client_item("claymore", f"{NS}:block/claymore")

@@ -1,6 +1,6 @@
 {
 	"model": {
 		"type": "minecraft:model",
-		"model": "rubymod:block/sentry_turret"
+		"model": "rubymod:block/sentry_turret_full"
 	}
 }

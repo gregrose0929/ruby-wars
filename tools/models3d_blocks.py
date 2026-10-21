@@ -5,9 +5,13 @@ from models3d import (BLACK, BRASS, DARK, LENS, LIGHT, OLIVE, OLIVE_DARK, RED_LI
                       TANK_TURRET, WHITE, tilt, vbox)
 
 BLOCKS = {
+    # The sentry is a fixed base plus a head the block entity renderer turns to aim (sentry_head).
     "sentry_turret": [
         vbox([3, 0, 3], [13, 2, 13], DARK),                          # base plate
         vbox([6.5, 2, 6.5], [9.5, 7, 9.5], STEEL),                   # pillar
+        vbox([5.5, 6, 5.5], [10.5, 7, 10.5], DARK),                  # traverse ring
+    ],
+    "sentry_head": [
         vbox([4.5, 7, 5], [11.5, 11, 12], OLIVE),                    # gun housing
         vbox([5, 11, 6], [11, 11.5, 11], OLIVE_DARK),
         vbox([6, 8.5, -1], [7, 9.5, 5], BLACK),                      # twin barrels
@@ -143,3 +147,6 @@ def extent(elements, axis):
     lo = min(min(e["from"][axis], e["to"][axis]) for e in elements)
     hi = max(max(e["from"][axis], e["to"][axis]) for e in elements)
     return lo, hi
+
+
+BLOCKS["sentry_turret_full"] = BLOCKS["sentry_turret"] + BLOCKS["sentry_head"]
