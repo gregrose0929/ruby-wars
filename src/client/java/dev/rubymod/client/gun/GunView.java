@@ -357,7 +357,7 @@ public final class GunView {
 			case "longshot_sniper" -> new View(new Vector3f(0.26F, -0.27F, -0.52F), 3.0F, 3.0F, -2.0F);
 			case "ruby_blaster" -> new View(new Vector3f(0.26F, -0.26F, -0.55F), 4.4F, 6.4F, -2.0F);
 			case "rocket_launcher" -> new View(new Vector3f(0.30F, -0.21F, -0.34F), 5.0F, 5.0F, -1.0F);
-			case "skyhammer" -> new View(new Vector3f(0.28F, -0.23F, -0.36F), 4.0F, 4.0F, -1.0F);
+			case "skyhammer" -> new View(new Vector3f(0.28F, -0.23F, -0.36F), 9.0F, 9.0F, -1.0F);
 			case "lancer" -> new View(new Vector3f(0.32F, -0.26F, -0.32F), 1.6F, 1.6F, -1.0F);
 			default -> new View(new Vector3f(0.26F, -0.27F, -0.55F), 4.2F, 6.8F, -2.0F);
 		};
