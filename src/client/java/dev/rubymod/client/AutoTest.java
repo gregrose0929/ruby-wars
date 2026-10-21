@@ -606,6 +606,8 @@ public final class AutoTest {
 		then(15, mc -> shot(mc, "vehicles-turret-aim"));
 		then(2, mc -> ClientPlayNetworking.send(new Payloads.VehicleFire()));
 		then(3, mc -> shot(mc, "vehicles-tank-firing"));
+		then(30, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		then(10, mc -> shot(mc, "vehicles-tank-first-person"));
 		then(15, mc -> command(mc, "ride @p dismount"));
 
 		then(40, mc -> {

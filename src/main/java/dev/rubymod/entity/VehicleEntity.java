@@ -210,8 +210,8 @@ public class VehicleEntity extends Mob {
 		int index = Math.max(0, getPassengers().indexOf(passenger));
 		double height = dimensions.height() * (isTank() ? 0.75 : 0.45);
 		if (isTank()) {
-			// Driver sits in the hull, gunner on the turret.
-			return new Vec3(0, height + (index == 0 ? 0 : 0.4), index == 0 ? 0.6 : -0.4).yRot((float) Math.toRadians(-getYRot()));
+			// Driver/commander stands in the cupola (head and shoulders above the turret roof); a second rider on the engine deck.
+			return new Vec3(index == 0 ? 0.45 : 0, height + (index == 0 ? 0.45 : 0.1), index == 0 ? -0.1 : -1.2).yRot((float) Math.toRadians(-getYRot()));
 		}
 		double side = index % 2 == 0 ? 0.45 : -0.45;
 		double front = index < 2 ? 0.3 : -0.7;
