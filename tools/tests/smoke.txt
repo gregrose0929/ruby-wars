@@ -11,8 +11,6 @@ rubywars phase ended
 rubywars status
 rubywars reset confirm
 rubywars status
-rubywars backup
-wait 5
 # Spawn every projectile type to make sure they tick without crashing.
 summon rubymod:rocket 0 120 0
 summon rubymod:mortar_shell 0 120 0
@@ -20,9 +18,14 @@ summon rubymod:cruise_missile 0 120 0
 summon rubymod:frag_grenade 0 120 0
 summon rubymod:bomb 0 120 0
 wait 8
+worldborder get
+rubywars status
 # Game-rule checks with fake players (their test area must be loaded).
 forceload add ~290 ~290 ~460 ~350
-wait 5
+wait 60
 rubywars selftest
 wait 2
 forceload remove all
+# Backups zip the world in the background, so run them last.
+rubywars backup
+wait 20

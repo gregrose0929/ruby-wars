@@ -263,7 +263,7 @@ public final class SelfTest {
 					+ ", pickable " + target.isPickable() + ", difficulty " + level.getDifficulty();
 			target.discard();
 		}
-		check("guns: rifle hits a target 5 blocks away and uses a round [" + gunDetail + "]", gunWorks);
+		check("guns: rifle hits a target 5 blocks away and uses a round [" + gunDetail + ", phase " + Rules.phase() + ", alpha eliminated " + Rules.isEliminated(alpha.getUUID()) + ", canHurt " + Rules.canHurt(alpha, victim) + "]", gunWorks);
 		ItemStack moddedRifle = new ItemStack(ModItems.ARR_RIFLE);
 		moddedRifle.set(ModComponents.ATTACHMENTS, List.of("EXTENDED_MAG", "SUPPRESSOR"));
 		GunStats modded = ((GunItem) ModItems.ARR_RIFLE).stats(moddedRifle);
