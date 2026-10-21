@@ -36,6 +36,9 @@ public enum Attachment {
 					hip *= 0.8F;
 					aim *= 0.5F;
 					zoom = Math.min(zoom, 0.7F);
+					if (base.scoped()) {
+						zoom = base.zoom(); // A red dot doesn't change a scoped gun.
+					}
 				}
 				case GRIP -> recoil *= 0.6F;
 				case SUPPRESSOR -> {

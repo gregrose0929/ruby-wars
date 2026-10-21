@@ -15,8 +15,15 @@ public abstract class AbstractClientPlayerMixin {
 	@Inject(method = "getFieldOfViewModifier", at = @At("RETURN"), cancellable = true)
 	private void rubymod$aimZoom(boolean firstPerson, float effectScale, CallbackInfoReturnable<Float> cir) {
 		AbstractClientPlayer self = (AbstractClientPlayer) (Object) this;
-		if (firstPerson && GunItem.isAiming(self) && !self.isScoping() && self.getUseItem().getItem() instanceof GunItem gun) {
-			cir.setReturnValue(cir.getReturnValueF() * gun.stats(self.getUseItem()).zoom());
+		if (!firstPerson || !GunItem.isAiming(self) || !(self.getUseItem().getItem() instanceof GunItem gun)) {
+			return;
+		}
+		float zoom = gun.stats(self.getUseItem()).zoom();
+		if (!self.isScoping()) {
+			cir.setReturnValue(cir.getReturnValueF() * zoom);
+		} else if (zoom > 0.25F) {
+			// Vanilla scoping zooms to 0.1 (spyglass). Lighter scopes like the rifle's zoom less.
+			cir.setReturnValue(zoom);
 		}
 	}
 }

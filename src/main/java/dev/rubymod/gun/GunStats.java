@@ -16,7 +16,9 @@ package dev.rubymod.gun;
  * @param headshot      damage multiplier for headshots
  * @param moveSpeed     movement speed multiplier while firing (1.0 = no slowdown)
  * @param recoil        camera kick in degrees per shot
- * @param zoom          FOV multiplier while aiming (1.0 = no zoom)
+ * @param zoom          FOV multiplier while aiming (1.0 = no zoom). At or below
+ *                      {@link #SCOPE_ZOOM} the gun has a scope: aiming shows a scope
+ *                      overlay and hides the gun.
  * @param special       extra behaviour
  * @param silenced      fitted with a Suppressor: quiet, no tracers
  */
@@ -42,6 +44,18 @@ public record GunStats(
 			AmmoType ammo, boolean automatic, float headshot, float moveSpeed, float recoil, float zoom, Special special) {
 		this(damage, fireInterval, magazine, reloadTicks, hipSpread, aimSpread, range, pellets, ammo, automatic, headshot, moveSpeed, recoil, zoom,
 				special, false);
+	}
+
+	/** Guns zoomed this far or more use a scope. */
+	public static final float SCOPE_ZOOM = 0.4F;
+
+	public boolean scoped() {
+		return zoom <= SCOPE_ZOOM;
+	}
+
+	/** Scope overlay size relative to the full spyglass view: the sniper fills the screen, the rifle's is smaller. */
+	public float scopeSize() {
+		return zoom <= 0.25F ? 1.0F : 0.6F;
 	}
 
 	public enum Special {

@@ -36,10 +36,10 @@ GUNS = ["service_pistol", "combat_shotgun", "arr_rifle", "longshot_sniper", "rub
 GUN_DISPLAY = {
     # Third person uses the crossbow's aiming transform (see AvatarRendererMixin), turned 45 degrees
     # because the crossbow sprite is diagonal and ours are horizontal.
-    "thirdperson_righthand": {"rotation": [-90, 0, 80], "translation": [-1.5, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
-    "thirdperson_lefthand": {"rotation": [-90, 0, -20], "translation": [-1.5, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
-    "firstperson_righthand": {"rotation": [0, -90, 5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
-    "firstperson_lefthand": {"rotation": [0, 90, -5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
+    "thirdperson_righthand": {"rotation": [-90, 0, -100], "translation": [-1.5, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
+    "thirdperson_lefthand": {"rotation": [-90, 0, 160], "translation": [-1.5, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
+    "firstperson_righthand": {"rotation": [0, 90, -5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
+    "firstperson_lefthand": {"rotation": [0, -90, 5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
     "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
     "gui": {"rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [1, 1, 1]},
     "fixed": {"rotation": [0, 180, 0], "scale": [1, 1, 1]},

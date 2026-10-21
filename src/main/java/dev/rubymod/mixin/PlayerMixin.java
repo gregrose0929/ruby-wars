@@ -11,7 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Aiming a scoped gun (the sniper) counts as "scoping", like a spyglass. That
+ * Aiming a scoped gun (sniper, rifle) counts as "scoping", like a spyglass. That
  * gives it the vanilla scope overlay, hides the hand, zooms way in, and slows
  * the mouse for precise aim.
  */
@@ -22,7 +22,7 @@ public abstract class PlayerMixin {
 		Player self = (Player) (Object) this;
 		if (!cir.getReturnValueZ() && self.isUsingItem()) {
 			ItemStack used = self.getUseItem();
-			if (used.getItem() instanceof GunItem gun && gun.stats(used).zoom() <= 0.3F) {
+			if (used.getItem() instanceof GunItem gun && gun.stats(used).scoped()) {
 				cir.setReturnValue(true);
 			}
 		}

@@ -85,7 +85,8 @@ public final class Gunfire {
 		playShot(level, player, stats);
 		if (!stats.silenced()) {
 			Vec3 muzzle = eye.add(player.getLookAngle().scale(0.8)).add(0, -0.15, 0);
-			level.sendParticles(ParticleTypes.SMOKE, muzzle.x, muzzle.y, muzzle.z, 2, 0.02, 0.02, 0.02, 0.01);
+			// Others see the muzzle smoke; the shooter doesn't (it would cloud their sights).
+			sendToOthers(level, player, ParticleTypes.SMOKE, muzzle, 2, 0.02, 0.01);
 		}
 
 		RandomSource random = player.getRandom();
@@ -192,7 +193,8 @@ public final class Gunfire {
 		Vec3 step = delta.normalize();
 		double spacing = stats.ammo() == AmmoType.RUBY_CELL ? 0.6 : 2.0;
 		int count = (int) Math.min(length / spacing, 60);
-		for (int i = 1; i <= count; i++) {
+		int first = (int) Math.ceil(3.0 / spacing);
+		for (int i = first; i <= count; i++) {
 			Vec3 p = from.add(step.scale(i * spacing));
 			level.sendParticles(particle, p.x, p.y, p.z, 1, 0, 0, 0, 0);
 		}
@@ -284,7 +286,7 @@ public final class Gunfire {
 		if (player.tickCount % 10 == 0 && GunItem.isAiming(player)
 				&& player.getMainHandItem().getItem() instanceof GunItem gun && gun.stats(player.getMainHandItem()).special() == GunStats.Special.GLINT) {
 			Vec3 p = player.getEyePosition().add(player.getLookAngle().scale(0.6));
-			((ServerLevel) player.level()).sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0, 0, 0, 0);
+			sendToOthers((ServerLevel) player.level(), player, ParticleTypes.END_ROD, p, 1, 0, 0);
 		}
 	}
 
@@ -310,6 +312,15 @@ public final class Gunfire {
 		}
 		inventory.setChanged();
 		return taken;
+	}
+
+	/** Particles every player sees except the shooter (so they never fog the shooter's own view or scope). */
+	private static void sendToOthers(ServerLevel level, ServerPlayer shooter, ParticleOptions particle, Vec3 at, int count, double spread, double speed) {
+		for (ServerPlayer viewer : level.players()) {
+			if (viewer != shooter) {
+				level.sendParticles(viewer, particle, false, false, at.x, at.y, at.z, count, spread, spread, spread, speed);
+			}
+		}
 	}
 
 	public static void forget(UUID player) {

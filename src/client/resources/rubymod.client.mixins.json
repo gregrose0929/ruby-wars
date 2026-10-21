@@ -5,6 +5,7 @@
 	"client": [
 		"AbstractClientPlayerMixin",
 		"AvatarRendererMixin",
+		"HudMixin",
 		"MinecraftMixin"
 	],
 	"injectors": {
