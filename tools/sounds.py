@@ -89,13 +89,13 @@ def normalize(x, peak=0.92):
     return x / m * peak if m > 0 else x
 
 
-def gunshot(seed, crack, body_cut, body_decay, thump_hz, thump_decay, length, mech=0.25, echo=True, gain_crack=0.35):
+def gunshot(seed, crack, body_cut, body_decay, thump_hz, thump_decay, length, mech=0.25, echo=True, gain_crack=0.35, thump_gain=1.3):
     rng = np.random.default_rng(seed)
     crack_layer = highpass(noise(0.012, rng), 2500) * env(int(SR * 0.012), 0.0003, 0.0025) * gain_crack * crack
     body = lowpass3(noise(length, rng), body_cut) * env(int(SR * length), 0.0008, body_decay)
     body = body / max(1e-6, np.max(np.abs(body)))
     tt = t(thump_decay * 5)
-    thump = np.sin(2 * np.pi * thump_hz * tt * (1 - 0.3 * tt / tt[-1])) * np.exp(-tt / thump_decay) * 1.3
+    thump = np.sin(2 * np.pi * thump_hz * tt * (1 - 0.3 * tt / tt[-1])) * np.exp(-tt / thump_decay) * thump_gain
     clack = bandpass(noise(0.03, rng), 1800, 6000) * env(int(SR * 0.03), 0.0005, 0.006) * mech
     x = mix(length + 0.1, (0, crack_layer), (0.0005, body), (0.0, thump), (0.045, clack))
     if echo:
@@ -129,7 +129,7 @@ def whoosh(seed, seconds=1.4):
 
 
 def cannon(seed):
-    x = gunshot(seed, crack=1.0, body_cut=900, body_decay=0.16, thump_hz=38, thump_decay=0.18, length=1.0, mech=0.0)
+    x = gunshot(seed, crack=1.4, body_cut=1700, body_decay=0.16, thump_hz=52, thump_decay=0.16, length=1.0, mech=0.0, thump_gain=0.35)
     return normalize(tail(x, ((0.2, 0.5), (0.45, 0.32), (0.8, 0.2), (1.3, 0.12))))
 
 
@@ -180,6 +180,70 @@ def dry_fire(seed):
     return normalize(metal_click(seed, [2800, 4400], 0.006, 0.06), 0.7)
 
 
+# ----- Engine loops (2 s, seamless: every tone has a whole number of cycles, noise is filtered periodically) -----
+
+LOOP = 2.0
+
+
+def periodic_noise(rng, shape):
+    """Filtered noise that loops cleanly: filter three copies end to end and keep the middle one."""
+    n = int(SR * LOOP)
+    base = rng.uniform(-1, 1, n)
+    y = shape(np.concatenate([base, base, base]))
+    return y[n:2 * n]
+
+
+def tone(freq, amp=1.0):
+    f = round(freq * LOOP) / LOOP
+    return np.sin(2 * np.pi * f * t(LOOP)) * amp
+
+
+def jet_engine(seed):
+    rng = np.random.default_rng(seed)
+    roar = periodic_noise(rng, lambda x: lowpass3(x, 900)) * 3.0
+    hiss = periodic_noise(rng, lambda x: bandpass(x, 2500, 7000)) * 0.4
+    whine = tone(3150, 0.12) + tone(6300, 0.05) + tone(1575, 0.08)
+    wobble = 1 + 0.08 * np.sin(2 * np.pi * 1.5 * t(LOOP))
+    return normalize((roar + hiss + whine) * wobble, 0.8)
+
+
+def heli_rotor(seed):
+    rng = np.random.default_rng(seed)
+    n = int(SR * LOOP)
+    slap = np.zeros(n)
+    rate = 5.5
+    beats = int(rate * LOOP)
+    period = n // beats
+    burst = lowpass3(rng.uniform(-1, 1, period), 700) * env(period, 0.004, 0.035)
+    burst = burst / np.max(np.abs(burst))
+    for i in range(beats):
+        slap[i * period:i * period + period] += burst
+    turbine = periodic_noise(rng, lambda x: bandpass(x, 1500, 5000)) * 0.25 + tone(2400, 0.06)
+    rumble = periodic_noise(rng, lambda x: lowpass3(x, 200)) * 2.5
+    return normalize(slap * 0.9 + turbine + rumble * 0.6, 0.85)
+
+
+def tank_engine(seed):
+    rng = np.random.default_rng(seed)
+    tt = t(LOOP)
+    firing = sum(tone(42 * k, 1.0 / k ** 0.5) for k in range(1, 13)) * (1 + 0.3 * np.sin(2 * np.pi * 14 * tt))
+    grit = periodic_noise(rng, lambda x: lowpass3(x, 900)) * 1.5
+    clank = np.zeros(int(SR * LOOP))
+    for i in range(16):
+        c = metal_click(seed + i, [900 + 100 * (i % 3), 1700], 0.02, 0.06, 0.35)
+        o = int(i * len(clank) / 16)
+        clank[o:o + len(c)] += c[: len(clank) - o]
+    return normalize(firing * 0.5 + grit + clank, 0.85)
+
+
+def jeep_engine(seed):
+    rng = np.random.default_rng(seed)
+    tt = t(LOOP)
+    engine = sum(tone(46 * k, 1.0 / (k ** 0.8)) for k in range(1, 12)) * (1 + 0.2 * np.sin(2 * np.pi * 23 * tt))
+    intake = periodic_noise(rng, lambda x: bandpass(x, 300, 1800)) * 0.8
+    return normalize(engine * 0.4 + intake, 0.8)
+
+
 SOUNDS = {
     "rifle_shot": lambda s: gunshot(s, 1.0, 2600, 0.05, 70, 0.05, 0.35),
     "pistol_shot": lambda s: gunshot(s, 0.8, 3400, 0.035, 95, 0.035, 0.28, mech=0.35),
@@ -195,7 +259,12 @@ SOUNDS = {
     "shell_in": shell_in,
     "casing": casing,
     "dry_fire": dry_fire,
+    "jet_engine": jet_engine,
+    "heli_rotor": heli_rotor,
+    "tank_engine": tank_engine,
+    "jeep_engine": jeep_engine,
 }
+ENGINE_RANGE = {"jet_engine": 96, "heli_rotor": 80, "tank_engine": 48, "jeep_engine": 32}
 VARIANTS = {"rifle_shot": 3, "pistol_shot": 3, "shotgun_shot": 2, "sniper_shot": 2, "blaster_shot": 3, "casing": 4}
 
 
@@ -209,6 +278,9 @@ def main():
             fname = f"{name}_{v}" if VARIANTS.get(name, 1) > 1 else name
             sf.write(os.path.join(OUT, fname + ".ogg"), data, SR, format="OGG", subtype="VORBIS")
             files.append(f"rubymod:{fname}")
+        if name in ENGINE_RANGE:
+            index[name] = {"sounds": [{"name": f, "attenuation_distance": ENGINE_RANGE[name], "stream": False} for f in files]}
+            continue
         index[name] = {"sounds": [{"name": f, "attenuation_distance": 96} if "shot" in name or name in ("rocket_launch", "tank_cannon")
                                   else f for f in files]}
     with open(os.path.join(OUT, "..", "sounds.json"), "w") as fh:

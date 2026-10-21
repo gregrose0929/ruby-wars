@@ -127,5 +127,41 @@
 		"sounds": [
 			"rubymod:dry_fire"
 		]
+	},
+	"jet_engine": {
+		"sounds": [
+			{
+				"name": "rubymod:jet_engine",
+				"attenuation_distance": 96,
+				"stream": false
+			}
+		]
+	},
+	"heli_rotor": {
+		"sounds": [
+			{
+				"name": "rubymod:heli_rotor",
+				"attenuation_distance": 80,
+				"stream": false
+			}
+		]
+	},
+	"tank_engine": {
+		"sounds": [
+			{
+				"name": "rubymod:tank_engine",
+				"attenuation_distance": 48,
+				"stream": false
+			}
+		]
+	},
+	"jeep_engine": {
+		"sounds": [
+			{
+				"name": "rubymod:jeep_engine",
+				"attenuation_distance": 32,
+				"stream": false
+			}
+		]
 	}
 }

@@ -68,6 +68,12 @@ public class GraveBlock extends BaseEntityBlock {
 	}
 
 	@Override
+	public <T extends BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(Level level, BlockState state,
+			net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
+		return level.isClientSide() ? null : createTickerHelper(type, dev.rubymod.registry.ModBlockEntities.GRAVE, GraveBlockEntity::serverTick);
+	}
+
+	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof GraveBlockEntity grave && player instanceof ServerPlayer sp) {
 			if (!grave.canOpen(sp)) {

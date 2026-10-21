@@ -70,6 +70,19 @@ public class GraveBlockEntity extends BlockEntity implements Container {
 		return player.getUUID().equals(owner) || lockedSeconds() == 0 || player.isCreative();
 	}
 
+	/** Every few seconds: an old grave breaks open and spills what's left. */
+	public static void serverTick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, GraveBlockEntity grave) {
+		if (level.getGameTime() % 100 != 0) {
+			return;
+		}
+		long age = level.getGameTime() - grave.createdAt;
+		if (grave.isEmpty() || age > GameConfig.get().graveDecayMinutes * 1200L) {
+			net.minecraft.world.Containers.dropContents(level, pos, grave);
+			dev.rubymod.game.Waypoints.clearGrave(grave.owner);
+			level.destroyBlock(pos, false);
+		}
+	}
+
 	public Component title() {
 		return Component.literal("War Grave: " + ownerName);
 	}

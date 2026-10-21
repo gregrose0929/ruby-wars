@@ -274,6 +274,14 @@ public final class AutoTest {
 			});
 		});
 		then(40, mc -> shot(mc, "features-overview"));
+		for (int i = 0; i < 3; i++) {
+			then(40, mc -> log("fps {} (minimap {})", mc.getFps(), dev.rubymod.client.map.Minimap.enabled));
+		}
+		then(1, mc -> dev.rubymod.client.map.Minimap.enabled = false);
+		for (int i = 0; i < 3; i++) {
+			then(40, mc -> log("fps {} (minimap {})", mc.getFps(), dev.rubymod.client.map.Minimap.enabled));
+		}
+		then(1, mc -> dev.rubymod.client.map.Minimap.enabled = true);
 		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 21"));
 		then(20, mc -> shot(mc, "features-look-machine"));
 		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ 26.5 5"));

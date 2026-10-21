@@ -59,6 +59,8 @@ public class GameConfig {
 	/** War Graves: your gear waits where you died; only you can open it for this long, then anyone can. */
 	public boolean graves = true;
 	public int graveLockSeconds = 300;
+	/** An unclaimed grave breaks open after this many minutes, spilling what's left. */
+	public int graveDecayMinutes = 60;
 	/** Research: advanced Armory gear starts locked (see Research). Squadmates share what they research. */
 	public boolean research = true;
 	public boolean squadsShareResearch = true;

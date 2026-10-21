@@ -57,6 +57,7 @@ public class RubyModClient implements ClientModInitializer {
 			}
 			Vehicles.tick(client, freeLookKey.isDown());
 			dev.rubymod.client.map.MapCache.tick(client);
+			EngineSounds.tick(client);
 			dev.rubymod.client.map.LookPanel.tick(client);
 			while (pingKey.consumeClick()) {
 				dev.rubymod.client.map.Pinger.ping(client);
