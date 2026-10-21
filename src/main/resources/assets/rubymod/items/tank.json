@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/tank"
+		"type": "minecraft:special",
+		"base": "rubymod:item/tank",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:tank",
+			"texture": "rubymod:textures/entity/vehicle/tank.png"
+		}
 	}
 }

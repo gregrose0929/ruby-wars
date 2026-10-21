@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/bomber"
+		"type": "minecraft:special",
+		"base": "rubymod:item/bomber",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:bomber",
+			"texture": "rubymod:textures/entity/aircraft/bomber.png"
+		}
 	}
 }

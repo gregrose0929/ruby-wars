@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/attack_heli"
+		"type": "minecraft:special",
+		"base": "rubymod:item/attack_heli",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:attack_heli",
+			"texture": "rubymod:textures/entity/aircraft/attack_heli.png"
+		}
 	}
 }

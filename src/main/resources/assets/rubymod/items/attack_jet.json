@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/attack_jet"
+		"type": "minecraft:special",
+		"base": "rubymod:item/attack_jet",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:attack_jet",
+			"texture": "rubymod:textures/entity/aircraft/attack_jet.png"
+		}
 	}
 }

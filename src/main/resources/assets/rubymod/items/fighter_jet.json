@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/fighter_jet"
+		"type": "minecraft:special",
+		"base": "rubymod:item/fighter_jet",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:fighter_jet",
+			"texture": "rubymod:textures/entity/aircraft/fighter_jet.png"
+		}
 	}
 }

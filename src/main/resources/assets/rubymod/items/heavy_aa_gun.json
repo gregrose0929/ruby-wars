@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/heavy_aa_gun"
+		"type": "minecraft:special",
+		"base": "rubymod:item/heavy_aa_gun",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:heavy_aa_gun",
+			"texture": "rubymod:textures/entity/aircraft/heavy_aa_gun.png"
+		}
 	}
 }

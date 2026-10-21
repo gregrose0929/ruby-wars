@@ -1,22 +1,24 @@
 {
-	"parent": "rubymod:block/tank_icon",
+	"textures": {
+		"particle": "rubymod:block/vehicle_parts"
+	},
 	"gui_light": "side",
 	"display": {
 		"gui": {
 			"rotation": [
 				25,
-				135,
+				145,
 				0
 			],
 			"translation": [
-				0.0,
-				-0.27,
-				3.25
+				0,
+				0,
+				0
 			],
 			"scale": [
-				0.532,
-				0.532,
-				0.532
+				0.95,
+				0.95,
+				0.95
 			]
 		},
 		"ground": {
@@ -26,14 +28,14 @@
 				0
 			],
 			"translation": [
-				0.0,
+				0,
 				2,
-				1.62
+				0
 			],
 			"scale": [
-				0.266,
-				0.266,
-				0.266
+				0.5,
+				0.5,
+				0.5
 			]
 		},
 		"fixed": {
@@ -43,14 +45,14 @@
 				0
 			],
 			"translation": [
-				0.0,
-				-0.27,
-				3.25
+				0,
+				0,
+				0
 			],
 			"scale": [
-				0.532,
-				0.532,
-				0.532
+				1,
+				1,
+				1
 			]
 		},
 		"thirdperson_righthand": {
@@ -65,9 +67,9 @@
 				0
 			],
 			"scale": [
-				0.2,
-				0.2,
-				0.2
+				0.375,
+				0.375,
+				0.375
 			]
 		},
 		"firstperson_righthand": {
@@ -82,9 +84,9 @@
 				0
 			],
 			"scale": [
-				0.25,
-				0.25,
-				0.25
+				0.45,
+				0.45,
+				0.45
 			]
 		}
 	}

@@ -206,6 +206,20 @@ public final class AutoTest {
 		then(5, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
 		then(14, mc -> shot(mc, "view-third"));
 		then(2, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		then(2, mc -> {
+			for (String item : new String[] {"tank", "jeep", "fighter_jet", "attack_jet", "bomber", "attack_heli", "heavy_aa_gun", "railgun",
+					"frag_grenade", "c4", "rocket", "light_ammo", "heavy_ammo", "ruby", "rangefinder", "breaching_charge", "architect_wand",
+					"ruby_drill", "combustion_generator", "vault", "red_dot_sight", "suppressor"}) {
+				command(mc, "give @a rubymod:" + item);
+			}
+		});
+		then(4, mc -> command(mc, "gamemode survival @a"));
+		then(10, mc -> mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)));
+		then(12, mc -> shot(mc, "view-inventory"));
+		then(2, mc -> {
+			mc.gui.setScreen(null);
+			command(mc, "gamemode creative @a");
+		});
 	}
 
 	private static void tourScript() {

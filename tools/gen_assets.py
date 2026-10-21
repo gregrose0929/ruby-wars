@@ -96,6 +96,21 @@ def vehicle_item(name, elements, block_model):
     client_item(name, f"{NS}:item/{name}")
 
 
+def model_icon_item(name, layer, texture):
+    """Vehicle and aircraft items draw a miniature of the real entity model (ModelIconRenderer)."""
+    display = {
+        "gui": {"rotation": [25, 145, 0], "translation": [0, 0, 0], "scale": [0.95, 0.95, 0.95]},
+        "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
+        "fixed": {"rotation": [0, 180, 0], "translation": [0, 0, 0], "scale": [1, 1, 1]},
+        "thirdperson_righthand": {"rotation": [75, 45, 0], "translation": [0, 2.5, 0], "scale": [0.375, 0.375, 0.375]},
+        "firstperson_righthand": {"rotation": [0, 135, 0], "translation": [0, 3, 0], "scale": [0.45, 0.45, 0.45]},
+    }
+    write(f"{ASSETS}/models/item/{name}.json", {"textures": {"particle": f"{NS}:block/vehicle_parts"}, "gui_light": "side", "display": display})
+    write(f"{ASSETS}/items/{name}.json", {"model": {"type": "minecraft:special", "base": f"{NS}:item/{name}",
+                                                    "model": {"type": f"{NS}:model_icon", "layer": f"{NS}:{layer}",
+                                                              "texture": f"{NS}:textures/entity/{texture}.png"}}})
+
+
 def client_item(name, model):
     write(f"{ASSETS}/items/{name}.json", {"model": {"type": "minecraft:model", "model": model}})
 
@@ -189,18 +204,16 @@ def gen_blocks(client_jar):
         write(f"{ASSETS}/blockstates/{name}.json", {"variants": {"": {"model": f"{NS}:block/{name}"}}})
     write(f"{ASSETS}/models/block/tank_icon.json",
           {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"}, "elements": models3d_blocks.TANK_ICON})
-    vehicle_item("jeep", models3d.JEEP, f"{NS}:block/jeep_model")
-    vehicle_item("tank", models3d_blocks.TANK_ICON, f"{NS}:block/tank_icon")
-    vehicle_item("fighter_jet", models3d.JET, f"{NS}:block/jet_model")
-    vehicle_item("attack_jet", models3d.ATTACK_JET, f"{NS}:block/attack_jet_model")
-    vehicle_item("bomber", models3d.BOMBER, f"{NS}:block/bomber_model")
-    vehicle_item("attack_heli", models3d.HELI, f"{NS}:block/heli_model")
+    model_icon_item("jeep", "jeep", "vehicle/jeep")
+    model_icon_item("tank", "tank", "vehicle/tank")
+    for plane in ("fighter_jet", "attack_jet", "bomber", "attack_heli"):
+        model_icon_item(plane, plane, "aircraft/" + plane)
     write(f"{ASSETS}/models/block/heavy_aa_icon.json", {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"},
                                                         "elements": machines3d.HEAVY_AA_ICON})
-    vehicle_item("heavy_aa_gun", machines3d.HEAVY_AA_ICON, f"{NS}:block/heavy_aa_icon")
+    model_icon_item("heavy_aa_gun", "heavy_aa_gun", "aircraft/heavy_aa_gun")
     write(f"{ASSETS}/models/block/railgun_icon.json", {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"},
                                                        "elements": machines3d.RAILGUN_ICON})
-    vehicle_item("railgun", machines3d.RAILGUN_ICON, f"{NS}:block/railgun_icon")
+    model_icon_item("railgun", "railgun", "aircraft/railgun")
 
     # Industry machines: 3D models, facing the way they were placed.
     for name, elements in machines3d.MACHINES.items():

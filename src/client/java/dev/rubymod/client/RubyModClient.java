@@ -35,6 +35,8 @@ public class RubyModClient implements ClientModInitializer {
 		dev.rubymod.client.model.GunModel.registerLayers();
 		dev.rubymod.client.mixin.SpecialModelRenderersAccessor.rubymod$idMapper().put(RubyMod.id("gun"),
 				dev.rubymod.client.gun.GunItemRenderer.Unbaked.MAP_CODEC);
+		dev.rubymod.client.mixin.SpecialModelRenderersAccessor.rubymod$idMapper().put(RubyMod.id("model_icon"),
+				dev.rubymod.client.gun.ModelIconRenderer.Unbaked.MAP_CODEC);
 		reloadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.reload", InputConstants.KEY_R, CATEGORY));
 		designateKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.designate", InputConstants.KEY_T, CATEGORY));
 		KeyMapping weaponCamKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.weapon_cam", InputConstants.KEY_V, CATEGORY));
@@ -161,6 +163,7 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.TANK, VehicleRenderer::new);
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.rubymod.registry.ModMenus.MACHINE, MachineScreen::new);
 		AircraftRenderer.registerLayers();
+		VehicleRenderer.registerLayers();
 		HeavyAAGunRenderer.registerLayer();
 		EntityRendererRegistry.register(ModEntities.HEAVY_AA_GUN, HeavyAAGunRenderer::new);
 		EntityRendererRegistry.register(ModEntities.RAILGUN, HeavyAAGunRenderer::railgun);

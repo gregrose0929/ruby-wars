@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/railgun"
+		"type": "minecraft:special",
+		"base": "rubymod:item/railgun",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:railgun",
+			"texture": "rubymod:textures/entity/aircraft/railgun.png"
+		}
 	}
 }

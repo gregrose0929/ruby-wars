@@ -75,6 +75,17 @@ def fighter():
         B(-2.75, 7, -28, 2.75, 12, -24, "nozzle"),                    # engine nozzle
         B(-1.5, 5.5, 4, 1.5, 6.5, 10, "dark"),                        # belly
         B(-0.4, 4.5, 13, 0.4, 5.5, 20, "dark"),                       # cannon fairing
+        B(-0.2, 9.8, 35, 0.2, 10.2, 39, "strut"),                     # pitot tube
+        B(-2.05, 15.3, 15.0, 2.05, 15.6, 15.4, "dark"),              # canopy frame bows
+        B(-2.05, 14.4, 20.8, 2.05, 14.7, 21.2, "dark"),
+        B(-0.8, 13, 12.4, 0.8, 15.4, 13.6, "seat"),                   # ejection seat headrest
+        B(-1.8, 12.9, 21.5, 1.8, 13.6, 23.0, "dark"),                 # instrument coaming
+        B(-7, 10.4, 6, 7, 11.0, 22, "skin"),                          # leading-edge root extensions
+        B(-3.0, 6.6, -29, 3.0, 12.4, -28, "petals"),                  # engine nozzle petals
+        B(-1.6, 2.8, -4, 1.6, 5.4, 12, "tank"),                       # centerline drop tank
+        B(-0.4, 5.4, 0, 0.4, 6.5, 6, "dark"),
+        B(-0.1, 14, -2, 0.1, 15.6, 1, "dark"),                        # blade antenna
+        B(-4.5, 12.5, -24, 4.5, 13.0, -14, "skin2"),                  # engine bay doors
     ]
     gear = Part("gear", boxes=[
         B(-0.5, 2, 20, 0.5, 7, 21, "strut"), B(-1, 0, 19.5, 1, 2.5, 22, "tire"),               # nose gear
@@ -87,6 +98,8 @@ def fighter():
         B(22, -0.4, -6, 23, 0.4, 0, "light_red", light=True),
         B(16, -2, -6, 17, -0.5, -1, "dark"),                          # pylon
         B(15.5, -3.5, -8, 17.5, -2, 3, "missile"),                    # wing missile
+        B(16.3, -5, -8, 16.7, -0.5, -5, "dark"), B(14, -2.95, -8, 19, -2.55, -5, "dark"),   # missile fins
+        B(21, -1.6, -7, 24, -0.6, 2, "missile"),                      # wingtip missile
     ], children=[Part("aileron_l", pivot=(14, 0, -9), boxes=[B(0, -0.45, -3, 8, 0.45, 0, "skin")])])
     wing_r = Part("wing_r", pivot=(-4.5, 9, 6), rot=(0, -32, 0), boxes=[
         B(-14, -0.6, -12, 0, 0.6, 0, "skin", roundel=True),
@@ -94,12 +107,15 @@ def fighter():
         B(-23, -0.4, -6, -22, 0.4, 0, "light_green", light=True),
         B(-17, -2, -6, -16, -0.5, -1, "dark"),
         B(-17.5, -3.5, -8, -15.5, -2, 3, "missile"),
+        B(-16.7, -5, -8, -16.3, -0.5, -5, "dark"), B(-19, -2.95, -8, -14, -2.55, -5, "dark"),
+        B(-24, -1.6, -7, -21, -0.6, 2, "missile"),
     ], children=[Part("aileron_r", pivot=(-14, 0, -9), boxes=[B(-8, -0.45, -3, 0, 0.45, 0, "skin")])])
     elev_l = Part("elevator_l", pivot=(4, 9, -21), rot=(0, 30, 0), boxes=[B(0, -0.4, -6, 10, 0.4, 2, "skin")])
     elev_r = Part("elevator_r", pivot=(-4, 9, -21), rot=(0, -30, 0), boxes=[B(-10, -0.4, -6, 0, 0.4, 2, "skin")])
     fin = Part("fin", pivot=(0, 12.5, -16), rot=(-28, 0, 0), boxes=[
-        B(-0.5, 0, -8, 0.5, 13, 0, "skin", flash=True),
+        B(-0.5, 0, -8, 0.5, 13, 0, "skin", flash=True, number="24"),
         B(-0.4, 13, -6, 0.4, 13.8, -1, "light_white", light=True),
+        B(-0.6, 9, -3, 0.6, 10, 1, "dark"),                            # fin antenna fairing
     ], children=[Part("rudder", pivot=(0, 1, -8), boxes=[B(-0.4, 0, -3, 0.4, 10, 0, "skin")])])
     return Part("root", children=[Part("body", boxes=body), gear, wing_l, wing_r, elev_l, elev_r, fin])
 
@@ -113,6 +129,13 @@ def attack_jet():
         B(-4, 5, -6, 4, 12, 18, "skin"),                              # center fuselage
         B(-3, 6, -26, 3, 11, -6, "skin"),                             # tail cone
         B(-1, 11, -10, 1, 12.5, 18, "skin"),                          # spine
+        B(-2.55, 14.6, 23.5, 2.55, 15.1, 24.0, "dark"),               # canopy bows
+        B(-2.55, 14.6, 19.5, 2.55, 15.1, 20.0, "dark"),
+        B(-0.9, 12, 19.6, 0.9, 14.6, 21, "seat"),
+        B(-0.2, 8.6, 39, 0.2, 9.0, 41, "strut"),                      # pitot
+        B(-1.2, 6.8, 33.5, 1.2, 9.2, 34.5, "dark"),                   # gun muzzle cluster
+        B(-3.6, 4.6, -4, 3.6, 5.0, 16, "dark"),                       # armored belly plate
+        B(-0.1, 12.5, 0, 0.1, 14.5, 3, "dark"),                       # antenna
     ]
     # Engines on pylons above the rear fuselage (the A-10 look).
     for side in (-1, 1):
@@ -163,6 +186,13 @@ def bomber():
         B(-4, 8, -40, 4, 15, -20, "skin"),
         B(-2.5, 9, -46, 2.5, 14, -40, "skin"),                        # tail cone
         B(-1, 14, -46, 1, 15.5, -44, "light_white", light=True),
+        B(-3.05, 16.6, 36, 3.05, 16.9, 36.5, "dark"),                 # cockpit frames
+        B(-3.05, 15.8, 39.5, 3.05, 16.1, 40, "dark"),
+        B(-0.2, 10.8, 48, 0.2, 11.2, 51, "strut"),                    # refuelling probe
+        B(-0.1, 16, 10, 0.1, 19, 13, "dark"),                         # antennas
+        B(-0.1, 16, -10, 0.1, 18, -8, "dark"),
+        B(-5.2, 10, -30, 5.2, 12, -20, "skin2"),                      # tail cone fairing
+        B(-1.5, 6.4, 20, 1.5, 7.2, 26, "glass"),                      # bombardier window
     ]
     gear = Part("gear", boxes=[
         B(-0.6, 2, 30, 0.6, 7.5, 31.2, "strut"), B(-1.5, 0, 29.5, 1.5, 3, 32.5, "tire"),
@@ -188,7 +218,7 @@ def bomber():
 
     elev_l = Part("elevator_l", pivot=(2.5, 12, -38), rot=(0, 28, 0), boxes=[B(0, -0.5, -8, 16, 0.5, 2, "skin")])
     elev_r = Part("elevator_r", pivot=(-2.5, 12, -38), rot=(0, -28, 0), boxes=[B(-16, -0.5, -8, 0, 0.5, 2, "skin")])
-    fin = Part("fin", pivot=(0, 15, -32), rot=(-25, 0, 0), boxes=[B(-0.6, 0, -12, 0.6, 20, 0, "skin", flash=True)],
+    fin = Part("fin", pivot=(0, 15, -32), rot=(-25, 0, 0), boxes=[B(-0.6, 0, -12, 0.6, 20, 0, "skin", flash=True, number="61")],
                children=[Part("rudder", pivot=(0, 1, -12), boxes=[B(-0.5, 0, -4, 0.5, 17, 0, "skin")])])
     return Part("root", children=[Part("body", boxes=body), gear, wing(1), wing(-1), elev_l, elev_r, fin])
 
@@ -212,6 +242,17 @@ def helicopter():
         B(-1, 3, 22, 1, 6, 24, "dark"),                               # chin gun turret
         B(-0.4, 3.8, 24, 0.4, 4.6, 30, "dark"),                       # chin gun barrel
         B(-0.4, 14, -44, 0.4, 14.8, -43, "light_white", light=True),
+        B(-2.65, 15.5, 11.5, 2.65, 15.8, 12.2, "dark"),               # canopy frames
+        B(-2.65, 17, 6.5, 2.65, 17.3, 7.2, "dark"),
+        B(-0.6, 13, 13, 0.6, 15, 14, "seat"), B(-0.6, 14, 4, 0.6, 16, 5, "seat"),
+        B(-2, 5.5, 26, 2, 9.5, 27, "dark"),                           # sensor turret housing
+        B(-1.3, 6.3, 27, 1.3, 8.7, 28.2, "glass"),
+        B(-1.5, 14.2, -11, 1.5, 15.2, -6, "dark"),                    # exhaust shrouds
+        B(-6.5, 11.6, -11, -4.2, 14.4, -10, "petals"), B(4.2, 11.6, -11, 6.5, 14.4, -10, "petals"),
+        B(-1, 10, -36, 1, 13, -33, "dark"),                           # tail gearbox
+        B(-0.1, 15, -2, 0.1, 17, 1, "dark"),                          # antenna
+        B(-3.2, 3.5, 6, 3.2, 5, 18, "dark"),                          # belly armor
+        B(-0.6, 3, -20, 0.6, 3.6, -12, "strut"),                      # tail skid
     ]
     for s in (1, -1):                                                 # stub wings with rocket pods and missiles
         body += [
@@ -230,6 +271,10 @@ def helicopter():
         B(-1.5, 0, -1.5, 1.5, 2, 1.5, "dark"),
         B(-0.8, 1, 1.5, 0.8, 1.6, 34, "rotor"), B(-0.8, 1, -34, 0.8, 1.6, -1.5, "rotor"),
         B(1.5, 1, -0.8, 34, 1.6, 0.8, "rotor"), B(-34, 1, -0.8, -1.5, 1.6, 0.8, "rotor"),
+        B(-0.85, 0.95, 31, 0.85, 1.65, 34, "tip"), B(-0.85, 0.95, -34, 0.85, 1.65, -31, "tip"),     # blade tip caps
+        B(31, 0.95, -0.85, 34, 1.65, 0.85, "tip"), B(-34, 0.95, -0.85, -31, 1.65, 0.85, "tip"),
+        B(-1, 2, -1, 1, 3.4, 1, "dark"),                              # rotor head
+        B(-2.2, 0.6, -0.4, 2.2, 1.2, 0.4, "strut"), B(-0.4, 0.6, -2.2, 0.4, 1.2, 2.2, "strut"),   # pitch links
     ])
     tail_rotor = Part("tail_rotor", pivot=(1.2, 18, -42), boxes=[
         B(0, -0.5, -0.5, 0.6, 0.5, 0.5, "dark"),
@@ -360,6 +405,12 @@ MATERIALS = {
     "nozzle": (60, 58, 56), "glass": (40, 70, 95), "missile": (225, 226, 222), "bomb": (70, 80, 60),
     "rotor": (36, 38, 40), "intake": (18, 18, 20), "metal": (88, 92, 98), "brass": (196, 156, 62),
     "light_red": (255, 40, 40), "light_green": (40, 255, 80), "light_white": (255, 255, 240),
+    "seat": (40, 38, 34), "petals": (70, 64, 58), "tank": (140, 146, 150), "tip": (230, 200, 40),
+}
+
+DIGITS = {
+    "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"], "2": ["111", "001", "111", "100", "111"],
+    "4": ["101", "101", "111", "001", "001"], "6": ["111", "100", "111", "101", "111"],
 }
 
 
@@ -399,6 +450,10 @@ def pixel(b, face, px, py, fw, fh, pal, rnd):
                 base = pal["camo"]
         if face == "top":
             base = mul(base, 1.12)
+        elif face in ("side_a", "side_b") and fh > 3:
+            base = mul(base, 1.06 - 0.14 * py / (fh - 1))             # lit from above
+            if (px * 7 + b.uv[0]) % 13 == 0 and py > fh * 0.3:
+                base = mul(base, 0.93)                                # rain and oil streaks
         if b.flags.get("intake") and face == "front":
             base = (16, 16, 18)
         c = (base[0] + n, base[1] + n, base[2] + n)
@@ -414,6 +469,15 @@ def pixel(b, face, px, py, fw, fh, pal, rnd):
                 c = (190, 20, 45) if r < rad * 0.4 or r > rad * 0.75 else (235, 235, 230)
         if b.flags.get("flash") and face in ("side_a", "side_b") and fh > 6 and py < fh * 0.22:
             c = (180, 20, 40)
+        num = b.flags.get("number")
+        if num and face in ("side_a", "side_b") and fh > 10 and fw > 8:
+            ox, oy = fw // 2 - 3, int(fh * 0.45)
+            dy = py - oy
+            if 0 <= dy < 5:
+                for i, ch in enumerate(num):
+                    gx = px - ox - i * 4
+                    if 0 <= gx < 3 and DIGITS[ch][dy][gx] == "1":
+                        c = (232, 232, 226)
         if edge:
             c = mul(c, 0.8)
         return clamp(c) + (255,)
@@ -441,6 +505,12 @@ def pixel(b, face, px, py, fw, fh, pal, rnd):
         return clamp((c[0] + n, c[1] + n, c[2] + n)) + (255,)
     if mat == "brass":
         c = MATERIALS["brass"] if (px % 3) else (150, 110, 40)
+        return clamp((c[0] + n, c[1] + n, c[2] + n)) + (255,)
+    if mat == "tank":
+        c = mul(MATERIALS["tank"], 1.15 if face == "top" else 0.8 if face == "bottom" else 1.0)
+        return clamp((c[0] + n, c[1] + n, c[2] + n)) + (255,)
+    if mat == "petals":
+        c = mul(MATERIALS["petals"], 1.25 if (px // 2) % 2 else 0.85)
         return clamp((c[0] + n, c[1] + n, c[2] + n)) + (255,)
     if mat == "missile":
         c = MATERIALS["missile"]

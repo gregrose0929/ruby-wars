@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/jeep"
+		"type": "minecraft:special",
+		"base": "rubymod:item/jeep",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:jeep",
+			"texture": "rubymod:textures/entity/vehicle/jeep.png"
+		}
 	}
 }
