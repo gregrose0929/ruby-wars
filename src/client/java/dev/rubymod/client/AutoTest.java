@@ -339,6 +339,14 @@ public final class AutoTest {
 			mc.gui.setScreen(manual);
 		});
 		then(12, mc -> shot(mc, "features-manual"));
+		then(2, mc -> mc.gui.setScreen(new SquadScreen()));
+		then(12, mc -> shot(mc, "features-squad"));
+		then(2, mc -> {
+			mc.gui.setScreen(null);
+			mc.player.connection.sendCommand("squad create Ruby Raiders");
+		});
+		then(40, mc -> mc.gui.setScreen(new SquadScreen()));
+		then(12, mc -> shot(mc, "features-squad-member"));
 		then(2, mc -> mc.gui.setScreen(new ResearchScreen()));
 		then(12, mc -> shot(mc, "features-research"));
 		then(2, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));

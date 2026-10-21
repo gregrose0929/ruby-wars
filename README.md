@@ -54,6 +54,7 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Ping / spot | B: mark the spot you're looking at for your squad, or spot the enemy under your crosshair (10 s) |
 | Map | K: the full map (scroll to zoom, drag to pan). The minimap is always top right |
 | Research | J: the research tree |
+| Squad | O: your squad, members and one-click invites |
 | Minimap | U: hide or show it |
 | Field Manual | Y: short in-game guide pages on everything here |
 

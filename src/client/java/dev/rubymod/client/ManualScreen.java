@@ -23,7 +23,7 @@ public class ManualScreen extends Screen {
 			new Page("Controls",
 					"Left-click fire, hold right-click to aim, R reload.",
 					"B: ping a spot for your squad, or spot the enemy under your crosshair.",
-					"K: map.  U: hide/show the minimap.  J: research.  Y: this manual.  V: voice chat (Simple Voice Chat).",
+					"K: map.  U: hide/show the minimap.  J: research.  O: squad.  Y: this manual.  V: voice chat (Simple Voice Chat).",
 					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, T designate, C weapon cam, G gear."),
 			new Page("Economy",
 					"Generators and solar panels fill your power grid. Ruby Drills dig ore; the Ore Refinery doubles it; the Trade Depot sells it into your bank.",
