@@ -394,7 +394,7 @@ point for each build day you log in, 1 for clearing all three daily bounties,
 and 2 for each raid you repel, which isn't enough for everything, so squads split
 the tree (squadmates share unlocks). Basic guns, the Heart, base blocks, basic
 industry and basic defenses never need research. Locked Armory items say what
-unlocks them. Turn it off with `"research": false`.
+unlocks them; supply drops can still hand you locked gear. Turn it off with `"research": false`.
 
 ## Commands
 
