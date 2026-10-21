@@ -92,7 +92,7 @@ public class MapScreen extends Screen {
 			g.fill(p[0] - 2, p[1] - 2, p[0] + 3, p[1] + 3, 0xFFFFFFFF);
 		}
 		g.disableScissor();
-		g.centeredText(font, "MAP  -  scroll to zoom, drag to pan, " + (int) Math.round(span) + " blocks across", w / 2, 8, 0xFFDDE6EE);
+		g.centeredText(font, "MAP  -  scroll: zoom, drag: pan, right-click: add/remove a waypoint  (" + (int) Math.round(span) + " blocks)", w / 2, 8, 0xFFDDE6EE);
 		// Legend
 		String[] names = {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart", "Squad Heart"};
 		int lx = x0 + size + 10;
@@ -142,6 +142,29 @@ public class MapScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+		if (event.button() == 1) {
+			// Right-click: drop a waypoint there (or remove the one you clicked).
+			int size = Math.min(width, height) - 40;
+			int x0 = (width - size) / 2;
+			int y0 = 24;
+			int bx = (int) Math.round(centerX + (event.x() - x0 - size / 2.0) * zoom);
+			int bz = (int) Math.round(centerZ + (event.y() - y0 - size / 2.0) * zoom);
+			var player = Minecraft.getInstance().player;
+			if (player != null) {
+				var map = ClientState.map;
+				if (map != null) {
+					for (MorePayloads.Marker m : map.markers()) {
+						if (m.kind() == 0 && Math.abs(m.x() - bx) <= 4 * zoom && Math.abs(m.z() - bz) <= 4 * zoom) {
+							player.connection.sendCommand("waypoint remove " + m.name());
+							return true;
+						}
+					}
+				}
+				long count = map == null ? 0 : map.markers().stream().filter(m -> m.kind() == 0).count();
+				player.connection.sendCommand("waypoint at " + bx + " " + bz + " Marker " + (count + 1));
+			}
+			return true;
+		}
 		dragging = true;
 		lastMouseX = event.x();
 		lastMouseY = event.y();

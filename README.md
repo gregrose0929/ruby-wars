@@ -334,7 +334,7 @@ ends when one squad (or one solo player) is left.
 The minimap (top right) shows the terrain you've explored, claim borders (yours
 green, your squad's blue, others red), squadmates, and markers: waypoints, your
 grave, pings, supply drops and raids. K opens the full map. Markers also float in
-the world with their distance. `/waypoint add <name>` saves where you stand
+the world with their distance. Right-click the full map to drop a waypoint (or remove one). `/waypoint add <name>` saves where you stand
 (`/waypoint list`, `/waypoint remove <name>`). B pings a spot for your squad, or
 spots an enemy for 10 seconds; eliminated players can still spot for their squad
 while they spectate.

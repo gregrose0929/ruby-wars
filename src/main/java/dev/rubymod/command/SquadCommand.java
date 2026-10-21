@@ -53,6 +53,12 @@ public final class SquadCommand {
 				.then(Commands.literal("add").then(Commands.argument("name", StringArgumentType.greedyString())
 						.executes(c -> reply(c, Waypoints.add(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "name")),
 								"Waypoint added. It shows on your map and HUD."))))
+				.then(Commands.literal("at").then(Commands.argument("x", com.mojang.brigadier.arguments.IntegerArgumentType.integer())
+						.then(Commands.argument("z", com.mojang.brigadier.arguments.IntegerArgumentType.integer())
+								.then(Commands.argument("name", StringArgumentType.greedyString()).executes(c -> reply(c,
+										Waypoints.addAt(c.getSource().getPlayerOrException(), com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "x"),
+												com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "z"), StringArgumentType.getString(c, "name")),
+										"Waypoint set."))))))
 				.then(Commands.literal("remove").then(Commands.argument("name", StringArgumentType.greedyString())
 						.executes(c -> Waypoints.remove(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "name"))
 								? reply(c, null, "Waypoint removed.") : reply(c, "No waypoint with that name.", ""))))

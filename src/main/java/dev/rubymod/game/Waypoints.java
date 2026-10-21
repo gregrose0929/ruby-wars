@@ -73,6 +73,20 @@ public final class Waypoints {
 		return null;
 	}
 
+	/** A waypoint at map coordinates (on the surface there), e.g. right-clicked on the full map. */
+	public static String addAt(ServerPlayer player, int x, int z, String name) {
+		var level = player.level();
+		BlockPos top = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
+		List<Waypoint> list = own(player.getUUID());
+		list.removeIf(w -> w.kind == 0 && w.name.equalsIgnoreCase(name));
+		if (list.stream().filter(w -> w.kind == 0).count() >= 16) {
+			return "You can have 16 waypoints. Remove one first (/waypoint remove <name>).";
+		}
+		list.add(new Waypoint(name, top, 0));
+		SeasonData.markDirty();
+		return null;
+	}
+
 	public static boolean remove(ServerPlayer player, String name) {
 		boolean removed = own(player.getUUID()).removeIf(w -> w.name.equalsIgnoreCase(name));
 		SeasonData.markDirty();

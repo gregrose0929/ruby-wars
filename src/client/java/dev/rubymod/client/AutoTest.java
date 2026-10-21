@@ -350,6 +350,8 @@ public final class AutoTest {
 		then(12, mc -> shot(mc, "features-squad-member"));
 		then(2, mc -> mc.gui.setScreen(new ResearchScreen()));
 		then(12, mc -> shot(mc, "features-research"));
+		then(2, mc -> mc.player.connection.sendCommand("waypoint at 40 -30 Forward Base"));
+		then(30, mc -> log("waypoints: {}", ClientState.map.markers().stream().filter(m -> m.kind() == 0).map(m -> m.name() + "@" + m.x() + "," + m.z()).toList()));
 		then(2, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));
 		then(12, mc -> shot(mc, "features-map"));
 		then(2, mc -> mc.gui.setScreen(null));
