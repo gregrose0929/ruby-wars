@@ -53,7 +53,7 @@ public class DroneRenderer extends EntityRenderer<ReconDroneEntity, AircraftRend
 	public void submit(AircraftRenderer.State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
 		poseStack.pushPose();
 		poseStack.rotateDegrees(Axis.YP, -state.yaw);
-		poseStack.scale(-1.0F, -1.0F, 1.0F);
+		poseStack.scale(-1.5F, -1.5F, 1.5F);
 		collector.submitModel(model, state, poseStack, TEXTURE, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
 		if ((state.ageInTicks % 20) < 14) {
 			collector.submitModel(model, state, poseStack, RenderTypes.eyes(GLOW), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);

@@ -65,7 +65,7 @@ public class ModEntities {
 			EntityType.Builder.<dev.rubymod.entity.SoldierEntity>of(dev.rubymod.entity.SoldierEntity::new, MobCategory.MISC).sized(0.6F, 1.95F)
 					.eyeHeight(1.62F).clientTrackingRange(10));
 	public static final EntityType<dev.rubymod.entity.ReconDroneEntity> RECON_DRONE = register("recon_drone",
-			EntityType.Builder.<dev.rubymod.entity.ReconDroneEntity>of(dev.rubymod.entity.ReconDroneEntity::new, MobCategory.MISC).sized(1.2F, 0.6F)
+			EntityType.Builder.<dev.rubymod.entity.ReconDroneEntity>of(dev.rubymod.entity.ReconDroneEntity::new, MobCategory.MISC).sized(1.8F, 0.9F)
 					.clientTrackingRange(16).updateInterval(2));
 
 	private static final java.util.Map<EntityType<?>, AircraftType> AIRCRAFT_TYPES = new java.util.HashMap<>();

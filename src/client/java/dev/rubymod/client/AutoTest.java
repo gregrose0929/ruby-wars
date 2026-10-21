@@ -314,6 +314,36 @@ public final class AutoTest {
 		then(2, mc -> mc.gui.setScreen(null));
 		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~ ~4 ~-6 0 25"));
 		then(20, mc -> shot(mc, "features-paint"));
+		then(2, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				var drone = dev.rubymod.entity.ReconDroneEntity.launch(player.level(), player);
+				player.level().addFreshEntity(drone);
+				var r = dev.rubymod.entity.SoldierEntity.raider(player.level(), player.blockPosition().offset(30, 0, -20), player.blockPosition(), 0, -1);
+				r.setNoAi(true);
+				player.level().addFreshEntity(r);
+			});
+		});
+		then(120, mc -> {
+			long spotted = ClientState.map == null ? -1 : ClientState.map.markers().stream().filter(m -> m.kind() == 7).count();
+			log("recon drone: {} enemies spotted on the map", spotted);
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				for (var d : player.level().getEntitiesOfClass(dev.rubymod.entity.ReconDroneEntity.class, player.getBoundingBox().inflate(100))) {
+					log("drone at {} (player at {})", d.blockPosition(), player.blockPosition());
+				}
+			});
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof dev.rubymod.entity.ReconDroneEntity d) {
+					var rel = d.position().subtract(mc.player.getEyePosition());
+					mc.player.setYRot((float) Math.toDegrees(Math.atan2(-rel.x, rel.z)));
+					mc.player.setXRot((float) -Math.toDegrees(Math.atan2(rel.y, Math.hypot(rel.x, rel.z))));
+				}
+			}
+		});
+		then(2, mc -> shot(mc, "features-drone"));
 	}
 
 	/** A real raid on a defended base: Heart, a sentry turret, two guards. Logs the fight every 10 seconds. */
