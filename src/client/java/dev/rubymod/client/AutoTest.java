@@ -457,7 +457,12 @@ public final class AutoTest {
 				log("player dead: {}", player.isDeadOrDying());
 			});
 		});
-		then(30, mc -> {
+		then(10, mc -> {
+			ClientState.lastDeath = new Payloads.KillFeed("Raven", mc.player.getName().getString(), "Longshot Sniper", true);
+			ClientState.lastDeathAt = System.currentTimeMillis();
+		});
+		then(25, mc -> shot(mc, "gear-deathscreen"));
+		then(5, mc -> {
 			if (mc.player.isDeadOrDying()) {
 				mc.player.respawn();
 			}

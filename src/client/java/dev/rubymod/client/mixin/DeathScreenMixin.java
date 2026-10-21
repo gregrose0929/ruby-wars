@@ -20,14 +20,14 @@ public abstract class DeathScreenMixin {
 		Minecraft mc = Minecraft.getInstance();
 		var font = mc.font;
 		int w = g.guiWidth();
-		int y = 34;
+		int y = 20;
 		var kill = ClientState.lastDeath;
 		if (kill != null && System.currentTimeMillis() - ClientState.lastDeathAt < 15000) {
 			String line = "Killed by " + kill.killer() + " with " + kill.weapon() + (kill.headshot() ? " (headshot)" : "");
 			int tw = font.width(line) + 16;
 			g.fill(w / 2 - tw / 2, y - 3, w / 2 + tw / 2, y + 10, 0xA0000000);
 			g.centeredText(font, line, w / 2, y, 0xFFFF7A7A);
-			y += 16;
+			y += 13;
 		}
 		if (ClientState.hud != null && ClientState.phase().isBattle()) {
 			boolean out = ClientState.hud.eliminated() || ClientState.phase() == Phase.SUDDEN_DEATH || ClientState.phase() == Phase.FINAL_CIRCLE;
