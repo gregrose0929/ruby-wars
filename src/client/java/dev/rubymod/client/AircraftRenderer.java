@@ -29,6 +29,7 @@ public class AircraftRenderer extends EntityRenderer<AircraftEntity, AircraftRen
 		public float roll;
 		public float scale;
 		public float gear;
+		public boolean hidden;
 	}
 
 	public AircraftRenderer(EntityRendererProvider.Context context) {
@@ -59,6 +60,9 @@ public class AircraftRenderer extends EntityRenderer<AircraftEntity, AircraftRen
 		state.roll = entity.roll();
 		state.scale = entity.kind().scale();
 		state.gear = (float) entity.kind().gearHeight();
+		// Truly first person: the pilot doesn't see their own airframe, just the HUD.
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		state.hidden = entity.hasPassenger(mc.player) && mc.options.getCameraType().isFirstPerson();
 		BlockPos pos = BlockPos.containing(entity.getX(), entity.getBoundingBox().maxY, entity.getZ());
 		state.model.randomSeedPos = BlockPos.ZERO;
 		state.model.blockPos = pos;
@@ -72,6 +76,9 @@ public class AircraftRenderer extends EntityRenderer<AircraftEntity, AircraftRen
 
 	@Override
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+		if (state.hidden) {
+			return;
+		}
 		poseStack.pushPose();
 		poseStack.translate(0, PIVOT, 0);
 		poseStack.rotateDegrees(Axis.YP, 180.0F - state.yaw);

@@ -43,7 +43,7 @@ public final class Trigger {
 	/** Send the fire request with the seeker's lock (if locked) or the marked ground point. */
 	public static void fireAircraft(Weapon weapon) {
 		int target = weapon != null && Targeting.locked(weapon) ? Targeting.candidate.getId() : -1;
-		var point = Targeting.aimPoint;
+		var point = Designation.point != null ? Designation.point : Targeting.aimPoint;
 		ClientPlayNetworking.send(new Payloads.AircraftFire(target, point != null, point != null ? point.x : 0, point != null ? point.y : 0,
 				point != null ? point.z : 0));
 	}

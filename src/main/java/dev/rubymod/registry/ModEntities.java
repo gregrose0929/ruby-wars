@@ -45,6 +45,9 @@ public class ModEntities {
 	public static final EntityType<VehicleEntity> TANK = register("tank",
 			EntityType.Builder.<VehicleEntity>of(VehicleEntity::new, MobCategory.MISC).sized(3.0F, 2.0F).clientTrackingRange(10).updateInterval(1));
 
+	public static final EntityType<dev.rubymod.entity.WreckEntity> WRECK = register("wreck",
+			EntityType.Builder.<dev.rubymod.entity.WreckEntity>of(dev.rubymod.entity.WreckEntity::new, MobCategory.MISC).sized(0.5F, 0.5F)
+					.clientTrackingRange(10).noSave());
 	public static final EntityType<dev.rubymod.entity.TargetDummyEntity> TARGET_DUMMY = register("target_dummy",
 			EntityType.Builder.<dev.rubymod.entity.TargetDummyEntity>of(dev.rubymod.entity.TargetDummyEntity::new, MobCategory.MISC).sized(0.5F, 1.975F)
 					.eyeHeight(1.7765F).clientTrackingRange(10));

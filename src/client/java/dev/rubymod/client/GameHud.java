@@ -44,10 +44,24 @@ public class GameHud implements HudElement {
 		drawDamageDirection(g, player, w, h);
 		drawRadar(g, font, w);
 		drawKillFeed(g, font, w);
+		drawHitConfirm(g, font, w, h);
 
 		if (ClientState.hud != null && ClientState.hud.eliminated()) {
 			g.centeredText(font, Component.literal("ELIMINATED - spectating"), w / 2, h - 60, RED);
 		}
+	}
+
+	/** "HIT - Tank 40%" / "DESTROYED - Tank" under the crosshair after a warhead lands. */
+	private void drawHitConfirm(GuiGraphicsExtractor g, Font font, int w, int h) {
+		var hit = ClientState.hitConfirm;
+		if (hit == null || System.currentTimeMillis() - ClientState.hitConfirmAt > 2500) {
+			return;
+		}
+		String text = hit.destroyed() ? "DESTROYED - " + hit.target() : "HIT - " + hit.target() + "  " + hit.percentLeft() + "%";
+		int col = hit.destroyed() ? GOLD : RED;
+		int width = font.width(text) + 10;
+		g.fill(w / 2 - width / 2, h / 2 + 50, w / 2 + width / 2, h / 2 + 63, PANEL);
+		g.centeredText(font, text, w / 2, h / 2 + 53, col);
 	}
 
 	private void drawPhaseBanner(GuiGraphicsExtractor g, Font font, int w) {

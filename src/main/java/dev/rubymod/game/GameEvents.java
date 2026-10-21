@@ -59,6 +59,7 @@ public final class GameEvents {
 				SpawnShield.tick(player);
 			}
 			LagCompensation.record(server);
+			CannonRounds.tick();
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
@@ -96,6 +97,23 @@ public final class GameEvents {
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftCycle.TYPE, (payload, context) -> {
 			if (context.player().getVehicle() instanceof AircraftEntity aircraft) {
 				aircraft.cycleWeapon(context.player());
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftDesignate.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof AircraftEntity aircraft) {
+				var target = payload.entityId() >= 0 ? context.player().level().getEntity(payload.entityId()) : null;
+				var point = payload.hasPoint() ? new net.minecraft.world.phys.Vec3(payload.x(), payload.y(), payload.z()) : null;
+				aircraft.designate(context.player(), target, point);
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftGear.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof AircraftEntity aircraft) {
+				aircraft.toggleGear(context.player());
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftCrash.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof AircraftEntity aircraft) {
+				aircraft.reportCrash(context.player(), Math.min(payload.severity(), 5.0F));
 			}
 		});
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftFlares.TYPE, (payload, context) -> {

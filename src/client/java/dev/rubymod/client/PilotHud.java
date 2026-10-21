@@ -47,6 +47,10 @@ public class PilotHud implements HudElement {
 		AircraftType kind = aircraft.kind();
 		Camera camera = mc.gameRenderer.mainCamera();
 
+		if (Designation.weaponCam) {
+			drawWeaponCam(g, font, mc, w, h);
+			return;
+		}
 		drawPitchLadder(g, font, camera, aircraft, w, h);
 		drawFlightPath(g, camera, aircraft, w, h);
 		drawSpeedTape(g, font, aircraft, w, h);
@@ -54,6 +58,7 @@ public class PilotHud implements HudElement {
 		drawHeading(g, font, aircraft, w);
 		drawStatus(g, font, aircraft, kind, w, h);
 		drawWeapons(g, font, camera, aircraft, w, h);
+		drawDesignation(g, font, camera, aircraft, w, h);
 		drawWarnings(g, font, mc, aircraft, kind, w, h);
 	}
 
@@ -227,10 +232,12 @@ public class PilotHud implements HudElement {
 		g.text(font, kind.name().toUpperCase(), x + 10, y, DIM, false);
 		int hp = Math.round(aircraft.getHealth() / aircraft.getMaxHealth() * 100);
 		g.text(font, "HULL " + hp + "%", x + 10, y + 11, hp < 30 ? RED : hp < 60 ? AMBER : GREEN, false);
+		boolean gear = aircraft.gearDown();
+		g.text(font, gear ? "GEAR DOWN [G]" : "GEAR UP [G]", x + 10, y + 42, gear ? GREEN : AMBER, false);
 		if (aircraft.onGround()) {
 			int kmh = (int) Math.round(aircraft.speed() * 72.0);
 			int vr = (int) Math.round(kind.rotateSpeed() * 72.0);
-			String takeoff = kmh >= vr ? "ROTATE - pull up" : "GEAR DOWN  Vr " + vr;
+			String takeoff = kmh >= vr ? "ROTATE - pull up" : "TAKEOFF ROLL  Vr " + vr;
 			g.text(font, takeoff, x + 10, y + 21, kmh >= vr ? AMBER : DIM, false);
 		}
 	}
@@ -256,11 +263,23 @@ public class PilotHud implements HudElement {
 
 		switch (weapon) {
 			case CANNON -> {
-				// Gun pipper a little ahead along the nose (lead for a target ~150 blocks out).
+				// Gun pipper on the nose, and the lead circle: put the pipper on it and fire.
 				float[] p = projectDirection(camera, aircraft.forward(), w, h);
 				if (p != null) {
 					circle(g, (int) p[0], (int) p[1], 10, GREEN);
 					g.fill((int) p[0], (int) p[1], (int) p[0] + 1, (int) p[1] + 1, GREEN);
+				}
+				if (Designation.leadDirection != null) {
+					float[] lead = projectDirection(camera, Designation.leadDirection, w, h);
+					if (lead != null) {
+						int lx = (int) lead[0];
+						int ly = (int) lead[1];
+						boolean onTarget = p != null && Math.hypot(lx - p[0], ly - p[1]) < 6;
+						circle(g, lx, ly, 5, onTarget ? RED : AMBER);
+						diamond(g, lx, ly, 2, onTarget ? RED : AMBER);
+						int d = (int) Math.round(Designation.leadTarget.distanceTo(aircraft));
+						g.text(font, (onTarget ? "SHOOT " : "LEAD ") + d + "m", lx + 8, ly - 4, onTarget ? RED : AMBER, false);
+					}
 				}
 			}
 			case AAM, AGM -> drawSeeker(g, font, camera, weapon, w, h);
@@ -334,6 +353,57 @@ public class PilotHud implements HudElement {
 			}
 		}
 		g.text(font, "BOMB " + Math.round(impact.distanceTo(aircraft.position())) + "m", x + 10, y - 4, RED, false);
+	}
+
+	// ----- Designation and weapon camera -----
+
+	/** The designated target: a square on it, or an arrow at the screen edge pointing to it. */
+	private void drawDesignation(GuiGraphicsExtractor g, Font font, Camera camera, AircraftEntity aircraft, int w, int h) {
+		Vec3 target = Designation.target();
+		if (target == null) {
+			g.text(font, "T: designate target", 6, h / 2 + 70, DIM, false);
+			return;
+		}
+		int d = (int) Math.round(target.distanceTo(aircraft.position()));
+		String label = (Designation.entity != null ? "TGT " + Designation.entity.getName().getString() : "TGT POINT") + " " + d + "m";
+		float[] p = project(camera, target, w, h);
+		if (p != null && p[0] > 10 && p[0] < w - 10 && p[1] > 10 && p[1] < h - 10) {
+			int x = (int) p[0];
+			int y = (int) p[1];
+			g.outline(x - 7, y - 7, 14, 14, 0xFF40C0FF);
+			g.fill(x, y, x + 1, y + 1, 0xFF40C0FF);
+			g.text(font, label, x + 10, y + 4, 0xFF40C0FF, false);
+			return;
+		}
+		// Off screen: arrow on an ellipse around the center, toward the target.
+		Vec3 rel = target.subtract(camera.position());
+		var l = camera.leftVector();
+		var u = camera.upVector();
+		double sx = -(rel.x * l.x() + rel.y * l.y() + rel.z * l.z());
+		double sy = -(rel.x * u.x() + rel.y * u.y() + rel.z * u.z());
+		double a = Math.atan2(sy, sx);
+		int ax = w / 2 + (int) (Math.cos(a) * (w / 2.0 - 40));
+		int ay = h / 2 + (int) (Math.sin(a) * (h / 2.0 - 30));
+		for (int i = 0; i < 6; i++) {
+			int px = ax - (int) Math.round(Math.cos(a) * i);
+			int py = ay - (int) Math.round(Math.sin(a) * i);
+			g.fill(px - (5 - i) / 2, py - (5 - i) / 2, px + (5 - i) / 2 + 1, py + (5 - i) / 2 + 1, 0xFF40C0FF);
+		}
+		center(g, font, label, Mth.clamp(ax, 60, w - 60), Mth.clamp(ay + 8, 20, h - 30), 0xFF40C0FF);
+	}
+
+	private void drawWeaponCam(GuiGraphicsExtractor g, Font font, Minecraft mc, int w, int h) {
+		center(g, font, "WEAPON CAM  [V] back to cockpit", w / 2, 22, GREEN);
+		var munition = Designation.lastMunition;
+		Vec3 target = Designation.target();
+		if (munition != null && munition.isAlive()) {
+			String speed = Math.round(munition.getDeltaMovement().length() * 72) + " km/h";
+			String range = target != null ? "  " + Math.round(munition.position().distanceTo(target)) + "m to target" : "";
+			center(g, font, speed + range, w / 2, h - 30, GREEN);
+		} else {
+			center(g, font, "IMPACT", w / 2, h - 30, RED);
+		}
+		g.outline(w / 2 - 20, h / 2 - 20, 40, 40, DIM);
 	}
 
 	// ----- Warnings -----

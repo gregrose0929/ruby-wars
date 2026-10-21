@@ -65,6 +65,24 @@ public class AircraftEntity extends Mob {
 	private static final EntityDataAccessor<Integer> MISSILES = SynchedEntityData.defineId(AircraftEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> BOMBS = SynchedEntityData.defineId(AircraftEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Integer> FLARES = SynchedEntityData.defineId(AircraftEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Boolean> GEAR_DOWN = SynchedEntityData.defineId(AircraftEntity.class, EntityDataSerializers.BOOLEAN);
+
+	/** Sink rate (blocks/tick) a landing can take without damage: 6 m/s. */
+	private static final double SAFE_SINK = 0.3;
+	/**
+	 * How the pilot's client reports an impact it felt (severity: 0 = scrape, 1+ = destroyed).
+	 * The flight model runs on the pilot's client, which sees collisions exactly; the client
+	 * mod points this at a packet sender.
+	 */
+	public static java.util.function.DoubleConsumer crashReporter = severity -> { };
+	private int crashCooldown;
+
+	// Designated target (T): every weapon goes for it.
+	private Entity designatedEntity;
+	private Vec3 designatedPoint;
+	/** The last player who damaged us, and when (a crash soon after is their kill). */
+	private ServerPlayer lastAttacker;
+	private long lastAttackedAt;
 
 	private final AircraftType kind;
 
@@ -101,7 +119,7 @@ public class AircraftEntity extends Mob {
 	public static AttributeSupplier.Builder attributes(AircraftType type) {
 		return Mob.createMobAttributes()
 				.add(Attributes.MAX_HEALTH, type.health())
-				.add(Attributes.ARMOR, 8.0)
+				.add(Attributes.CAMERA_DISTANCE, 6.0 + type.scale() * 2.5)
 				.add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
 				.add(Attributes.STEP_HEIGHT, 1.1);
 	}
@@ -116,6 +134,7 @@ public class AircraftEntity extends Mob {
 		builder.define(MISSILES, type.missiles());
 		builder.define(BOMBS, type.bombs());
 		builder.define(FLARES, type.flares());
+		builder.define(GEAR_DOWN, true);
 	}
 
 	// ----- Accessors for the HUD -----
@@ -157,6 +176,69 @@ public class AircraftEntity extends Mob {
 
 	public int flares() {
 		return entityData.get(FLARES);
+	}
+
+	public boolean gearDown() {
+		return entityData.get(GEAR_DOWN);
+	}
+
+	/** G: raise or lower the landing gear (raising only works in the air). */
+	public void toggleGear(ServerPlayer pilot) {
+		if (pilot != getControllingPassenger()) {
+			return;
+		}
+		if (gearDown() && !airborneOnServer()) {
+			pilot.sendOverlayMessage(Component.literal("Can't raise the gear on the ground"));
+			return;
+		}
+		entityData.set(GEAR_DOWN, !gearDown());
+		level().playSound(null, getX(), getY(), getZ(), SoundEvents.PISTON_EXTEND, SoundSource.PLAYERS, 1.0F, gearDown() ? 0.8F : 1.2F);
+	}
+
+	/** Crashing shortly after being shot up counts as the shooter's kill. */
+	private DamageSource crashSource(ServerLevel level) {
+		if (lastAttacker != null && level.getGameTime() - lastAttackedAt < 200 && lastAttacker.isAlive()) {
+			return ModDamage.source(level, ModDamage.ANTI_ARMOR, null, lastAttacker);
+		}
+		return level.damageSources().flyIntoWall();
+	}
+
+	/** T: designate the entity or ground point the pilot is looking at (null both = clear). */
+	public void designate(ServerPlayer pilot, Entity target, Vec3 point) {
+		if (pilot != getControllingPassenger()) {
+			return;
+		}
+		designatedEntity = target != null && target != this && !hasPassenger(target) && target.distanceTo(this) < 1600 ? target : null;
+		designatedPoint = designatedEntity == null ? point : null;
+	}
+
+	/** The designated entity, if it's still a valid target. */
+	private Entity designated() {
+		if (designatedEntity != null && (!designatedEntity.isAlive() || designatedEntity.isRemoved())) {
+			designatedPoint = designatedEntity.position();
+			designatedEntity = null;
+		}
+		return designatedEntity;
+	}
+
+	/** The pilot's client felt an impact (see {@link #crashReporter}). */
+	public void reportCrash(ServerPlayer pilot, float severity) {
+		if (pilot != getControllingPassenger() || !(level() instanceof ServerLevel level) || severity <= 0.02F || crashCooldown > 0) {
+			return;
+		}
+		crashCooldown = 10;
+		if (severity >= 1.0F) {
+			dev.rubymod.RubyMod.LOGGER.info("{} crashed (impact severity {})", kind.name(), String.format("%.2f", severity));
+			pilot.hurtServer(level, crashSource(level), 12.0F);
+			hurtServer(level, crashSource(level), 10000.0F);
+			return;
+		}
+		hurtServer(level, crashSource(level), getMaxHealth() * severity);
+		pilot.hurtServer(level, crashSource(level), 8.0F * severity);
+		level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 0.5, getZ(), 10, 1.0, 0.3, 1.0, 0.05);
+		level.playSound(null, getX(), getY(), getZ(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.5F, 0.6F);
+		pilot.sendOverlayMessage(Component.literal((severity > 0.4F ? "Heavy damage! " : "Hard landing! ") + "Hull "
+				+ Math.round(getHealth() / getMaxHealth() * 100) + "%"));
 	}
 
 	public boolean isAirborne() {
@@ -253,11 +335,12 @@ public class AircraftEntity extends Mob {
 		}
 
 		// Speed: thrust minus drag, gravity along the flight path, rolling resistance and brakes on the ground.
-		double accel = throttle * kind.thrust() - kind.drag() * speed * speed;
+		double drag = kind.drag() * (gearDown() ? 1.0 : 0.85);
+		double accel = throttle * kind.thrust() - drag * speed * speed;
 		if (airborne) {
 			accel -= Math.sin(Math.toRadians(-getXRot())) * 0.035;
 		} else {
-			accel -= 0.002;
+			accel -= gearDown() ? 0.0015 : 0.05; // Rolling resistance, or scraping along on the belly.
 			if (braking) {
 				accel -= 0.03;
 			}
@@ -313,8 +396,32 @@ public class AircraftEntity extends Mob {
 		}
 		setDeltaMovement(velocity);
 		move(MoverType.SELF, velocity);
-		if (horizontalCollision && speed > 0.3) {
+		if (crashCooldown > 0) {
+			crashCooldown--;
+		}
+		// Impacts, felt here on the pilot's client.
+		double severity = 0.0;
+		if (airborne && onGround()) {
+			double sink = -velocity.y;
+			if (sink > SAFE_SINK) {
+				severity = (sink - SAFE_SINK) / 0.35; // ~13 m/s sink destroys the aircraft
+			}
+			if (getXRot() > 8.0F) {
+				severity = Math.max(severity, (getXRot() - 8.0F) / 12.0F * speed); // nose first
+			}
+			if (!gearDown()) {
+				severity = Math.max(severity, Math.max(0.35, speed / kind.rotateSpeed() * 0.6)); // belly landing
+			}
+		}
+		if (horizontalCollision && speed > 0.6) {
+			severity = Math.max(severity, (speed - 0.6) / 0.9);
 			speed *= 0.3;
+		} else if (horizontalCollision && speed > 0.3) {
+			speed *= 0.3;
+		}
+		if (severity > 0.02 && crashCooldown == 0 && level().isClientSide()) {
+			crashCooldown = 10;
+			crashReporter.accept(severity);
 		}
 	}
 
@@ -351,7 +458,13 @@ public class AircraftEntity extends Mob {
 		}
 		switch (weapon) {
 			case CANNON -> fireCannon(pilot);
-			case AAM, AGM -> fireMissile(pilot, weapon, validTarget(target), point);
+			case AAM, AGM -> {
+				Entity aim = validTarget(target);
+				if (aim == null && designated() != null) {
+					aim = designated();
+				}
+				fireMissile(pilot, weapon, aim, aim == null && designatedPoint != null ? designatedPoint : point);
+			}
 			case BOMBS -> dropBomb(pilot);
 		}
 	}
@@ -398,37 +511,22 @@ public class AircraftEntity extends Mob {
 		cannonCooldown = kind.cannonInterval();
 		entityData.set(CANNON_AMMO, ammo(Weapon.CANNON) - 1);
 		ServerLevel level = (ServerLevel) level();
-		Vec3 dir = forward().add((random.nextDouble() - 0.5) * 0.02, (random.nextDouble() - 0.5) * 0.02, (random.nextDouble() - 0.5) * 0.02).normalize();
-		Vec3 start = position().add(0, 0.6, 0).add(dir.scale(kind.scale() * 1.4));
-		Vec3 end = start.add(dir.scale(200));
-		BlockHitResult blockHit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
-		Vec3 stop = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
-		Entity hit = null;
-		double best = Double.MAX_VALUE;
-		for (Entity e : level.getEntities(this, new AABB(start, stop).inflate(1.5), e -> e.isAlive() && e.isPickable() && e != pilot)) {
-			var clip = e.getBoundingBox().inflate(0.3).clip(start, stop);
-			if (clip.isPresent() && start.distanceToSqr(clip.get()) < best) {
-				best = start.distanceToSqr(clip.get());
-				hit = e;
-				stop = clip.get();
-			}
-		}
-		if (hit != null && Rules.canHurt(pilot, hit)) {
-			hit.setInvulnerableTime(0);
-			hit.hurtServer(level, ModDamage.source(level, ModDamage.BULLET, pilot, pilot), kind.cannonDamage());
-		} else if (blockHit.getType() == HitResult.Type.BLOCK) {
-			dev.rubymod.gun.BlockDamage.hit(level, blockHit.getBlockPos(), kind.cannonDamage() * 0.8F, pilot);
-			level.sendParticles(ParticleTypes.SMOKE, stop.x, stop.y, stop.z, 2, 0.1, 0.1, 0.1, 0.02);
-		}
-		Vec3 step = stop.subtract(start).normalize();
-		double length = start.distanceTo(stop);
-		for (double d = 4; d < length; d += 4) {
-			Vec3 p = start.add(step.scale(d));
-			level.sendParticles(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, 1, 0, 0, 0, 0);
-		}
+		Vec3 dir = forward().add((random.nextDouble() - 0.5) * 0.012, (random.nextDouble() - 0.5) * 0.012, (random.nextDouble() - 0.5) * 0.012).normalize();
+		Vec3 start = gunPosition();
+		float antiArmor = kind.cannonDamage() * (kind == AircraftType.ATTACK ? 1.0F : 0.5F);
+		dev.rubymod.game.CannonRounds.fire(level, pilot, this, start, dir.scale(dev.rubymod.game.CannonRounds.SPEED).add(serverVelocity),
+				kind.cannonDamage(), antiArmor);
+		level.sendParticles(ParticleTypes.FLAME, true, false, start.x, start.y, start.z, 3, 0.1, 0.1, 0.1, 0.02);
+		level.playSound(null, start.x, start.y, start.z, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 3.0F, 1.7F + random.nextFloat() * 0.3F);
 		if (tickCount % 2 == 0) {
-			level.playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 2.0F, 2.0F);
+			level.playSound(null, start.x, start.y, start.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 0.7F, 2.0F);
 		}
+		dev.rubymod.net.Net.send(pilot, new dev.rubymod.net.Payloads.Shake(0.35F, 3));
+	}
+
+	/** Where cannon rounds leave the nose. */
+	public Vec3 gunPosition() {
+		return position().add(0, 0.6, 0).add(forward().scale(kind.scale() * 1.4));
 	}
 
 	private void fireMissile(ServerPlayer pilot, Weapon weapon, Entity target, Vec3 point) {
@@ -444,7 +542,8 @@ public class AircraftEntity extends Mob {
 		boolean aam = weapon == Weapon.AAM;
 		Vec3 velocity = forward.scale(Math.max(aam ? 3.0 : 2.4, speedOnServer() + 1.0));
 		Vec3 aimPoint = target == null ? point : null;
-		RocketEntity missile = RocketEntity.missile(level(), pilot, this, from, velocity, aam ? 3.5F : 4.5F, aam ? 7.0 : 4.0, target, aimPoint);
+		RocketEntity missile = RocketEntity.missile(level(), pilot, this, from, velocity, aam ? 3.5F : 4.5F, aam ? 7.0 : 4.0, target, aimPoint)
+				.withAntiArmor(aam ? 110.0F : 75.0F);
 		level().addFreshEntity(missile);
 		level().playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 3.0F, 0.7F);
 	}
@@ -457,6 +556,7 @@ public class AircraftEntity extends Mob {
 		entityData.set(BOMBS, ammo(Weapon.BOMBS) - 1);
 		BombEntity bomb = BombEntity.drop(level(), pilot, position().add(0, -1.2, 0));
 		bomb.setDeltaMovement(serverVelocity.add(0, -0.1, 0));
+		bomb.guide(designated(), designated() == null ? designatedPoint : null);
 		level().addFreshEntity(bomb);
 		level().playSound(null, getX(), getY(), getZ(), SoundEvents.DISPENSER_LAUNCH, SoundSource.PLAYERS, 2.0F, 0.6F);
 	}
@@ -470,12 +570,16 @@ public class AircraftEntity extends Mob {
 	@Override
 	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
 		if (source.is(ModDamage.BULLET) || source.is(ModDamage.HEADSHOT)) {
-			amount *= 0.4F;
+			amount *= 0.3F;
 		} else if (source.is(DamageTypeTags.IS_EXPLOSION)) {
-			amount *= 2.0F;
+			amount *= 0.5F; // Splash; warheads hit through Armor (ANTI_ARMOR) instead.
 		}
 		if (source.getEntity() != null && hasPassenger(source.getEntity())) {
 			return false;
+		}
+		if (source.getEntity() instanceof ServerPlayer attacker) {
+			lastAttacker = attacker;
+			lastAttackedAt = level.getGameTime();
 		}
 		return super.hurtServer(level, source, amount);
 	}
@@ -491,6 +595,7 @@ public class AircraftEntity extends Mob {
 		if (level() instanceof ServerLevel level) {
 			ejectPassengers();
 			Explosions.explode(level, this, getX(), getY() + 0.5, getZ(), 4.0F, false);
+			level.addFreshEntity(WreckEntity.of(level, this));
 			releaseChunk(level);
 			discard();
 		}
@@ -543,11 +648,14 @@ public class AircraftEntity extends Mob {
 		}
 		boolean suddenStop = peak > 0.9 && moving < peak * 0.35 && nearBlocks;
 		boolean slammed = previousVelocity.y < -0.6 && serverVelocity.y > previousVelocity.y * 0.3 && !airborneOnServer();
+		if (crashCooldown > 0) {
+			crashCooldown--;
+		}
 		if (pilot != null && (suddenStop || slammed)) {
 			dev.rubymod.RubyMod.LOGGER.info("{} crashed ({}) at {} km/h", kind.name(), suddenStop ? "hit something" : "hard landing",
 					Math.round(Math.max(peak, previousVelocity.length()) * 72));
-			pilot.hurtServer(level, level.damageSources().flyIntoWall(), 12.0F);
-			hurtServer(level, level.damageSources().flyIntoWall(), 10000.0F);
+			pilot.hurtServer(level, crashSource(level), 12.0F);
+			hurtServer(level, crashSource(level), 10000.0F);
 			return;
 		}
 		if (getHealth() < getMaxHealth() * 0.3F && tickCount % 3 == 0) {
@@ -578,7 +686,7 @@ public class AircraftEntity extends Mob {
 		AircraftEntity drone = new AircraftEntity(ModEntities.FIGHTER_JET, level);
 		drone.snapTo(center.x + radius, center.y, center.z, 180, 0);
 		drone.droneCenter = center;
-		drone.speed = 1.0;
+		drone.speed = 2.0;
 		drone.setCustomName(Component.literal("Target Drone"));
 		return drone;
 	}
@@ -665,7 +773,7 @@ public class AircraftEntity extends Mob {
 		double dx = input.getDoubleOr("drone_x", Double.NaN);
 		if (!Double.isNaN(dx)) {
 			droneCenter = new Vec3(dx, input.getDoubleOr("drone_y", getY()), input.getDoubleOr("drone_z", getZ()));
-			speed = 1.0;
+			speed = 2.0;
 		}
 	}
 

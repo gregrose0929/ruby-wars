@@ -78,6 +78,11 @@ public class BreachingChargeEntity extends ModProjectile {
 	}
 
 	@Override
+	protected float antiArmor(float power) {
+		return 30.0F;
+	}
+
+	@Override
 	protected void onImpact(ServerLevel level, HitResult hitResult) {
 	}
 

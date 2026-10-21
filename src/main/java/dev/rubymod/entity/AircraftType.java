@@ -44,13 +44,13 @@ public record AircraftType(String id, String name, double maxSpeed, double thrus
 	}
 
 	/** Fast and agile. Cannon, heat-seeking air-to-air missiles, lots of flares. */
-	public static final AircraftType FIGHTER = new AircraftType("fighter_jet", "Fighter", 2.2, 0.016, 0.8, 0.6, 6.0F,
-			100.0F, 2.6F, 2.5F, 2, 300, 4, Weapon.AAM, 0, 8, 0.25, 0.9, 1.4);
+	public static final AircraftType FIGHTER = new AircraftType("fighter_jet", "Fighter", 3.5, 0.0125, 2.2, 1.6, 6.0F,
+			100.0F, 2.6F, 4.5F, 1, 450, 4, Weapon.AAM, 0, 8, 0.25, 0.9, 1.4);
 	/** Slow and tough. Heavy cannon, guided ground-attack missiles, a few bombs. */
-	public static final AircraftType ATTACK = new AircraftType("attack_jet", "Attack Jet", 1.75, 0.012, 0.75, 0.5, 4.5F,
-			220.0F, 2.6F, 4.0F, 3, 400, 6, Weapon.AGM, 4, 6, 0.35, 1.3, 1.2);
-	/** Huge bomb load; needs a long runway to get off the ground. */
-	public static final AircraftType BOMBER = new AircraftType("bomber", "Bomber", 1.5, 0.0075, 0.85, 0.65, 2.5F,
+	public static final AircraftType ATTACK = new AircraftType("attack_jet", "Attack Jet", 3.0, 0.0105, 1.9, 1.4, 4.5F,
+			220.0F, 2.6F, 7.0F, 2, 500, 6, Weapon.AGM, 4, 6, 0.35, 1.3, 1.2);
+	/** Huge bomb load; needs a long runway (~400 blocks) to get off the ground. */
+	public static final AircraftType BOMBER = new AircraftType("bomber", "Bomber", 2.6, 0.0082, 1.8, 1.35, 2.5F,
 			320.0F, 3.4F, 0.0F, 0, 0, 0, Weapon.AGM, 16, 10, 0.55, 2.6, 0.8);
 
 	public List<Weapon> weapons() {

@@ -20,6 +20,26 @@ public abstract class MinecraftMixin {
 		}
 	}
 
+	/** In the cockpit the designate key wins over chat when they share a key (both default to T). */
+	@Inject(method = "handleKeybinds", at = @At("HEAD"))
+	private void rubymod$designateNotChat(CallbackInfo ci) {
+		Minecraft mc = (Minecraft) (Object) this;
+		var designate = dev.rubymod.client.RubyModClient.designateKey;
+		if (designate != null && dev.rubymod.client.Targeting.piloting(mc) != null && mc.options.keyChat.same(designate)) {
+			while (mc.options.keyChat.consumeClick()) {
+				dev.rubymod.client.Designation.designate(mc);
+			}
+		}
+	}
+
+	/** In a vehicle right-click is the vehicle's (tank gunner sight), not the held item's. */
+	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
+	private void rubymod$noItemsInVehicles(CallbackInfo ci) {
+		if (dev.rubymod.client.Vehicles.inVehicle((Minecraft) (Object) this)) {
+			ci.cancel();
+		}
+	}
+
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void rubymod$noMiningWithGun(boolean down, CallbackInfo ci) {
 		if (Trigger.capturesAttack((Minecraft) (Object) this)) {

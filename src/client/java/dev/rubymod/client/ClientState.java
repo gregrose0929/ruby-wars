@@ -27,6 +27,9 @@ public final class ClientState {
 	public static int shakeTicks;
 
 	public static long hitMarkerAt;
+	/** Last warhead hit on a vehicle or aircraft (shown under the crosshair). */
+	public static Payloads.HitConfirm hitConfirm;
+	public static long hitConfirmAt;
 	public static long damagedAt;
 	public static double damageX;
 	public static double damageZ;

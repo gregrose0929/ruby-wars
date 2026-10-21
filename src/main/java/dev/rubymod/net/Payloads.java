@@ -76,6 +76,46 @@ public class Payloads {
 		}
 	}
 
+	/** Client -> server: the pilot pressed T: designate this entity (-1 = none) or point (clear = forget the designation). */
+	public record AircraftDesignate(int entityId, boolean hasPoint, double x, double y, double z) implements CustomPacketPayload {
+		public static final Type<AircraftDesignate> TYPE = new Type<>(RubyMod.id("aircraft_designate"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, AircraftDesignate> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, AircraftDesignate::entityId,
+				ByteBufCodecs.BOOL, AircraftDesignate::hasPoint,
+				ByteBufCodecs.DOUBLE, AircraftDesignate::x,
+				ByteBufCodecs.DOUBLE, AircraftDesignate::y,
+				ByteBufCodecs.DOUBLE, AircraftDesignate::z,
+				AircraftDesignate::new);
+
+		@Override
+		public Type<AircraftDesignate> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the pilot pressed G (landing gear). */
+	public record AircraftGear() implements CustomPacketPayload {
+		public static final Type<AircraftGear> TYPE = new Type<>(RubyMod.id("aircraft_gear"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, AircraftGear> CODEC = StreamCodec.unit(new AircraftGear());
+
+		@Override
+		public Type<AircraftGear> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the pilot's aircraft hit something (severity 0..1+, see AircraftEntity). */
+	public record AircraftCrash(float severity) implements CustomPacketPayload {
+		public static final Type<AircraftCrash> TYPE = new Type<>(RubyMod.id("aircraft_crash"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, AircraftCrash> CODEC = StreamCodec.composite(
+				ByteBufCodecs.FLOAT, AircraftCrash::severity, AircraftCrash::new);
+
+		@Override
+		public Type<AircraftCrash> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: the pilot pressed jump (drop flares). */
 	public record AircraftFlares() implements CustomPacketPayload {
 		public static final Type<AircraftFlares> TYPE = new Type<>(RubyMod.id("aircraft_flares"));
@@ -83,6 +123,21 @@ public class Payloads {
 
 		@Override
 		public Type<AircraftFlares> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: your warhead hit a vehicle or aircraft (name, armor left in %, destroyed?). */
+	public record HitConfirm(String target, int percentLeft, boolean destroyed) implements CustomPacketPayload {
+		public static final Type<HitConfirm> TYPE = new Type<>(RubyMod.id("hit_confirm"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, HitConfirm> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, HitConfirm::target,
+				ByteBufCodecs.VAR_INT, HitConfirm::percentLeft,
+				ByteBufCodecs.BOOL, HitConfirm::destroyed,
+				HitConfirm::new);
+
+		@Override
+		public Type<HitConfirm> type() {
 			return TYPE;
 		}
 	}
@@ -236,7 +291,11 @@ public class Payloads {
 		PayloadTypeRegistry.serverboundPlay().register(AircraftFire.TYPE, AircraftFire.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(AircraftCycle.TYPE, AircraftCycle.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(AircraftFlares.TYPE, AircraftFlares.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(AircraftGear.TYPE, AircraftGear.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(AircraftDesignate.TYPE, AircraftDesignate.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(AircraftCrash.TYPE, AircraftCrash.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Shake.TYPE, Shake.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(HitConfirm.TYPE, HitConfirm.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Recoil.TYPE, Recoil.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ReloadState.TYPE, ReloadState.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HitMarker.TYPE, HitMarker.CODEC);

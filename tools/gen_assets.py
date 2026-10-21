@@ -180,6 +180,10 @@ LANG = {
     "itemGroup.rubymod.ruby_wars": "Ruby Wars",
     "key.category.rubymod.ruby_wars": "Ruby Wars",
     "key.rubymod.reload": "Reload Gun / Next Aircraft Weapon",
+    "key.rubymod.free_look": "Free Look (in vehicles)",
+    "key.rubymod.landing_gear": "Landing Gear",
+    "key.rubymod.designate": "Designate Target (aircraft)",
+    "key.rubymod.weapon_cam": "Weapon Camera (aircraft)",
     "item.rubymod.ruby": "Ruby",
     "item.rubymod.light_ammo": "Light Ammo",
     "item.rubymod.heavy_ammo": "Heavy Ammo",
@@ -256,6 +260,9 @@ LANG = {
     "entity.rubymod.bomb": "Bomb",
     "entity.rubymod.air_strike_flare": "Air Strike Flare",
     "entity.rubymod.breaching_charge": "Breaching Charge",
+    "death.attack.rubymod.anti_armor": "%1$s was blown apart",
+    "death.attack.rubymod.anti_armor.player": "%1$s was blown apart by %2$s",
+    "death.attack.rubymod.anti_armor.item": "%1$s was blown apart by %2$s using %3$s",
     "death.attack.rubymod.bullet": "%1$s was shot",
     "death.attack.rubymod.bullet.player": "%1$s was shot by %2$s",
     "death.attack.rubymod.bullet.item": "%1$s was shot by %2$s using %3$s",
@@ -373,7 +380,7 @@ def gen_worldgen():
 
 
 def gen_damage_types():
-    for name in ["bullet", "headshot", "turret"]:
+    for name in ["bullet", "headshot", "turret", "anti_armor"]:
         write(f"{DATA}/{NS}/damage_type/{name}.json", {"exhaustion": 0.1, "message_id": f"{NS}.{name}", "scaling": "never"})
     write(f"{DATA}/minecraft/tags/damage_type/is_projectile.json", {"values": [f"{NS}:bullet", f"{NS}:headshot", f"{NS}:turret"]})
 

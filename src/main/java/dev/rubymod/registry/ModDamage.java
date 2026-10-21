@@ -13,6 +13,8 @@ import net.minecraft.world.level.Level;
 public class ModDamage {
 	public static final ResourceKey<DamageType> BULLET = ResourceKey.create(Registries.DAMAGE_TYPE, RubyMod.id("bullet"));
 	public static final ResourceKey<DamageType> HEADSHOT = ResourceKey.create(Registries.DAMAGE_TYPE, RubyMod.id("headshot"));
+	/** Warheads against vehicles and aircraft (see game.Armor). */
+	public static final ResourceKey<DamageType> ANTI_ARMOR = ResourceKey.create(Registries.DAMAGE_TYPE, RubyMod.id("anti_armor"));
 	public static final ResourceKey<DamageType> TURRET = ResourceKey.create(Registries.DAMAGE_TYPE, RubyMod.id("turret"));
 
 	public static DamageSource source(Level level, ResourceKey<DamageType> type, Entity direct, Entity causing) {

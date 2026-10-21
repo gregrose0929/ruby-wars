@@ -15,6 +15,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -26,9 +27,17 @@ public class RubyModClient implements ClientModInitializer {
 	public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(RubyMod.id("ruby_wars"));
 	public static KeyMapping reloadKey;
 
+	/** T in the cockpit: designate a target (shares its default key with chat; see MinecraftMixin). */
+	public static KeyMapping designateKey;
+
 	@Override
 	public void onInitializeClient() {
 		reloadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.reload", InputConstants.KEY_R, CATEGORY));
+		designateKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.designate", InputConstants.KEY_T, CATEGORY));
+		KeyMapping weaponCamKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.weapon_cam", InputConstants.KEY_V, CATEGORY));
+		KeyMapping gearKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.landing_gear", InputConstants.KEY_G, CATEGORY));
+		dev.rubymod.entity.AircraftEntity.crashReporter = severity -> ClientPlayNetworking.send(new Payloads.AircraftCrash((float) severity));
+		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (reloadKey.consumeClick()) {
@@ -36,6 +45,22 @@ public class RubyModClient implements ClientModInitializer {
 					ClientPlayNetworking.send(new Payloads.AircraftCycle());
 				} else if (client.player != null) {
 					ClientPlayNetworking.send(new Payloads.Reload());
+				}
+			}
+			Vehicles.tick(client, freeLookKey.isDown());
+			if (Targeting.piloting(client) != null) {
+				// In the cockpit T designates (instead of opening chat; Enter still opens chat).
+				while (designateKey.consumeClick()) {
+					Designation.designate(client);
+				}
+				while (weaponCamKey.consumeClick()) {
+					Designation.toggleCam(client);
+				}
+			}
+			Designation.tick(client);
+			while (gearKey.consumeClick()) {
+				if (Targeting.piloting(client) != null) {
+					ClientPlayNetworking.send(new Payloads.AircraftGear());
 				}
 			}
 			Targeting.tick(client);
@@ -87,6 +112,10 @@ public class RubyModClient implements ClientModInitializer {
 			ClientState.damageX = payload.x();
 			ClientState.damageZ = payload.z();
 		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.HitConfirm.TYPE, (payload, context) -> {
+			ClientState.hitConfirm = payload;
+			ClientState.hitConfirmAt = System.currentTimeMillis();
+		});
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Shake.TYPE, (payload, context) -> {
 			ClientState.shake = Math.max(ClientState.shake, payload.strength());
 			ClientState.shakeTicks = Math.max(ClientState.shakeTicks, payload.ticks());
@@ -95,10 +124,21 @@ public class RubyModClient implements ClientModInitializer {
 
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
 		HudElementRegistry.addLast(RubyMod.id("pilot_hud"), new PilotHud());
+		HudElementRegistry.addLast(RubyMod.id("vehicle_hud"), new VehicleHud());
+		// In a vehicle the vehicle HUD replaces the hotbar, hearts, hunger, armor, air and XP.
+		for (var element : java.util.List.of(VanillaHudElements.HOTBAR, VanillaHudElements.HEALTH_BAR, VanillaHudElements.FOOD_BAR,
+				VanillaHudElements.ARMOR_BAR, VanillaHudElements.AIR_BAR, VanillaHudElements.EXPERIENCE_LEVEL, VanillaHudElements.INFO_BAR,
+				VanillaHudElements.HELD_ITEM_TOOLTIP)) {
+			HudElementRegistry.replaceElement(element, vanilla -> (g, delta) -> {
+				if (!Vehicles.inVehicle(Minecraft.getInstance())) {
+					vanilla.extractRenderState(g, delta);
+				}
+			});
+		}
 		// The pilot HUD shows hull %, so hide the rows of vanilla mount hearts while flying.
-		HudElementRegistry.replaceElement(net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.MOUNT_HEALTH,
+		HudElementRegistry.replaceElement(VanillaHudElements.MOUNT_HEALTH,
 				vanilla -> (g, delta) -> {
-					if (Targeting.piloting(Minecraft.getInstance()) == null) {
+					if (!Vehicles.inVehicle(Minecraft.getInstance())) {
 						vanilla.extractRenderState(g, delta);
 					}
 				});
@@ -113,6 +153,7 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.FIGHTER_JET, AircraftRenderer::new);
 		EntityRendererRegistry.register(ModEntities.ATTACK_JET, AircraftRenderer::new);
 		EntityRendererRegistry.register(ModEntities.BOMBER, AircraftRenderer::new);
+		EntityRendererRegistry.register(ModEntities.WRECK, net.minecraft.client.renderer.entity.NoopRenderer::new);
 		EntityRendererRegistry.register(ModEntities.TARGET_DUMMY, net.minecraft.client.renderer.entity.ArmorStandRenderer::new);
 		EntityRendererRegistry.register(ModEntities.ROCKET,
 				context -> new ProjectileModelRenderer<>(context, r -> r.isShell() ? ModBlocks.TANK_SHELL_MODEL : ModBlocks.ROCKET_MODEL, 1.6F));

@@ -36,12 +36,49 @@ public class BombEntity extends ModProjectile {
 		return 0.08;
 	}
 
+	// Guided bomb (JDAM-style): steers its fall toward a designated target or point.
+	private Entity guideEntity;
+	private Vec3 guidePoint;
+
+	public void guide(Entity target, Vec3 point) {
+		this.guideEntity = target;
+		this.guidePoint = point;
+	}
+
 	@Override
 	public void tick() {
+		if (level() instanceof ServerLevel && (guideEntity != null || guidePoint != null)) {
+			steer();
+		}
 		super.tick();
 		if (level() instanceof ServerLevel && tickCount > 400) {
 			discard();
 		}
+	}
+
+	/** Fins: trim the horizontal velocity so the fall ends on the target (limited authority, like a glide kit). */
+	private void steer() {
+		Vec3 target = guideEntity != null && guideEntity.isAlive() ? guideEntity.position() : guidePoint;
+		if (target == null) {
+			return;
+		}
+		Vec3 v = getDeltaMovement();
+		double drop = getY() - target.y;
+		if (drop <= 0.5) {
+			return;
+		}
+		// Time to fall the remaining height (gravity 0.08, current sink rate).
+		double sink = Math.max(0.0, -v.y);
+		double t = (-sink + Math.sqrt(sink * sink + 2 * 0.08 * drop)) / 0.08;
+		t = Math.max(t, 1.0);
+		Vec3 need = new Vec3((target.x - getX()) / t, 0, (target.z - getZ()) / t);
+		Vec3 have = new Vec3(v.x, 0, v.z);
+		Vec3 correction = need.subtract(have);
+		double max = 0.05;
+		if (correction.length() > max) {
+			correction = correction.normalize().scale(max);
+		}
+		setDeltaMovement(v.add(correction));
 	}
 
 	/** Bombs fall in a stick: don't detonate on each other or on the plane that dropped them. */
@@ -53,5 +90,10 @@ public class BombEntity extends ModProjectile {
 	@Override
 	protected void onImpact(ServerLevel level, HitResult hitResult) {
 		explode(level, 5.0F, true);
+	}
+
+	@Override
+	protected float antiArmor(float power) {
+		return 90.0F;
 	}
 }

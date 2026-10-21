@@ -195,4 +195,9 @@ public class CruiseMissileEntity extends ModProjectile implements Interceptable 
 		targetZ = input.getDoubleOr("target_z", getZ());
 		cruiseY = input.getDoubleOr("cruise_y", getY());
 	}
+
+	@Override
+	protected float antiArmor(float power) {
+		return 250.0F;
+	}
 }

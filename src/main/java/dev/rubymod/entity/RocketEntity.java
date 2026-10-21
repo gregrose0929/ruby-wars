@@ -31,8 +31,6 @@ import net.minecraft.world.phys.Vec3;
 public class RocketEntity extends ModProjectile {
 	private static final double LAUNCHER_SPEED = 1.6;
 	private static final int LIFETIME = 160;
-	/** Direct fragment damage of a guided missile per point of blast power (one air-to-air missile downs a fighter). */
-	private static final float WARHEAD = 20.0F;
 	private static final EntityDataAccessor<Boolean> SHELL = SynchedEntityData.defineId(RocketEntity.class, EntityDataSerializers.BOOLEAN);
 	/** Entity id of what this missile is homing on (-1 = none); lets the target's HUD warn them. */
 	private static final EntityDataAccessor<Integer> TARGET = SynchedEntityData.defineId(RocketEntity.class, EntityDataSerializers.INT);
@@ -44,6 +42,7 @@ public class RocketEntity extends ModProjectile {
 	private Vec3 homingPoint;
 	private double turnRate;
 	private Entity launchedFrom;
+	private float antiArmor = 48.0F;
 
 	public RocketEntity(EntityType<? extends RocketEntity> type, Level level) {
 		super(type, level);
@@ -90,7 +89,19 @@ public class RocketEntity extends ModProjectile {
 	public static RocketEntity tankShell(Level level, LivingEntity shooter, Vec3 from, Vec3 velocity, float power) {
 		RocketEntity shell = shell(level, shooter, from, velocity, power);
 		shell.entityData.set(SHELL, true);
+		shell.antiArmor = 56.0F;
 		return shell;
+	}
+
+	/** Set how much this round hurts vehicles and aircraft (see {@link dev.rubymod.game.Armor}). */
+	public RocketEntity withAntiArmor(float damage) {
+		this.antiArmor = damage;
+		return this;
+	}
+
+	@Override
+	protected float antiArmor(float power) {
+		return antiArmor;
 	}
 
 	/** A homing missile fired from {@code launcher} (an aircraft) at an entity or a point. */
@@ -185,8 +196,8 @@ public class RocketEntity extends ModProjectile {
 			double eta = position().distanceTo(homingEntity.position()) / Math.max(speed, 0.5);
 			aim = homingEntity.getBoundingBox().getCenter().add(homingEntity.getDeltaMovement().scale(Math.min(eta, 20) * 0.6));
 			if (position().distanceTo(homingEntity.getBoundingBox().getCenter()) < 2.5) {
-				// Proximity fuse: the warhead's fragments hit the target directly, then the blast.
-				homingEntity.hurtServer(level, level.damageSources().explosion(this, getOwner()), power * WARHEAD);
+				// Proximity fuse.
+				setPos(homingEntity.getBoundingBox().getCenter().lerp(position(), 0.5));
 				explode(level, power, true);
 				return;
 			}
@@ -203,10 +214,6 @@ public class RocketEntity extends ModProjectile {
 
 	@Override
 	protected void onImpact(ServerLevel level, HitResult hitResult) {
-		if (turnRate > 0 && hitResult instanceof net.minecraft.world.phys.EntityHitResult entityHit) {
-			// A guided missile striking its target: the warhead's fragments hit it directly, then the blast.
-			entityHit.getEntity().hurtServer(level, level.damageSources().explosion(this, getOwner()), power * WARHEAD);
-		}
 		explode(level, power, true);
 	}
 }

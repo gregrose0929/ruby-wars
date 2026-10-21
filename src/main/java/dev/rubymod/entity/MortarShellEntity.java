@@ -85,6 +85,11 @@ public class MortarShellEntity extends ModProjectile implements Interceptable {
 	}
 
 	@Override
+	protected float antiArmor(float power) {
+		return 40.0F;
+	}
+
+	@Override
 	public boolean threatens(SeasonData.Claim claim) {
 		if (getOwner() != null && claim.canUse(getOwner().getUUID())) {
 			return false;

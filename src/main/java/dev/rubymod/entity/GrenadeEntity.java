@@ -81,6 +81,11 @@ public class GrenadeEntity extends ModProjectile {
 	}
 
 	@Override
+	protected float antiArmor(float power) {
+		return 12.0F;
+	}
+
+	@Override
 	protected void onImpact(ServerLevel level, HitResult hitResult) {
 		// Handled in onHitBlock / onHitEntity: grenades bounce instead of exploding on contact.
 	}

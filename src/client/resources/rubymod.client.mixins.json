@@ -6,7 +6,10 @@
 		"AbstractClientPlayerMixin",
 		"AvatarRendererMixin",
 		"HudMixin",
-		"MinecraftMixin"
+		"MinecraftMixin",
+		"CameraMixin",
+		"EntityTurnMixin",
+		"GameRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

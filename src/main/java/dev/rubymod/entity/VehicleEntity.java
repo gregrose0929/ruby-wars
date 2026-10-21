@@ -45,6 +45,9 @@ public class VehicleEntity extends Mob {
 	/** Turret traverse speed, degrees per tick. */
 	private static final float TRAVERSE = 4.0F;
 	private int cannonCooldown;
+	/** Ticks the main gun takes to reload. */
+	public static final int RELOAD_TICKS = 60;
+	private static final EntityDataAccessor<Integer> RELOAD = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.INT);
 
 	public VehicleEntity(EntityType<? extends VehicleEntity> type, Level level) {
 		super(type, level);
@@ -61,11 +64,17 @@ public class VehicleEntity extends Mob {
 		super.defineSynchedData(builder);
 		builder.define(TURRET_YAW, 0.0F);
 		builder.define(BARREL_PITCH, 0.0F);
+		builder.define(RELOAD, 0);
 	}
 
 	/** Where the turret points (world yaw, degrees). */
 	public float turretYaw() {
 		return entityData.get(TURRET_YAW);
+	}
+
+	/** Ticks until the main gun can fire again (synced for the tank HUD). */
+	public int reloadLeft() {
+		return entityData.get(RELOAD);
 	}
 
 	/** Barrel elevation (negative = up, like player pitch). */
@@ -79,21 +88,19 @@ public class VehicleEntity extends Mob {
 
 	public static AttributeSupplier.Builder jeepAttributes() {
 		return Mob.createMobAttributes()
-				.add(Attributes.MAX_HEALTH, 80.0)
+				.add(Attributes.MAX_HEALTH, 60.0)
 				.add(Attributes.MOVEMENT_SPEED, 0.32)
 				.add(Attributes.STEP_HEIGHT, 1.1)
-				.add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
-				.add(Attributes.ARMOR, 6.0);
+				.add(Attributes.KNOCKBACK_RESISTANCE, 1.0);
 	}
 
 	public static AttributeSupplier.Builder tankAttributes() {
 		return Mob.createMobAttributes()
-				.add(Attributes.MAX_HEALTH, 300.0)
+				.add(Attributes.MAX_HEALTH, 160.0)
 				.add(Attributes.MOVEMENT_SPEED, 0.16)
 				.add(Attributes.STEP_HEIGHT, 1.1)
 				.add(Attributes.KNOCKBACK_RESISTANCE, 1.0)
-				.add(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE, 1.0)
-				.add(Attributes.ARMOR, 20.0);
+				.add(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE, 1.0);
 	}
 
 	private int seats() {
@@ -180,10 +187,15 @@ public class VehicleEntity extends Mob {
 
 	@Override
 	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
-		if (source.is(ModDamage.BULLET) || source.is(ModDamage.HEADSHOT) || source.is(ModDamage.TURRET)) {
-			amount *= isTank() ? 0.05F : 0.25F;
+		if (source.is(ModDamage.ANTI_ARMOR)) {
+			// Full damage: rockets, shells, missiles, mines (see Armor).
+		} else if (source.is(ModDamage.BULLET) || source.is(ModDamage.HEADSHOT) || source.is(ModDamage.TURRET)) {
+			amount *= isTank() ? 0.0F : 0.25F;
 		} else if (source.is(DamageTypeTags.IS_EXPLOSION)) {
-			amount *= 2.0F;
+			amount *= isTank() ? 0.25F : 0.5F; // Splash; warheads hit through Armor instead.
+		}
+		if (amount <= 0) {
+			return false;
 		}
 		if (source.getEntity() != null && hasPassenger(source.getEntity())) {
 			return false; // Don't shoot your own ride.
@@ -202,6 +214,7 @@ public class VehicleEntity extends Mob {
 			ejectPassengers();
 			Explosions.explode(level, this, getX(), getY() + 1, getZ(), isTank() ? 4.0F : 3.0F, false);
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 1, getZ(), 30, 1.0, 1.0, 1.0, 0.05);
+			level.addFreshEntity(WreckEntity.of(level, this));
 			discard();
 		}
 	}
@@ -211,7 +224,8 @@ public class VehicleEntity extends Mob {
 		if (!isTank() || cannonCooldown > 0 || getControllingPassenger() != driver) {
 			return;
 		}
-		cannonCooldown = 60;
+		cannonCooldown = RELOAD_TICKS;
+		entityData.set(RELOAD, RELOAD_TICKS);
 		Vec3 aim = Vec3.directionFromRotation(barrelPitch(), turretYaw());
 		Vec3 muzzle = muzzlePosition();
 		RocketEntity shell = RocketEntity.tankShell(level(), driver, muzzle, aim.scale(2.6), 4.0F);
@@ -250,6 +264,9 @@ public class VehicleEntity extends Mob {
 		super.tick();
 		if (cannonCooldown > 0) {
 			cannonCooldown--;
+			if (!level().isClientSide()) {
+				entityData.set(RELOAD, cannonCooldown);
+			}
 		}
 		if (isTank() && !level().isClientSide()) {
 			if (tickCount == 1 && turretYaw() == 0.0F) {
@@ -257,8 +274,15 @@ public class VehicleEntity extends Mob {
 			}
 			aimTurret();
 		}
-		if (level() instanceof ServerLevel level && getHealth() < getMaxHealth() * 0.3F && tickCount % 4 == 0) {
-			level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + getBbHeight(), getZ(), 1, 0.3, 0.1, 0.3, 0.01);
+		if (level() instanceof ServerLevel level) {
+			// Damage you can see: smoke below half armor, fire below a quarter.
+			float health = getHealth() / getMaxHealth();
+			if (health < 0.5F && tickCount % 3 == 0) {
+				level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + getBbHeight(), getZ(), 1, 0.3, 0.1, 0.3, 0.02);
+			}
+			if (health < 0.25F && tickCount % 2 == 0) {
+				level.sendParticles(ParticleTypes.FLAME, getX(), getY() + getBbHeight() * 0.8, getZ(), 2, 0.5, 0.2, 0.5, 0.01);
+			}
 		}
 	}
 
