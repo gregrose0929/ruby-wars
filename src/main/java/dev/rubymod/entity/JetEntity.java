@@ -61,6 +61,14 @@ public class JetEntity extends Mob {
 	private Vec3 autopilotTarget;
 	private int bombsLeft;
 	private Entity strikeOwner;
+	private long forcedChunk = Long.MIN_VALUE;
+
+	private void releaseChunk(ServerLevel level) {
+		if (forcedChunk != Long.MIN_VALUE) {
+			level.setChunkForced((int) (forcedChunk >> 32), (int) forcedChunk, false);
+			forcedChunk = Long.MIN_VALUE;
+		}
+	}
 
 	public JetEntity(EntityType<? extends JetEntity> type, Level level) {
 		super(type, level);
@@ -330,7 +338,7 @@ public class JetEntity extends Mob {
 	public static JetEntity airStrike(ServerLevel level, Entity owner, Vec3 target, float yaw) {
 		JetEntity jet = new JetEntity(ModEntities.JET, level);
 		Vec3 direction = Vec3.directionFromRotation(0, yaw);
-		Vec3 start = target.add(direction.scale(-90)).add(0, 35, 0);
+		Vec3 start = target.add(direction.scale(-48)).add(0, 30, 0);
 		jet.snapTo(start.x, start.y, start.z, yaw, 0);
 		jet.autopilotTarget = target;
 		jet.bombsLeft = 10;
@@ -351,16 +359,27 @@ public class JetEntity extends Mob {
 		double dz = autopilotTarget.z - getZ();
 		double along = dx * velocity.x + dz * velocity.z; // > 0 while approaching
 		double distance = Math.sqrt(dx * dx + dz * dz);
-		if (bombsLeft > 0 && distance < 14 && tickCount % 2 == 0) {
+		// Release the stick of bombs straight down while crossing the target.
+		if (bombsLeft > 0 && distance < 9 && tickCount % 2 == 0) {
 			bombsLeft--;
 			BombEntity bomb = BombEntity.drop(level, strikeOwner != null ? strikeOwner : this, position().add(0, -1.5, 0));
-			bomb.setDeltaMovement(velocity.scale(0.5).add(0, -0.6, 0));
+			bomb.setDeltaMovement(0, -0.8, 0);
 			level.addFreshEntity(bomb);
 		}
 		if (tickCount % 10 == 0) {
 			level.playSound(null, getX(), getY(), getZ(), SoundEvents.ELYTRA_FLYING, SoundSource.HOSTILE, 6.0F, 1.2F);
 		}
-		if (along < 0 && distance > 120 || tickCount > 400) {
+		// Keep our chunk loaded so the flyover never freezes outside players' simulation distance.
+		int cx = (int) Math.floor(getX()) >> 4;
+		int cz = (int) Math.floor(getZ()) >> 4;
+		long key = ((long) cx << 32) | (cz & 0xFFFFFFFFL);
+		if (key != forcedChunk) {
+			releaseChunk(level);
+			level.setChunkForced(cx, cz, true);
+			forcedChunk = key;
+		}
+		if (along < 0 && distance > 70 || tickCount > 300) {
+			releaseChunk(level);
 			discard();
 		}
 	}

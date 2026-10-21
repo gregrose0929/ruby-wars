@@ -103,6 +103,7 @@ public final class AutoTest {
 		switch (mode) {
 			case "guns" -> gunsScript();
 			case "vehicles" -> vehiclesScript();
+			case "strikes" -> strikesScript();
 			default -> {
 				gunsScript();
 				tourScript();
@@ -265,6 +266,77 @@ public final class AutoTest {
 		then(40, mc -> shot(mc, "airstrike-flyover"));
 		then(25, mc -> shot(mc, "airstrike-impact"));
 		then(2, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+	}
+
+	private static net.minecraft.core.BlockPos house;
+
+	private static void strikesScript() {
+		// A hollow cobblestone house 26 blocks south of the player, watched from the north.
+		then(5, mc -> {
+			command(mc, "rubywars phase war");
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				var level = player.level();
+				house = player.blockPosition().offset(-4, 0, 22);
+				for (var pos : net.minecraft.core.BlockPos.betweenClosed(house, house.offset(8, 6, 8))) {
+					boolean shell = pos.getX() == house.getX() || pos.getX() == house.getX() + 8 || pos.getZ() == house.getZ()
+							|| pos.getZ() == house.getZ() + 8 || pos.getY() == house.getY() + 6;
+					level.setBlockAndUpdate(pos, shell ? net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState()
+							: net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+				}
+				log("house built at {}", house);
+			});
+			command(mc, "execute as @p at @s run tp @s ~ ~6 ~-6 0 12");
+		});
+		then(20, mc -> {
+			shot(mc, "strike-before");
+			countHouse(mc, "before strikes");
+		});
+		then(2, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				var level = (net.minecraft.server.level.ServerLevel) player.level();
+				Vec3 target = Vec3.atCenterOf(house.offset(4, 0, 4));
+				level.addFreshEntity(dev.rubymod.entity.JetEntity.airStrike(level, player, target, 90.0F));
+			});
+		});
+		for (int t = 30; t <= 90; t += 15) {
+			int at = t;
+			then(15, mc -> shot(mc, "strike-air-" + at));
+		}
+		then(40, mc -> countHouse(mc, "after air strike"));
+		then(5, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				var level = (net.minecraft.server.level.ServerLevel) player.level();
+				var mortarPos = house.offset(12, 0, -48);
+				level.setBlockAndUpdate(mortarPos, dev.rubymod.registry.ModBlocks.MORTAR.defaultBlockState());
+				dev.rubymod.item.RangefinderItem.mark(player, house.offset(4, 0, 4));
+				dev.rubymod.game.HeavyWeapons.fireMortar(level, player, mortarPos, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.MORTAR_SHELL, 5));
+			});
+		});
+		for (int t = 20; t <= 100; t += 20) {
+			int at = t;
+			then(20, mc -> shot(mc, "strike-mortar-" + at));
+		}
+		then(20, mc -> countHouse(mc, "after mortar"));
+	}
+
+	private static void countHouse(Minecraft mc, String label) {
+		IntegratedServer server = mc.getSingleplayerServer();
+		server.execute(() -> {
+			var level = server.getPlayerList().getPlayers().get(0).level();
+			int count = 0;
+			for (var pos : net.minecraft.core.BlockPos.betweenClosed(house, house.offset(8, 6, 8))) {
+				if (!level.getBlockState(pos).isAir()) {
+					count++;
+				}
+			}
+			log("house blocks {}: {}", label, count);
+		});
 	}
 
 	// ----- Runner -----

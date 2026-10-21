@@ -29,6 +29,11 @@ public class RangefinderItem extends Item {
 		super(properties);
 	}
 
+	/** Mark a target directly (used by tests). */
+	public static void mark(Player player, BlockPos pos) {
+		TARGETS.put(player.getUUID(), pos.immutable());
+	}
+
 	public static BlockPos target(Player player) {
 		return TARGETS.get(player.getUUID());
 	}

@@ -31,6 +31,7 @@ public final class Explosions {
 	private static final float REINFORCED_MIN_RADIUS = 2.5F;
 
 	private static final Map<String, Map<Long, Integer>> HITS = new HashMap<>();
+	private static final boolean DEBUG = System.getenv("RUBYMOD_AUTOTEST") != null;
 
 	private Explosions() {
 	}
@@ -72,6 +73,10 @@ public final class Explosions {
 				continue;
 			}
 			result.add(pos);
+		}
+		if (DEBUG && radius >= 3.0F && !positions.isEmpty()) {
+			dev.rubymod.RubyMod.LOGGER.info("[explosion] radius {} at {} kept {} of {} blocks (phase {})", radius,
+					positions.get(0), result.size(), positions.size(), Rules.phase());
 		}
 		return result;
 	}

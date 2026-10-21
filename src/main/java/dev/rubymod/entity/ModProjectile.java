@@ -34,6 +34,12 @@ public abstract class ModProjectile extends ThrowableItemProjectile {
 		return drag();
 	}
 
+	/** Shells and bombs in flight aren't knocked off course by other blasts. */
+	@Override
+	public boolean ignoreExplosion(net.minecraft.world.level.Explosion explosion) {
+		return true;
+	}
+
 	@Override
 	protected void onHit(HitResult hitResult) {
 		super.onHit(hitResult);

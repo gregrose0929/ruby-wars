@@ -44,6 +44,12 @@ public class BombEntity extends ModProjectile {
 		}
 	}
 
+	/** Bombs fall in a stick: don't detonate on each other or on the plane that dropped them. */
+	@Override
+	protected boolean canHitEntity(Entity entity) {
+		return !(entity instanceof BombEntity) && !(entity instanceof JetEntity) && super.canHitEntity(entity);
+	}
+
 	@Override
 	protected void onImpact(ServerLevel level, HitResult hitResult) {
 		explode(level, 5.0F, true);
