@@ -180,6 +180,23 @@ def dry_fire(seed):
     return normalize(metal_click(seed, [2800, 4400], 0.006, 0.06), 0.7)
 
 
+def explosion(seed):
+    rng = np.random.default_rng(seed)
+    blast = gunshot(seed, crack=1.2, body_cut=1400, body_decay=0.22, thump_hz=48, thump_decay=0.25, length=1.6, mech=0.0, echo=False,
+                    thump_gain=0.6)
+    rumble = lowpass3(noise(3.0, rng), 260) * env(int(SR * 3.0), 0.05, 0.9)
+    rumble = rumble / np.max(np.abs(rumble))
+    debris = bandpass(noise(1.2, rng), 1500, 6000) * env(int(SR * 1.2), 0.1, 0.35) * 0.15
+    return normalize(tail(mix(3.0, (0, blast), (0.0, rumble * 0.7), (0.25, debris)), ((0.3, 0.4), (0.7, 0.25), (1.2, 0.15))))
+
+
+def explosion_far(seed):
+    rng = np.random.default_rng(seed)
+    boom = lowpass3(noise(2.5, rng), 180) * env(int(SR * 2.5), 0.03, 0.7)
+    thud = np.sin(2 * np.pi * 50 * t(1.0)) * np.exp(-t(1.0) / 0.25)
+    return normalize(mix(2.5, (0, boom), (0, thud * 0.5)), 0.9)
+
+
 # ----- Engine loops (2 s, seamless: every tone has a whole number of cycles, noise is filtered periodically) -----
 
 LOOP = 2.0
@@ -259,13 +276,15 @@ SOUNDS = {
     "shell_in": shell_in,
     "casing": casing,
     "dry_fire": dry_fire,
+    "explosion": explosion,
+    "explosion_far": explosion_far,
     "jet_engine": jet_engine,
     "heli_rotor": heli_rotor,
     "tank_engine": tank_engine,
     "jeep_engine": jeep_engine,
 }
 ENGINE_RANGE = {"jet_engine": 96, "heli_rotor": 80, "tank_engine": 48, "jeep_engine": 32}
-VARIANTS = {"rifle_shot": 3, "pistol_shot": 3, "shotgun_shot": 2, "sniper_shot": 2, "blaster_shot": 3, "casing": 4}
+VARIANTS = {"explosion": 3, "explosion_far": 2, "rifle_shot": 3, "pistol_shot": 3, "shotgun_shot": 2, "sniper_shot": 2, "blaster_shot": 3, "casing": 4}
 
 
 def main():
@@ -281,7 +300,7 @@ def main():
         if name in ENGINE_RANGE:
             index[name] = {"sounds": [{"name": f, "attenuation_distance": ENGINE_RANGE[name], "stream": False} for f in files]}
             continue
-        index[name] = {"sounds": [{"name": f, "attenuation_distance": 96} if "shot" in name or name in ("rocket_launch", "tank_cannon")
+        index[name] = {"sounds": [{"name": f, "attenuation_distance": 96} if "shot" in name or name in ("rocket_launch", "tank_cannon", "explosion")
                                   else f for f in files]}
     with open(os.path.join(OUT, "..", "sounds.json"), "w") as fh:
         json.dump(index, fh, indent="\t")

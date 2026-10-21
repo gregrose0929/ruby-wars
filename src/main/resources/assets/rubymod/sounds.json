@@ -128,6 +128,28 @@
 			"rubymod:dry_fire"
 		]
 	},
+	"explosion": {
+		"sounds": [
+			{
+				"name": "rubymod:explosion_0",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:explosion_1",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:explosion_2",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"explosion_far": {
+		"sounds": [
+			"rubymod:explosion_far_0",
+			"rubymod:explosion_far_1"
+		]
+	},
 	"jet_engine": {
 		"sounds": [
 			{

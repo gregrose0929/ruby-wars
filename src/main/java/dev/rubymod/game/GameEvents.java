@@ -64,6 +64,7 @@ public final class GameEvents {
 			}
 			LagCompensation.record(server);
 			CannonRounds.tick();
+			Explosions.tick(server);
 			Countermeasures.tick();
 			Range.tick(server);
 			if (server.getTickCount() % 20 == 0) {

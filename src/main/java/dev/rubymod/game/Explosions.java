@@ -44,7 +44,69 @@ public final class Explosions {
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.5, z, (int) (power * 6), power * 0.25, power * 0.3, power * 0.25, 0.04);
 			level.sendParticles(ParticleTypes.FLAME, x, y + 0.3, z, (int) (power * 4), power * 0.2, power * 0.15, power * 0.2, 0.08);
 			level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y + 1, z, (int) power * 2, power * 0.3, 0.5, power * 0.3, 0.02);
+			effects(level, at, power);
 		}
+	}
+
+	/** The big-blast extras: a ground debris spray, an expanding dust ring, and a boom that carries (a low rumble far away). */
+	private static void effects(ServerLevel level, Vec3 at, float power) {
+		net.minecraft.core.BlockPos below = net.minecraft.core.BlockPos.containing(at).below();
+		var ground = level.getBlockState(below);
+		if (ground.isAir()) {
+			ground = level.getBlockState(below.below());
+		}
+		if (!ground.isAir()) {
+			level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, ground), at.x, at.y + 0.3, at.z,
+					(int) (power * 14), power * 0.3, 0.2, power * 0.3, 0.5);
+		}
+		int ring = 28;
+		for (int i = 0; i < ring; i++) {
+			double a = i * Math.PI * 2 / ring;
+			// count 0: the offset is the particle's velocity.
+			level.sendParticles(ParticleTypes.CLOUD, at.x, at.y + 0.2, at.z, 0, Math.cos(a), 0.02, Math.sin(a), 0.25 + power * 0.06);
+		}
+		var random = level.getRandom();
+		for (ServerPlayer player : level.players()) {
+			double d = player.position().distanceTo(at);
+			if (d < 64) {
+				player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+						net.minecraft.core.Holder.direct(dev.rubymod.registry.ModSounds.EXPLOSION), net.minecraft.sounds.SoundSource.BLOCKS,
+						at.x, at.y, at.z, Math.min(4.0F, power * 0.8F), 0.9F + random.nextFloat() * 0.2F, random.nextLong()));
+			} else if (d < 64 + power * 50) {
+				// Far away: a muffled boom from the blast's direction.
+				// Sound travels about 340 blocks a second, so the boom arrives after the flash.
+				float volume = (float) Math.max(0.15, 1.0 - (d - 64) / (power * 50));
+				long seed = random.nextLong();
+				float pitch = 0.9F + random.nextFloat() * 0.2F;
+				DELAYED.add(new Delayed(player.getUUID(), at, volume, pitch, seed, level.getGameTime() + (long) (d / 340.0 * 20.0)));
+			}
+		}
+	}
+
+	private record Delayed(java.util.UUID player, Vec3 at, float volume, float pitch, long seed, long when) {
+	}
+
+	private static final java.util.List<Delayed> DELAYED = new java.util.ArrayList<>();
+
+	/** Every tick: deliver far-away booms whose sound has arrived. */
+	public static void tick(net.minecraft.server.MinecraftServer server) {
+		if (DELAYED.isEmpty()) {
+			return;
+		}
+		long now = server.overworld().getGameTime();
+		DELAYED.removeIf(d -> {
+			if (d.when > now) {
+				return false;
+			}
+			ServerPlayer player = server.getPlayerList().getPlayer(d.player);
+			if (player != null) {
+				Vec3 p = player.position().add(d.at.subtract(player.position()).normalize().scale(12));
+				player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+						net.minecraft.core.Holder.direct(dev.rubymod.registry.ModSounds.EXPLOSION_FAR), net.minecraft.sounds.SoundSource.BLOCKS,
+						p.x, p.y, p.z, d.volume, d.pitch, d.seed));
+			}
+			return true;
+		});
 	}
 
 	/** Shake the camera of every player near a blast; stronger the closer they are. */
