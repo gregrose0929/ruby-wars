@@ -240,6 +240,7 @@ LANG = {
     "key.rubymod.reload": "Reload Gun / Next Aircraft Weapon",
     "key.rubymod.ping": "Ping (mark a spot for your squad)",
     "key.rubymod.map": "Open Map",
+    "key.rubymod.minimap": "Toggle Minimap",
     "block.rubymod.war_grave": "War Grave",
     "item.rubymod.field_pack": "Field Pack",
     "item.rubymod.field_radio": "Field Radio",

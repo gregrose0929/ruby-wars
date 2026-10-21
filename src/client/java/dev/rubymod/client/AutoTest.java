@@ -274,7 +274,13 @@ public final class AutoTest {
 				player.getInventory().setItem(8, paper);
 			});
 		});
-		then(40, mc -> shot(mc, "features-overview"));
+		then(30, mc -> {
+			long now = System.currentTimeMillis();
+			ClientState.KILLS.addFirst(new ClientState.Kill(new Payloads.KillFeed("Raven", mc.player.getName().getString(), "Longshot Sniper", true), now));
+			ClientState.KILLS.addFirst(new ClientState.Kill(new Payloads.KillFeed(mc.player.getName().getString(), "Ghost", "AR-R Rifle", false), now));
+			ClientState.KILLS.addFirst(new ClientState.Kill(new Payloads.KillFeed("Ghost", "Raven", "Sentry Turret", false), now));
+		});
+		then(10, mc -> shot(mc, "features-overview"));
 		for (int i = 0; i < 3; i++) {
 			then(40, mc -> log("fps {} (minimap {})", mc.getFps(), dev.rubymod.client.map.Minimap.enabled));
 		}

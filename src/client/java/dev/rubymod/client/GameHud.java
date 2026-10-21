@@ -295,17 +295,55 @@ public class GameHud implements HudElement {
 		}
 	}
 
+	private static final java.util.Map<String, ItemStack> WEAPON_ICONS = new java.util.HashMap<>();
+
+	/** The item whose name matches a kill feed weapon ("AR-R Rifle"), for its icon; empty if none. */
+	private static ItemStack weaponIcon(String weapon) {
+		return WEAPON_ICONS.computeIfAbsent(weapon, name -> {
+			for (var item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+				ItemStack stack = new ItemStack(item);
+				if (stack.getHoverName().getString().equals(name)) {
+					return stack;
+				}
+			}
+			return ItemStack.EMPTY;
+		});
+	}
+
+	/** Kill feed (top right, under the minimap): killer, the weapon's icon, victim; headshots in gold. */
 	private void drawKillFeed(GuiGraphicsExtractor g, Font font, int w) {
 		long now = System.currentTimeMillis();
 		ClientState.KILLS.removeIf(k -> now - k.at() > 7000);
 		int y = dev.rubymod.client.map.Minimap.SIZE + 66;
+		String me = Minecraft.getInstance().player == null ? "" : Minecraft.getInstance().player.getName().getString();
 		for (ClientState.Kill kill : ClientState.KILLS) {
 			var info = kill.info();
-			String text = info.killer() + "  [" + info.weapon() + (info.headshot() ? " - HEADSHOT" : "") + "]  " + info.victim();
-			int width = font.width(text);
-			panel(g, w - width - 10, y - 2, w - 4, y + 9);
-			g.text(font, text, w - width - 7, y, info.headshot() ? GOLD : WHITE);
-			y += 12;
+			ItemStack icon = weaponIcon(info.weapon());
+			String middle = icon.isEmpty() ? "  [" + info.weapon() + "]  " : "        ";
+			String tag = info.headshot() ? " HS" : "";
+			int width = font.width(info.killer()) + font.width(middle) + font.width(tag) + font.width(info.victim());
+			int x = w - width - 10;
+			panel(g, x - 3, y - 2, w - 4, y + 10);
+			int killerColor = info.killer().equals(me) ? GOLD : 0xFFFF7A7A;
+			int victimColor = info.victim().equals(me) ? GOLD : 0xFF9CC9FF;
+			g.text(font, info.killer(), x, y, killerColor);
+			int mx = x + font.width(info.killer());
+			if (!icon.isEmpty()) {
+				g.pose().pushMatrix();
+				g.pose().translate(mx + 8, y - 2);
+				g.pose().scale(0.75F, 0.75F);
+				g.item(icon, 0, 0);
+				g.pose().popMatrix();
+			} else {
+				g.text(font, middle, mx, y, GRAY);
+			}
+			mx += font.width(middle);
+			if (!tag.isEmpty()) {
+				g.text(font, tag, mx - 6, y, GOLD);
+				mx += font.width(tag);
+			}
+			g.text(font, info.victim(), mx, y, victimColor);
+			y += 13;
 		}
 	}
 
