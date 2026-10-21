@@ -257,6 +257,7 @@ public final class AutoTest {
 
 	/** Squads, map, markers, look-at, guards, raiders, research, paint, blueprint ghost. */
 	private static void featuresScript() {
+		then(3, mc -> log("map chunks known at start: {}", dev.rubymod.client.map.MapCache.size()));
 		then(5, mc -> {
 			command(mc, "rubywars reset confirm");
 			command(mc, "rubywars start");

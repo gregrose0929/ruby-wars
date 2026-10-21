@@ -186,7 +186,10 @@ public class RubyModClient implements ClientModInitializer {
 			ClientState.shake = Math.max(ClientState.shake, payload.strength());
 			ClientState.shakeTicks = Math.max(ClientState.shakeTicks, payload.ticks());
 		});
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientState.reset());
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			dev.rubymod.client.map.MapCache.save();
+			ClientState.reset();
+		});
 
 		HudElementRegistry.addLast(RubyMod.id("markers"), new dev.rubymod.client.map.Markers());
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());

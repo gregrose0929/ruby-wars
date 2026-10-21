@@ -30,16 +30,90 @@ public final class MapCache {
 		return chunk == null ? 0 : chunk[(z & 15) * 16 + (x & 15)];
 	}
 
+	private static java.nio.file.Path savedAs;
+
+	/** Chunks known (for tests). */
+	public static int size() {
+		return CHUNKS.size();
+	}
+
+	/** Where this world's explored map is kept: one file per server (or singleplayer world) and dimension. */
+	private static java.nio.file.Path file(Minecraft mc, String dim) {
+		String world;
+		if (mc.getSingleplayerServer() != null) {
+			world = "local-" + mc.getSingleplayerServer().getWorldData().getLevelName();
+		} else if (mc.getCurrentServer() != null) {
+			world = "server-" + mc.getCurrentServer().ip;
+		} else {
+			world = "unknown";
+		}
+		String safe = (world + "-" + dim).replaceAll("[^A-Za-z0-9._-]", "_");
+		return mc.gameDirectory.toPath().resolve("rubywars").resolve("maps").resolve(safe + ".bin.gz");
+	}
+
+	/** Save what's been explored (called on leaving a world or dimension). */
+	public static void save() {
+		if (savedAs == null || CHUNKS.isEmpty()) {
+			return;
+		}
+		try {
+			java.nio.file.Files.createDirectories(savedAs.getParent());
+			try (var out = new java.io.DataOutputStream(new java.util.zip.GZIPOutputStream(java.nio.file.Files.newOutputStream(savedAs)))) {
+				out.writeInt(CHUNKS.size());
+				for (var e : CHUNKS.entrySet()) {
+					out.writeLong(e.getKey());
+					for (int c : e.getValue()) {
+						out.writeInt(c);
+					}
+				}
+			}
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the map to {}", savedAs, e);
+		}
+	}
+
+	private static void load(java.nio.file.Path path) {
+		CHUNKS.clear();
+		SCANNED.clear();
+		savedAs = path;
+		if (!java.nio.file.Files.exists(path)) {
+			return;
+		}
+		try (var in = new java.io.DataInputStream(new java.util.zip.GZIPInputStream(java.nio.file.Files.newInputStream(path)))) {
+			int n = in.readInt();
+			for (int i = 0; i < n; i++) {
+				long key = in.readLong();
+				int[] colors = new int[256];
+				for (int j = 0; j < 256; j++) {
+					colors[j] = in.readInt();
+				}
+				CHUNKS.put(key, colors);
+			}
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the map from {}", path, e);
+		}
+	}
+
 	public static void tick(Minecraft mc) {
 		ClientLevel level = mc.level;
 		if (level == null || mc.player == null) {
+			if (savedAs != null) {
+				save();
+				savedAs = null;
+				dimension = "";
+				CHUNKS.clear();
+				SCANNED.clear();
+			}
 			return;
 		}
 		String dim = level.dimension().identifier().toString();
 		if (!dim.equals(dimension)) {
-			CHUNKS.clear();
-			SCANNED.clear();
+			save();
 			dimension = dim;
+			load(file(mc, dim));
+		}
+		if (level.getGameTime() % 6000 == 0) {
+			save(); // every 5 minutes, in case the game crashes
 		}
 		int pcx = mc.player.blockPosition().getX() >> 4;
 		int pcz = mc.player.blockPosition().getZ() >> 4;
