@@ -89,6 +89,12 @@ public final class Explosions {
 		if (state.is(ModBlocks.REINFORCED_CONCRETE)) {
 			return 3;
 		}
+		if (state.is(ModBlocks.REINFORCED_GLASS)) {
+			return 2;
+		}
+		if (state.is(ModBlocks.VAULT)) {
+			return 5;
+		}
 		return 0;
 	}
 

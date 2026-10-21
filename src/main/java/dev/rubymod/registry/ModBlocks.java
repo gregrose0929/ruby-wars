@@ -117,6 +117,13 @@ public class ModBlocks {
 	public static final Block CRUISE_MISSILE_MODEL = registerModelOnly("cruise_missile_model");
 	public static final Block BOMB_MODEL = registerModelOnly("bomb_model");
 
+	/** Bulletproof window: see-through, shrugs off small arms (~30 rifle rounds) and takes two blasts. */
+	public static final Block REINFORCED_GLASS = register("reinforced_glass", net.minecraft.world.level.block.TransparentBlock::new,
+			props().mapColor(MapColor.NONE).strength(8.0F, 6.0F).requiresCorrectToolForDrops().sound(SoundType.GLASS).noOcclusion());
+	/** A bright base light. */
+	public static final Block FLOODLIGHT = register("floodlight", p -> new dev.rubymod.block.ShapedBlock(Block.box(3, 0, 3, 13, 14, 13), p),
+			props().mapColor(MapColor.METAL).strength(2.0F, 4.0F).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 15));
+
 	// --- Industry (see dev.rubymod.industry) ---
 	private static final java.util.Set<Block> MACHINES = new java.util.LinkedHashSet<>();
 	public static final Block COMBUSTION_GENERATOR = machine("combustion_generator", dev.rubymod.industry.MachineKind.COMBUSTION_GENERATOR, Shapes.block());

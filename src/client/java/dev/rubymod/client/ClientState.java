@@ -27,6 +27,8 @@ public final class ClientState {
 	public static int shakeTicks;
 
 	public static long hitMarkerAt;
+	/** Bank and power grid (see Payloads.Economy). */
+	public static Payloads.Economy economy;
 	/** Last warhead hit on a vehicle or aircraft (shown under the crosshair). */
 	public static Payloads.HitConfirm hitConfirm;
 	public static long hitConfirmAt;

@@ -128,6 +128,9 @@ def simple_state(name):
 def gen_blocks(client_jar):
     for name in ["ruby_block", "ruby_ore", "deepslate_ruby_ore", "ruby_heart", "sandbags", "concrete_wall", "reinforced_concrete"]:
         cube_all(name)
+    write(f"{ASSETS}/models/block/reinforced_glass.json", {"parent": "minecraft:block/cube_all",
+          "textures": {"all": {"force_translucent": True, "sprite": f"{NS}:block/reinforced_glass"}}})
+    simple_state("reinforced_glass")
     column("armory")
 
     # Defenses and launchers are 3D models built from boxes (tools/models3d_blocks.py).
@@ -213,6 +216,8 @@ LANG = {
     "item.rubymod.air_strike_flare": "Air Strike Flare",
     "item.rubymod.rocket_launcher": "Rocket Launcher",
     "item.rubymod.architect_wand": "Architect's Wand",
+    "block.rubymod.reinforced_glass": "Reinforced Glass",
+    "block.rubymod.floodlight": "Floodlight",
     "item.rubymod.remodeler": "Remodeler",
     "item.rubymod.blueprint": "Blueprint",
     "item.rubymod.heavy_aa_gun": "Heavy AA Gun",
@@ -366,7 +371,7 @@ def gen_loot():
 
     for name in ["ruby_block", "ruby_heart", "armory", "sandbags", "concrete_wall", "reinforced_concrete", "sentry_turret",
                  "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "barbed_wire", "mortar", "missile_silo",
-                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor"]:
+                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor", "reinforced_glass", "floodlight"]:
         drop_self(name)
 
     def ore(name):
@@ -393,7 +398,7 @@ def gen_loot():
 def gen_tags():
     pickaxe = ["ruby_block", "ruby_ore", "deepslate_ruby_ore", "armory", "concrete_wall", "reinforced_concrete", "blast_door",
                "sentry_turret", "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "mortar", "missile_silo",
-               "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor"]
+               "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor", "reinforced_glass", "floodlight"]
     write(f"{DATA}/minecraft/tags/block/mineable/pickaxe.json", {"values": [f"{NS}:{n}" for n in pickaxe]})
     write(f"{DATA}/minecraft/tags/block/mineable/shovel.json", {"values": [f"{NS}:sandbags"]})
     write(f"{DATA}/minecraft/tags/block/mineable/axe.json", {"values": [f"{NS}:barbed_wire"]})

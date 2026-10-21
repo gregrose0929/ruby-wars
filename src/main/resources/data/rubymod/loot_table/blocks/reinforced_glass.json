@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:block",
+	"pools": [
+		{
+			"rolls": 1,
+			"condition": {
+				"type": "minecraft:survives_explosion"
+			},
+			"entries": [
+				{
+					"type": "minecraft:item",
+					"name": "rubymod:reinforced_glass"
+				}
+			]
+		}
+	],
+	"random_sequence": "rubymod:blocks/reinforced_glass"
+}

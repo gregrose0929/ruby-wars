@@ -38,6 +38,7 @@ public class GameHud implements HudElement {
 
 		drawPhaseBanner(g, font, w);
 		drawHeart(g, font);
+		drawEconomy(g, font);
 		drawAmmo(g, font, player, w, h);
 		drawReload(g, w, h);
 		drawHitMarker(g, w, h);
@@ -104,6 +105,25 @@ public class GameHud implements HudElement {
 			g.fill(8, 16, 92, 19, 0xFF400000);
 			g.fill(8, 16, 8 + barWidth, 19, RED);
 		}
+	}
+
+	/** Bank and power, under the Heart panel, once you have either. */
+	private void drawEconomy(GuiGraphicsExtractor g, Font font) {
+		var e = ClientState.economy;
+		if (e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
+			return;
+		}
+		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY ? 24 : 4;
+		g.fill(4, y, 96, y + 30, PANEL);
+		g.item(new ItemStack(dev.rubymod.registry.ModItems.RUBY), 6, y + 1);
+		g.text(font, String.format(java.util.Locale.ROOT, "%,d", e.bank()), 24, y + 5, 0xFFFF5A82);
+		long cap = Math.max(1, e.capacity());
+		int fill = (int) (84 * Math.min(1.0, e.charge() / (double) cap));
+		g.fill(8, y + 20, 92, y + 26, 0xFF2A2410);
+		g.fillGradient(8, y + 20, 8 + fill, y + 26, 0xFFFFE066, 0xFFE09A1A);
+		long net = e.produced() - e.consumed();
+		String rate = (net >= 0 ? "+" : "") + net + "/s";
+		g.text(font, rate, 92 - font.width(rate), y + 10, net >= 0 ? 0xFF5BE37D : RED);
 	}
 
 	private void drawAmmo(GuiGraphicsExtractor g, Font font, Player player, int w, int h) {

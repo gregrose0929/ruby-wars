@@ -893,6 +893,20 @@ def blocks():
     rect(img, 3, 6, 12, 7, (200, 200, 190))
     b["claymore"] = img
 
+    # Reinforced glass: tinted pane with a steel frame and wire mesh.
+    img = [[(150, 210, 230, 90)] * 16 for _ in range(16)]
+    for i in range(16):
+        for j in range(16):
+            if i in (0, 15) or j in (0, 15):
+                img[j][i] = (70, 76, 86, 255)
+            elif i in (1, 14) or j in (1, 14):
+                img[j][i] = (110, 118, 128, 255)
+            elif (i + j) % 5 == 0 or (i - j) % 5 == 0:
+                img[j][i] = (120, 130, 140, 150)
+    for i in range(3, 7):
+        img[i][i + 1] = (235, 250, 255, 170)
+    b["reinforced_glass"] = img
+
     # Landmine.
     img = noise_tile((70, 72, 70), 6, 19)
     for x in range(16):

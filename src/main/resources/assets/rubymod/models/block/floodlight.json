@@ -1,0 +1,349 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"parts": "rubymod:block/vehicle_parts",
+		"particle": "rubymod:block/vehicle_parts"
+	},
+	"elements": [
+		{
+			"from": [
+				3,
+				0,
+				3
+			],
+			"to": [
+				13,
+				1.5,
+				13
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				}
+			}
+		},
+		{
+			"from": [
+				7,
+				1.5,
+				7
+			],
+			"to": [
+				9,
+				9,
+				9
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						8.5,
+						0.5,
+						11.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						8.5,
+						0.5,
+						11.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						8.5,
+						0.5,
+						11.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						8.5,
+						0.5,
+						11.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						8.5,
+						0.5,
+						11.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						8.5,
+						0.5,
+						11.5,
+						3.5
+					],
+					"texture": "#parts"
+				}
+			}
+		},
+		{
+			"from": [
+				4,
+				9,
+				4
+			],
+			"to": [
+				12,
+				13,
+				12
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				}
+			}
+		},
+		{
+			"from": [
+				4.5,
+				13,
+				4.5
+			],
+			"to": [
+				11.5,
+				13.6,
+				11.5
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						4.5,
+						12.5,
+						7.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						4.5,
+						12.5,
+						7.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						4.5,
+						12.5,
+						7.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						4.5,
+						12.5,
+						7.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						4.5,
+						12.5,
+						7.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						4.5,
+						12.5,
+						7.5,
+						15.5
+					],
+					"texture": "#parts"
+				}
+			}
+		},
+		{
+			"from": [
+				3.6,
+				12,
+				3.6
+			],
+			"to": [
+				12.4,
+				12.6,
+				12.4
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						8.5,
+						8.5,
+						11.5,
+						11.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						8.5,
+						8.5,
+						11.5,
+						11.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						8.5,
+						8.5,
+						11.5,
+						11.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						8.5,
+						8.5,
+						11.5,
+						11.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						8.5,
+						8.5,
+						11.5,
+						11.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						8.5,
+						8.5,
+						11.5,
+						11.5
+					],
+					"texture": "#parts"
+				}
+			}
+		}
+	]
+}

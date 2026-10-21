@@ -189,7 +189,8 @@ public final class RubyWarsCommand {
 				{ModBlocks.AT_MINE, 4}, {ModItems.HEAVY_AA_GUN, 1}, {ModItems.ARCHITECT_WAND, 1}, {ModItems.REMODELER, 1}, {ModItems.BLUEPRINT, 2},
 				{ModBlocks.COMBUSTION_GENERATOR, 2}, {ModBlocks.SOLAR_PANEL, 4}, {ModBlocks.BATTERY, 2}, {ModBlocks.RUBY_DRILL, 2},
 				{ModBlocks.ORE_REFINERY, 1}, {ModBlocks.AMMO_FACTORY, 1}, {ModBlocks.TRADE_DEPOT, 1}, {ModBlocks.VAULT, 1},
-				{ModBlocks.SHIELD_GENERATOR, 1}, {ModBlocks.POINT_DEFENSE, 1}, {ModBlocks.CONSTRUCTOR, 1}, {ModBlocks.FLAK_CANNON, 1}, {ModBlocks.SAM_SITE, 1}, {ModBlocks.AIRFIELD_PAD, 1}, {ModItems.BUILDERS_WAND, 1}, {ModItems.EXCAVATOR, 1}, {ModItems.RUBY, 64},
+				{ModBlocks.SHIELD_GENERATOR, 1}, {ModBlocks.POINT_DEFENSE, 1}, {ModBlocks.CONSTRUCTOR, 1},
+				{ModBlocks.REINFORCED_GLASS, 32}, {ModBlocks.FLOODLIGHT, 4}, {ModBlocks.FLAK_CANNON, 1}, {ModBlocks.SAM_SITE, 1}, {ModBlocks.AIRFIELD_PAD, 1}, {ModItems.BUILDERS_WAND, 1}, {ModItems.EXCAVATOR, 1}, {ModItems.RUBY, 64},
 				{ModBlocks.ARMORY, 1}, {ModBlocks.MORTAR, 1}, {ModBlocks.MISSILE_SILO, 1}};
 		for (Object[] entry : stacks) {
 			give(player, new ItemStack((net.minecraft.world.level.ItemLike) entry[0], (Integer) entry[1]));

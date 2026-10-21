@@ -98,6 +98,13 @@ BLOCKS = {
         vbox([4, 1.5, 4], [5.5, 1.7, 12], WHITE),
         vbox([10.5, 1.5, 4], [12, 1.7, 12], WHITE),
     ],
+    "floodlight": [
+        vbox([3, 0, 3], [13, 1.5, 13], DARK),                        # base
+        vbox([7, 1.5, 7], [9, 9, 9], STEEL),                         # pole
+        vbox([4, 9, 4], [12, 13, 12], DARK),                         # lamp housing
+        vbox([4.5, 13, 4.5], [11.5, 13.6, 11.5], WHITE),             # lens (glows)
+        vbox([3.6, 12, 3.6], [12.4, 12.6, 12.4], BRASS),
+    ],
     "claymore": [
         vbox([4, 1, 7], [12, 6, 8.5], OLIVE),                        # curved face
         vbox([3.2, 1, 7.8], [4.2, 6, 9], OLIVE),

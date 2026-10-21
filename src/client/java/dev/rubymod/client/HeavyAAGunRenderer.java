@@ -34,6 +34,7 @@ public class HeavyAAGunRenderer extends EntityRenderer<HeavyAAGunEntity, HeavyAA
 		public float turretYaw;
 		public float gunPitch;
 		public float recoil;
+		public boolean hidden;
 	}
 
 	static class Model extends EntityModel<State> {
@@ -80,10 +81,16 @@ public class HeavyAAGunRenderer extends EntityRenderer<HeavyAAGunEntity, HeavyAA
 		state.gunPitch = entity.gunPitch();
 		float t = entity.recoil + partialTicks;
 		state.recoil = t < 4 ? Mth.sin(t / 4.0F * (float) Math.PI) : 0.0F;
+		// The gunner sees through the sight, not the inside of the gun shield.
+		Minecraft mc = Minecraft.getInstance();
+		state.hidden = entity.hasPassenger(mc.player) && mc.options.getCameraType().isFirstPerson();
 	}
 
 	@Override
 	public void submit(State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+		if (state.hidden) {
+			return;
+		}
 		poseStack.pushPose();
 		poseStack.rotateDegrees(Axis.YP, -state.baseYaw);
 		poseStack.scale(SCALE, SCALE, SCALE);

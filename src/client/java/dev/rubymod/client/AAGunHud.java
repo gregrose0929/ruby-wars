@@ -99,7 +99,8 @@ public final class AAGunHud {
 			g.text(font, "HEAVY AA  " + ammo + "/" + HeavyAAGunEntity.MAGAZINE, bx, by - 10, GREEN, false);
 		}
 		int hp = Math.round(gun.getHealth() / gun.getMaxHealth() * 100);
-		g.text(font, "MOUNT " + hp + "%", bx + 80, by - 10, hp < 30 ? RED : DIM, false);
+		String mount = "MOUNT " + hp + "%";
+		g.text(font, mount, bx + 122 - font.width(mount), by - 22, hp < 30 ? RED : DIM, false);
 		if (!zoomed) {
 			g.text(font, "Hold right-click: sight", 6, h - 12, DIM, false);
 		}

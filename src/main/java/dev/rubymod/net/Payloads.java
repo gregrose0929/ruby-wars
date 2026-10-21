@@ -150,6 +150,23 @@ public class Payloads {
 		}
 	}
 
+	/** Server -> client, every second: your bank and power grid, for the economy panel. */
+	public record Economy(long bank, long charge, long capacity, long produced, long consumed) implements CustomPacketPayload {
+		public static final Type<Economy> TYPE = new Type<>(RubyMod.id("economy"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Economy> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_LONG, Economy::bank,
+				ByteBufCodecs.VAR_LONG, Economy::charge,
+				ByteBufCodecs.VAR_LONG, Economy::capacity,
+				ByteBufCodecs.VAR_LONG, Economy::produced,
+				ByteBufCodecs.VAR_LONG, Economy::consumed,
+				Economy::new);
+
+		@Override
+		public Type<Economy> type() {
+			return TYPE;
+		}
+	}
+
 	/** One radar contact: an aircraft or vehicle (kind: 0 jeep, 1 tank, 2 fighter, 3 attack jet, 4 bomber, 5 drone). */
 	public record Contact(int id, byte kind, float x, float y, float z, boolean airborne, boolean crewed) {
 		public static final StreamCodec<RegistryFriendlyByteBuf, Contact> CODEC = StreamCodec.composite(
@@ -347,6 +364,7 @@ public class Payloads {
 		PayloadTypeRegistry.clientboundPlay().register(Shake.TYPE, Shake.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HitConfirm.TYPE, HitConfirm.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Contacts.TYPE, Contacts.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(Economy.TYPE, Economy.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Recoil.TYPE, Recoil.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ReloadState.TYPE, ReloadState.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HitMarker.TYPE, HitMarker.CODEC);

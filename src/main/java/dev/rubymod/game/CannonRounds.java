@@ -48,7 +48,7 @@ public final class CannonRounds {
 
 	/**
 	 * A flak shell (Heavy AA Gun): proximity-fused, it bursts when it passes within
-	 * 4 blocks of an aircraft (or at the end of its flight), hurting every aircraft
+	 * 6 blocks of an aircraft (or at the end of its flight), hurting every aircraft
 	 * near the burst with {@code flak} anti-armor damage.
 	 */
 	public static void fireFlak(ServerLevel level, ServerPlayer owner, Entity launcher, Vec3 from, Vec3 velocity, float flak, int life) {
@@ -83,14 +83,14 @@ public final class CannonRounds {
 			return true;
 		}
 		if (shell.flak() > 0) {
-			// Proximity fuse: burst at the closest point to any aircraft within 4 blocks of this segment.
-			for (Entity e : level.getEntities(shell.launcher(), new AABB(pos, next).inflate(5.0),
+			// Proximity fuse: burst at the closest point to any aircraft within 6 blocks of this segment.
+			for (Entity e : level.getEntities(shell.launcher(), new AABB(pos, next).inflate(7.0),
 					e -> e instanceof dev.rubymod.entity.AircraftEntity a && a.isAlive() && !a.onGround() && !a.hasPassenger(shell.owner()))) {
 				Vec3 c = e.getBoundingBox().getCenter();
 				Vec3 seg = next.subtract(pos);
 				double t = Math.max(0, Math.min(1, c.subtract(pos).dot(seg) / Math.max(1.0E-6, seg.lengthSqr())));
 				Vec3 closest = pos.add(seg.scale(t));
-				if (closest.distanceTo(c) < 4.0) {
+				if (closest.distanceTo(c) < 6.0) {
 					trail(level, pos, closest);
 					burst(shell, closest);
 					return true;
@@ -149,10 +149,10 @@ public final class CannonRounds {
 		level.sendParticles(ParticleTypes.LARGE_SMOKE, true, true, at.x, at.y, at.z, 14, 0.7, 0.7, 0.7, 0.01);
 		level.sendParticles(ParticleTypes.SQUID_INK, true, true, at.x, at.y, at.z, 10, 0.5, 0.5, 0.5, 0.02);
 		level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 4.0F, 1.4F);
-		for (Entity e : level.getEntities(shell.launcher(), new AABB(at, at).inflate(6), e -> e instanceof dev.rubymod.entity.AircraftEntity && e.isAlive())) {
+		for (Entity e : level.getEntities(shell.launcher(), new AABB(at, at).inflate(8), e -> e instanceof dev.rubymod.entity.AircraftEntity && e.isAlive())) {
 			double d = e.getBoundingBox().getCenter().distanceTo(at);
-			if (d < 6 && !e.hasPassenger(shell.owner())) {
-				Armor.hit(level, e, null, shell.owner(), (float) (shell.flak() * (d < 2.5 ? 1.0 : 1.0 - (d - 2.5) / 3.5 * 0.7)));
+			if (d < 8 && !e.hasPassenger(shell.owner())) {
+				Armor.hit(level, e, null, shell.owner(), (float) (shell.flak() * (d < 3.0 ? 1.0 : 1.0 - (d - 3.0) / 5.0 * 0.7)));
 			}
 		}
 	}

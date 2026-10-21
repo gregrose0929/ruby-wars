@@ -69,6 +69,12 @@ public final class GameEvents {
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
+				for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+					var id = player.getUUID();
+					Net.send(player, new Payloads.Economy(dev.rubymod.industry.Grid.rubies(id), dev.rubymod.industry.Grid.charge(id),
+							dev.rubymod.industry.Grid.capacity(id), dev.rubymod.industry.Grid.producedPerSecond(id),
+							dev.rubymod.industry.Grid.consumedPerSecond(id)));
+				}
 				TrainingGround.tick();
 			}
 			dev.rubymod.industry.Grid.endTick(server.overworld().getGameTime());

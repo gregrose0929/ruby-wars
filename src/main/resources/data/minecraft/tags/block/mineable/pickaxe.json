@@ -29,6 +29,8 @@
 		"rubymod:vault",
 		"rubymod:shield_generator",
 		"rubymod:point_defense",
-		"rubymod:constructor"
+		"rubymod:constructor",
+		"rubymod:reinforced_glass",
+		"rubymod:floodlight"
 	]
 }

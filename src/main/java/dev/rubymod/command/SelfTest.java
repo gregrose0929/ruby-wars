@@ -299,7 +299,7 @@ public final class SelfTest {
 		}
 
 		// ----- Industry -----
-		industryChecks(level, alpha, range.offset(0, 0, -30));
+		industryChecks(level, alpha, bravo, range.offset(0, 0, -30));
 
 		// ----- Aircraft weapons -----
 		AircraftEntity jet = ModEntities.ATTACK_JET.create(level, EntitySpawnReason.COMMAND);
@@ -398,7 +398,7 @@ public final class SelfTest {
 		}
 	}
 
-	private void industryChecks(ServerLevel level, FakePlayer alpha, BlockPos at) {
+	private void industryChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo, BlockPos at) {
 		var grid = dev.rubymod.industry.Grid.account(alpha.getUUID());
 		grid.charge = 0;
 		grid.milliRubies = 0;
@@ -474,6 +474,20 @@ public final class SelfTest {
 			}
 		}
 		check("blueprint: the Constructor builds it from the chest (" + built + "/12)", built == 12);
+
+		// Shield Generator: destroys an enemy shell inside its dome, paid for in charge.
+		grid.charge = 9000;
+		var shield = machine(level, at.offset(2, 2, 2), ModBlocks.SHIELD_GENERATOR, alpha);
+		var shell = MortarShellEntity.launch(level, bravo, Vec3.atCenterOf(at.offset(2, 6, 2)), Vec3.atCenterOf(at.offset(2, 0, 2)));
+		level.addFreshEntity(shell);
+		runMachines(level, 2, shield);
+		long left = dev.rubymod.industry.Grid.charge(alpha.getUUID());
+		check("shield: destroys an enemy shell in its dome (" + (9000 - left) + " charge spent)", shell.isRemoved() && left < 9000 - 1000);
+		shield.setRemoved();
+		level.setBlockAndUpdate(at.offset(2, 2, 2), Blocks.AIR.defaultBlockState());
+		if (!shell.isRemoved()) {
+			shell.discard();
+		}
 
 		// Architect's Wand shapes.
 		int room = dev.rubymod.item.BuildShapes.shape(dev.rubymod.item.BuildShapes.Mode.ROOM, BlockPos.ZERO, new BlockPos(4, 3, 4)).size();

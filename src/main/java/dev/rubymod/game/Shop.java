@@ -155,6 +155,8 @@ public final class Shop {
 			item(28, ModItems.REMODELER, 1, 8);
 			item(29, ModItems.BLUEPRINT, 1, 2);
 			item(30, ModBlocks.CONSTRUCTOR, 1, 30);
+			item(32, ModBlocks.REINFORCED_GLASS, 8, 3);
+			item(33, ModBlocks.FLOODLIGHT, 2, 1);
 			page = 0;
 		}
 		return entries;

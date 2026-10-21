@@ -118,6 +118,7 @@ public final class AutoTest {
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
 			case "showcase" -> showcaseScript();
+			case "industry" -> industryScript();
 			default -> {
 				gunsScript();
 				tourScript();
@@ -369,6 +370,131 @@ public final class AutoTest {
 			command(mc, "ride @p dismount");
 		});
 		then(10, mc -> shot(mc, "training-after-taxi"));
+	}
+
+	/** The industry machines, their screen, the Heavy AA Gun, and the Architect's Wand. */
+	private static void industryScript() {
+		String[] machines = {"combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot",
+				"vault", "shield_generator", "point_defense", "constructor"};
+		then(5, mc -> {
+			origin = mc.player.position();
+			command(mc, "gamemode creative @a");
+			command(mc, "execute at @p run fill ~-12 ~ ~-4 ~24 ~12 ~20 minecraft:air");
+			command(mc, "execute at @p run fill ~-12 ~-1 ~-4 ~24 ~-1 ~20 minecraft:smooth_stone");
+			for (int i = 0; i < machines.length; i++) {
+				command(mc, String.format(java.util.Locale.ROOT, "setblock %d %d %d rubymod:%s[facing=north]", (int) Math.floor(origin.x) - 5 + i * 2,
+						(int) Math.floor(origin.y), (int) Math.floor(origin.z) + 6, machines[i]));
+			}
+		});
+		then(10, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x + 5, origin.y + 3,
+				origin.z - 2, origin.x + 5, origin.y + 0.5, origin.z + 6.5)));
+		then(1, mc -> mc.player.getAbilities().flying = true);
+		then(25, mc -> shot(mc, "industry-machines"));
+		then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x - 3, origin.y + 1.5,
+				origin.z + 3, origin.x - 1, origin.y + 0.5, origin.z + 6.5)));
+		then(1, mc -> mc.player.getAbilities().flying = true);
+		then(20, mc -> shot(mc, "industry-close"));
+		// Open each kind of machine screen.
+		for (int i : new int[] {0, 3, 4, 5, 7, 10}) {
+			int index = i;
+			then(5, mc -> {
+				IntegratedServer server = mc.getSingleplayerServer();
+				server.execute(() -> {
+					var p = server.getPlayerList().getPlayers().get(0);
+					var pos = net.minecraft.core.BlockPos.containing(origin.x - 5 + index * 2, origin.y, origin.z + 6);
+					if (p.level().getBlockEntity(pos) instanceof dev.rubymod.industry.MachineBlockEntity be) {
+						if (index == 0) {
+							be.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 12));
+						}
+						p.openMenu(be);
+					}
+				});
+			});
+			then(20, mc -> shot(mc, "industry-screen-" + machines[index]));
+			then(2, mc -> mc.player.closeContainer());
+		}
+		// Architect's Wand: a hollow room of stone bricks.
+		then(5, mc -> {
+			command(mc, "clear @a");
+			command(mc, "give @a rubymod:architect_wand");
+			command(mc, "item replace entity @p weapon.offhand with minecraft:stone_bricks 64");
+			command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x + 10, origin.y + 6, origin.z - 3,
+					origin.x + 14, origin.y, origin.z + 4));
+		});
+		then(10, mc -> {
+			mc.player.getInventory().setSelectedSlot(0);
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var p = server.getPlayerList().getPlayers().get(0);
+				var stack = p.getMainHandItem();
+				stack.set(dev.rubymod.registry.ModComponents.WAND_MODE, dev.rubymod.item.BuildShapes.Mode.ROOM.ordinal());
+				stack.set(dev.rubymod.registry.ModComponents.CORNER, net.minecraft.core.BlockPos.containing(origin.x + 10, origin.y, origin.z + 2));
+			});
+		});
+		then(15, mc -> shot(mc, "industry-wand-preview"));
+		then(2, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var p = server.getPlayerList().getPlayers().get(0);
+				var hit = new net.minecraft.world.phys.BlockHitResult(new Vec3(origin.x + 16, origin.y - 0.5, origin.z + 8), net.minecraft.core.Direction.UP,
+						net.minecraft.core.BlockPos.containing(origin.x + 16, origin.y - 1, origin.z + 8), false);
+				p.getMainHandItem().useOn(new net.minecraft.world.item.context.UseOnContext(p, net.minecraft.world.InteractionHand.MAIN_HAND, hit));
+			});
+		});
+		then(15, mc -> shot(mc, "industry-wand-room"));
+		// Heavy AA Gun against a drone.
+		then(5, mc -> {
+			command(mc, String.format(java.util.Locale.ROOT, "summon rubymod:heavy_aa_gun %.1f %.1f %.1f {Rotation:[0f,0f]}", origin.x, origin.y, origin.z - 2));
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var level = (net.minecraft.server.level.ServerLevel) server.getPlayerList().getPlayers().get(0).level();
+				level.addFreshEntity(dev.rubymod.entity.AircraftEntity.targetDrone(level, new Vec3(origin.x, origin.y + 40, origin.z + 60), 30));
+			});
+			command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x + 5, origin.y + 2, origin.z - 8,
+					origin.x, origin.y + 1, origin.z - 2));
+		});
+		then(15, mc -> {
+			mc.player.getAbilities().flying = true;
+			shot(mc, "industry-aa-gun");
+		});
+		then(2, mc -> command(mc, "ride @p mount @e[type=rubymod:heavy_aa_gun,limit=1,sort=nearest]"));
+		then(10, mc -> {
+			double best = Double.MAX_VALUE;
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof dev.rubymod.entity.AircraftEntity d && !d.isVehicle() && d.distanceTo(mc.player) < best) {
+					best = d.distanceTo(mc.player);
+					track = d;
+				}
+			}
+			mc.options.keyAttack.setDown(true);
+		});
+		then(20, mc -> {
+			shot(mc, "industry-aa-firing");
+			IntegratedServer server = mc.getSingleplayerServer();
+			int id = track == null ? -1 : track.getId();
+			server.execute(() -> {
+				var p = server.getPlayerList().getPlayers().get(0);
+				if (p.getVehicle() instanceof dev.rubymod.entity.HeavyAAGunEntity gun && p.level().getEntity(id) instanceof net.minecraft.world.entity.Entity d) {
+					Vec3 to = d.getBoundingBox().getCenter().subtract(gun.position().add(0, 1.5, 0));
+					log("AA aim: gun yaw {} pitch {} (player {} {}), to drone yaw {} pitch {} dist {}, ammo {}", gun.turretYaw(), gun.gunPitch(),
+							p.getYHeadRot(), p.getXRot(), Math.toDegrees(Math.atan2(-to.x, to.z)),
+							-Math.toDegrees(Math.atan2(to.y, Math.hypot(to.x, to.z))), to.length(), gun.ammo());
+				} else {
+					log("AA aim: not riding ({}) or no drone {}", p.getVehicle(), id);
+				}
+			});
+		});
+		then(60, mc -> {
+			mc.options.keyAttack.setDown(false);
+			log("drone after Heavy AA: {}", track == null ? "none" : track.isAlive() ? "alive, hp " + ((net.minecraft.world.entity.LivingEntity) track).getHealth() : "destroyed");
+			track = null;
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(15, mc -> shot(mc, "industry-aa-third"));
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			command(mc, "ride @p dismount");
+		});
 	}
 
 	/** Screenshots of every aircraft model, parked and flying, and the helicopter flown. */
@@ -860,7 +986,14 @@ public final class AutoTest {
 		}
 		tick++;
 		if (track != null && track.isAlive()) {
-			Vec3 to = track.getBoundingBox().getCenter().subtract(mc.player.getEyePosition());
+			Vec3 aimAt = track.getBoundingBox().getCenter();
+			if (mc.player.getVehicle() instanceof dev.rubymod.entity.HeavyAAGunEntity) {
+				// Lead the target like the gun sight does.
+				Vec3 vel = new Vec3(track.getX() - track.xo, track.getY() - track.yo, track.getZ() - track.zo);
+				double t = aimAt.distanceTo(mc.player.getEyePosition()) / dev.rubymod.entity.HeavyAAGunEntity.SHELL_SPEED;
+				aimAt = aimAt.add(vel.scale(t)).add(0, 0.5 * 0.03 * t * t, 0);
+			}
+			Vec3 to = aimAt.subtract(mc.player.getEyePosition());
 			mc.player.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
 			mc.player.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
 		}

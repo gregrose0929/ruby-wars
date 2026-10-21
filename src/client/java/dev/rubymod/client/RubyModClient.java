@@ -114,6 +114,7 @@ public class RubyModClient implements ClientModInitializer {
 			ClientState.damageX = payload.x();
 			ClientState.damageZ = payload.z();
 		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Economy.TYPE, (payload, context) -> ClientState.economy = payload);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Contacts.TYPE, (payload, context) -> Contacts.receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.HitConfirm.TYPE, (payload, context) -> {
 			ClientState.hitConfirm = payload;

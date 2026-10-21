@@ -120,7 +120,15 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			case COMBUSTION_GENERATOR -> drawGenerator(g);
 			case SOLAR_PANEL -> info(g, "Output", kind.output(tier) * 20 + " charge/s in sunlight", "Needs open sky above it");
 			case BATTERY -> info(g, "Capacity", String.format(Locale.ROOT, "%,d charge", kind.batteryCapacity(tier)), "Adds to your whole grid");
-			case RUBY_DRILL -> drawArrow(g, 66, 44, true);
+			case RUBY_DRILL -> {
+				drawArrow(g, 66, 44, true);
+				float chance = new float[] {1.5F, 2.0F, 3.0F, 4.0F, 5.5F}[tier - 1];
+				g.text(font, "Rubies", 24, 26, MUTED, false);
+				g.text(font, chance + "%", 24, 36, 0xFFFF5A82, false);
+				g.text(font, "x2 deep", 24, 50, MUTED, false);
+				g.text(font, "(Y<0)", 24, 60, MUTED, false);
+				g.text(font, String.format(java.util.Locale.ROOT, "%.1fs", kind.cycle(tier) / 20.0), 66, 58, MUTED, false);
+			}
 			case ORE_REFINERY -> drawArrow(g, 66, 44, true);
 			case AMMO_FACTORY -> drawAmmo(g);
 			case TRADE_DEPOT -> drawDepot(g);
@@ -132,7 +140,6 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		for (Button b : buttons) {
 			drawButton(g, b, mouseX - leftPos, mouseY - topPos);
 		}
-		g.text(font, "Inventory", 8, MachineMenu.INVENTORY_Y - 15, MUTED, false);
 	}
 
 	private void drawStatus(GuiGraphicsExtractor g) {
