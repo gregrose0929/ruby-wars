@@ -1,6 +1,10 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/lancer"
+		"type": "minecraft:special",
+		"base": "rubymod:item/lancer",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "lancer"
+		}
 	}
 }

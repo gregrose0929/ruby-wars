@@ -1,6 +1,10 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/longshot_sniper"
+		"type": "minecraft:special",
+		"base": "rubymod:item/longshot_sniper",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "longshot_sniper"
+		}
 	}
 }

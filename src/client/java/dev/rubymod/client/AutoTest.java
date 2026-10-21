@@ -118,6 +118,7 @@ public final class AutoTest {
 		then(15, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 10"));
 		switch (mode) {
 			case "guns" -> gunsScript();
+			case "view" -> viewScript();
 			case "vehicles" -> vehiclesScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
@@ -167,6 +168,44 @@ public final class AutoTest {
 		then(2, mc -> shot(mc, "gun-rifle-firing"));
 		then(10, mc -> log("rifle ammo after one shot: {}", mc.player.getMainHandItem().get(ModComponents.AMMO)));
 		then(2, mc -> command(mc, "gamemode creative @a"));
+	}
+
+	/** First-person gun poses for tuning: hip, aimed, mid-reload (mag out, mag in), firing, sprinting; then the hotbar. */
+	private static void viewScript() {
+		String[] guns = {"arr_rifle", "service_pistol", "combat_shotgun", "longshot_sniper", "ruby_blaster", "rocket_launcher", "skyhammer", "lancer"};
+		then(5, mc -> {
+			for (String gun : guns) {
+				command(mc, "give @a rubymod:" + gun);
+			}
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+		});
+		for (int i = 0; i < guns.length; i++) {
+			int slot = i;
+			String name = guns[i];
+			then(12, mc -> mc.player.getInventory().setSelectedSlot(slot));
+			then(14, mc -> shot(mc, "view-" + name + "-hip"));
+			if (!name.equals("longshot_sniper")) {
+				then(2, mc -> aim(mc, true));
+				then(14, mc -> shot(mc, "view-" + name + "-aim"));
+				then(2, mc -> aim(mc, false));
+			}
+			then(8, mc -> {
+				ClientState.reloadTicks = 40;
+				ClientState.reloadStartedAt = System.currentTimeMillis() - 500;
+			});
+			then(1, mc -> shot(mc, "view-" + name + "-reload1"));
+			then(1, mc -> ClientState.reloadStartedAt = System.currentTimeMillis() - 1300);
+			then(1, mc -> shot(mc, "view-" + name + "-reload2"));
+			then(1, mc -> ClientState.reloadTicks = 0);
+			then(6, mc -> dev.rubymod.client.gun.GunView.onShot());
+			then(1, mc -> shot(mc, "view-" + name + "-fire"));
+			then(6, mc -> dev.rubymod.client.gun.GunView.debugSprint = true);
+			then(12, mc -> shot(mc, "view-" + name + "-sprint"));
+			then(1, mc -> dev.rubymod.client.gun.GunView.debugSprint = false);
+		}
+		then(5, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
+		then(14, mc -> shot(mc, "view-third"));
+		then(2, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 	}
 
 	private static void tourScript() {

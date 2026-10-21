@@ -47,7 +47,7 @@ public record GunStats(
 	}
 
 	/** Guns zoomed this far or more use a scope. */
-	public static final float SCOPE_ZOOM = 0.4F;
+	public static final float SCOPE_ZOOM = 0.3F;
 
 	public boolean scoped() {
 		return zoom <= SCOPE_ZOOM;

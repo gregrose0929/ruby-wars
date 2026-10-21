@@ -1,6 +1,10 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/arr_rifle"
+		"type": "minecraft:special",
+		"base": "rubymod:item/arr_rifle",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "arr_rifle"
+		}
 	}
 }

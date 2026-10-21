@@ -1,6 +1,10 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/rocket_launcher"
+		"type": "minecraft:special",
+		"base": "rubymod:item/rocket_launcher",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "rocket_launcher"
+		}
 	}
 }

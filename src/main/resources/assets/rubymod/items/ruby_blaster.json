@@ -1,6 +1,10 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/ruby_blaster"
+		"type": "minecraft:special",
+		"base": "rubymod:item/ruby_blaster",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "ruby_blaster"
+		}
 	}
 }

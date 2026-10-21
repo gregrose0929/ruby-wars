@@ -1,6 +1,10 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/combat_shotgun"
+		"type": "minecraft:special",
+		"base": "rubymod:item/combat_shotgun",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "combat_shotgun"
+		}
 	}
 }

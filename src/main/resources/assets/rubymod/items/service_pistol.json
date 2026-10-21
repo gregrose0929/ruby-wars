@@ -1,6 +1,10 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/service_pistol"
+		"type": "minecraft:special",
+		"base": "rubymod:item/service_pistol",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "service_pistol"
+		}
 	}
 }

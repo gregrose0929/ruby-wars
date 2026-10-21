@@ -47,7 +47,7 @@ public class ModItems {
 	//                                                                    dmg  rate mag reload hip  aim  range pel ammo          auto  head  speed recoil zoom special
 	public static final Item SERVICE_PISTOL = gun("service_pistol", new GunStats(5.0F, 6, 12, 30, 2.0F, 0.6F, 60, 1, AmmoType.LIGHT, false, 1.5F, 0.8F, 2.0F, 0.85F, Special.NONE));
 	public static final Item COMBAT_SHOTGUN = gun("combat_shotgun", new GunStats(3.0F, 16, 6, 50, 7.0F, 5.0F, 20, 8, AmmoType.SHELLS, false, 1.25F, 0.7F, 5.0F, 0.9F, Special.BREACH));
-	public static final Item ARR_RIFLE = gun("arr_rifle", new GunStats(5.0F, 3, 30, 40, 2.5F, 0.8F, 90, 1, AmmoType.HEAVY, true, 1.75F, 0.65F, 1.0F, 0.35F, Special.NONE));
+	public static final Item ARR_RIFLE = gun("arr_rifle", new GunStats(5.0F, 3, 30, 40, 2.5F, 0.8F, 90, 1, AmmoType.HEAVY, true, 1.75F, 0.65F, 1.0F, 0.55F, Special.NONE));
 	public static final Item LONGSHOT_SNIPER = gun("longshot_sniper", new GunStats(16.0F, 30, 5, 60, 6.0F, 0.0F, 512, 1, AmmoType.SNIPER, false, 2.0F, 0.35F, 6.0F, 0.2F, Special.GLINT));
 	public static final Item RUBY_BLASTER = gun("ruby_blaster", new GunStats(7.0F, 5, 20, 40, 1.5F, 1.0F, 70, 1, AmmoType.RUBY_CELL, true, 1.5F, 0.7F, 1.2F, 0.8F, Special.BOUNCE));
 

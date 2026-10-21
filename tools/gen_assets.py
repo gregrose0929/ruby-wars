@@ -12,6 +12,7 @@ import zipfile
 import models3d
 import models3d_blocks
 import machines3d
+import gun_models
 
 NS = "rubymod"
 RES = "src/main/resources"
@@ -71,15 +72,19 @@ def fit_display(elements, gui_rotation, pad=15.0):
 
 
 def gun_item(name):
-    """One 3D model everywhere: side profile in inventories, aimed forward in hand."""
-    model = models3d.gun_model(name)
-    model["gui_light"] = "front"
-    model["display"] = {**GUN_DISPLAY, **fit_display(model["elements"], [0, 0, 0], 15.5)}
+    """Guns are drawn by the "rubymod:gun" special renderer (GunItemRenderer) from their 3D model;
+    the base model only carries the display transforms, sized from the gun's real bounds."""
+    gun = gun_models.GUNS[name]()
+    b = gun_models.bounds(gun.root)
+    lo, hi = b["bounds_min"], b["bounds_max"]
+    ox, oy = 6.0, 5.0  # GunItemRenderer.ORIGIN_X / ORIGIN_Y
+    # Gun space (x left, y up, z forward) -> item space (z + ox, y + oy, 8 - x).
+    box = [{"from": [lo[2] + ox, lo[1] + oy, 8 - hi[0]], "to": [hi[2] + ox, hi[1] + oy, 8 - lo[0]]}]
+    display = {**GUN_DISPLAY, **fit_display(box, [0, 0, 0], 15.5)}
+    model = {"textures": {"particle": f"{NS}:item/gun_parts"}, "gui_light": "front", "display": display}
     write(f"{ASSETS}/models/item/{name}.json", model)
-    old_icon = f"{ASSETS}/models/item/{name}_icon.json"
-    if os.path.exists(old_icon):
-        os.remove(old_icon)
-    client_item(name, f"{NS}:item/{name}")
+    write(f"{ASSETS}/items/{name}.json", {"model": {"type": "minecraft:special", "base": f"{NS}:item/{name}",
+                                                    "model": {"type": f"{NS}:gun", "gun": name}}})
 
 
 def vehicle_item(name, elements, block_model):

@@ -32,6 +32,9 @@ public class RubyModClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		dev.rubymod.client.model.GunModel.registerLayers();
+		dev.rubymod.client.mixin.SpecialModelRenderersAccessor.rubymod$idMapper().put(RubyMod.id("gun"),
+				dev.rubymod.client.gun.GunItemRenderer.Unbaked.MAP_CODEC);
 		reloadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.reload", InputConstants.KEY_R, CATEGORY));
 		designateKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.designate", InputConstants.KEY_T, CATEGORY));
 		KeyMapping weaponCamKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.weapon_cam", InputConstants.KEY_V, CATEGORY));
@@ -80,6 +83,7 @@ public class RubyModClient implements ClientModInitializer {
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Recoil.TYPE, (payload, context) -> {
+			dev.rubymod.client.gun.GunView.onShot();
 			var player = context.player();
 			player.setXRot(Math.max(-90, player.getXRot() - payload.pitch()));
 			player.setYRot(player.getYRot() + payload.yaw());

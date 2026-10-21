@@ -9,7 +9,10 @@
 		"MinecraftMixin",
 		"CameraMixin",
 		"EntityTurnMixin",
-		"GameRendererMixin"
+		"GameRendererMixin",
+		"SpecialModelRenderersAccessor",
+		"FirstPersonHandsInvoker",
+		"FirstPersonHandsMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
