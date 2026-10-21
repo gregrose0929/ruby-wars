@@ -8,7 +8,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
-/** The Field Manual (H): short pages on everything Ruby Wars adds, so nobody has to read the README. */
+/** The Field Manual (Y): short pages on everything Ruby Wars adds, so nobody has to read the README. */
 public class ManualScreen extends Screen {
 	private record Page(String title, String... lines) {
 	}
@@ -23,7 +23,7 @@ public class ManualScreen extends Screen {
 			new Page("Controls",
 					"Left-click fire, hold right-click to aim, R reload.",
 					"B: ping a spot for your squad, or spot the enemy under your crosshair.",
-					"M: map.  N: hide/show the minimap.  J: research.  H: this manual.",
+					"K: map.  U: hide/show the minimap.  J: research.  Y: this manual.  V: voice chat (Simple Voice Chat).",
 					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, T designate, C weapon cam, G gear."),
 			new Page("Economy",
 					"Generators and solar panels fill your power grid. Ruby Drills dig ore; the Ore Refinery doubles it; the Trade Depot sells it into your bank.",

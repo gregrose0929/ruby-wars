@@ -52,10 +52,10 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Aircraft weapons | Left-click fires, R switches weapon, Space drops flares, T designates a target, C weapon camera, G landing gear, Sneak ejects (parachute) |
 | Helicopter | W/S climb and descend, look to turn, look down to fly forward (up to go back), A/D strafe |
 | Ping / spot | B: mark the spot you're looking at for your squad, or spot the enemy under your crosshair (10 s) |
-| Map | M: the full map (scroll to zoom, drag to pan). The minimap is always top right |
+| Map | K: the full map (scroll to zoom, drag to pan). The minimap is always top right |
 | Research | J: the research tree |
-| Minimap | N: hide or show it |
-| Field Manual | H: short in-game guide pages on everything here |
+| Minimap | U: hide or show it |
+| Field Manual | Y: short in-game guide pages on everything here |
 
 In any vehicle the view is truly first person: no hands, no held item, and the
 hotbar and hearts make way for the vehicle's HUD.
@@ -332,7 +332,7 @@ ends when one squad (or one solo player) is left.
 
 The minimap (top right) shows the terrain you've explored, claim borders (yours
 green, your squad's blue, others red), squadmates, and markers: waypoints, your
-grave, pings, supply drops and raids. M opens the full map. Markers also float in
+grave, pings, supply drops and raids. K opens the full map. Markers also float in
 the world with their distance. `/waypoint add <name>` saves where you stand
 (`/waypoint list`, `/waypoint remove <name>`). B pings a spot for your squad, or
 spots an enemy for 10 seconds; eliminated players can still spot for their squad

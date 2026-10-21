@@ -43,10 +43,10 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping gearKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.landing_gear", InputConstants.KEY_G, CATEGORY));
 		dev.rubymod.entity.AircraftEntity.crashReporter = severity -> ClientPlayNetworking.send(new Payloads.AircraftCrash((float) severity));
 		KeyMapping pingKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.ping", InputConstants.KEY_B, CATEGORY));
-		KeyMapping mapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.map", InputConstants.KEY_M, CATEGORY));
+		KeyMapping mapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.map", InputConstants.KEY_K, CATEGORY));
 		KeyMapping researchKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.research", InputConstants.KEY_J, CATEGORY));
-		KeyMapping minimapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.minimap", InputConstants.KEY_N, CATEGORY));
-		KeyMapping manualKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.manual", InputConstants.KEY_H, CATEGORY));
+		KeyMapping minimapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.minimap", InputConstants.KEY_U, CATEGORY));
+		KeyMapping manualKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.manual", InputConstants.KEY_Y, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
