@@ -124,6 +124,33 @@ public final class AutoTest {
 			case "gear" -> gearScript();
 			case "impact" -> impactScript();
 			case "follow" -> followScript();
+			case "tankfire" -> {
+				then(5, mc -> command(mc, "execute at @p run summon rubymod:tank ~ ~ ~8 {Rotation:[0f,0f]}"));
+				then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:tank,limit=1,sort=nearest]"));
+				then(10, mc -> {
+					mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+					mc.player.setYRot(mc.player.getVehicle().getYRot() + 40);
+					mc.player.setYHeadRot(mc.player.getYRot());
+					mc.player.setXRot(-15);
+				});
+				then(60, mc -> {
+					var t = (dev.rubymod.entity.VehicleEntity) mc.player.getVehicle();
+					log("tank yaw {} turret {} pitch {}", t.getYRot(), t.turretYaw(), t.barrelPitch());
+					ClientPlayNetworking.send(new Payloads.VehicleFire());
+				});
+				then(1, mc -> shot(mc, "tankfire-1"));
+				then(2, mc -> shot(mc, "tankfire-3"));
+				then(6, mc -> shot(mc, "tankfire-9"));
+				then(2, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
+				then(10, mc -> shot(mc, "tankfire-front"));
+				then(2, mc -> {
+					mc.options.setCameraType(CameraType.FIRST_PERSON);
+					command(mc, "ride @p dismount");
+				});
+				// Side view: the turret was aimed 40 degrees right (toward -x) and 15 up; look at it across its gun.
+				then(10, mc -> command(mc, "execute as @p at @e[type=rubymod:tank,limit=1,sort=nearest] run tp @s ~-9 ~1 ~-2 -100 0"));
+				then(15, mc -> shot(mc, "tankfire-side"));
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));

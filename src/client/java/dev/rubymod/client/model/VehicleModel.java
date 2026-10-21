@@ -69,10 +69,10 @@ public class VehicleModel extends EntityModel<VehicleRenderer.State> {
 	public void setupAnim(VehicleRenderer.State state) {
 		super.setupAnim(state);
 		if (turret != null) {
-			turret.yRot = (float) Math.toRadians(state.turretYaw);
+			turret.yRot = (float) Math.toRadians(-state.turretYaw);
 		}
 		if (gun != null) {
-			gun.xRot = (float) Math.toRadians(state.barrelPitch);
+			gun.xRot = (float) Math.toRadians(-state.barrelPitch); // Minecraft pitch is negative upward
 		}
 		if (barrel != null) {
 			barrel.z -= state.recoil * 7.0F;
