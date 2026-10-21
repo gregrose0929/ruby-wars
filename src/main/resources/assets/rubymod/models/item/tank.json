@@ -1,6 +1,91 @@
 {
-	"parent": "minecraft:item/generated",
-	"textures": {
-		"layer0": "rubymod:item/tank"
+	"parent": "rubymod:block/tank_icon",
+	"gui_light": "side",
+	"display": {
+		"gui": {
+			"rotation": [
+				25,
+				135,
+				0
+			],
+			"translation": [
+				0.0,
+				-0.27,
+				3.25
+			],
+			"scale": [
+				0.532,
+				0.532,
+				0.532
+			]
+		},
+		"ground": {
+			"rotation": [
+				0,
+				0,
+				0
+			],
+			"translation": [
+				0.0,
+				2,
+				1.62
+			],
+			"scale": [
+				0.266,
+				0.266,
+				0.266
+			]
+		},
+		"fixed": {
+			"rotation": [
+				0,
+				180,
+				0
+			],
+			"translation": [
+				0.0,
+				-0.27,
+				3.25
+			],
+			"scale": [
+				0.532,
+				0.532,
+				0.532
+			]
+		},
+		"thirdperson_righthand": {
+			"rotation": [
+				75,
+				45,
+				0
+			],
+			"translation": [
+				0,
+				2.5,
+				0
+			],
+			"scale": [
+				0.2,
+				0.2,
+				0.2
+			]
+		},
+		"firstperson_righthand": {
+			"rotation": [
+				0,
+				135,
+				0
+			],
+			"translation": [
+				0,
+				3,
+				0
+			],
+			"scale": [
+				0.25,
+				0.25,
+				0.25
+			]
+		}
 	}
 }

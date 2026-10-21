@@ -10,6 +10,7 @@ import sys
 import zipfile
 
 import models3d
+import models3d_blocks
 
 NS = "rubymod"
 RES = "src/main/resources"
@@ -25,7 +26,7 @@ def write(path, obj):
 
 
 # ---------------------------------------------------------------- items
-SIMPLE_ITEMS = ["jet", "extended_mag", "red_dot_sight", "vertical_grip", "suppressor", "jeep", "tank", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
+SIMPLE_ITEMS = ["extended_mag", "red_dot_sight", "vertical_grip", "suppressor", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
                 "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge"]
 HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe"]
 ARMOR_ITEMS = ["ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"]
@@ -53,19 +54,40 @@ def item_model(name, parent="minecraft:item/generated", display=None, texture=No
     client_item(name, f"{NS}:item/{name}")
 
 
+def fit_display(elements, gui_rotation, pad=15.0):
+    """gui/ground/fixed transforms that scale a 3D model to fit and center it in an inventory slot."""
+    (x0, x1), (y0, y1), (z0, z1) = (models3d_blocks.extent(elements, a) for a in range(3))
+    size = max(x1 - x0, y1 - y0, z1 - z0)
+    scale = round(min(1.0, pad / size), 3)
+    cx, cy, cz = (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2
+    shift = [round((8 - cx) * scale, 2), round((8 - cy) * scale, 2), round((8 - cz) * scale, 2)]
+    return {
+        "gui": {"rotation": gui_rotation, "translation": shift, "scale": [scale] * 3},
+        "ground": {"rotation": [0, 0, 0], "translation": [round(shift[0] * 0.5, 2), 2, round(shift[2] * 0.5, 2)],
+                   "scale": [round(scale * 0.5, 3)] * 3},
+        "fixed": {"rotation": [0, 180, 0], "translation": shift, "scale": [scale] * 3},
+    }
+
+
 def gun_item(name):
-    """Flat sprite in inventories and on the ground; 3D model in hand (like the vanilla spyglass)."""
-    write(f"{ASSETS}/models/item/{name}_icon.json", {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{name}"}})
+    """One 3D model everywhere: side profile in inventories, aimed forward in hand."""
     model = models3d.gun_model(name)
-    model["display"] = GUN_DISPLAY
+    model["gui_light"] = "front"
+    model["display"] = {**GUN_DISPLAY, **fit_display(model["elements"], [0, 0, 0], 15.5)}
     write(f"{ASSETS}/models/item/{name}.json", model)
-    write(f"{ASSETS}/items/{name}.json", {"model": {
-        "type": "minecraft:select",
-        "property": "minecraft:display_context",
-        "cases": [{"when": ["gui", "ground", "fixed", "on_shelf"],
-                   "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}_icon"}}],
-        "fallback": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
-    }})
+    old_icon = f"{ASSETS}/models/item/{name}_icon.json"
+    if os.path.exists(old_icon):
+        os.remove(old_icon)
+    client_item(name, f"{NS}:item/{name}")
+
+
+def vehicle_item(name, elements, block_model):
+    """Vehicle items show the actual 3D vehicle."""
+    display = fit_display(elements, [25, 135, 0], 15.0)
+    display["thirdperson_righthand"] = {"rotation": [75, 45, 0], "translation": [0, 2.5, 0], "scale": [0.2, 0.2, 0.2]}
+    display["firstperson_righthand"] = {"rotation": [0, 135, 0], "translation": [0, 3, 0], "scale": [0.25, 0.25, 0.25]}
+    write(f"{ASSETS}/models/item/{name}.json", {"parent": block_model, "gui_light": "side", "display": display})
+    client_item(name, f"{NS}:item/{name}")
 
 
 def client_item(name, model):
@@ -103,20 +125,16 @@ def simple_state(name):
 
 
 def gen_blocks(client_jar):
-    for name in ["ruby_block", "ruby_ore", "deepslate_ruby_ore", "ruby_heart", "sandbags", "concrete_wall", "reinforced_concrete",
-                 "missile_interceptor", "alarm_block"]:
+    for name in ["ruby_block", "ruby_ore", "deepslate_ruby_ore", "ruby_heart", "sandbags", "concrete_wall", "reinforced_concrete"]:
         cube_all(name)
-    for name in ["armory", "radar_station", "missile_silo"]:
-        column(name)
+    column("armory")
 
-    box_model("sentry_turret", [2, 0, 2], [14, 14, 14], "sentry_turret", "sentry_turret_top")
-    simple_state("sentry_turret")
-    box_model("mortar", [2, 0, 2], [14, 12, 14], "mortar", "mortar_top")
-    simple_state("mortar")
-    box_model("landmine", [2, 0, 2], [14, 2, 14], "landmine", "landmine")
-    simple_state("landmine")
+    # Defenses and launchers are 3D models built from boxes (tools/models3d_blocks.py).
+    for name in models3d_blocks.BLOCKS:
+        write(f"{ASSETS}/models/block/{name}.json", models3d_blocks.block_model(name))
+        if name != "claymore":
+            simple_state(name)
 
-    box_model("claymore", [4, 0, 7], [12, 6, 9], "claymore", "claymore")
     write(f"{ASSETS}/blockstates/claymore.json", {"variants": {
         f"facing={f}": {"model": f"{NS}:block/claymore", "y": y} for f, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270))}})
     client_item("claymore", f"{NS}:block/claymore")
@@ -142,6 +160,11 @@ def gen_blocks(client_jar):
     # Vehicles: never placed as blocks; VehicleRenderer draws these models scaled up.
     for name in models3d.VEHICLES:
         write(f"{ASSETS}/models/block/{name}.json", models3d.vehicle_model(name))
+    write(f"{ASSETS}/models/block/tank_icon.json",
+          {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"}, "elements": models3d_blocks.TANK_ICON})
+    vehicle_item("jeep", models3d.JEEP, f"{NS}:block/jeep_model")
+    vehicle_item("tank", models3d_blocks.TANK_ICON, f"{NS}:block/tank_icon")
+    vehicle_item("jet", models3d.JET, f"{NS}:block/jet_model")
     for name in models3d.VEHICLES:
         write(f"{ASSETS}/blockstates/{name}.json", {"variants": {"": {"model": f"{NS}:block/{name}"}}})
 

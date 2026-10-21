@@ -69,13 +69,13 @@ public class ModBlocks {
 			props().mapColor(MapColor.METAL).strength(4.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
 	public static final Block MISSILE_INTERCEPTOR = register("missile_interceptor",
 			p -> new DefenseBlock(DefenseBlock.Kind.INTERCEPTOR, Shapes.block(), p),
-			props().mapColor(MapColor.METAL).strength(4.0F, 6.0F).sound(SoundType.METAL));
+			props().mapColor(MapColor.METAL).strength(4.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
 	public static final Block RADAR_STATION = register("radar_station",
 			p -> new DefenseBlock(DefenseBlock.Kind.RADAR, Shapes.block(), p),
-			props().mapColor(MapColor.METAL).strength(3.0F, 6.0F).sound(SoundType.METAL));
+			props().mapColor(MapColor.METAL).strength(3.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
 	public static final Block ALARM_BLOCK = register("alarm_block",
 			p -> new DefenseBlock(DefenseBlock.Kind.ALARM, Shapes.block(), p),
-			props().mapColor(MapColor.COLOR_RED).strength(2.0F, 6.0F).sound(SoundType.METAL));
+			props().mapColor(MapColor.COLOR_RED).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
 	public static final Block CLAYMORE = register("claymore", ClaymoreBlock::new,
 			props().mapColor(MapColor.COLOR_GREEN).strength(0.5F).sound(SoundType.METAL).noOcclusion());
 	public static final Block LANDMINE = register("landmine", LandmineBlock::new,
@@ -89,7 +89,7 @@ public class ModBlocks {
 			props().mapColor(MapColor.COLOR_GREEN).strength(4.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
 	public static final Block MISSILE_SILO = register("missile_silo",
 			p -> new LauncherBlock(LauncherBlock.Kind.MISSILE_SILO, Shapes.block(), p),
-			props().mapColor(MapColor.METAL).strength(6.0F, 6.0F).sound(SoundType.METAL));
+			props().mapColor(MapColor.METAL).strength(6.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
 
 	// --- Vehicle models (never placed; the vehicle renderers draw these block models) ---
 	public static final Block JEEP_MODEL = registerModelOnly("jeep_model");

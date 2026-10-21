@@ -4,6 +4,8 @@
 # Screenshots land in run/screenshots/autotest-*.png; the log in run/client-test.log.
 set -e
 cd "$(dirname "$0")/.."
+# Use JDK 25 if it's installed in the usual Windows spot and JAVA_HOME points elsewhere.
+if [ -d "/c/Program Files/Java/jdk-25" ]; then export JAVA_HOME="C:\Program Files\Java\jdk-25"; fi
 MODE="${1:-full}"
 mkdir -p run/saves
 if [ ! -d run/saves/autotest ]; then

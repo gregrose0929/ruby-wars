@@ -1,9 +1,8 @@
 {
 	"parent": "minecraft:block/block",
 	"textures": {
-		"particle": "rubymod:block/landmine",
-		"side": "rubymod:block/landmine",
-		"top": "rubymod:block/landmine"
+		"parts": "rubymod:block/vehicle_parts",
+		"particle": "rubymod:block/vehicle_parts"
 	},
 	"elements": [
 		{
@@ -14,28 +13,199 @@
 			],
 			"to": [
 				14,
-				2,
+				1,
 				14
 			],
 			"faces": {
 				"north": {
-					"texture": "#side"
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
 				},
 				"south": {
-					"texture": "#side"
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
 				},
 				"east": {
-					"texture": "#side"
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
 				},
 				"west": {
-					"texture": "#side"
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
 				},
 				"up": {
-					"texture": "#top"
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
 				},
 				"down": {
-					"texture": "#top",
-					"cullface": "down"
+					"uv": [
+						4.5,
+						0.5,
+						7.5,
+						3.5
+					],
+					"texture": "#parts"
+				}
+			}
+		},
+		{
+			"from": [
+				4,
+				1,
+				4
+			],
+			"to": [
+				12,
+				1.8,
+				12
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						12.5,
+						4.5,
+						15.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						12.5,
+						4.5,
+						15.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						12.5,
+						4.5,
+						15.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						12.5,
+						4.5,
+						15.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						12.5,
+						4.5,
+						15.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						12.5,
+						4.5,
+						15.5,
+						7.5
+					],
+					"texture": "#parts"
+				}
+			}
+		},
+		{
+			"from": [
+				7,
+				1.8,
+				7
+			],
+			"to": [
+				9,
+				2.4,
+				9
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						8.5,
+						12.5,
+						11.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						8.5,
+						12.5,
+						11.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						8.5,
+						12.5,
+						11.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						8.5,
+						12.5,
+						11.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						8.5,
+						12.5,
+						11.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						8.5,
+						12.5,
+						11.5,
+						15.5
+					],
+					"texture": "#parts"
 				}
 			}
 		}

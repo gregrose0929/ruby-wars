@@ -1,6 +1,91 @@
 {
-	"parent": "minecraft:item/generated",
-	"textures": {
-		"layer0": "rubymod:item/jet"
+	"parent": "rubymod:block/jet_model",
+	"gui_light": "side",
+	"display": {
+		"gui": {
+			"rotation": [
+				25,
+				135,
+				0
+			],
+			"translation": [
+				0.0,
+				0.46,
+				1.27
+			],
+			"scale": [
+				0.439,
+				0.439,
+				0.439
+			]
+		},
+		"ground": {
+			"rotation": [
+				0,
+				0,
+				0
+			],
+			"translation": [
+				0.0,
+				2,
+				0.64
+			],
+			"scale": [
+				0.22,
+				0.22,
+				0.22
+			]
+		},
+		"fixed": {
+			"rotation": [
+				0,
+				180,
+				0
+			],
+			"translation": [
+				0.0,
+				0.46,
+				1.27
+			],
+			"scale": [
+				0.439,
+				0.439,
+				0.439
+			]
+		},
+		"thirdperson_righthand": {
+			"rotation": [
+				75,
+				45,
+				0
+			],
+			"translation": [
+				0,
+				2.5,
+				0
+			],
+			"scale": [
+				0.2,
+				0.2,
+				0.2
+			]
+		},
+		"firstperson_righthand": {
+			"rotation": [
+				0,
+				135,
+				0
+			],
+			"translation": [
+				0,
+				3,
+				0
+			],
+			"scale": [
+				0.25,
+				0.25,
+				0.25
+			]
+		}
 	}
 }

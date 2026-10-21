@@ -63,6 +63,26 @@ def grid(rows):
         r = r.ljust(16, ".")
         assert len(r) == 16, r
         out.append([PAL[c] for c in r])
+    return shade(out, rows)
+
+
+def shade(img, rows):
+    """Give flat sprites depth: lighten pixels lit from the top-left, darken the bottom-right edges."""
+    def edge(x, y):
+        return x < 0 or y < 0 or x > 15 or y > 15 or rows[y][x] in ".k"
+
+    out = [row[:] for row in img]
+    for y in range(16):
+        for x in range(16):
+            if rows[y][x] in ".k":
+                continue
+            r, g, b, a = img[y][x]
+            delta = 0
+            if edge(x, y - 1) or edge(x - 1, y):
+                delta += 28
+            if edge(x, y + 1) or edge(x + 1, y):
+                delta -= 24
+            out[y][x] = (max(0, min(255, r + delta)), max(0, min(255, g + delta)), max(0, min(255, b + delta)), a)
     return out
 
 
