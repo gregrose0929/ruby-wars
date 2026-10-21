@@ -123,6 +123,7 @@ public final class AutoTest {
 			case "raid" -> raidScript();
 			case "gear" -> gearScript();
 			case "impact" -> impactScript();
+			case "follow" -> followScript();
 			case "vehicles" -> vehiclesScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
@@ -480,6 +481,34 @@ public final class AutoTest {
 			mc.player.setXRot(0);
 		});
 		then(10, mc -> shot(mc, "impact-holes"));
+	}
+
+	/** A guard told to follow keeps up as the player walks off. */
+	private static void followScript() {
+		then(5, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				var guard = dev.rubymod.entity.SoldierEntity.guard(player.level(), player, player.blockPosition().offset(2, 0, 0), 0);
+				player.level().addFreshEntity(guard);
+				guard.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND, guard.position());
+				log("guard following: {}", guard.following());
+			});
+		});
+		for (int step = 1; step <= 3; step++) {
+			int n = step;
+			then(10, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~" + 8 + " 0 0"));
+			then(100, mc -> {
+				IntegratedServer server = mc.getSingleplayerServer();
+				server.execute(() -> {
+					var player = server.getPlayerList().getPlayers().get(0);
+					for (var gd : player.level().getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, player.getBoundingBox().inflate(80))) {
+						log("step {}: guard {} blocks away", n, Math.round(gd.distanceTo(player)));
+					}
+				});
+			});
+		}
+		then(5, mc -> shot(mc, "follow"));
 	}
 
 	private static void tourScript() {
