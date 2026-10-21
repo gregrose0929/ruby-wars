@@ -46,6 +46,13 @@ public class GameHud implements HudElement {
 		drawRadar(g, font, w);
 		drawKillFeed(g, font, w);
 		drawHitConfirm(g, font, w, h);
+		long combat = ClientState.combatUntil - System.currentTimeMillis();
+		if (combat > 0) {
+			String text = "IN COMBAT " + (combat / 1000 + 1) + "s";
+			int tw = font.width(text) + 10;
+			panel(g, w / 2 - tw / 2, h - 72, w / 2 + tw / 2, h - 60);
+			g.centeredText(font, text, w / 2, h - 70, RED);
+		}
 
 		if (ClientState.hud != null && ClientState.hud.eliminated()) {
 			g.centeredText(font, Component.literal("ELIMINATED - spectating"), w / 2, h - 60, RED);

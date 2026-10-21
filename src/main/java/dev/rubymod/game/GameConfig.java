@@ -80,6 +80,8 @@ public class GameConfig {
 	/** Squads: players per squad, and whether squadmates can hurt each other. */
 	public int squadMaxSize = 4;
 	public boolean friendlyFire = false;
+	/** Seconds a PvP hit keeps you "in combat"; logging out then kills you. */
+	public int combatTagSeconds = 15;
 
 	/** Economy: Trade Depot prices are multiplied by this (1.0 = the full price list). */
 	public double tradeDepotPriceMultiplier = 0.35;

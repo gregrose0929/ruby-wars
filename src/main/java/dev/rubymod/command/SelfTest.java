@@ -415,6 +415,10 @@ public final class SelfTest {
 		dev.rubymod.game.Squads.leave(bravo);
 		dev.rubymod.game.Squads.leave(alpha);
 		check("squads: leaving the last member disbands the squad", data.squads.isEmpty());
+		check("combat: a PvP hit tags both players on Battle Day", runAs(Phase.WAR, () -> {
+			dev.rubymod.game.CombatTag.tag(alpha, bravo);
+			return dev.rubymod.game.CombatTag.tagged(alpha.getUUID()) && dev.rubymod.game.CombatTag.tagged(bravo.getUUID());
+		}));
 
 		// ----- Ore -----
 		int ore = 0;

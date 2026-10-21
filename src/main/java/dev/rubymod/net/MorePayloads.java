@@ -147,7 +147,20 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: you're in combat for this many seconds (don't log out). */
+	public record CombatTagged(int seconds) implements CustomPacketPayload {
+		public static final Type<CombatTagged> TYPE = new Type<>(RubyMod.id("combat_tagged"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, CombatTagged> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, CombatTagged::seconds, CombatTagged::new);
+
+		@Override
+		public Type<CombatTagged> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(CombatTagged.TYPE, CombatTagged.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BulletHole.TYPE, BulletHole.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Ping.TYPE, Ping.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(LookQuery.TYPE, LookQuery.CODEC);

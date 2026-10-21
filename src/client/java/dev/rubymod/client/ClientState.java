@@ -19,6 +19,8 @@ public final class ClientState {
 	/** Latest look-at answer and when it arrived. */
 	public static dev.rubymod.net.MorePayloads.LookInfo look;
 	public static long lookAt;
+	/** When the current combat tag runs out (ms). */
+	public static long combatUntil;
 	/** Research points and unlocks. */
 	public static dev.rubymod.net.MorePayloads.ResearchSync research;
 

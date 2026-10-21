@@ -368,6 +368,13 @@ crate with your helmet and dog tags) instead of scattering. Only you can open it
 for 5 minutes (`graveLockSeconds`), then anyone can loot it. It shows on your map,
 and crumbles once it's empty.
 
+## Combat logging
+
+Hurting or being hurt by another player tags you both "in combat" for 15 seconds
+(`combatTagSeconds`); the HUD shows the countdown. Log out while tagged when PvP
+is on and you die where you stood: your gear goes to a War Grave and the death
+counts.
+
 ## Practice raids
 
 On build days 3, 6, 9 and 12 (`raidDays`), once you or a squadmate is online,

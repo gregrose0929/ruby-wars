@@ -93,7 +93,10 @@ public final class GameEvents {
 		});
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> BattleDirector.onJoin(handler.getPlayer()));
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BattleDirector.onLeave(server, handler.getPlayer()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			CombatTag.onLeave(server, handler.getPlayer());
+			BattleDirector.onLeave(server, handler.getPlayer());
+		});
 
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Ping.TYPE, (payload, context) ->
 				Waypoints.ping(context.player(), payload));
@@ -179,6 +182,9 @@ public final class GameEvents {
 		// --- Combat ---
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> Rules.canHurt(source.getEntity(), entity));
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamage, damageTaken, blocked) -> {
+			if (entity instanceof ServerPlayer victim && damageTaken > 0 && source.getEntity() instanceof ServerPlayer attacker) {
+				CombatTag.tag(attacker, victim);
+			}
 			if (entity instanceof ServerPlayer player && damageTaken > 0 && source.getSourcePosition() != null) {
 				Net.send(player, new Payloads.DamageFrom(source.getSourcePosition().x, source.getSourcePosition().z));
 			}

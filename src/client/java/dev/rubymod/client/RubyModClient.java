@@ -119,6 +119,8 @@ public class RubyModClient implements ClientModInitializer {
 			player.setXRot(Math.max(-90, player.getXRot() - payload.pitch()));
 			player.setYRot(player.getYRot() + payload.yaw());
 		});
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.CombatTagged.TYPE, (payload, context) ->
+				ClientState.combatUntil = System.currentTimeMillis() + payload.seconds() * 1000L);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.MapSync.TYPE, (payload, context) -> ClientState.map = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ResearchSync.TYPE, (payload, context) -> ClientState.research = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.LookInfo.TYPE, (payload, context) -> {
