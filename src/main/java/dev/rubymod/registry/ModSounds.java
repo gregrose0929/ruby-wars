@@ -23,6 +23,7 @@ public final class ModSounds {
 	public static final SoundEvent CASING = register("casing");
 	public static final SoundEvent DRY_FIRE = register("dry_fire");
 	public static final SoundEvent EXPLOSION = register("explosion");
+	public static final SoundEvent BULLET_WHIZ = register("bullet_whiz");
 	public static final SoundEvent EXPLOSION_FAR = register("explosion_far");
 	public static final SoundEvent JET_ENGINE = register("jet_engine");
 	public static final SoundEvent HELI_ROTOR = register("heli_rotor");

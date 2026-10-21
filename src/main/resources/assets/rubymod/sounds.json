@@ -128,6 +128,13 @@
 			"rubymod:dry_fire"
 		]
 	},
+	"bullet_whiz": {
+		"sounds": [
+			"rubymod:bullet_whiz_0",
+			"rubymod:bullet_whiz_1",
+			"rubymod:bullet_whiz_2"
+		]
+	},
 	"explosion": {
 		"sounds": [
 			{

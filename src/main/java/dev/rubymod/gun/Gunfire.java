@@ -132,6 +132,31 @@ public final class Gunfire {
 			hitPos = end;
 		}
 		drawTracer(level, start, hitPos, stats);
+		nearMisses(level, shooter, start, hitPos, entityHit == null ? null : entityHit.entity());
+	}
+
+	/** Players the bullet passed close to (but didn't hit) hear it crack past and flinch a little. */
+	private static void nearMisses(ServerLevel level, ServerPlayer shooter, Vec3 from, Vec3 to, Entity hit) {
+		Vec3 seg = to.subtract(from);
+		double len2 = seg.lengthSqr();
+		if (len2 < 64) {
+			return;
+		}
+		for (ServerPlayer p : level.players()) {
+			if (p == shooter || p == hit || p.isSpectator() || p.distanceToSqr(shooter) < 64) {
+				continue;
+			}
+			Vec3 eye = p.getEyePosition();
+			double t = Math.max(0, Math.min(1, eye.subtract(from).dot(seg) / len2));
+			Vec3 closest = from.add(seg.scale(t));
+			double d = closest.distanceTo(eye);
+			if (d < 2.5 && t > 0.05 && t < 0.999) {
+				p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+						net.minecraft.core.Holder.direct(dev.rubymod.registry.ModSounds.BULLET_WHIZ), SoundSource.PLAYERS,
+						closest.x, closest.y, closest.z, 0.9F, 0.85F + p.getRandom().nextFloat() * 0.3F, p.getRandom().nextLong()));
+				Net.send(p, new Payloads.Shake(0.6F * (float) (1.0 - d / 2.5), 4));
+			}
+		}
 	}
 
 	private record Hit(Entity entity, Vec3 location, double eyeY) {

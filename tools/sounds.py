@@ -180,6 +180,18 @@ def dry_fire(seed):
     return normalize(metal_click(seed, [2800, 4400], 0.006, 0.06), 0.7)
 
 
+def bullet_whiz(seed):
+    """A supersonic crack and a short whine that dopplers down as the round goes past."""
+    rng = np.random.default_rng(seed)
+    n = int(SR * 0.35)
+    tt = np.arange(n) / SR
+    crack = highpass(noise(0.008, rng), 3000) * env(int(SR * 0.008), 0.0002, 0.002)
+    f = 3200 * np.exp(-tt / 0.08) + 900
+    whine = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt / 0.07) * np.minimum(1, tt / 0.004) * 0.25
+    air = bandpass(noise(0.35, rng), 1500, 7000) * np.exp(-tt / 0.05) * 0.4
+    return normalize(mix(0.35, (0, crack), (0.002, whine), (0.0, air)), 0.8)
+
+
 def explosion(seed):
     rng = np.random.default_rng(seed)
     blast = gunshot(seed, crack=1.2, body_cut=1400, body_decay=0.22, thump_hz=48, thump_decay=0.25, length=1.6, mech=0.0, echo=False,
@@ -276,6 +288,7 @@ SOUNDS = {
     "shell_in": shell_in,
     "casing": casing,
     "dry_fire": dry_fire,
+    "bullet_whiz": bullet_whiz,
     "explosion": explosion,
     "explosion_far": explosion_far,
     "jet_engine": jet_engine,
@@ -284,7 +297,7 @@ SOUNDS = {
     "jeep_engine": jeep_engine,
 }
 ENGINE_RANGE = {"jet_engine": 96, "heli_rotor": 80, "tank_engine": 48, "jeep_engine": 32}
-VARIANTS = {"explosion": 3, "explosion_far": 2, "rifle_shot": 3, "pistol_shot": 3, "shotgun_shot": 2, "sniper_shot": 2, "blaster_shot": 3, "casing": 4}
+VARIANTS = {"bullet_whiz": 3, "explosion": 3, "explosion_far": 2, "rifle_shot": 3, "pistol_shot": 3, "shotgun_shot": 2, "sniper_shot": 2, "blaster_shot": 3, "casing": 4}
 
 
 def main():
