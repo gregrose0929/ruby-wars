@@ -117,6 +117,7 @@ public final class AutoTest {
 			case "vehicles" -> vehiclesScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
+			case "showcase" -> showcaseScript();
 			default -> {
 				gunsScript();
 				tourScript();
@@ -368,6 +369,103 @@ public final class AutoTest {
 			command(mc, "ride @p dismount");
 		});
 		then(10, mc -> shot(mc, "training-after-taxi"));
+	}
+
+	/** Screenshots of every aircraft model, parked and flying, and the helicopter flown. */
+	private static void showcaseScript() {
+		then(5, mc -> {
+			origin = mc.player.position();
+			mc.options.fov().set(30);
+			command(mc, "gamemode creative @a");
+			command(mc, "execute at @p run fill ~-40 ~ ~-10 ~40 ~20 ~60 minecraft:air");
+			command(mc, "execute at @p run fill ~-40 ~-1 ~-10 ~40 ~-1 ~60 minecraft:gray_concrete");
+		});
+		String[] types = {"fighter_jet", "attack_jet", "bomber", "attack_heli"};
+		for (String type : types) {
+			then(10, mc -> {
+				command(mc, "kill @e[type=rubymod:fighter_jet]");
+				command(mc, "kill @e[type=rubymod:attack_jet]");
+				command(mc, "kill @e[type=rubymod:bomber]");
+				command(mc, "kill @e[type=rubymod:attack_heli]");
+				command(mc, String.format(java.util.Locale.ROOT, "summon rubymod:%s %.1f %.1f %.1f {Rotation:[0f,0f]}", type, origin.x, origin.y, origin.z + 20));
+			});
+			double far = type.equals("bomber") ? 1.6 : 1.0;
+			then(15, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f",
+					origin.x - 11 * far, origin.y + 4 * far, origin.z + 20 + 13 * far, origin.x, origin.y + 1.5, origin.z + 20)));
+			then(20, mc -> shot(mc, "showcase-" + type + "-front"));
+			then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f",
+					origin.x + 10 * far, origin.y + 7 * far, origin.z + 20 - 10 * far, origin.x, origin.y + 1, origin.z + 20)));
+			then(1, mc -> mc.player.getAbilities().flying = true);
+			then(19, mc -> {
+				shot(mc, "showcase-" + type + "-rear");
+				for (var e : mc.level.entitiesForRendering()) {
+					if (e instanceof dev.rubymod.entity.AircraftEntity a) {
+						log("rear view: camera at {} rot {} {}, aircraft at {}", mc.player.position(), mc.player.getYRot(), mc.player.getXRot(), a.position());
+					}
+				}
+			});
+			then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f",
+					origin.x + 18 * far, origin.y + 1.5, origin.z + 20, origin.x, origin.y + 1.5, origin.z + 20)));
+			then(20, mc -> shot(mc, "showcase-" + type + "-side"));
+		}
+		then(1, mc -> mc.options.fov().set(70));
+		then(5, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f",
+				origin.x - 8, origin.y, origin.z + 20, origin.x, origin.y + 1, origin.z + 20)));
+		// Fly the helicopter: climb, then forward.
+		then(2, mc -> command(mc, "ride @p mount @e[type=rubymod:attack_heli,limit=1,sort=nearest]"));
+		then(10, mc -> {
+			var a = aircraft(mc);
+			if (a == null) {
+				log("FAIL: could not board the helicopter");
+				return;
+			}
+			start = a.position();
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			mc.options.keyUp.setDown(true);
+			mc.player.setXRot(10);
+		});
+		then(50, mc -> {
+			var a = aircraft(mc);
+			if (a != null) {
+				log("heli climbed {} blocks in 50 ticks", String.format("%.1f", a.getY() - start.y));
+			}
+			mc.options.keyUp.setDown(false);
+			mc.player.setXRot(35);
+		});
+		then(40, mc -> {
+			var a = aircraft(mc);
+			if (a != null) {
+				log("heli forward flight: speed {} km/h, altitude change {}", Math.round(a.speed() * 72), String.format("%.1f", a.getY() - start.y));
+			}
+			shot(mc, "showcase-heli-flying");
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+		});
+		then(10, mc -> shot(mc, "showcase-heli-hud"));
+		then(5, mc -> {
+			mc.player.setXRot(10);
+			ClientPlayNetworking.send(new Payloads.AircraftCycle());
+		});
+		then(5, mc -> Trigger.fireAircraft(dev.rubymod.entity.AircraftType.Weapon.ROCKETS));
+		then(3, mc -> {
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			shot(mc, "showcase-heli-rockets");
+		});
+		then(20, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			command(mc, "ride @p dismount");
+		});
+		// A fighter flying past at speed: afterburner and contrails.
+		then(10, mc -> {
+			command(mc, "kill @e[type=rubymod:attack_heli]");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 90 5");
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var p = server.getPlayerList().getPlayers().get(0);
+				var level = (net.minecraft.server.level.ServerLevel) p.level();
+				level.addFreshEntity(dev.rubymod.entity.AircraftEntity.targetDrone(level, p.position().add(-30, 8, 0), 20));
+			});
+		});
+		then(30, mc -> shot(mc, "showcase-drone-flyby"));
 	}
 
 	/** Entity the player keeps looking at (the pilot steers by looking). */

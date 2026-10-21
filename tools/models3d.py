@@ -332,5 +332,18 @@ BOMBER = [
     vbox([11.5, 0.8, 8], [13, 3, 11], BLACK),
 ]
 
+HELI = [
+    vbox([6, 4, -6], [10, 10, 10], OLIVE),                      # fuselage
+    vbox([6.3, 8, -5], [9.7, 11, 3], LENS),                     # canopy
+    vbox([7, 6, 10], [9, 8, 26], OLIVE),                        # tail boom
+    vbox([7.6, 8, 23], [8.4, 13, 26], OLIVE_DARK),              # tail fin
+    vbox([7.5, 11, 2], [8.5, 12, 4], DARK),                     # mast
+    vbox([-8, 12, 2.6], [24, 12.5, 3.4], BLACK),                # rotor blades
+    vbox([7.6, 12, -13], [8.4, 12.5, 19], BLACK),
+    vbox([2, 7, -2], [6, 8, 3], OLIVE_DARK), vbox([10, 7, -2], [14, 8, 3], OLIVE_DARK),   # stub wings
+    vbox([3, 5, -3], [5, 7, 3], DARK), vbox([11, 5, -3], [13, 7, 3], DARK),               # rocket pods
+    vbox([6.5, 2, -4], [7.5, 4, -3], BLACK), vbox([8.5, 2, -4], [9.5, 4, -3], BLACK),    # wheels
+]
+VEHICLES["heli_model"] = HELI
 VEHICLES["attack_jet_model"] = ATTACK_JET
 VEHICLES["bomber_model"] = BOMBER

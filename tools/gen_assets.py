@@ -171,6 +171,7 @@ def gen_blocks(client_jar):
     vehicle_item("fighter_jet", models3d.JET, f"{NS}:block/jet_model")
     vehicle_item("attack_jet", models3d.ATTACK_JET, f"{NS}:block/attack_jet_model")
     vehicle_item("bomber", models3d.BOMBER, f"{NS}:block/bomber_model")
+    vehicle_item("attack_heli", models3d.HELI, f"{NS}:block/heli_model")
     for name in models3d.VEHICLES:
         write(f"{ASSETS}/blockstates/{name}.json", {"variants": {"": {"model": f"{NS}:block/{name}"}}})
 
@@ -232,6 +233,9 @@ LANG = {
     "item.rubymod.fighter_jet": "Fighter Jet",
     "item.rubymod.attack_jet": "Attack Jet",
     "item.rubymod.bomber": "Bomber",
+    "item.rubymod.attack_heli": "Attack Helicopter",
+    "entity.rubymod.attack_heli": "Attack Helicopter",
+    "block.rubymod.heli_model": "Attack Helicopter",
     "entity.rubymod.fighter_jet": "Fighter Jet",
     "entity.rubymod.attack_jet": "Attack Jet",
     "entity.rubymod.bomber": "Bomber",

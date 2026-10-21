@@ -121,6 +121,7 @@ public final class Shop {
 			item(3, ModItems.FIGHTER_JET, 1, 150);
 			item(4, ModItems.ATTACK_JET, 1, 170);
 			item(5, ModItems.BOMBER, 1, 220);
+			item(6, ModItems.ATTACK_HELI, 1, 160);
 			item(7, ModBlocks.AIRFIELD_PAD, 1, 30);
 			// Row 2: anti-vehicle and anti-air weapons
 			item(9, ModItems.SKYHAMMER, 1, 35);

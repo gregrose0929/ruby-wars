@@ -37,6 +37,7 @@ public final class Contacts {
 			case 3 -> "Attack Jet";
 			case 4 -> "Bomber";
 			case 5 -> "Drone";
+			case 6 -> "Helicopter";
 			default -> "Contact";
 		};
 	}

@@ -55,7 +55,7 @@ public final class Range {
 			if (a.isDrone()) {
 				return 5;
 			}
-			return (byte) (a.kind() == AircraftType.FIGHTER ? 2 : a.kind() == AircraftType.ATTACK ? 3 : 4);
+			return (byte) (a.kind() == AircraftType.FIGHTER ? 2 : a.kind() == AircraftType.ATTACK ? 3 : a.kind() == AircraftType.HELICOPTER ? 6 : 4);
 		}
 		return 0;
 	}

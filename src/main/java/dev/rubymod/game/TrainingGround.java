@@ -36,7 +36,7 @@ public final class TrainingGround {
 	private static final int MIN_X = -64;
 	private static final int MAX_X = 64;
 	private static final int MIN_Z = -16;
-	private static final int MAX_Z = 352;
+	private static final int MAX_Z = 712;
 	private static final int HEIGHT = 30;
 
 	private TrainingGround() {
@@ -90,14 +90,42 @@ public final class TrainingGround {
 			server.getCommands().performPrefixedCommand(source, cmd);
 		}
 
-		// Target drones circling over the far end of the runway.
-		level.addFreshEntity(AircraftEntity.targetDrone(level, new Vec3(ox, oy + 45, oz + 260), 45));
-		level.addFreshEntity(AircraftEntity.targetDrone(level, new Vec3(ox - 20, oy + 70, oz + 300), 70));
+		// Target drones (they come back 30 seconds after being shot down).
+		drone(level, new Vec3(ox, oy + 50, oz + 560), 45);
+		drone(level, new Vec3(ox - 20, oy + 80, oz + 620), 70);
+		drone(level, new Vec3(ox - 45, oy + 45, oz + 380), 40);
 		for (int cx = chunkX1; cx <= chunkX2; cx++) {
 			for (int cz = chunkZ1; cz <= chunkZ2; cz++) {
 				level.setChunkForced(cx, cz, false);
 			}
 		}
+	}
+
+	private record DroneRespawn(ServerLevel level, Vec3 center, double radius, long at) {
+	}
+
+	private static final List<DroneRespawn> RESPAWNS = new ArrayList<>();
+
+	private static void drone(ServerLevel level, Vec3 center, double radius) {
+		AircraftEntity drone = AircraftEntity.targetDrone(level, center, radius);
+		drone.respawnAfterDeath();
+		level.addFreshEntity(drone);
+	}
+
+	/** A training drone was shot down: bring it back in 30 seconds. */
+	public static void queueRespawn(ServerLevel level, Vec3 center, double radius) {
+		RESPAWNS.add(new DroneRespawn(level, center, radius, level.getGameTime() + 600));
+	}
+
+	/** Every second. */
+	public static void tick() {
+		RESPAWNS.removeIf(r -> {
+			if (r.level().getGameTime() < r.at()) {
+				return false;
+			}
+			drone(r.level(), r.center(), r.radius());
+			return true;
+		});
 	}
 
 	/** Remove targets, parked vehicles, and drones from an earlier build. */
@@ -125,6 +153,8 @@ public final class TrainingGround {
 		chest(cmds, -38, -4, "Attachments", List.of("rubymod:extended_mag*4", "rubymod:red_dot_sight*4", "rubymod:vertical_grip*4",
 				"rubymod:suppressor*4", "rubymod:frag_grenade*16", "rubymod:smoke_grenade*16", "rubymod:breaching_charge*8",
 				"rubymod:air_strike_flare*4", "rubymod:mortar_shell*16"));
+		chest(cmds, -42, -4, "Launchers", List.of("rubymod:skyhammer", "rubymod:aa_missile*8", "rubymod:lancer", "rubymod:at_missile*8",
+				"rubymod:c4*8", "rubymod:at_mine*8"));
 
 		// Lanes with targets at four distances.
 		int[] distances = {10, 25, 50, 80};
@@ -177,56 +207,75 @@ public final class TrainingGround {
 			cmds.add("summon rubymod:target_dummy ~" + x + " ~ ~80 {Rotation:[180f,0f],ShowArms:1b}");
 		}
 		label(cmds, 37, 3, 80, "TARGETS", "white", 1.0);
+		// Anti-tank mine lane: drive a tank over it.
+		cmds.add(fill(54, -1, 30, 58, -1, 70, "gravel"));
+		for (int z = 40; z <= 64; z += 12) {
+			cmds.add("setblock ~56 ~ ~" + z + " rubymod:at_mine");
+		}
+		label(cmds, 56, 2.5, 32, "AT MINE LANE", "red", 1.0);
 	}
 
 	private static void buildAirfield(List<String> cmds) {
-		// Runway: 13 wide, 250 long, with a dashed center line and threshold bars.
-		cmds.add(fill(-7, -1, 100, 7, -1, 350, "gray_concrete"));
-		for (int z = 106; z < 346; z += 8) {
+		// Runway: 13 wide, 600 long, with a dashed center line and threshold bars.
+		for (int z = 100; z < 700; z += 150) {
+			cmds.add(fill(-7, -1, z, 7, -1, z + 149, "gray_concrete"));
+		}
+		for (int z = 106; z < 696; z += 8) {
 			cmds.add(fill(0, -1, z, 0, -1, z + 3, "white_concrete"));
 		}
 		for (int x = -6; x <= 6; x += 2) {
 			cmds.add(fill(x, -1, 101, x, -1, 104, "white_concrete"));
-			cmds.add(fill(x, -1, 346, x, -1, 349, "white_concrete"));
+			cmds.add(fill(x, -1, 695, x, -1, 698, "white_concrete"));
 		}
 		// Edge lights.
-		for (int z = 100; z <= 350; z += 10) {
+		for (int z = 100; z <= 700; z += 12) {
 			cmds.add("setblock ~-8 ~-1 ~" + z + " sea_lantern");
 			cmds.add("setblock ~8 ~-1 ~" + z + " sea_lantern");
 		}
 		label(cmds, 0, 3.4, 98, "RUNWAY 18", "gold", 2.0);
-		label(cmds, 0, 2.6, 98, "Taxi on, full throttle (W), at ROTATE pull up (look up). R: weapon, Space: flares, Sneak: eject", "gray", 0.6);
+		label(cmds, 0, 2.6, 98, "Taxi on, full throttle (W), at ROTATE look up. G: gear, T: designate, V: weapon cam, R: weapon, Space: flares", "gray", 0.6);
 
-		// Apron and taxiway to the runway threshold.
-		cmds.add(fill(8, -1, 100, 50, -1, 140, "light_gray_concrete"));
-		cmds.add(fill(8, -1, 104, 50, -1, 104, "yellow_concrete"));
-		label(cmds, 30, 3.4, 98, "APRON", "gold", 1.6);
-		cmds.add("summon rubymod:fighter_jet ~16 ~ ~112 {Rotation:[90f,0f]}");
-		cmds.add("summon rubymod:attack_jet ~27 ~ ~112 {Rotation:[90f,0f]}");
-		cmds.add("summon rubymod:bomber ~41 ~ ~114 {Rotation:[90f,0f]}");
-		cmds.add("summon rubymod:fighter_jet ~16 ~ ~128 {Rotation:[90f,0f]}");
-		label(cmds, 16, 3.6, 108, "FIGHTER - cannon, air-to-air missiles", "white", 0.7);
-		label(cmds, 27, 4.0, 107, "ATTACK JET - cannon, guided missiles, bombs", "white", 0.7);
-		label(cmds, 41, 4.6, 108, "BOMBER - 16 bombs (CCIP pipper)", "white", 0.7);
+		// Apron with every aircraft, and an Airfield Pad that rearms them.
+		cmds.add(fill(8, -1, 100, 60, -1, 150, "light_gray_concrete"));
+		cmds.add(fill(8, -1, 104, 60, -1, 104, "yellow_concrete"));
+		label(cmds, 34, 3.4, 98, "APRON", "gold", 1.6);
+		cmds.add("summon rubymod:fighter_jet ~16 ~ ~114 {Rotation:[90f,0f]}");
+		cmds.add("summon rubymod:attack_jet ~28 ~ ~114 {Rotation:[90f,0f]}");
+		cmds.add("summon rubymod:bomber ~44 ~ ~118 {Rotation:[90f,0f]}");
+		cmds.add("summon rubymod:attack_heli ~16 ~ ~136 {Rotation:[90f,0f]}");
+		cmds.add("summon rubymod:fighter_jet ~30 ~ ~138 {Rotation:[90f,0f]}");
+		cmds.add("setblock ~56 ~-1 ~140 rubymod:airfield_pad");
+		label(cmds, 16, 4.2, 108, "FIGHTER - cannon, air-to-air missiles", "white", 0.7);
+		label(cmds, 28, 4.6, 107, "ATTACK JET - cannon, guided missiles, bombs", "white", 0.7);
+		label(cmds, 44, 5.4, 108, "BOMBER - 16 guided bombs", "white", 0.7);
+		label(cmds, 16, 5.0, 130, "HELICOPTER - no runway needed", "white", 0.7);
+		label(cmds, 56, 2.2, 140, "AIRFIELD PAD - park here to rearm", "yellow", 0.7);
 
 		// Bombing range east of the runway: ground targets inside a ring.
-		cmds.add(fill(20, -1, 200, 60, -1, 330, "coarse_dirt"));
+		cmds.add(fill(20, -1, 300, 64, -1, 460, "coarse_dirt"));
 		for (int i = 0; i < 48; i++) {
 			double a = i * Math.PI * 2 / 48;
-			int x = 40 + (int) Math.round(Math.cos(a) * 18);
-			int z = 265 + (int) Math.round(Math.sin(a) * 18);
+			int x = 42 + (int) Math.round(Math.cos(a) * 18);
+			int z = 380 + (int) Math.round(Math.sin(a) * 18);
 			cmds.add("setblock ~" + x + " ~-1 ~" + z + " red_concrete");
 		}
-		cmds.add("summon rubymod:tank ~36 ~ ~258 {Rotation:[30f,0f]}");
-		cmds.add("summon rubymod:tank ~46 ~ ~272 {Rotation:[200f,0f]}");
-		cmds.add("summon rubymod:jeep ~32 ~ ~272 {Rotation:[120f,0f]}");
-		cmds.add("summon rubymod:jeep ~48 ~ ~256 {Rotation:[300f,0f]}");
-		cmds.add(fill(36, 0, 296, 44, 3, 304, "cobblestone"));
-		cmds.add(fill(37, 0, 297, 43, 2, 303, "air"));
-		for (int x = 30; x <= 50; x += 5) {
-			cmds.add("summon rubymod:target_dummy ~" + x + " ~ ~265 {Rotation:[0f,0f],ShowArms:1b}");
+		cmds.add("summon rubymod:tank ~38 ~ ~372 {Rotation:[30f,0f]}");
+		cmds.add("summon rubymod:tank ~48 ~ ~388 {Rotation:[200f,0f]}");
+		cmds.add("summon rubymod:jeep ~34 ~ ~388 {Rotation:[120f,0f]}");
+		cmds.add("summon rubymod:jeep ~50 ~ ~370 {Rotation:[300f,0f]}");
+		cmds.add(fill(38, 0, 416, 46, 3, 424, "cobblestone"));
+		cmds.add(fill(39, 0, 417, 45, 2, 423, "air"));
+		for (int x = 32; x <= 52; x += 5) {
+			cmds.add("summon rubymod:target_dummy ~" + x + " ~ ~380 {Rotation:[0f,0f],ShowArms:1b}");
 		}
-		label(cmds, 40, 8, 265, "BOMBING RANGE", "red", 3.0);
+		label(cmds, 42, 8, 380, "BOMBING RANGE", "red", 3.0);
+
+		// Air defense range west of the runway: a Flak Cannon and a SAM Site guarding a drone.
+		cmds.add(fill(-60, -1, 340, -30, -1, 420, "coarse_dirt"));
+		cmds.add("setblock ~-45 ~ ~370 rubymod:flak_cannon{ammo:512}");
+		cmds.add("setblock ~-45 ~ ~390 rubymod:sam_site{charges:3}");
+		label(cmds, -45, 4, 380, "AIR DEFENSE RANGE", "red", 2.0);
+		label(cmds, -45, 3.2, 380, "Fly within 180 blocks to practice dodging: Space drops flares", "gray", 0.6);
 	}
 
 	// ----- Command helpers (all coordinates relative to the origin) -----

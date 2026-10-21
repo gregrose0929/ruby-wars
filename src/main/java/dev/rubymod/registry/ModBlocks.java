@@ -110,6 +110,7 @@ public class ModBlocks {
 	public static final Block JET_MODEL = registerModelOnly("jet_model");
 	public static final Block ATTACK_JET_MODEL = registerModelOnly("attack_jet_model");
 	public static final Block BOMBER_MODEL = registerModelOnly("bomber_model");
+	public static final Block HELI_MODEL = registerModelOnly("heli_model");
 	public static final Block ROCKET_MODEL = registerModelOnly("rocket_model");
 	public static final Block TANK_SHELL_MODEL = registerModelOnly("tank_shell_model");
 	public static final Block MORTAR_SHELL_MODEL = registerModelOnly("mortar_shell_model");

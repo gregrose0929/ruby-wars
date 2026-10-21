@@ -248,7 +248,10 @@ public class DefenseBlockEntity extends BlockEntity {
 		double bestDist = range;
 		for (AircraftEntity a : level.getEntitiesOfClass(AircraftEntity.class, new AABB(from, from).inflate(range), a -> a.isAlive() && !a.onGround())) {
 			var pilot = a.getControllingPassenger();
-			boolean hostile = pilot != null ? claim != null && Rules.phase().pvp() && Rules.isEnemyOf(claim, pilot) : a.isDrone();
+			// Outside claims (the training ground), air defenses practice on drones, and in the lobby on anyone flying by.
+			boolean hostile = pilot != null
+					? claim != null ? Rules.phase().pvp() && Rules.isEnemyOf(claim, pilot) : Rules.phase() == dev.rubymod.game.Phase.LOBBY
+					: a.isDrone();
 			double dist = a.position().distanceTo(from);
 			if (hostile && dist < bestDist && canSee(level, from, a.getBoundingBox().getCenter())) {
 				best = a;

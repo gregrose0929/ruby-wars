@@ -59,6 +59,7 @@ public class PilotHud implements HudElement {
 		drawStatus(g, font, aircraft, kind, w, h);
 		drawWeapons(g, font, camera, aircraft, w, h);
 		drawContacts(g, font, camera, mc, w, h);
+		drawLandingAid(g, font, camera, mc, aircraft, kind, w, h);
 		drawDesignation(g, font, camera, aircraft, w, h);
 		drawWarnings(g, font, mc, aircraft, kind, w, h);
 	}
@@ -91,7 +92,7 @@ public class PilotHud implements HudElement {
 		float yaw = aircraft.getYRot();
 		for (int pitch = -60; pitch <= 60; pitch += 10) {
 			float[] p = projectDirection(camera, Vec3.directionFromRotation(-pitch, yaw), w, h);
-			if (p == null || p[1] < 20 || p[1] > h - 30) {
+			if (p == null || p[1] < 52 || p[1] > h - 30) {
 				continue;
 			}
 			int x = (int) p[0];
@@ -229,11 +230,15 @@ public class PilotHud implements HudElement {
 		g.fill(x, y, x + 6, y + 40, PANEL);
 		int filled = Math.round(aircraft.throttle() * 40);
 		g.fill(x + 1, y + 40 - filled, x + 5, y + 40, aircraft.throttle() >= 0.99F ? AMBER : GREEN);
-		g.text(font, "THR " + Math.round(aircraft.throttle() * 100) + "%", x + 10, y + 32, GREEN, false);
+		g.text(font, (kind.rotorcraft() ? "COLL " : "THR ") + Math.round(aircraft.throttle() * 100) + "%", x + 10, y + 32, GREEN, false);
 		g.text(font, kind.name().toUpperCase(), x + 10, y, DIM, false);
 		int hp = Math.round(aircraft.getHealth() / aircraft.getMaxHealth() * 100);
 		g.text(font, "HULL " + hp + "%", x + 10, y + 11, hp < 30 ? RED : hp < 60 ? AMBER : GREEN, false);
 		boolean gear = aircraft.gearDown();
+		if (kind.rotorcraft()) {
+			g.text(font, "W/S climb  A/D strafe  look down: fly", x + 10, y + 42, DIM, false);
+			return;
+		}
 		g.text(font, gear ? "GEAR DOWN [G]" : "GEAR UP [G]", x + 10, y + 42, gear ? GREEN : AMBER, false);
 		if (aircraft.onGround()) {
 			int kmh = (int) Math.round(aircraft.speed() * 72.0);
@@ -255,6 +260,12 @@ public class PilotHud implements HudElement {
 			int ammo = aircraft.ammo(weapon);
 			g.text(font, weapon.title.toUpperCase(), x, y, GREEN, false);
 			g.text(font, (weapon == Weapon.CANNON ? "RNDS " : "x") + ammo, x, y + 10, ammo == 0 ? RED : GREEN, false);
+			if (weapon == Weapon.ROCKETS) {
+				float[] p = projectDirection(camera, aircraft.forward(), w, h);
+				if (p != null) {
+					g.outline((int) p[0] - 8, (int) p[1] - 8, 16, 16, GREEN);
+				}
+			}
 			g.text(font, "R: next weapon", x, y + 31, DIM, false);
 		}
 		g.text(font, "FLARES " + aircraft.flares() + "  [Space]", x, y + 20, aircraft.flares() == 0 ? RED : GREEN, false);
@@ -356,6 +367,40 @@ public class PilotHud implements HudElement {
 		g.text(font, "BOMB " + Math.round(impact.distanceTo(aircraft.position())) + "m", x + 10, y - 4, RED, false);
 	}
 
+	// ----- Landing aid -----
+
+	/**
+	 * Gear down, low and descending: where the flight path meets the ground (the touchdown point),
+	 * and a glide-slope cue: aim for a 3 degree descent and a sink rate under 6 m/s.
+	 */
+	private void drawLandingAid(GuiGraphicsExtractor g, Font font, Camera camera, Minecraft mc, AircraftEntity aircraft, AircraftType kind, int w, int h) {
+		if (kind.rotorcraft() || !aircraft.gearDown() || aircraft.onGround()) {
+			return;
+		}
+		Vec3 v = aircraft.getDeltaMovement();
+		int agl = heightAboveGround(mc, aircraft);
+		if (v.y >= -0.02 || agl < 0 || agl > 60 || v.lengthSqr() < 0.01) {
+			return;
+		}
+		Vec3 from = aircraft.position();
+		var hit = mc.level.clip(new ClipContext(from, from.add(v.normalize().scale(400)), ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, aircraft));
+		if (hit.getType() == HitResult.Type.BLOCK) {
+			float[] p = project(camera, hit.getLocation(), w, h);
+			if (p != null) {
+				int x = (int) p[0];
+				int y = (int) p[1];
+				g.horizontalLine(x - 10, x + 10, y, 0xFF40C0FF);
+				g.verticalLine(x, y - 4, y + 4, 0xFF40C0FF);
+				g.text(font, "TOUCHDOWN", x + 12, y - 4, 0xFF40C0FF, false);
+			}
+		}
+		double sink = -v.y * 20.0;
+		double angle = Math.toDegrees(Math.atan2(-v.y, Math.hypot(v.x, v.z)));
+		String cue = angle > 4.5 ? "TOO STEEP - pull up" : angle < 1.5 ? "SHALLOW - descend" : "ON GLIDE SLOPE";
+		int col = sink > 6 ? RED : angle > 4.5 || angle < 1.5 ? AMBER : GREEN;
+		center(g, font, String.format(java.util.Locale.ROOT, "%s  %.1f deg  sink %.1f m/s", cue, angle, sink), w / 2, h - 46, col);
+	}
+
 	// ----- Long-range contacts -----
 
 	/** Aircraft and vehicles beyond render distance: a small diamond, type and range. */
@@ -433,7 +478,7 @@ public class PilotHud implements HudElement {
 			y += 12;
 		}
 		if (!aircraft.onGround()) {
-			if (aircraft.speed() < kind.stallSpeed() * 1.1) {
+			if (!kind.rotorcraft() && aircraft.speed() < kind.stallSpeed() * 1.1) {
 				warning(g, font, "STALL", w / 2, y, blink ? RED : AMBER);
 				y += 12;
 			}

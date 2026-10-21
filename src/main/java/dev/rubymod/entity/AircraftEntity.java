@@ -105,6 +105,8 @@ public class AircraftEntity extends Mob {
 	// Autopilot: air strike flyover or a circling target drone.
 	private Vec3 strikeTarget;
 	private Vec3 droneCenter;
+	private double droneRadius;
+	private boolean droneRespawns;
 	private int bombsLeft;
 	private Entity strikeOwner;
 
@@ -131,7 +133,7 @@ public class AircraftEntity extends Mob {
 		builder.define(WEAPON, 0);
 		builder.define(CANNON_AMMO, type.cannonAmmo());
 		builder.define(MISSILES, type.missiles());
-		builder.define(BOMBS, type.bombs());
+		builder.define(BOMBS, type.bombs() + type.rockets());
 		builder.define(FLARES, type.flares());
 		builder.define(GEAR_DOWN, true);
 	}
@@ -169,7 +171,7 @@ public class AircraftEntity extends Mob {
 		return switch (weapon) {
 			case CANNON -> entityData.get(CANNON_AMMO);
 			case AAM, AGM -> entityData.get(MISSILES);
-			case BOMBS -> entityData.get(BOMBS);
+			case BOMBS, ROCKETS -> entityData.get(BOMBS);
 		};
 	}
 
@@ -185,6 +187,9 @@ public class AircraftEntity extends Mob {
 	public void toggleGear(ServerPlayer pilot) {
 		if (pilot != getControllingPassenger()) {
 			return;
+		}
+		if (kind.rotorcraft()) {
+			return; // Fixed landing gear.
 		}
 		if (gearDown() && !airborneOnServer()) {
 			pilot.sendOverlayMessage(Component.literal("Can't raise the gear on the ground"));
@@ -310,7 +315,9 @@ public class AircraftEntity extends Mob {
 	@Override
 	public void travel(Vec3 input) {
 		LivingEntity pilot = getControllingPassenger();
-		if (pilot != null) {
+		if (pilot != null && kind.rotorcraft()) {
+			flyRotor(pilot, input);
+		} else if (pilot != null) {
 			fly(pilot, input);
 		} else if (strikeTarget != null || droneCenter != null) {
 			autopilot();
@@ -424,6 +431,91 @@ public class AircraftEntity extends Mob {
 		}
 	}
 
+	/** Helicopter velocity (the rotor model doesn't use the airspeed/throttle model). */
+	private Vec3 rotorVelocity = Vec3.ZERO;
+
+	/**
+	 * Helicopter: W/S climb and descend (no input holds altitude), the nose turns to where the
+	 * pilot looks, looking down tilts the rotor forward to fly forward (up flies backward),
+	 * A/D strafe. Lands vertically anywhere; touching down too hard or too fast damages it.
+	 */
+	private void flyRotor(LivingEntity pilot, Vec3 input) {
+		boolean airborne = isAirborne();
+		float yaw = getYRot();
+		float yawDelta = Mth.clamp(Mth.wrapDegrees(pilot.getYRot() - yaw), -kind.turnRate(), kind.turnRate());
+		yaw += yawDelta;
+		// Rotor tilt follows the pilot's look, limited to +-25 degrees.
+		float tilt = airborne ? Mth.clamp(pilot.getXRot() - 10.0F, -20.0F, 25.0F) : 0.0F;
+		float pitch = Mth.lerp(0.15F, getXRot(), tilt);
+		throttle = (float) Mth.clamp(throttle + (input.z > 0 ? 0.04 : input.z < 0 ? -0.04 : (0.5 - throttle) * 0.1), 0.0, 1.0);
+
+		Vec3 forward = Vec3.directionFromRotation(0, yaw);
+		Vec3 right = new Vec3(-forward.z, 0, forward.x);
+		Vec3 v = rotorVelocity;
+		// Horizontal: tilt pushes along the nose, A/D push sideways, drag.
+		Vec3 push = forward.scale(pitch / 25.0 * kind.thrust() * 2.0).add(right.scale(-input.x * kind.thrust()));
+		Vec3 horizontal = new Vec3(v.x, 0, v.z).add(push).scale(0.985);
+		if (horizontal.length() > kind.maxSpeed()) {
+			horizontal = horizontal.normalize().scale(kind.maxSpeed());
+		}
+		// Vertical: W climbs, S descends, otherwise hold altitude.
+		double targetClimb = input.z > 0 ? 0.35 : input.z < 0 ? -0.3 : 0.0;
+		double vy = Mth.lerp(0.08, v.y, targetClimb);
+		if (!airborne && targetClimb <= 0) {
+			vy = Math.min(vy, 0) - 0.05;
+			horizontal = horizontal.scale(0.7); // wheels on the ground
+		}
+		Vec3 velocity = new Vec3(horizontal.x, vy, horizontal.z);
+		rotorVelocity = velocity;
+		speed = horizontal.length();
+
+		setYRot(yaw);
+		setXRot(pitch);
+		yBodyRot = yaw;
+		yHeadRot = yaw;
+		entityData.set(ROLL, Mth.lerp(0.2F, roll(), Mth.clamp(yawDelta * 6.0F + (float) input.x * -12.0F, -30.0F, 30.0F)));
+		setDeltaMovement(velocity);
+		move(MoverType.SELF, velocity);
+		if (crashCooldown > 0) {
+			crashCooldown--;
+		}
+		double severity = 0.0;
+		if (airborne && onGround()) {
+			severity = Math.max((-velocity.y - 0.35) / 0.4, (speed - 1.0) / 1.0);
+		}
+		if (horizontalCollision && speed > 0.8) {
+			severity = Math.max(severity, (speed - 0.8) / 1.0);
+		}
+		if (horizontalCollision) {
+			rotorVelocity = new Vec3(0, rotorVelocity.y, 0);
+		}
+		if (severity > 0.02 && crashCooldown == 0 && level().isClientSide()) {
+			crashCooldown = 10;
+			crashReporter.accept(severity);
+		}
+	}
+
+	/** Helicopter rocket pods: a pair of unguided rockets per click. */
+	private void fireRockets(ServerPlayer pilot) {
+		if (bombCooldown > 0) {
+			return;
+		}
+		bombCooldown = 4;
+		ServerLevel level = (ServerLevel) level();
+		Vec3 forward = forward();
+		for (int side = -1; side <= 1; side += 2) {
+			if (ammo(Weapon.ROCKETS) <= 0) {
+				break;
+			}
+			entityData.set(BOMBS, ammo(Weapon.ROCKETS) - 1);
+			Vec3 offset = new Vec3(side * 0.9 * kind.scale(), -0.2, 0).yRot((float) Math.toRadians(-getYRot()));
+			Vec3 from = position().add(0, 0.9, 0).add(offset).add(forward.scale(1.5));
+			Vec3 dir = forward.add((random.nextDouble() - 0.5) * 0.03, (random.nextDouble() - 0.5) * 0.03, (random.nextDouble() - 0.5) * 0.03);
+			level.addFreshEntity(RocketEntity.shell(level, pilot, from, dir.normalize().scale(3.5).add(serverVelocity), 2.5F).withAntiArmor(30.0F));
+		}
+		level.playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 2.5F, 1.2F);
+	}
+
 	/** No pilot: glide down and roll to a stop. */
 	private void coast() {
 		speed *= onGround() ? 0.85 : 0.985;
@@ -465,6 +557,7 @@ public class AircraftEntity extends Mob {
 				fireMissile(pilot, weapon, aim, aim == null && designatedPoint != null ? designatedPoint : point);
 			}
 			case BOMBS -> dropBomb(pilot);
+			case ROCKETS -> fireRockets(pilot);
 		}
 	}
 
@@ -548,6 +641,9 @@ public class AircraftEntity extends Mob {
 	}
 
 	private void dropBomb(ServerPlayer pilot) {
+		if (kind.rotorcraft()) {
+			return;
+		}
 		if (bombCooldown > 0 || !airborneOnServer()) {
 			return;
 		}
@@ -595,6 +691,9 @@ public class AircraftEntity extends Mob {
 			ejectPassengers();
 			Explosions.explode(level, this, getX(), getY() + 0.5, getZ(), 4.0F, false);
 			level.addFreshEntity(WreckEntity.of(level, this));
+			if (droneRespawns && droneCenter != null) {
+				dev.rubymod.game.TrainingGround.queueRespawn(level, droneCenter, droneRadius);
+			}
 			releaseChunk(level);
 			discard();
 		}
@@ -610,9 +709,79 @@ public class AircraftEntity extends Mob {
 		return false;
 	}
 
+	/**
+	 * Where the engine exhaust and wingtips are, in model pixels (x, y, z of the exhaust,
+	 * then x, y, z of the right wingtip; the left is mirrored). Matches tools/aircraft_models.py.
+	 */
+	private double[] effectPoints() {
+		if (kind == AircraftType.ATTACK) {
+			return new double[] {6.5, 15, -18, 31, 7, -4};
+		}
+		if (kind == AircraftType.BOMBER) {
+			return new double[] {14, 6, -6, 38, 12, -10};
+		}
+		return new double[] {0, 9.5, -28, 23, 9, -8};
+	}
+
+	/** Client-side effects: afterburner flame, exhaust smoke, wingtip contrails, rotor wash. */
+	private void clientEffects() {
+		Vec3 vel = position().subtract(xo, yo, zo);
+		double v = vel.length();
+		boolean flying = !onGround();
+		double s = kind.scale() / 16.0;
+		if (kind.rotorcraft()) {
+			// Rotor wash: dust kicked up under a low-flying helicopter.
+			if ((isVehicle() || flying) && tickCount % 2 == 0) {
+				double ground = getY();
+				for (int i = 0; i < 12 && ground > level().getMinY(); i++) {
+					if (!level().getBlockState(net.minecraft.core.BlockPos.containing(getX(), ground - 1, getZ())).isAir()) {
+						break;
+					}
+					ground -= 1;
+				}
+				if (getY() - ground < 10) {
+					for (int i = 0; i < 4; i++) {
+						double a = random.nextDouble() * Math.PI * 2;
+						level().addParticle(ParticleTypes.CLOUD, getX() + Math.cos(a) * 3, ground + 0.2, getZ() + Math.sin(a) * 3,
+								Math.cos(a) * 0.3, 0.02, Math.sin(a) * 0.3);
+					}
+				}
+			}
+			return;
+		}
+		double[] p = effectPoints();
+		Vec3 fwd = forward();
+		Vec3 up = Vec3.directionFromRotation(getXRot() - 90, getYRot());
+		Vec3 right = fwd.cross(up).normalize();
+		boolean afterburner = v > kind.maxSpeed() * 0.8 || (isVehicle() && throttle > 0.95F);
+		for (int side = p[0] == 0 ? 1 : -1; side <= 1; side += 2) {
+			Vec3 nozzle = position().add(0, 1.0, 0).add(fwd.scale(p[2] * s)).add(up.scale((p[1] - 16.0 / kind.scale()) * s))
+					.add(right.scale(p[0] * side * s));
+			if (afterburner) {
+				for (int i = 0; i < 2; i++) {
+					level().addParticle(ParticleTypes.FLAME, nozzle.x, nozzle.y, nozzle.z, -fwd.x * 0.4 + vel.x * 0.6, -fwd.y * 0.4 + vel.y * 0.6,
+							-fwd.z * 0.4 + vel.z * 0.6);
+				}
+			} else if (v > 0.2 && tickCount % 2 == 0) {
+				level().addParticle(ParticleTypes.SMOKE, nozzle.x, nozzle.y, nozzle.z, vel.x * 0.5, vel.y * 0.5, vel.z * 0.5);
+			}
+		}
+		// Contrails at speed or in hard turns.
+		if (flying && (v > kind.maxSpeed() * 0.75 || Math.abs(roll()) > 40)) {
+			for (int side = -1; side <= 1; side += 2) {
+				Vec3 tip = position().add(0, 1.0, 0).add(right.scale(p[3] * side * s)).add(fwd.scale(p[5] * s))
+						.add(up.scale((p[4] - 16.0 / kind.scale()) * s));
+				level().addParticle(ParticleTypes.CLOUD, tip.x, tip.y, tip.z, 0, 0, 0);
+			}
+		}
+	}
+
 	@Override
 	public void tick() {
 		super.tick();
+		if (level().isClientSide()) {
+			clientEffects();
+		}
 		if (!(level() instanceof ServerLevel level)) {
 			return;
 		}
@@ -685,6 +854,7 @@ public class AircraftEntity extends Mob {
 		AircraftEntity drone = new AircraftEntity(ModEntities.FIGHTER_JET, level);
 		drone.snapTo(center.x + radius, center.y, center.z, 180, 0);
 		drone.droneCenter = center;
+		drone.droneRadius = radius;
 		drone.speed = 2.0;
 		drone.setCustomName(Component.literal("Target Drone"));
 		return drone;
@@ -743,6 +913,8 @@ public class AircraftEntity extends Mob {
 		output.putInt("flares", flares());
 		output.putBoolean("strike", strikeTarget != null);
 		if (droneCenter != null) {
+			output.putDouble("drone_radius", droneRadius);
+			output.putBoolean("drone_respawns", droneRespawns);
 			output.putDouble("drone_x", droneCenter.x);
 			output.putDouble("drone_y", droneCenter.y);
 			output.putDouble("drone_z", droneCenter.z);
@@ -754,7 +926,7 @@ public class AircraftEntity extends Mob {
 		super.readAdditionalSaveData(input);
 		entityData.set(CANNON_AMMO, input.getIntOr("cannon_ammo", kind.cannonAmmo()));
 		entityData.set(MISSILES, input.getIntOr("missiles", kind.missiles()));
-		entityData.set(BOMBS, input.getIntOr("bombs", kind.bombs()));
+		entityData.set(BOMBS, input.getIntOr("bombs", kind.bombs() + kind.rockets()));
 		entityData.set(FLARES, input.getIntOr("flares", kind.flares()));
 		if (input.getBooleanOr("strike", false)) {
 			discard(); // An air strike from before a restart: just leave.
@@ -762,11 +934,18 @@ public class AircraftEntity extends Mob {
 		double dx = input.getDoubleOr("drone_x", Double.NaN);
 		if (!Double.isNaN(dx)) {
 			droneCenter = new Vec3(dx, input.getDoubleOr("drone_y", getY()), input.getDoubleOr("drone_z", getZ()));
+			droneRadius = input.getDoubleOr("drone_radius", 40);
+			droneRespawns = input.getBooleanOr("drone_respawns", false);
 			speed = 2.0;
 		}
 	}
 
 	/** Refill ammo, missiles, bombs, and flares (training range resupply). */
+	/** Training drones come back after being shot down (see TrainingGround). */
+	public void respawnAfterDeath() {
+		droneRespawns = true;
+	}
+
 	/** A target drone (circles on autopilot, no pilot). */
 	public boolean isDrone() {
 		return droneCenter != null;
@@ -781,17 +960,18 @@ public class AircraftEntity extends Mob {
 	public boolean rearmStep() {
 		entityData.set(CANNON_AMMO, Math.min(kind.cannonAmmo(), ammo(Weapon.CANNON) + Math.max(1, kind.cannonAmmo() / 5)));
 		entityData.set(MISSILES, Math.min(kind.missiles(), entityData.get(MISSILES) + 1));
-		entityData.set(BOMBS, Math.min(kind.bombs(), entityData.get(BOMBS) + Math.max(1, kind.bombs() / 4)));
+		int store = kind.bombs() + kind.rockets();
+		entityData.set(BOMBS, Math.min(store, entityData.get(BOMBS) + Math.max(1, store / 4)));
 		entityData.set(FLARES, Math.min(kind.flares(), flares() + 2));
 		setHealth(Math.min(getMaxHealth(), getHealth() + getMaxHealth() * 0.1F));
-		return ammo(Weapon.CANNON) >= kind.cannonAmmo() && entityData.get(MISSILES) >= kind.missiles() && entityData.get(BOMBS) >= kind.bombs()
+		return ammo(Weapon.CANNON) >= kind.cannonAmmo() && entityData.get(MISSILES) >= kind.missiles() && entityData.get(BOMBS) >= store
 				&& flares() >= kind.flares() && getHealth() >= getMaxHealth();
 	}
 
 	public void rearm() {
 		entityData.set(CANNON_AMMO, kind.cannonAmmo());
 		entityData.set(MISSILES, kind.missiles());
-		entityData.set(BOMBS, kind.bombs());
+		entityData.set(BOMBS, kind.bombs() + kind.rockets());
 		entityData.set(FLARES, kind.flares());
 		setHealth(getMaxHealth());
 	}

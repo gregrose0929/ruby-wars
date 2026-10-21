@@ -65,6 +65,7 @@ public final class GameEvents {
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
+				TrainingGround.tick();
 			}
 			if (server.getTickCount() % 1200 == 0) {
 				SeasonData.saveIfDirty();

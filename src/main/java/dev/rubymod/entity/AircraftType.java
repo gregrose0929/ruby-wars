@@ -28,10 +28,11 @@ import java.util.List;
  */
 public record AircraftType(String id, String name, double maxSpeed, double thrust, double rotateSpeed, double stallSpeed, float turnRate,
 		float health, float scale, float cannonDamage, int cannonInterval, int cannonAmmo, int missiles, Weapon missileKind, int bombs,
-		int flares, double seatUp, double seatForward, double gearHeight) {
+		int flares, double seatUp, double seatForward, double gearHeight, int rockets, boolean rotorcraft) {
 
 	public enum Weapon {
 		CANNON("Cannon"),
+		ROCKETS("Rocket pods"),
 		AAM("Air-to-air missiles"),
 		AGM("Guided missiles"),
 		BOMBS("Bombs");
@@ -45,18 +46,27 @@ public record AircraftType(String id, String name, double maxSpeed, double thrus
 
 	/** Fast and agile. Cannon, heat-seeking air-to-air missiles, lots of flares. */
 	public static final AircraftType FIGHTER = new AircraftType("fighter_jet", "Fighter", 3.5, 0.0125, 2.2, 1.6, 6.0F,
-			100.0F, 2.6F, 4.5F, 1, 450, 4, Weapon.AAM, 0, 8, 0.25, 0.9, 1.4);
+			100.0F, 2.0F, 4.5F, 1, 450, 4, Weapon.AAM, 0, 8, 0.75, 2.1, 0.0, 0, false);
 	/** Slow and tough. Heavy cannon, guided ground-attack missiles, a few bombs. */
 	public static final AircraftType ATTACK = new AircraftType("attack_jet", "Attack Jet", 3.0, 0.0105, 1.9, 1.4, 4.5F,
-			220.0F, 2.6F, 7.0F, 2, 500, 6, Weapon.AGM, 4, 6, 0.35, 1.3, 1.2);
+			220.0F, 2.0F, 7.0F, 2, 500, 6, Weapon.AGM, 4, 6, 0.7, 2.9, 0.0, 0, false);
 	/** Huge bomb load; needs a long runway (~400 blocks) to get off the ground. */
 	public static final AircraftType BOMBER = new AircraftType("bomber", "Bomber", 2.6, 0.0082, 1.8, 1.35, 2.5F,
-			320.0F, 3.4F, 0.0F, 0, 0, 0, Weapon.AGM, 16, 10, 0.55, 2.6, 0.8);
+			320.0F, 2.4F, 0.0F, 0, 0, 0, Weapon.AGM, 16, 10, 1.4, 5.7, 0.0, 0, false);
+	/**
+	 * Takes off and lands anywhere. W/S climb and descend, look to turn, look down to fly forward,
+	 * A/D strafe. Chin cannon, rocket pods, guided missiles.
+	 */
+	public static final AircraftType HELICOPTER = new AircraftType("attack_heli", "Attack Helicopter", 2.2, 0.02, 0.0, 0.0, 5.0F,
+			180.0F, 2.0F, 4.0F, 2, 600, 4, Weapon.AGM, 0, 6, 0.75, 2.0, 0.0, 24, true);
 
 	public List<Weapon> weapons() {
 		java.util.ArrayList<Weapon> list = new java.util.ArrayList<>();
 		if (cannonDamage > 0) {
 			list.add(Weapon.CANNON);
+		}
+		if (rockets > 0) {
+			list.add(Weapon.ROCKETS);
 		}
 		if (missiles > 0) {
 			list.add(missileKind);

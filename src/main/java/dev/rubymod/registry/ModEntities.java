@@ -56,9 +56,10 @@ public class ModEntities {
 					.eyeHeight(1.7765F).clientTrackingRange(10));
 
 	private static final java.util.Map<EntityType<?>, AircraftType> AIRCRAFT_TYPES = new java.util.HashMap<>();
-	public static final EntityType<AircraftEntity> FIGHTER_JET = aircraft(AircraftType.FIGHTER, 3.0F, 1.5F);
-	public static final EntityType<AircraftEntity> ATTACK_JET = aircraft(AircraftType.ATTACK, 3.4F, 1.6F);
-	public static final EntityType<AircraftEntity> BOMBER = aircraft(AircraftType.BOMBER, 5.0F, 2.2F);
+	public static final EntityType<AircraftEntity> FIGHTER_JET = aircraft(AircraftType.FIGHTER, 4.0F, 1.9F);
+	public static final EntityType<AircraftEntity> ATTACK_JET = aircraft(AircraftType.ATTACK, 4.5F, 2.0F);
+	public static final EntityType<AircraftEntity> BOMBER = aircraft(AircraftType.BOMBER, 6.5F, 2.6F);
+	public static final EntityType<AircraftEntity> ATTACK_HELI = aircraft(AircraftType.HELICOPTER, 3.5F, 2.6F);
 
 	private static EntityType<AircraftEntity> aircraft(AircraftType kind, float width, float height) {
 		EntityType<AircraftEntity> type = register(kind.id(),
@@ -84,5 +85,6 @@ public class ModEntities {
 		FabricDefaultAttributeRegistry.register(FIGHTER_JET, AircraftEntity.attributes(AircraftType.FIGHTER));
 		FabricDefaultAttributeRegistry.register(ATTACK_JET, AircraftEntity.attributes(AircraftType.ATTACK));
 		FabricDefaultAttributeRegistry.register(BOMBER, AircraftEntity.attributes(AircraftType.BOMBER));
+		FabricDefaultAttributeRegistry.register(ATTACK_HELI, AircraftEntity.attributes(AircraftType.HELICOPTER));
 	}
 }

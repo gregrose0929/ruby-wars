@@ -83,6 +83,7 @@ public class ModItems {
 	public static final Item TANK = register("tank", p -> new VehicleItem(() -> ModEntities.TANK, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item FIGHTER_JET = register("fighter_jet", p -> new VehicleItem(() -> ModEntities.FIGHTER_JET, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item ATTACK_JET = register("attack_jet", p -> new VehicleItem(() -> ModEntities.ATTACK_JET, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
+	public static final Item ATTACK_HELI = register("attack_heli", p -> new VehicleItem(() -> ModEntities.ATTACK_HELI, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item BOMBER = register("bomber", p -> new VehicleItem(() -> ModEntities.BOMBER, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 
 	// --- Ruby gear (between iron and diamond) ---

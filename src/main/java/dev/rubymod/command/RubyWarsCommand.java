@@ -184,7 +184,7 @@ public final class RubyWarsCommand {
 				{ModItems.RUBY_CELL, 64}, {ModItems.ROCKET, 16}, {ModItems.SMOKE_GRENADE, 16}, {ModItems.AIR_STRIKE_FLARE, 1},
 				{ModItems.RANGEFINDER, 1}, {ModItems.BREACHING_CHARGE, 8}, {ModItems.MORTAR_SHELL, 16}, {ModItems.CRUISE_MISSILE, 1},
 				{ModItems.EXTENDED_MAG, 4}, {ModItems.RED_DOT_SIGHT, 4}, {ModItems.VERTICAL_GRIP, 4}, {ModItems.SUPPRESSOR, 4},
-				{ModItems.JEEP, 1}, {ModItems.TANK, 1}, {ModItems.FIGHTER_JET, 1}, {ModItems.ATTACK_JET, 1}, {ModItems.BOMBER, 1},
+				{ModItems.JEEP, 1}, {ModItems.TANK, 1}, {ModItems.FIGHTER_JET, 1}, {ModItems.ATTACK_JET, 1}, {ModItems.BOMBER, 1}, {ModItems.ATTACK_HELI, 1},
 				{ModItems.SKYHAMMER, 1}, {ModItems.AA_MISSILE, 8}, {ModItems.LANCER, 1}, {ModItems.AT_MISSILE, 8}, {ModItems.C4, 8},
 				{ModBlocks.AT_MINE, 4}, {ModBlocks.FLAK_CANNON, 1}, {ModBlocks.SAM_SITE, 1}, {ModBlocks.AIRFIELD_PAD, 1}, {ModItems.BUILDERS_WAND, 1}, {ModItems.EXCAVATOR, 1}, {ModItems.RUBY, 64},
 				{ModBlocks.ARMORY, 1}, {ModBlocks.MORTAR, 1}, {ModBlocks.MISSILE_SILO, 1}};
