@@ -56,6 +56,12 @@ public class GameConfig {
 	public int backupIntervalHours = 24;
 	public int backupsToKeep = 7;
 
+	/** Economy: Trade Depot prices are multiplied by this (1.0 = the full price list). */
+	public double tradeDepotPriceMultiplier = 0.35;
+	/** Ruby Drills a player may own: without a Heart, then per Heart tier 1/2/3. */
+	public int drillsWithoutHeart = 1;
+	public int[] drillsPerHeartTier = {2, 4, 6};
+
 	/** Armory price overrides: item id (like "rubymod:sniper_rifle") to price in rubies. */
 	public Map<String, Integer> prices = new LinkedHashMap<>();
 
@@ -88,6 +94,15 @@ public class GameConfig {
 		} catch (IOException e) {
 			RubyMod.LOGGER.error("Couldn't write {}", PATH, e);
 		}
+	}
+
+	/** How many Ruby Drills this player may own right now. */
+	public int drillLimit(java.util.UUID player) {
+		SeasonData.Claim claim = SeasonData.get().claimOf(player);
+		if (claim == null) {
+			return drillsWithoutHeart;
+		}
+		return drillsPerHeartTier[Math.max(0, Math.min(drillsPerHeartTier.length, claim.tier) - 1)];
 	}
 
 	public int heartRadius(int tier) {

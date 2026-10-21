@@ -175,6 +175,10 @@ public final class Recipes {
 
 	/** Better depots get better prices: +6% per tier above Mk I. */
 	public static int price(ItemStack stack, int tier) {
-		return Math.round(price(stack) * (1.0F + 0.06F * (tier - 1)));
+		if (stack.is(ModItems.RUBY)) {
+			return 1000; // Rubies are always worth a ruby.
+		}
+		double rate = dev.rubymod.game.GameConfig.get().tradeDepotPriceMultiplier;
+		return (int) Math.round(price(stack) * rate * (1.0 + 0.06 * (tier - 1)));
 	}
 }

@@ -110,6 +110,11 @@ shows charge, capacity, and +/- per second.
 | Constructor | Builds a Blueprint, block by block, from chests next to it |
 | Tesla Coil | Arcs lightning at hostile mobs, and at enemies in your claim on Battle Day; 400 charge per zap |
 
+**Limits.** You can own one Ruby Drill without a Heart, then 2, 4 or 6 as you
+upgrade your Heart: the Heart upgrades are what grow your economy. Trade Depot
+prices and the drill limits are in `config/rubywars.json`
+(`tradeDepotPriceMultiplier`, `drillsPerHeartTier`).
+
 **Upgrades.** Every machine goes from Mk I to Mk V. Click Upgrade on its screen:
 each tier costs twice the last, paid from your inventory, then your bank. A machine
 you pick up keeps its tier.

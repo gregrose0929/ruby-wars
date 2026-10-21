@@ -447,6 +447,13 @@ public final class SelfTest {
 		check("industry: a Vault banks rubies (" + before + " -> " + afterDeposit + ")", afterDeposit == before + 10 && vault.getItem(0).isEmpty());
 		check("industry: the bank pays for upgrades", Shop.countRubies(alpha) >= 10);
 
+		// Balance: drill limits follow the Heart; the depot pays a fraction of list price.
+		int limit = dev.rubymod.game.GameConfig.get().drillLimit(java.util.UUID.randomUUID());
+		check("economy: one Ruby Drill without a Heart (limit " + limit + ")", limit == 1);
+		int iron = dev.rubymod.industry.Recipes.price(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT), 1);
+		check("economy: depot pays 35% of list for iron (" + iron + " milli-rubies), rubies at par",
+				iron == 49 && dev.rubymod.industry.Recipes.price(new ItemStack(ModItems.RUBY), 3) == 1000);
+
 		// Blueprint: copy a little stone hut, then a Constructor builds it from a chest.
 		BlockPos src = at.offset(0, 0, 4);
 		for (BlockPos p : BlockPos.betweenClosed(src, src.offset(2, 1, 1))) {
@@ -462,6 +469,9 @@ public final class SelfTest {
 		constructor.setTier(5);
 		level.setBlockAndUpdate(cpos.east(), Blocks.CHEST.defaultBlockState());
 		((net.minecraft.world.Container) level.getBlockEntity(cpos.east())).setItem(0, new ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 20));
+		for (int i = 0; data != null && i < data.cells().size(); i++) {
+			level.setBlockAndUpdate(dev.rubymod.industry.Blueprints.target(cpos, net.minecraft.core.Direction.WEST, data.local(i)), Blocks.AIR.defaultBlockState());
+		}
 		ItemStack paper = new ItemStack(ModItems.BLUEPRINT);
 		paper.set(dev.rubymod.registry.ModComponents.BLUEPRINT, data);
 		constructor.setItem(0, paper);
@@ -473,7 +483,7 @@ public final class SelfTest {
 				built++;
 			}
 		}
-		check("blueprint: the Constructor builds it from the chest (" + built + "/12)", built == 12);
+		check("blueprint: the Constructor builds it from the chest (" + built + "/12, status " + constructor.status() + ", charge " + grid.charge + ")", built == 12);
 
 		// Shield Generator: destroys an enemy shell inside its dome, paid for in charge.
 		grid.charge = 9000;

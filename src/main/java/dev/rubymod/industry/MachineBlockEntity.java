@@ -105,6 +105,10 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		setChanged();
 	}
 
+	public int status() {
+		return status;
+	}
+
 	public void setStatus(int status) {
 		this.status = status;
 	}

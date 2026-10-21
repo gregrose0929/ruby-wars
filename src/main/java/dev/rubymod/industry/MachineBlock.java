@@ -88,6 +88,9 @@ public class MachineBlock extends BaseEntityBlock {
 	public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity by, ItemStack stack) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MachineBlockEntity be && by instanceof Player player) {
 			be.setOwner(player.getUUID());
+			if (kind == MachineKind.RUBY_DRILL) {
+				Grid.account(player.getUUID()).drills++;
+			}
 			Integer tier = stack.get(ModComponents.MACHINE_TIER);
 			if (tier != null) {
 				be.setTier(tier);
@@ -107,10 +110,19 @@ public class MachineBlock extends BaseEntityBlock {
 		return InteractionResult.SUCCESS;
 	}
 
+	/** A drill leaving the world frees one of its owner's drill slots. */
+	private void released(MachineBlockEntity be) {
+		if (kind == MachineKind.RUBY_DRILL) {
+			Grid.Account account = Grid.account(be.owner());
+			account.drills = Math.max(0, account.drills - 1);
+		}
+	}
+
 	/** Breaking it by hand: drop the contents and the machine, with its tier kept on the item. */
 	@Override
 	public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MachineBlockEntity be) {
+			released(be);
 			Containers.dropContents(level, pos, be.items());
 			if (!player.isCreative()) {
 				ItemStack drop = new ItemStack(this);
@@ -128,6 +140,7 @@ public class MachineBlock extends BaseEntityBlock {
 	protected void onExplosionHit(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion,
 			java.util.function.BiConsumer<ItemStack, BlockPos> onHit) {
 		if (level.getBlockEntity(pos) instanceof MachineBlockEntity be && Rules.canWeaponBreak(level, pos, state)) {
+			released(be);
 			Containers.dropContents(level, pos, be.items());
 			if (kind == MachineKind.VAULT) {
 				be.raided(level);

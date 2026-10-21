@@ -18,6 +18,21 @@ public class MachineItem extends BlockItem {
 		super(block, properties);
 	}
 
+	/** Ruby Drills are limited per player (see GameConfig.drillLimit). */
+	@Override
+	public net.minecraft.world.InteractionResult place(net.minecraft.world.item.context.BlockPlaceContext context) {
+		if (getBlock() instanceof MachineBlock block && block.kind() == MachineKind.RUBY_DRILL
+				&& context.getPlayer() instanceof net.minecraft.server.level.ServerPlayer player && !player.isCreative()) {
+			int limit = dev.rubymod.game.GameConfig.get().drillLimit(player.getUUID());
+			if (Grid.account(player.getUUID()).drills >= limit) {
+				player.sendOverlayMessage(Component.literal("Drill limit reached (" + limit + "). Upgrade your Ruby Heart for more.")
+						.withStyle(ChatFormatting.RED));
+				return net.minecraft.world.InteractionResult.FAIL;
+			}
+		}
+		return super.place(context);
+	}
+
 	@Override
 	@SuppressWarnings("deprecation")
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
@@ -36,6 +51,9 @@ public class MachineItem extends BlockItem {
 		}
 		if (kind.batteryCapacity(tier) > 0) {
 			builder.accept(Component.literal("Stores " + kind.batteryCapacity(tier) + " charge").withStyle(ChatFormatting.DARK_GRAY));
+		}
+		if (kind == MachineKind.RUBY_DRILL) {
+			builder.accept(Component.literal("Limit: 1 without a Heart, 2/4/6 by Heart tier").withStyle(ChatFormatting.DARK_GRAY));
 		}
 		builder.accept(Component.literal("Right-click to open; upgrade with rubies").withStyle(ChatFormatting.DARK_GRAY));
 	}

@@ -38,6 +38,8 @@ public final class Grid {
 		public long milliRubies;
 		public long lastInterestDay = -1;
 		public long lifetimeEarned;
+		/** Ruby Drills this player owns (limited by their Heart tier). */
+		public int drills;
 	}
 
 	/** Per-second bookkeeping (not saved). */
