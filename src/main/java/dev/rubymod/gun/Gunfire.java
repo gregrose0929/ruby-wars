@@ -236,16 +236,16 @@ public final class Gunfire {
 			case HEAVY -> dev.rubymod.registry.ModSounds.RIFLE_SHOT;
 			default -> dev.rubymod.registry.ModSounds.PISTOL_SHOT;
 		};
-		// Volume sets how far it carries (16 blocks per point): rifles ~100 blocks, the sniper ~200.
+		// Shots fade out over 96 blocks (sounds.json); volume above 1 stretches that: rifles ~120, the sniper ~240.
 		float volume = switch (stats.ammo()) {
-			case SNIPER -> 12.0F;
-			case SHELLS, HEAVY -> 6.0F;
-			case RUBY_CELL -> 3.0F;
-			default -> 4.0F;
+			case SNIPER -> 2.5F;
+			case SHELLS, HEAVY -> 1.25F;
+			case RUBY_CELL -> 0.9F;
+			default -> 1.0F;
 		};
 		if (stats.silenced()) {
 			sound = dev.rubymod.registry.ModSounds.SILENCED_SHOT;
-			volume = 1.0F;
+			volume = 0.3F;
 		}
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, volume, 0.95F + player.getRandom().nextFloat() * 0.1F);
 	}

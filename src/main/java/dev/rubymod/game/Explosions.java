@@ -71,7 +71,7 @@ public final class Explosions {
 			if (d < 64) {
 				player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
 						net.minecraft.core.Holder.direct(dev.rubymod.registry.ModSounds.EXPLOSION), net.minecraft.sounds.SoundSource.BLOCKS,
-						at.x, at.y, at.z, Math.min(4.0F, power * 0.8F), 0.9F + random.nextFloat() * 0.2F, random.nextLong()));
+						at.x, at.y, at.z, Math.min(2.0F, power * 0.4F), 0.9F + random.nextFloat() * 0.2F, random.nextLong()));
 			} else if (d < 64 + power * 50) {
 				// Far away: a muffled boom from the blast's direction.
 				// Sound travels about 340 blocks a second, so the boom arrives after the flash.
