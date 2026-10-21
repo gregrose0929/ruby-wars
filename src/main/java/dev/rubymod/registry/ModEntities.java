@@ -45,6 +45,9 @@ public class ModEntities {
 	public static final EntityType<VehicleEntity> TANK = register("tank",
 			EntityType.Builder.<VehicleEntity>of(VehicleEntity::new, MobCategory.MISC).sized(3.0F, 2.0F).clientTrackingRange(10).updateInterval(1));
 
+	public static final EntityType<dev.rubymod.entity.HeavyAAGunEntity> HEAVY_AA_GUN = register("heavy_aa_gun",
+			EntityType.Builder.<dev.rubymod.entity.HeavyAAGunEntity>of(dev.rubymod.entity.HeavyAAGunEntity::new, MobCategory.MISC).sized(2.4F, 2.2F)
+					.clientTrackingRange(12).updateInterval(1));
 	public static final EntityType<dev.rubymod.entity.StickyChargeEntity> STICKY_CHARGE = register("sticky_charge",
 			EntityType.Builder.<dev.rubymod.entity.StickyChargeEntity>of(dev.rubymod.entity.StickyChargeEntity::new, MobCategory.MISC).sized(0.3F, 0.3F)
 					.clientTrackingRange(8).updateInterval(2));
@@ -81,6 +84,7 @@ public class ModEntities {
 	public static void initialize() {
 		FabricDefaultAttributeRegistry.register(JEEP, VehicleEntity.jeepAttributes());
 		FabricDefaultAttributeRegistry.register(TANK, VehicleEntity.tankAttributes());
+		FabricDefaultAttributeRegistry.register(HEAVY_AA_GUN, dev.rubymod.entity.HeavyAAGunEntity.attributes());
 		FabricDefaultAttributeRegistry.register(TARGET_DUMMY, net.minecraft.world.entity.decoration.ArmorStand.createAttributes());
 		FabricDefaultAttributeRegistry.register(FIGHTER_JET, AircraftEntity.attributes(AircraftType.FIGHTER));
 		FabricDefaultAttributeRegistry.register(ATTACK_JET, AircraftEntity.attributes(AircraftType.ATTACK));

@@ -23,13 +23,22 @@ public class VehicleHud implements HudElement {
 	private static final int PANEL = 0x70000000;
 
 	public static boolean zoomed(Minecraft mc) {
-		return mc.player != null && mc.player.getVehicle() instanceof VehicleEntity v && v.isTank() && v.getControllingPassenger() == mc.player
-				&& mc.options.keyUse.isDown() && mc.gui.screen() == null;
+		if (mc.player == null || !mc.options.keyUse.isDown() || mc.gui.screen() != null) {
+			return false;
+		}
+		if (mc.player.getVehicle() instanceof dev.rubymod.entity.HeavyAAGunEntity gun) {
+			return gun.getControllingPassenger() == mc.player;
+		}
+		return mc.player.getVehicle() instanceof VehicleEntity v && v.isTank() && v.getControllingPassenger() == mc.player;
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker deltaTracker) {
 		Minecraft mc = Minecraft.getInstance();
+		if (mc.player != null && mc.player.getVehicle() instanceof dev.rubymod.entity.HeavyAAGunEntity gun) {
+			AAGunHud.draw(g, mc, gun);
+			return;
+		}
 		if (mc.player == null || !(mc.player.getVehicle() instanceof VehicleEntity vehicle)) {
 			return;
 		}

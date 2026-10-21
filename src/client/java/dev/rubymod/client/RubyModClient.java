@@ -65,6 +65,7 @@ public class RubyModClient implements ClientModInitializer {
 			}
 			Targeting.tick(client);
 			LauncherSeeker.tick(client);
+			BuildPreview.tick(client);
 			Trigger.tick(client);
 			if (client.player != null && ClientState.shakeTicks > 0) {
 				ClientState.shakeTicks--;
@@ -153,7 +154,10 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.BREACHING_CHARGE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.JEEP, VehicleRenderer::new);
 		EntityRendererRegistry.register(ModEntities.TANK, VehicleRenderer::new);
+		net.minecraft.client.gui.screens.MenuScreens.register(dev.rubymod.registry.ModMenus.MACHINE, MachineScreen::new);
 		AircraftRenderer.registerLayers();
+		HeavyAAGunRenderer.registerLayer();
+		EntityRendererRegistry.register(ModEntities.HEAVY_AA_GUN, HeavyAAGunRenderer::new);
 		EntityRendererRegistry.register(ModEntities.FIGHTER_JET, AircraftRenderer::new);
 		EntityRendererRegistry.register(ModEntities.ATTACK_JET, AircraftRenderer::new);
 		EntityRendererRegistry.register(ModEntities.BOMBER, AircraftRenderer::new);

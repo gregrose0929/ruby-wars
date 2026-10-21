@@ -11,6 +11,7 @@ import zipfile
 
 import models3d
 import models3d_blocks
+import machines3d
 
 NS = "rubymod"
 RES = "src/main/resources"
@@ -27,8 +28,8 @@ def write(path, obj):
 
 # ---------------------------------------------------------------- items
 SIMPLE_ITEMS = ["extended_mag", "red_dot_sight", "vertical_grip", "suppressor", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
-                "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge", "aa_missile", "at_missile", "c4"]
-HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe"]
+                "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge", "aa_missile", "at_missile", "c4", "blueprint"]
+HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe", "architect_wand", "remodeler"]
 ARMOR_ITEMS = ["ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"]
 GUNS = ["service_pistol", "combat_shotgun", "arr_rifle", "longshot_sniper", "ruby_blaster", "rocket_launcher", "skyhammer", "lancer"]
 
@@ -172,6 +173,17 @@ def gen_blocks(client_jar):
     vehicle_item("attack_jet", models3d.ATTACK_JET, f"{NS}:block/attack_jet_model")
     vehicle_item("bomber", models3d.BOMBER, f"{NS}:block/bomber_model")
     vehicle_item("attack_heli", models3d.HELI, f"{NS}:block/heli_model")
+    write(f"{ASSETS}/models/block/heavy_aa_icon.json", {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"},
+                                                        "elements": machines3d.HEAVY_AA_ICON})
+    vehicle_item("heavy_aa_gun", machines3d.HEAVY_AA_ICON, f"{NS}:block/heavy_aa_icon")
+
+    # Industry machines: 3D models, facing the way they were placed.
+    for name, elements in machines3d.MACHINES.items():
+        write(f"{ASSETS}/models/block/{name}.json", {"parent": "minecraft:block/block",
+              "textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"}, "elements": elements})
+        write(f"{ASSETS}/blockstates/{name}.json", {"variants": {
+            f"facing={f}": {"model": f"{NS}:block/{name}", "y": y} for f, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270))}})
+        client_item(name, f"{NS}:block/{name}")
     for name in models3d.VEHICLES:
         write(f"{ASSETS}/blockstates/{name}.json", {"variants": {"": {"model": f"{NS}:block/{name}"}}})
 
@@ -200,6 +212,23 @@ LANG = {
     "item.rubymod.smoke_grenade": "Smoke Grenade",
     "item.rubymod.air_strike_flare": "Air Strike Flare",
     "item.rubymod.rocket_launcher": "Rocket Launcher",
+    "item.rubymod.architect_wand": "Architect's Wand",
+    "item.rubymod.remodeler": "Remodeler",
+    "item.rubymod.blueprint": "Blueprint",
+    "item.rubymod.heavy_aa_gun": "Heavy AA Gun",
+    "entity.rubymod.heavy_aa_gun": "Heavy AA Gun",
+    "block.rubymod.combustion_generator": "Combustion Generator",
+    "block.rubymod.solar_panel": "Solar Panel",
+    "block.rubymod.battery": "Battery Bank",
+    "block.rubymod.ruby_drill": "Ruby Drill",
+    "block.rubymod.ore_refinery": "Ore Refinery",
+    "block.rubymod.ammo_factory": "Ammo Factory",
+    "block.rubymod.trade_depot": "Trade Depot",
+    "block.rubymod.vault": "Ruby Vault",
+    "block.rubymod.shield_generator": "Shield Generator",
+    "block.rubymod.point_defense": "Point Defense Gun",
+    "block.rubymod.constructor": "Constructor",
+
     "item.rubymod.skyhammer": "Skyhammer AA Launcher",
     "item.rubymod.lancer": "Lancer AT Launcher",
     "item.rubymod.aa_missile": "Skyhammer Missile",
@@ -337,7 +366,7 @@ def gen_loot():
 
     for name in ["ruby_block", "ruby_heart", "armory", "sandbags", "concrete_wall", "reinforced_concrete", "sentry_turret",
                  "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "barbed_wire", "mortar", "missile_silo",
-                 "at_mine", "flak_cannon", "sam_site", "airfield_pad"]:
+                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor"]:
         drop_self(name)
 
     def ore(name):
@@ -364,7 +393,7 @@ def gen_loot():
 def gen_tags():
     pickaxe = ["ruby_block", "ruby_ore", "deepslate_ruby_ore", "armory", "concrete_wall", "reinforced_concrete", "blast_door",
                "sentry_turret", "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "mortar", "missile_silo",
-               "at_mine", "flak_cannon", "sam_site", "airfield_pad"]
+               "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor"]
     write(f"{DATA}/minecraft/tags/block/mineable/pickaxe.json", {"values": [f"{NS}:{n}" for n in pickaxe]})
     write(f"{DATA}/minecraft/tags/block/mineable/shovel.json", {"values": [f"{NS}:sandbags"]})
     write(f"{DATA}/minecraft/tags/block/mineable/axe.json", {"values": [f"{NS}:barbed_wire"]})

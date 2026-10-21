@@ -1,0 +1,20 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "rubymod:block/point_defense",
+			"y": 0
+		},
+		"facing=east": {
+			"model": "rubymod:block/point_defense",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "rubymod:block/point_defense",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "rubymod:block/point_defense",
+			"y": 270
+		}
+	}
+}

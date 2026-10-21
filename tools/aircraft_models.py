@@ -238,11 +238,49 @@ def helicopter():
     return Part("root", children=[Part("body", boxes=body), gear, rotor, tail_rotor])
 
 
+def heavy_aa_gun():
+    base = [
+        B(-22, 0, -3, 22, 2.5, 3, "skin2"),                            # cruciform outriggers
+        B(-3, 0, -22, 3, 2.5, 22, "skin2"),
+        B(-26, 0, -4, -22, 1.5, 4, "dark"), B(22, 0, -4, 26, 1.5, 4, "dark"),   # jack pads
+        B(-4, 0, -26, 4, 1.5, -22, "dark"), B(-4, 0, 22, 4, 1.5, 26, "dark"),
+        B(-24.5, 1.5, -1, -23.5, 5, 1, "strut"), B(23.5, 1.5, -1, 24.5, 5, 1, "strut"),   # jack screws
+        B(-1, 1.5, -24.5, 1, 5, -23.5, "strut"), B(-1, 1.5, 23.5, 1, 5, 24.5, "strut"),
+        B(-7, 2.5, -7, 7, 7, 7, "dark"),                               # pedestal
+    ]
+    guns = Part("guns", pivot=(0, 9, 2), boxes=[
+        B(-5, -3, -9, 5, 3, 8, "dark"),                                # cradle / breech
+        B(-3.6, -1, 8, -1.4, 1, 40, "metal"),                          # barrels
+        B(1.4, -1, 8, 3.6, 1, 40, "metal"),
+        B(-4, -1.4, 40, -1, 1.4, 45, "dark", muzzle=True),             # flash hiders
+        B(1, -1.4, 40, 4, 1.4, 45, "dark", muzzle=True),
+        B(-4.2, -1.6, 8, -0.8, 1.6, 14, "skin"),                       # recoil sleeves
+        B(0.8, -1.6, 8, 4.2, 1.6, 14, "skin"),
+        B(-4.2, 3, -6, -0.8, 8, 3, "brass"),                           # ammo clips
+        B(0.8, 3, -6, 4.2, 8, 3, "brass"),
+        B(-0.5, 3, 4, 0.5, 6, 6, "dark"),                              # ring sight post
+        B(-3, 6, 4.6, 3, 6.6, 5.2, "dark"), B(-3, 0.6, 4.6, 3, 1.2, 5.2, "dark"),
+        B(-3, 1.2, 4.6, -2.4, 6, 5.2, "dark"), B(2.4, 1.2, 4.6, 3, 6, 5.2, "dark"),
+    ])
+    turret = Part("turret", pivot=(0, 7, 0), boxes=[
+        B(-11, 0, -11, 11, 2.5, 11, "skin"),                           # turntable
+        B(-10, 2.5, -6, -6, 15, 9, "skin"),                            # side cheeks
+        B(6, 2.5, -6, 10, 15, 9, "skin"),
+        B(-12.5, 2.5, 9, 12.5, 13, 10.5, "skin2", flash=True),         # gun shield
+        B(-3, 2.5, -14, 3, 5.5, -8, "dark"),                           # gunner seat
+        B(-3, 5.5, -15, 3, 12, -13, "dark"),                           # seat back
+        B(-12, 6, -2, -10, 10, 2, "strut"), B(10, 6, -2, 12, 10, 2, "strut"),     # handwheels
+        B(-9, 15, -4, -7, 16, 6, "dark"), B(7, 15, -4, 9, 16, 6, "dark"),
+    ], children=[guns])
+    return Part("root", children=[Part("base", boxes=base), turret])
+
+
 AIRCRAFT = {
     "fighter_jet": (fighter, {"skin": (128, 136, 146), "skin2": (100, 108, 118), "under": (172, 178, 184), "camo": None}),
     "attack_jet": (attack_jet, {"skin": (86, 98, 70), "skin2": (78, 90, 64), "under": (150, 156, 150), "camo": (62, 70, 50)}),
     "bomber": (bomber, {"skin": (158, 162, 166), "skin2": (120, 124, 130), "under": (64, 68, 74), "camo": None}),
     "attack_heli": (helicopter, {"skin": (70, 78, 62), "skin2": (60, 68, 54), "under": (70, 78, 62), "camo": (48, 54, 42)}),
+    "heavy_aa_gun": (heavy_aa_gun, {"skin": (92, 102, 78), "skin2": (78, 88, 66), "under": (60, 66, 52), "camo": (64, 72, 54)}),
 }
 
 
@@ -289,7 +327,7 @@ def mul(c, f):
 MATERIALS = {
     "nose": (70, 74, 80), "dark": (52, 55, 60), "strut": (170, 172, 176), "tire": (24, 24, 26),
     "nozzle": (60, 58, 56), "glass": (40, 70, 95), "missile": (225, 226, 222), "bomb": (70, 80, 60),
-    "rotor": (36, 38, 40), "intake": (18, 18, 20),
+    "rotor": (36, 38, 40), "intake": (18, 18, 20), "metal": (88, 92, 98), "brass": (196, 156, 62),
     "light_red": (255, 40, 40), "light_green": (40, 255, 80), "light_white": (255, 255, 240),
 }
 
@@ -361,6 +399,15 @@ def pixel(b, face, px, py, fw, fh, pal, rnd):
             c = (255, 150, 40) if r < 0.35 else (20, 18, 18) if r < 0.75 else (70, 66, 62)
             return clamp(c) + (255,)
         c = mul(MATERIALS["nozzle"], 1.0 + 0.15 * ((px // 2) % 2))
+        return clamp((c[0] + n, c[1] + n, c[2] + n)) + (255,)
+    if b.flags.get("muzzle") and face == "front":
+        r = math.hypot(px + 0.5 - fw / 2, py + 0.5 - fh / 2)
+        return ((12, 12, 12) if r < min(fw, fh) * 0.3 else (46, 48, 52)) + (255,)
+    if mat == "metal":
+        c = mul(MATERIALS["metal"], 1.15 if py == 0 else 0.9 if py == fh - 1 else 1.0)
+        return clamp((c[0] + n, c[1] + n, c[2] + n)) + (255,)
+    if mat == "brass":
+        c = MATERIALS["brass"] if (px % 3) else (150, 110, 40)
         return clamp((c[0] + n, c[1] + n, c[2] + n)) + (255,)
     if mat == "missile":
         c = MATERIALS["missile"]

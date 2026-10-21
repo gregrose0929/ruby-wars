@@ -35,6 +35,7 @@ public class RubyMod implements ModInitializer {
 		ModItems.initialize();
 		ModBlocks.initialize();
 		ModBlockEntities.initialize();
+		dev.rubymod.registry.ModMenus.initialize();
 		ModEntities.initialize();
 		ModTabs.initialize();
 		Payloads.register();

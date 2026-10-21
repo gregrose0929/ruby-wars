@@ -1,0 +1,20 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "rubymod:block/solar_panel",
+			"y": 0
+		},
+		"facing=east": {
+			"model": "rubymod:block/solar_panel",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "rubymod:block/solar_panel",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "rubymod:block/solar_panel",
+			"y": 270
+		}
+	}
+}

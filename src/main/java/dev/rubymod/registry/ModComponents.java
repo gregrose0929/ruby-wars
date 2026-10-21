@@ -25,6 +25,32 @@ public class ModComponents {
 			DataComponentType.<List<String>>builder().persistent(Codec.STRING.listOf())
 					.networkSynchronized(ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list())).build());
 
+	/** A machine's upgrade tier, kept on the item when it's picked up. */
+	public static final DataComponentType<Integer> MACHINE_TIER = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("machine_tier"),
+			DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());
+
+	/** A copied structure on a Blueprint. */
+	public static final DataComponentType<dev.rubymod.industry.Blueprints.Data> BLUEPRINT = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("blueprint"),
+			DataComponentType.<dev.rubymod.industry.Blueprints.Data>builder().persistent(dev.rubymod.industry.Blueprints.Data.CODEC)
+					.networkSynchronized(dev.rubymod.industry.Blueprints.Data.STREAM_CODEC).build());
+
+	/** First corner picked with a Blueprint or the Architect's Wand. */
+	public static final DataComponentType<net.minecraft.core.BlockPos> CORNER = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("corner"),
+			DataComponentType.<net.minecraft.core.BlockPos>builder().persistent(net.minecraft.core.BlockPos.CODEC)
+					.networkSynchronized(net.minecraft.core.BlockPos.STREAM_CODEC).build());
+
+	/** Architect's Wand shape (index into ArchitectWandItem.Mode). */
+	public static final DataComponentType<Integer> WAND_MODE = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("wand_mode"),
+			DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());
+
 	public static void initialize() {
 	}
 }

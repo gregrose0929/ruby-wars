@@ -18,6 +18,17 @@
 		"rubymod:at_mine",
 		"rubymod:flak_cannon",
 		"rubymod:sam_site",
-		"rubymod:airfield_pad"
+		"rubymod:airfield_pad",
+		"rubymod:combustion_generator",
+		"rubymod:solar_panel",
+		"rubymod:battery",
+		"rubymod:ruby_drill",
+		"rubymod:ore_refinery",
+		"rubymod:ammo_factory",
+		"rubymod:trade_depot",
+		"rubymod:vault",
+		"rubymod:shield_generator",
+		"rubymod:point_defense",
+		"rubymod:constructor"
 	]
 }

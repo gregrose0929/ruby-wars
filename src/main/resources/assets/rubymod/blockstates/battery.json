@@ -1,0 +1,20 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "rubymod:block/battery",
+			"y": 0
+		},
+		"facing=east": {
+			"model": "rubymod:block/battery",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "rubymod:block/battery",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "rubymod:block/battery",
+			"y": 270
+		}
+	}
+}

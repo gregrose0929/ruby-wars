@@ -25,7 +25,7 @@ public final class Vehicles {
 			return null;
 		}
 		Entity v = mc.player.getVehicle();
-		return v instanceof VehicleEntity || v instanceof AircraftEntity ? v : null;
+		return v instanceof VehicleEntity || v instanceof AircraftEntity || v instanceof dev.rubymod.entity.HeavyAAGunEntity ? v : null;
 	}
 
 	public static boolean inVehicle(Minecraft mc) {

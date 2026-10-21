@@ -50,7 +50,8 @@ public final class Shop {
 	}
 
 	/** Page 0: weapons and base. Page 1: vehicles, aircraft, and the gear to fight them. */
-	private static final int PAGES = 2;
+	private static final int PAGES = 3;
+	private static final String[] PAGE_NAMES = {"Weapons & Base", "Vehicles & Air Defense", "Industry & Building"};
 	private static final int NEXT_SLOT = 53;
 	private static final int BACK_SLOT = 45;
 	private static int page;
@@ -133,6 +134,27 @@ public final class Shop {
 			// Row 3: air defense for your base
 			item(18, ModBlocks.FLAK_CANNON, 1, 45);
 			item(19, ModBlocks.SAM_SITE, 1, 90);
+			item(20, ModItems.HEAVY_AA_GUN, 1, 70);
+
+			page = 2;
+			// Row 1: power
+			item(0, ModBlocks.COMBUSTION_GENERATOR, 1, 12);
+			item(1, ModBlocks.SOLAR_PANEL, 1, 10);
+			item(2, ModBlocks.BATTERY, 1, 15);
+			// Row 2: production
+			item(9, ModBlocks.RUBY_DRILL, 1, 25);
+			item(10, ModBlocks.ORE_REFINERY, 1, 20);
+			item(11, ModBlocks.AMMO_FACTORY, 1, 18);
+			item(12, ModBlocks.TRADE_DEPOT, 1, 15);
+			item(13, ModBlocks.VAULT, 1, 20);
+			// Row 3: base defense
+			item(18, ModBlocks.SHIELD_GENERATOR, 1, 60);
+			item(19, ModBlocks.POINT_DEFENSE, 1, 45);
+			// Row 4: building
+			item(27, ModItems.ARCHITECT_WAND, 1, 10);
+			item(28, ModItems.REMODELER, 1, 8);
+			item(29, ModItems.BLUEPRINT, 1, 2);
+			item(30, ModBlocks.CONSTRUCTOR, 1, 30);
 			page = 0;
 		}
 		return entries;
@@ -174,7 +196,7 @@ public final class Shop {
 	public static void open(ServerPlayer player, int page) {
 		SimpleContainer container = new SimpleContainer(SLOTS);
 		fill(container, player, page);
-		String title = page == 0 ? "Armory: Weapons & Base" : "Armory: Vehicles & Air Defense";
+		String title = "Armory: " + PAGE_NAMES[page];
 		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShopMenu(id, inventory, container, page),
 				Component.literal(title + "  -  " + countRubies(player) + " rubies")));
 	}
@@ -203,10 +225,10 @@ public final class Shop {
 				Component.literal("or loot supply drops.").withStyle(ChatFormatting.GRAY))));
 		container.setItem(49, info);
 		if (page + 1 < PAGES) {
-			container.setItem(NEXT_SLOT, named(Items.SPECTRAL_ARROW, "Vehicles & Air Defense ->"));
+			container.setItem(NEXT_SLOT, named(Items.SPECTRAL_ARROW, PAGE_NAMES[page + 1] + " ->"));
 		}
 		if (page > 0) {
-			container.setItem(BACK_SLOT, named(Items.SPECTRAL_ARROW, "<- Weapons & Base"));
+			container.setItem(BACK_SLOT, named(Items.SPECTRAL_ARROW, "<- " + PAGE_NAMES[page - 1]));
 		}
 	}
 
@@ -247,11 +269,12 @@ public final class Shop {
 		}
 	}
 
+	/** Rubies the player can spend: in their inventory plus in their bank (Vault). */
 	public static int countRubies(Player player) {
-		return player.getInventory().countItem(ModItems.RUBY);
+		return player.getInventory().countItem(ModItems.RUBY) + (int) Math.min(Integer.MAX_VALUE / 2, dev.rubymod.industry.Grid.rubies(player.getUUID()));
 	}
 
-	/** Removes rubies from the player's inventory. Creative players buy for free. */
+	/** Removes rubies from the player's inventory first, then their bank. Creative players buy for free. */
 	public static boolean takeRubies(ServerPlayer player, int amount) {
 		if (player.isCreative()) {
 			return true;
@@ -260,6 +283,11 @@ public final class Shop {
 			return false;
 		}
 		Inventory inventory = player.getInventory();
+		int carried = inventory.countItem(ModItems.RUBY);
+		if (carried < amount) {
+			dev.rubymod.industry.Grid.withdraw(player.getUUID(), amount - carried);
+			amount = carried;
+		}
 		int left = amount;
 		for (int i = 0; i < inventory.getContainerSize() && left > 0; i++) {
 			ItemStack s = inventory.getItem(i);

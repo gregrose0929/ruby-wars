@@ -244,7 +244,7 @@ public final class SelfTest {
 			target.setNoAi(true);
 			target.setPos(range.getX() + 5.5, alpha.getY(), range.getZ() + 0.5);
 			level.addFreshEntity(target);
-			for (int x = 1; x <= 5; x++) {
+			for (int x = 0; x <= 5; x++) {
 				for (int y = 0; y <= 2; y++) {
 					BlockPos p = range.offset(x, y, 0);
 					if (!level.getBlockState(p).isAir()) {
@@ -297,6 +297,9 @@ public final class SelfTest {
 			check("armor: bullets don't hurt tanks", armorTest.getHealth() == afterRear);
 			armorTest.discard();
 		}
+
+		// ----- Industry -----
+		industryChecks(level, alpha, range.offset(0, 0, -30));
 
 		// ----- Aircraft weapons -----
 		AircraftEntity jet = ModEntities.ATTACK_JET.create(level, EntitySpawnReason.COMMAND);
@@ -374,6 +377,120 @@ public final class SelfTest {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
 		}
 		Explosions.clearHits();
+	}
+
+	/** Place a machine owned by {@code owner} and return its block entity. */
+	private static dev.rubymod.industry.MachineBlockEntity machine(ServerLevel level, BlockPos pos, net.minecraft.world.level.block.Block block,
+			FakePlayer owner) {
+		level.setBlockAndUpdate(pos, block.defaultBlockState());
+		var be = (dev.rubymod.industry.MachineBlockEntity) level.getBlockEntity(pos);
+		be.setOwner(owner.getUUID());
+		return be;
+	}
+
+	private static void runMachines(ServerLevel level, int ticks, dev.rubymod.industry.MachineBlockEntity... machines) {
+		long t = level.getGameTime();
+		for (int i = 0; i < ticks; i++) {
+			for (var m : machines) {
+				dev.rubymod.industry.MachineBlockEntity.serverTick(level, m.getBlockPos(), m.getBlockState(), m);
+			}
+			dev.rubymod.industry.Grid.endTick(t + i);
+		}
+	}
+
+	private void industryChecks(ServerLevel level, FakePlayer alpha, BlockPos at) {
+		var grid = dev.rubymod.industry.Grid.account(alpha.getUUID());
+		grid.charge = 0;
+		grid.milliRubies = 0;
+		for (BlockPos p : BlockPos.betweenClosed(at.offset(-1, 0, -1), at.offset(8, 4, 6))) {
+			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+		}
+		// Power: a generator with coal fills the grid.
+		var gen = machine(level, at, ModBlocks.COMBUSTION_GENERATOR, alpha);
+		gen.setItem(0, new ItemStack(net.minecraft.world.item.Items.COAL, 8));
+		runMachines(level, 100, gen);
+		long charge = dev.rubymod.industry.Grid.charge(alpha.getUUID());
+		check("industry: a combustion generator charges the grid (" + charge + " after 5 s)", charge >= 290 && charge <= 310);
+
+		// Production line: drill -> refinery -> trade depot, each pushing into the next.
+		var drill = machine(level, at.offset(2, 0, 0), ModBlocks.RUBY_DRILL, alpha);
+		drill.setTier(5);
+		var refinery = machine(level, at.offset(3, 0, 0), ModBlocks.ORE_REFINERY, alpha);
+		refinery.setTier(5);
+		var depot = machine(level, at.offset(4, 0, 0), ModBlocks.TRADE_DEPOT, alpha);
+		refinery.setItem(0, new ItemStack(net.minecraft.world.item.Items.RAW_IRON, 4));
+		runMachines(level, 2400, gen, drill, refinery, depot);
+		int dug = 0;
+		for (int i = 0; i < drill.getContainerSize(); i++) {
+			dug += drill.getItem(i).getCount();
+		}
+		long bank = dev.rubymod.industry.Grid.milliRubies(alpha.getUUID());
+		check("industry: the drill digs (" + dug + " items in its buffer)", dug > 0);
+		StringBuilder inv = new StringBuilder();
+		for (var m : new dev.rubymod.industry.MachineBlockEntity[] {drill, refinery, depot}) {
+			inv.append(" |");
+			for (int i = 0; i < m.getContainerSize(); i++) {
+				if (!m.getItem(i).isEmpty()) {
+					inv.append(' ').append(m.getItem(i));
+				}
+			}
+		}
+		check("industry: the refinery doubles ore and the depot banks the sale (" + bank / 1000.0 + " rubies," + inv + ")",
+				bank > 0);
+
+		// Vault: rubies in, interest-free withdraw out.
+		var vault = machine(level, at.offset(6, 0, 0), ModBlocks.VAULT, alpha);
+		long before = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
+		vault.setItem(0, new ItemStack(ModItems.RUBY, 10));
+		runMachines(level, 1, vault);
+		long afterDeposit = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
+		check("industry: a Vault banks rubies (" + before + " -> " + afterDeposit + ")", afterDeposit == before + 10 && vault.getItem(0).isEmpty());
+		check("industry: the bank pays for upgrades", Shop.countRubies(alpha) >= 10);
+
+		// Blueprint: copy a little stone hut, then a Constructor builds it from a chest.
+		BlockPos src = at.offset(0, 0, 4);
+		for (BlockPos p : BlockPos.betweenClosed(src, src.offset(2, 1, 1))) {
+			level.setBlockAndUpdate(p, Blocks.STONE_BRICKS.defaultBlockState());
+		}
+		var data = dev.rubymod.industry.Blueprints.capture(level, src, src.offset(2, 1, 1));
+		check("blueprint: copies a 3x2x2 structure (" + (data == null ? "null" : data.blocks()) + " blocks)", data != null && data.blocks() == 12);
+		BlockPos cpos = at.offset(-1, 0, 2);
+		level.setBlockAndUpdate(cpos, ModBlocks.CONSTRUCTOR.defaultBlockState().setValue(dev.rubymod.industry.MachineBlock.FACING,
+				net.minecraft.core.Direction.WEST));
+		var constructor = (dev.rubymod.industry.MachineBlockEntity) level.getBlockEntity(cpos);
+		constructor.setOwner(alpha.getUUID());
+		constructor.setTier(5);
+		level.setBlockAndUpdate(cpos.east(), Blocks.CHEST.defaultBlockState());
+		((net.minecraft.world.Container) level.getBlockEntity(cpos.east())).setItem(0, new ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 20));
+		ItemStack paper = new ItemStack(ModItems.BLUEPRINT);
+		paper.set(dev.rubymod.registry.ModComponents.BLUEPRINT, data);
+		constructor.setItem(0, paper);
+		runMachines(level, 400, gen, constructor);
+		int built = 0;
+		for (int i = 0; data != null && i < data.cells().size(); i++) {
+			BlockPos p = dev.rubymod.industry.Blueprints.target(cpos, net.minecraft.core.Direction.WEST, data.local(i));
+			if (level.getBlockState(p).is(Blocks.STONE_BRICKS)) {
+				built++;
+			}
+		}
+		check("blueprint: the Constructor builds it from the chest (" + built + "/12)", built == 12);
+
+		// Architect's Wand shapes.
+		int room = dev.rubymod.item.BuildShapes.shape(dev.rubymod.item.BuildShapes.Mode.ROOM, BlockPos.ZERO, new BlockPos(4, 3, 4)).size();
+		int wall = dev.rubymod.item.BuildShapes.shape(dev.rubymod.item.BuildShapes.Mode.WALL, BlockPos.ZERO, new BlockPos(6, 2, 0)).size();
+		check("wand: a 5x4x5 hollow room is " + room + " blocks (want 82), a 7x3 wall " + wall + " (want 21)", room == 82 && wall == 21);
+
+		// Upgrade costs rubies.
+		grid.milliRubies = 100_000;
+		int carried = alpha.getInventory().countItem(ModItems.RUBY);
+		var solar = machine(level, at.offset(0, 2, 0), ModBlocks.SOLAR_PANEL, alpha);
+		String msg = solar.upgrade(alpha);
+		check("industry: upgrading costs rubies (" + msg + ")", solar.tier() == 2 && Shop.countRubies(alpha) == 100 + carried - 8);
+		for (BlockPos p : BlockPos.betweenClosed(at.offset(-1, 0, -1), at.offset(8, 4, 6))) {
+			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+		}
+		grid.charge = 0;
+		grid.milliRubies = 0;
 	}
 
 	/** How many 5-damage bullet hits break a block of this kind (-1 if 40 hits don't). */

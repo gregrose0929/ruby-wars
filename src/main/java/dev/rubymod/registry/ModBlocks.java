@@ -117,6 +117,33 @@ public class ModBlocks {
 	public static final Block CRUISE_MISSILE_MODEL = registerModelOnly("cruise_missile_model");
 	public static final Block BOMB_MODEL = registerModelOnly("bomb_model");
 
+	// --- Industry (see dev.rubymod.industry) ---
+	private static final java.util.Set<Block> MACHINES = new java.util.LinkedHashSet<>();
+	public static final Block COMBUSTION_GENERATOR = machine("combustion_generator", dev.rubymod.industry.MachineKind.COMBUSTION_GENERATOR, Shapes.block());
+	public static final Block SOLAR_PANEL = machine("solar_panel", dev.rubymod.industry.MachineKind.SOLAR_PANEL, Block.box(0, 0, 0, 16, 6, 16));
+	public static final Block BATTERY = machine("battery", dev.rubymod.industry.MachineKind.BATTERY, Shapes.block());
+	public static final Block RUBY_DRILL = machine("ruby_drill", dev.rubymod.industry.MachineKind.RUBY_DRILL, Shapes.block());
+	public static final Block ORE_REFINERY = machine("ore_refinery", dev.rubymod.industry.MachineKind.ORE_REFINERY, Shapes.block());
+	public static final Block AMMO_FACTORY = machine("ammo_factory", dev.rubymod.industry.MachineKind.AMMO_FACTORY, Shapes.block());
+	public static final Block TRADE_DEPOT = machine("trade_depot", dev.rubymod.industry.MachineKind.TRADE_DEPOT, Shapes.block());
+	public static final Block VAULT = machine("vault", dev.rubymod.industry.MachineKind.VAULT, Shapes.block());
+	public static final Block SHIELD_GENERATOR = machine("shield_generator", dev.rubymod.industry.MachineKind.SHIELD_GENERATOR, Shapes.block());
+	public static final Block POINT_DEFENSE = machine("point_defense", dev.rubymod.industry.MachineKind.POINT_DEFENSE, Shapes.block());
+	public static final Block CONSTRUCTOR = machine("constructor", dev.rubymod.industry.MachineKind.CONSTRUCTOR, Shapes.block());
+
+	private static Block machine(String name, dev.rubymod.industry.MachineKind kind, net.minecraft.world.phys.shapes.VoxelShape shape) {
+		float strength = kind == dev.rubymod.industry.MachineKind.VAULT ? 25.0F : 5.0F;
+		Block block = register(name, p -> new dev.rubymod.industry.MachineBlock(kind, shape, p),
+				props().mapColor(MapColor.METAL).strength(strength, 8.0F).sound(SoundType.METAL).noOcclusion().noLootTable()
+						.requiresCorrectToolForDrops(), dev.rubymod.industry.MachineItem::new);
+		MACHINES.add(block);
+		return block;
+	}
+
+	public static java.util.Set<Block> machines() {
+		return MACHINES;
+	}
+
 	private static Block registerModelOnly(String name) {
 		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, RubyMod.id(name));
 		return Registry.register(BuiltInRegistries.BLOCK, key, new Block(props().noOcclusion().noLootTable().setId(key)));

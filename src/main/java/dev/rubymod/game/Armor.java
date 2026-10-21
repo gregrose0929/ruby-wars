@@ -31,7 +31,7 @@ public final class Armor {
 	}
 
 	public static boolean isArmored(Entity e) {
-		return e instanceof VehicleEntity || e instanceof AircraftEntity;
+		return e instanceof VehicleEntity || e instanceof AircraftEntity || e instanceof dev.rubymod.entity.HeavyAAGunEntity;
 	}
 
 	/** An anti-armor burst at {@code at} (travelling along {@code travel}, may be null). */

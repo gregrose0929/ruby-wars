@@ -33,7 +33,8 @@ public final class CannonRounds {
 	public static final double GRAVITY = 0.03;
 	private static final int LIFE = 30;
 
-	private record Shell(ServerLevel level, ServerPlayer owner, Entity launcher, float damage, float antiArmor, Vec3[] state, int[] age) {
+	private record Shell(ServerLevel level, ServerPlayer owner, Entity launcher, float damage, float antiArmor, Vec3[] state, int[] age,
+			float flak, int life) {
 	}
 
 	private static final List<Shell> SHELLS = new ArrayList<>();
@@ -42,7 +43,16 @@ public final class CannonRounds {
 	}
 
 	public static void fire(ServerLevel level, ServerPlayer owner, Entity launcher, Vec3 from, Vec3 velocity, float damage, float antiArmor) {
-		SHELLS.add(new Shell(level, owner, launcher, damage, antiArmor, new Vec3[] {from, velocity}, new int[] {0}));
+		SHELLS.add(new Shell(level, owner, launcher, damage, antiArmor, new Vec3[] {from, velocity}, new int[] {0}, 0, LIFE));
+	}
+
+	/**
+	 * A flak shell (Heavy AA Gun): proximity-fused, it bursts when it passes within
+	 * 4 blocks of an aircraft (or at the end of its flight), hurting every aircraft
+	 * near the burst with {@code flak} anti-armor damage.
+	 */
+	public static void fireFlak(ServerLevel level, ServerPlayer owner, Entity launcher, Vec3 from, Vec3 velocity, float flak, int life) {
+		SHELLS.add(new Shell(level, owner, launcher, flak, flak, new Vec3[] {from, velocity}, new int[] {0}, flak, life));
 	}
 
 	/** Called every server tick. */
@@ -50,7 +60,14 @@ public final class CannonRounds {
 		Iterator<Shell> it = SHELLS.iterator();
 		while (it.hasNext()) {
 			Shell shell = it.next();
-			if (step(shell) || ++shell.age()[0] > LIFE) {
+			boolean spent = step(shell);
+			if (!spent && ++shell.age()[0] > shell.life()) {
+				if (shell.flak() > 0) {
+					burst(shell, shell.state()[0]);
+				}
+				spent = true;
+			}
+			if (spent) {
 				it.remove();
 			}
 		}
@@ -64,6 +81,21 @@ public final class CannonRounds {
 		Vec3 next = pos.add(vel);
 		if (!level.hasChunkAt(net.minecraft.core.BlockPos.containing(next))) {
 			return true;
+		}
+		if (shell.flak() > 0) {
+			// Proximity fuse: burst at the closest point to any aircraft within 4 blocks of this segment.
+			for (Entity e : level.getEntities(shell.launcher(), new AABB(pos, next).inflate(5.0),
+					e -> e instanceof dev.rubymod.entity.AircraftEntity a && a.isAlive() && !a.onGround() && !a.hasPassenger(shell.owner()))) {
+				Vec3 c = e.getBoundingBox().getCenter();
+				Vec3 seg = next.subtract(pos);
+				double t = Math.max(0, Math.min(1, c.subtract(pos).dot(seg) / Math.max(1.0E-6, seg.lengthSqr())));
+				Vec3 closest = pos.add(seg.scale(t));
+				if (closest.distanceTo(c) < 4.0) {
+					trail(level, pos, closest);
+					burst(shell, closest);
+					return true;
+				}
+			}
 		}
 		BlockHitResult blockHit = level.clip(new ClipContext(pos, next, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, shell.launcher()));
 		Vec3 end = blockHit.getType() == HitResult.Type.MISS ? next : blockHit.getLocation();
@@ -100,6 +132,29 @@ public final class CannonRounds {
 		shell.state()[0] = next;
 		shell.state()[1] = vel.add(0, -GRAVITY, 0);
 		return false;
+	}
+
+	private static void trail(ServerLevel level, Vec3 from, Vec3 to) {
+		Vec3 seg = to.subtract(from);
+		for (int i = 1; i <= 3; i++) {
+			Vec3 p = from.add(seg.scale(i / 3.0));
+			level.sendParticles(ParticleTypes.FLAME, true, true, p.x, p.y, p.z, 1, 0, 0, 0, 0);
+		}
+	}
+
+	/** A flak burst: a black puff with a flash, splinters for everything airborne nearby. */
+	private static void burst(Shell shell, Vec3 at) {
+		ServerLevel level = shell.level();
+		level.sendParticles(ParticleTypes.EXPLOSION, true, true, at.x, at.y, at.z, 1, 0, 0, 0, 0);
+		level.sendParticles(ParticleTypes.LARGE_SMOKE, true, true, at.x, at.y, at.z, 14, 0.7, 0.7, 0.7, 0.01);
+		level.sendParticles(ParticleTypes.SQUID_INK, true, true, at.x, at.y, at.z, 10, 0.5, 0.5, 0.5, 0.02);
+		level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 4.0F, 1.4F);
+		for (Entity e : level.getEntities(shell.launcher(), new AABB(at, at).inflate(6), e -> e instanceof dev.rubymod.entity.AircraftEntity && e.isAlive())) {
+			double d = e.getBoundingBox().getCenter().distanceTo(at);
+			if (d < 6 && !e.hasPassenger(shell.owner())) {
+				Armor.hit(level, e, null, shell.owner(), (float) (shell.flak() * (d < 2.5 ? 1.0 : 1.0 - (d - 2.5) / 3.5 * 0.7)));
+			}
+		}
 	}
 
 	private static void impact(Shell shell, Vec3 at, Entity target) {

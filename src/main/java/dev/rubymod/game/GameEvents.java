@@ -49,9 +49,13 @@ public final class GameEvents {
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			GameConfig.load();
 			SeasonData.load(server);
+			dev.rubymod.industry.Grid.load(server);
 			Explosions.clearHits();
 		});
-		ServerLifecycleEvents.SERVER_STOPPING.register(server -> SeasonData.save());
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+			SeasonData.save();
+			dev.rubymod.industry.Grid.saveIfDirty();
+		});
 
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -67,7 +71,9 @@ public final class GameEvents {
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
 				TrainingGround.tick();
 			}
+			dev.rubymod.industry.Grid.endTick(server.overworld().getGameTime());
 			if (server.getTickCount() % 1200 == 0) {
+				dev.rubymod.industry.Grid.saveIfDirty();
 				SeasonData.saveIfDirty();
 			}
 		});
@@ -75,7 +81,13 @@ public final class GameEvents {
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> BattleDirector.onJoin(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BattleDirector.onLeave(server, handler.getPlayer()));
 
-		ServerPlayNetworking.registerGlobalReceiver(Payloads.Reload.TYPE, (payload, context) -> Gunfire.startReload(context.player()));
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.Reload.TYPE, (payload, context) -> {
+			if (context.player().getMainHandItem().getItem() instanceof dev.rubymod.item.ArchitectWandItem) {
+				dev.rubymod.item.ArchitectWandItem.undo(context.player());
+			} else {
+				Gunfire.startReload(context.player());
+			}
+		});
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.Fire.TYPE, (payload, context) -> {
 			ServerPlayer player = context.player();
 			ItemStack held = player.getMainHandItem();
@@ -88,6 +100,8 @@ public final class GameEvents {
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleFire.TYPE, (payload, context) -> {
 			if (context.player().getVehicle() instanceof VehicleEntity vehicle) {
 				vehicle.fireCannon(context.player());
+			} else if (context.player().getVehicle() instanceof dev.rubymod.entity.HeavyAAGunEntity gun) {
+				gun.fire(context.player());
 			}
 		});
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftFire.TYPE, (payload, context) -> {

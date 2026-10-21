@@ -28,6 +28,9 @@ public final class Trigger {
 		if (Targeting.piloting(mc) != null) {
 			return true;
 		}
+		if (mc.player.getVehicle() instanceof dev.rubymod.entity.HeavyAAGunEntity gun) {
+			return gun.getControllingPassenger() == mc.player;
+		}
 		return mc.player.getVehicle() instanceof VehicleEntity vehicle && vehicle.getControllingPassenger() == mc.player && vehicle.hasWeapon();
 	}
 

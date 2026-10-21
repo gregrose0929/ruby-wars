@@ -1,0 +1,18 @@
+{
+	"type": "minecraft:block",
+	"pools": [
+		{
+			"rolls": 1,
+			"condition": {
+				"type": "minecraft:survives_explosion"
+			},
+			"entries": [
+				{
+					"type": "minecraft:item",
+					"name": "rubymod:point_defense"
+				}
+			]
+		}
+	],
+	"random_sequence": "rubymod:blocks/point_defense"
+}
