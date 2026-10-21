@@ -17,6 +17,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundEvents;
@@ -31,10 +32,13 @@ public class RubyModClient implements ClientModInitializer {
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (reloadKey.consumeClick()) {
-				if (client.player != null) {
+				if (Targeting.piloting(client) != null) {
+					ClientPlayNetworking.send(new Payloads.AircraftCycle());
+				} else if (client.player != null) {
 					ClientPlayNetworking.send(new Payloads.Reload());
 				}
 			}
+			Targeting.tick(client);
 			Trigger.tick(client);
 			if (client.player != null && ClientState.shakeTicks > 0) {
 				ClientState.shakeTicks--;
@@ -90,6 +94,14 @@ public class RubyModClient implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientState.reset());
 
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
+		HudElementRegistry.addLast(RubyMod.id("pilot_hud"), new PilotHud());
+		// The pilot HUD shows hull %, so hide the rows of vanilla mount hearts while flying.
+		HudElementRegistry.replaceElement(net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.MOUNT_HEALTH,
+				vanilla -> (g, delta) -> {
+					if (Targeting.piloting(Minecraft.getInstance()) == null) {
+						vanilla.extractRenderState(g, delta);
+					}
+				});
 		AutoTest.register();
 
 		EntityRendererRegistry.register(ModEntities.FRAG_GRENADE, ThrownItemRenderer::new);
@@ -98,7 +110,10 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.BREACHING_CHARGE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.JEEP, VehicleRenderer::new);
 		EntityRendererRegistry.register(ModEntities.TANK, VehicleRenderer::new);
-		EntityRendererRegistry.register(ModEntities.JET, JetRenderer::new);
+		EntityRendererRegistry.register(ModEntities.FIGHTER_JET, AircraftRenderer::new);
+		EntityRendererRegistry.register(ModEntities.ATTACK_JET, AircraftRenderer::new);
+		EntityRendererRegistry.register(ModEntities.BOMBER, AircraftRenderer::new);
+		EntityRendererRegistry.register(ModEntities.TARGET_DUMMY, net.minecraft.client.renderer.entity.ArmorStandRenderer::new);
 		EntityRendererRegistry.register(ModEntities.ROCKET,
 				context -> new ProjectileModelRenderer<>(context, r -> r.isShell() ? ModBlocks.TANK_SHELL_MODEL : ModBlocks.ROCKET_MODEL, 1.6F));
 		EntityRendererRegistry.register(ModEntities.MORTAR_SHELL, context -> new ProjectileModelRenderer<>(context, e -> ModBlocks.MORTAR_SHELL_MODEL, 1.4F));

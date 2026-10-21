@@ -1,6 +1,6 @@
 package dev.rubymod.game;
 
-import dev.rubymod.entity.JetEntity;
+import dev.rubymod.entity.AircraftEntity;
 import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.gun.GunItem;
 import dev.rubymod.gun.Gunfire;
@@ -61,6 +61,7 @@ public final class GameEvents {
 			LagCompensation.record(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
+				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
 			}
 			if (server.getTickCount() % 1200 == 0) {
 				SeasonData.saveIfDirty();
@@ -83,13 +84,23 @@ public final class GameEvents {
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleFire.TYPE, (payload, context) -> {
 			if (context.player().getVehicle() instanceof VehicleEntity vehicle) {
 				vehicle.fireCannon(context.player());
-			} else if (context.player().getVehicle() instanceof JetEntity jet) {
-				jet.fireMissile(context.player());
 			}
 		});
-		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleBomb.TYPE, (payload, context) -> {
-			if (context.player().getVehicle() instanceof JetEntity jet) {
-				jet.dropBomb(context.player());
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftFire.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof AircraftEntity aircraft) {
+				var target = payload.targetId() >= 0 ? context.player().level().getEntity(payload.targetId()) : null;
+				var point = payload.hasPoint() ? new net.minecraft.world.phys.Vec3(payload.x(), payload.y(), payload.z()) : null;
+				aircraft.fire(context.player(), target, point);
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftCycle.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof AircraftEntity aircraft) {
+				aircraft.cycleWeapon(context.player());
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftFlares.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof AircraftEntity aircraft) {
+				aircraft.flares(context.player());
 			}
 		});
 

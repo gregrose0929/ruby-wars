@@ -1,1 +1,6 @@
+# Load the test area (spawn +300..+460, +290..+350) so test entities can be added.
+forceload add ~290 ~290 ~460 ~350
+wait 5
 rubywars selftest
+wait 2
+forceload remove all

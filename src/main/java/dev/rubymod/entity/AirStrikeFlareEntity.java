@@ -62,7 +62,7 @@ public class AirStrikeFlareEntity extends ModProjectile {
 	}
 
 	private void callStrike(ServerLevel level) {
-		level.addFreshEntity(JetEntity.airStrike(level, getOwner() != null ? getOwner() : this, position(), lineYaw));
+		level.addFreshEntity(AircraftEntity.airStrike(level, getOwner() != null ? getOwner() : this, position(), lineYaw));
 		discard();
 	}
 

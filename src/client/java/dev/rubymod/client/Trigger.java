@@ -1,6 +1,7 @@
 package dev.rubymod.client;
 
-import dev.rubymod.entity.JetEntity;
+import dev.rubymod.entity.AircraftEntity;
+import dev.rubymod.entity.AircraftType.Weapon;
 import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.gun.GunItem;
 import dev.rubymod.item.RocketLauncherItem;
@@ -24,8 +25,8 @@ public final class Trigger {
 		if (mc.player == null) {
 			return false;
 		}
-		if (mc.player.getVehicle() instanceof JetEntity jet) {
-			return jet.getControllingPassenger() == mc.player;
+		if (Targeting.piloting(mc) != null) {
+			return true;
 		}
 		return mc.player.getVehicle() instanceof VehicleEntity vehicle && vehicle.getControllingPassenger() == mc.player && vehicle.hasWeapon();
 	}
@@ -39,17 +40,34 @@ public final class Trigger {
 		return held.getItem() instanceof GunItem || held.getItem() instanceof RocketLauncherItem || drivingArmedVehicle(mc);
 	}
 
+	/** Send the fire request with the seeker's lock (if locked) or the marked ground point. */
+	public static void fireAircraft(Weapon weapon) {
+		int target = weapon != null && Targeting.locked(weapon) ? Targeting.candidate.getId() : -1;
+		var point = Targeting.aimPoint;
+		ClientPlayNetworking.send(new Payloads.AircraftFire(target, point != null, point != null ? point.x : 0, point != null ? point.y : 0,
+				point != null ? point.z : 0));
+	}
+
 	/** Called every client tick. */
 	public static void tick(Minecraft mc) {
 		boolean jumping = mc.player != null && mc.gui.screen() == null && mc.options.keyJump.isDown();
-		if (jumping && !wasJumping && mc.player.getVehicle() instanceof JetEntity jet && jet.getControllingPassenger() == mc.player) {
-			ClientPlayNetworking.send(new Payloads.VehicleBomb());
+		if (jumping && !wasJumping && Targeting.piloting(mc) != null) {
+			ClientPlayNetworking.send(new Payloads.AircraftFlares());
 		}
 		wasJumping = jumping;
 		boolean down = mc.player != null && mc.gui.screen() == null && mc.options.keyAttack.isDown();
 		boolean pressed = down && !wasDown;
 		wasDown = down;
 		if (!down || mc.player == null) {
+			return;
+		}
+		AircraftEntity aircraft = Targeting.piloting(mc);
+		if (aircraft != null) {
+			// The cannon fires while held (the server sets the rate); missiles and bombs once per click.
+			Weapon weapon = aircraft.selectedWeapon();
+			if (weapon == Weapon.CANNON || pressed) {
+				fireAircraft(weapon);
+			}
 			return;
 		}
 		if (drivingArmedVehicle(mc)) {

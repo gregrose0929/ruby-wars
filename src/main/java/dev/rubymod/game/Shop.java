@@ -95,7 +95,9 @@ public final class Shop {
 			item(33, ModBlocks.BARBED_WIRE, 8, 1);
 			item(34, ModItems.JEEP, 1, 40);
 			item(35, ModItems.TANK, 1, 100);
-			item(44, ModItems.JET, 1, 150);
+			item(43, ModItems.FIGHTER_JET, 1, 150);
+			item(44, ModItems.ATTACK_JET, 1, 170);
+			item(53, ModItems.BOMBER, 1, 220);
 			// Row 5: tools and upgrades
 			item(36, ModItems.BUILDERS_WAND, 1, 6);
 			item(38, ModItems.EXTENDED_MAG, 1, 6);

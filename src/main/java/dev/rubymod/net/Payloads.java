@@ -44,13 +44,45 @@ public class Payloads {
 		}
 	}
 
-	/** Client -> server: the jet pilot pressed jump (drop a bomb). */
-	public record VehicleBomb() implements CustomPacketPayload {
-		public static final Type<VehicleBomb> TYPE = new Type<>(RubyMod.id("vehicle_bomb"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, VehicleBomb> CODEC = StreamCodec.unit(new VehicleBomb());
+	/**
+	 * Client -> server: the pilot fired the selected weapon. {@code targetId} is the
+	 * entity the HUD has locked (-1 = none); {@code x,y,z} the ground point under the
+	 * pipper, used by guided missiles when nothing is locked.
+	 */
+	public record AircraftFire(int targetId, boolean hasPoint, double x, double y, double z) implements CustomPacketPayload {
+		public static final Type<AircraftFire> TYPE = new Type<>(RubyMod.id("aircraft_fire"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, AircraftFire> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, AircraftFire::targetId,
+				ByteBufCodecs.BOOL, AircraftFire::hasPoint,
+				ByteBufCodecs.DOUBLE, AircraftFire::x,
+				ByteBufCodecs.DOUBLE, AircraftFire::y,
+				ByteBufCodecs.DOUBLE, AircraftFire::z,
+				AircraftFire::new);
 
 		@Override
-		public Type<VehicleBomb> type() {
+		public Type<AircraftFire> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the pilot pressed R (next weapon). */
+	public record AircraftCycle() implements CustomPacketPayload {
+		public static final Type<AircraftCycle> TYPE = new Type<>(RubyMod.id("aircraft_cycle"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, AircraftCycle> CODEC = StreamCodec.unit(new AircraftCycle());
+
+		@Override
+		public Type<AircraftCycle> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the pilot pressed jump (drop flares). */
+	public record AircraftFlares() implements CustomPacketPayload {
+		public static final Type<AircraftFlares> TYPE = new Type<>(RubyMod.id("aircraft_flares"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, AircraftFlares> CODEC = StreamCodec.unit(new AircraftFlares());
+
+		@Override
+		public Type<AircraftFlares> type() {
 			return TYPE;
 		}
 	}
@@ -201,7 +233,9 @@ public class Payloads {
 		PayloadTypeRegistry.serverboundPlay().register(Reload.TYPE, Reload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(VehicleFire.TYPE, VehicleFire.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Fire.TYPE, Fire.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(VehicleBomb.TYPE, VehicleBomb.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(AircraftFire.TYPE, AircraftFire.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(AircraftCycle.TYPE, AircraftCycle.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(AircraftFlares.TYPE, AircraftFlares.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Shake.TYPE, Shake.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Recoil.TYPE, Recoil.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ReloadState.TYPE, ReloadState.CODEC);

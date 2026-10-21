@@ -78,6 +78,18 @@ public final class RubyWarsCommand {
 				.then(Commands.literal("revive").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.argument("player", EntityArgument.player()).executes(RubyWarsCommand::revive)))
 				.then(Commands.literal("kit").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::kit))
+				.then(Commands.literal("rearm").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
+					if (c.getSource().getPlayerOrException().getVehicle() instanceof dev.rubymod.entity.AircraftEntity aircraft) {
+						aircraft.rearm();
+						return ok(c, "Rearmed and repaired.");
+					}
+					c.getSource().sendFailure(Component.literal("Get in an aircraft first."));
+					return 0;
+				}))
+				.then(Commands.literal("training").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
+					dev.rubymod.game.TrainingGround.build(c.getSource().getLevel(), net.minecraft.core.BlockPos.containing(c.getSource().getPosition()));
+					return ok(c, "Training ground built: gun range to the west, vehicle yard to the east, airfield to the south.");
+				}))
 				.then(Commands.literal("selftest").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.executes(c -> SelfTest.run(c.getSource())))
 				.then(Commands.literal("reset").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
@@ -172,7 +184,7 @@ public final class RubyWarsCommand {
 				{ModItems.RUBY_CELL, 64}, {ModItems.ROCKET, 16}, {ModItems.SMOKE_GRENADE, 16}, {ModItems.AIR_STRIKE_FLARE, 1},
 				{ModItems.RANGEFINDER, 1}, {ModItems.BREACHING_CHARGE, 8}, {ModItems.MORTAR_SHELL, 16}, {ModItems.CRUISE_MISSILE, 1},
 				{ModItems.EXTENDED_MAG, 4}, {ModItems.RED_DOT_SIGHT, 4}, {ModItems.VERTICAL_GRIP, 4}, {ModItems.SUPPRESSOR, 4},
-				{ModItems.JEEP, 1}, {ModItems.TANK, 1}, {ModItems.JET, 1}, {ModItems.BUILDERS_WAND, 1}, {ModItems.EXCAVATOR, 1}, {ModItems.RUBY, 64},
+				{ModItems.JEEP, 1}, {ModItems.TANK, 1}, {ModItems.FIGHTER_JET, 1}, {ModItems.ATTACK_JET, 1}, {ModItems.BOMBER, 1}, {ModItems.BUILDERS_WAND, 1}, {ModItems.EXCAVATOR, 1}, {ModItems.RUBY, 64},
 				{ModBlocks.ARMORY, 1}, {ModBlocks.MORTAR, 1}, {ModBlocks.MISSILE_SILO, 1}};
 		for (Object[] entry : stacks) {
 			give(player, new ItemStack((net.minecraft.world.level.ItemLike) entry[0], (Integer) entry[1]));

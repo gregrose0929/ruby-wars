@@ -1,0 +1,13 @@
+# Build the training ground at world spawn (run on a fresh flat world, see tools/make-training-world.sh).
+gamerule spawn_mobs false
+gamerule advance_time false
+gamerule advance_weather false
+gamerule keep_inventory true
+gamerule spawn_radius 0
+gamerule respawn_radius 0
+time set noon
+weather clear
+rubywars training
+wait 15
+save-all flush
+wait 5

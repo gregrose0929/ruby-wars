@@ -94,7 +94,7 @@ public class GameHud implements HudElement {
 
 	private void drawAmmo(GuiGraphicsExtractor g, Font font, Player player, int w, int h) {
 		ItemStack held = player.getMainHandItem();
-		if (!(held.getItem() instanceof GunItem gun)) {
+		if (!(held.getItem() instanceof GunItem gun) || player.getVehicle() instanceof dev.rubymod.entity.AircraftEntity) {
 			return;
 		}
 		GunStats stats = gun.stats(held);

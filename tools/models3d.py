@@ -266,3 +266,51 @@ PROJECTILES = {
         vbox([6.4, 6.4, 6], [9.6, 9.6, 7], BRASS),
     ],
 }
+
+
+# ----------------------------------------------------------------- more aircraft (front = -Z)
+
+ATTACK_JET = [
+    vbox([6.25, 3, -9], [9.75, 6.5, 18], OLIVE),                 # fuselage
+    vbox([6.75, 2.6, -7], [9.25, 3, 16], OLIVE_DARK),            # belly
+    vbox([7, 3.5, -11], [9, 6, -9], OLIVE_DARK),                 # nose
+    vbox([7.6, 4.2, -14], [8.4, 5, -11], BLACK),                 # big nose cannon
+    vbox([6.75, 6.5, -6], [9.25, 8, 0], LENS),                   # canopy
+    vbox([-10, 3.4, 2], [26, 4.2, 8], OLIVE),                    # straight wings
+    vbox([-10.5, 3.2, 2], [-9.5, 4.4, 8], OLIVE_DARK),
+    vbox([25.5, 3.2, 2], [26.5, 4.4, 8], OLIVE_DARK),
+    vbox([3.5, 6.5, 10], [6.5, 9.5, 16], DARK),                  # twin engines on top
+    vbox([9.5, 6.5, 10], [12.5, 9.5, 16], DARK),
+    vbox([4, 7, 16], [6, 9, 16.6], RED_LIGHT),
+    vbox([10, 7, 16], [12, 9, 16.6], RED_LIGHT),
+    vbox([1, 4, 15], [15, 4.6, 19], OLIVE),                      # tailplane
+    vbox([1, 4.6, 16], [1.8, 10, 19], OLIVE),                    # twin tails
+    vbox([14.2, 4.6, 16], [15, 10, 19], OLIVE),
+    *[vbox([x, 2, 3], [x + 1.2, 3.4, 6], WHITE) for x in (-6, -2, 17, 21)],   # rockets under wings
+    *[vbox([x, 2, 2], [x + 1.2, 3.4, 3], RUBY) for x in (-6, -2, 17, 21)],
+    vbox([7.4, 1.2, -6], [8.6, 2.6, -4], BLACK),                 # landing gear
+    vbox([2, 1.2, 4], [3, 3.4, 6], BLACK),
+    vbox([13, 1.2, 4], [14, 3.4, 6], BLACK),
+]
+
+BOMBER = [
+    vbox([5.5, 3, -12], [10.5, 8, 26], LIGHT),                   # long fuselage
+    vbox([6, 2.5, -10], [10, 3, 24], STEEL),
+    vbox([6.5, 3.5, -14], [9.5, 7.5, -12], STEEL),               # nose
+    vbox([6.75, 6, -13], [9.25, 7.6, -9], LENS),                 # cockpit glass
+    vbox([-15, 4.5, 2], [31, 5.5, 12], STEEL),                   # wings
+    vbox([-16, 4.3, 7], [-15, 5.7, 12], RUBY),
+    vbox([31, 4.3, 7], [32, 5.7, 12], RUBY),
+    *[vbox([x, 2.6, 0], [x + 3, 5, 8], DARK) for x in (-9, -2, 15, 22)],      # four engines
+    *[vbox([x + 0.5, 3, 8], [x + 2.5, 4.6, 8.6], RED_LIGHT) for x in (-9, -2, 15, 22)],
+    vbox([0, 6, 21], [16, 7, 26], STEEL),                        # tailplane
+    vbox([7.4, 8, 18], [8.6, 16, 26], STEEL),                    # tail fin
+    vbox([7.3, 14, 23], [8.7, 16, 26], RUBY),
+    vbox([6.5, 2, 4], [9.5, 3, 14], BLACK),                      # bomb bay doors
+    vbox([7.4, 0.8, -8], [8.6, 2.6, -6], BLACK),                 # landing gear
+    vbox([3, 0.8, 8], [4.5, 3, 11], BLACK),
+    vbox([11.5, 0.8, 8], [13, 3, 11], BLACK),
+]
+
+VEHICLES["attack_jet_model"] = ATTACK_JET
+VEHICLES["bomber_model"] = BOMBER

@@ -116,6 +116,9 @@ public final class Gunfire {
 			level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), hitPos.x, hitPos.y, hitPos.z, 4, 0.05, 0.05, 0.05, 0.1);
 			if (stats.special() == GunStats.Special.BREACH && isBreachable(state) && Rules.canWeaponBreak(level, pos, state)) {
 				level.destroyBlock(pos, false, shooter);
+			} else if (BlockDamage.hit(level, pos, stats.damage(), shooter)) {
+				drawTracer(level, start, hitPos, stats);
+				return; // Shot through: the block is gone.
 			}
 			if (bounces > 0) {
 				double travelled = start.distanceTo(hitPos);

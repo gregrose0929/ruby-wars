@@ -24,6 +24,8 @@ view-distance=6
 simulation-distance=6
 pause-when-empty-seconds=-1
 EOF
+# Extra server.properties lines (newline-separated), e.g. EXTRA_PROPS="level-type=minecraft\:flat"
+if [ -n "$EXTRA_PROPS" ]; then printf '%s\n' "$EXTRA_PROPS" >> run/server.properties; fi
 
 LOG=run/test-output.log
 : > "$LOG"
@@ -39,7 +41,8 @@ LOG=run/test-output.log
 	done
 	sleep 2
 	while IFS= read -r line || [ -n "$line" ]; do
-		line="$(printf '%s' "$line" | tr -d '')"
+		line="$(printf '%s' "$line" | tr -d '
+')"
 		case "$line" in
 			"" | \#*) ;;
 			wait\ *) sleep "${line#wait }" ;;

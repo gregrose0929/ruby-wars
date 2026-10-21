@@ -1,0 +1,91 @@
+{
+	"parent": "rubymod:block/bomber_model",
+	"gui_light": "side",
+	"display": {
+		"gui": {
+			"rotation": [
+				25,
+				135,
+				0
+			],
+			"translation": [
+				0.0,
+				-0.12,
+				0.62
+			],
+			"scale": [
+				0.312,
+				0.312,
+				0.312
+			]
+		},
+		"ground": {
+			"rotation": [
+				0,
+				0,
+				0
+			],
+			"translation": [
+				0.0,
+				2,
+				0.31
+			],
+			"scale": [
+				0.156,
+				0.156,
+				0.156
+			]
+		},
+		"fixed": {
+			"rotation": [
+				0,
+				180,
+				0
+			],
+			"translation": [
+				0.0,
+				-0.12,
+				0.62
+			],
+			"scale": [
+				0.312,
+				0.312,
+				0.312
+			]
+		},
+		"thirdperson_righthand": {
+			"rotation": [
+				75,
+				45,
+				0
+			],
+			"translation": [
+				0,
+				2.5,
+				0
+			],
+			"scale": [
+				0.2,
+				0.2,
+				0.2
+			]
+		},
+		"firstperson_righthand": {
+			"rotation": [
+				0,
+				135,
+				0
+			],
+			"translation": [
+				0,
+				3,
+				0
+			],
+			"scale": [
+				0.25,
+				0.25,
+				0.25
+			]
+		}
+	}
+}

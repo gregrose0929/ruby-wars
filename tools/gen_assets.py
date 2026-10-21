@@ -168,7 +168,9 @@ def gen_blocks(client_jar):
           {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"}, "elements": models3d_blocks.TANK_ICON})
     vehicle_item("jeep", models3d.JEEP, f"{NS}:block/jeep_model")
     vehicle_item("tank", models3d_blocks.TANK_ICON, f"{NS}:block/tank_icon")
-    vehicle_item("jet", models3d.JET, f"{NS}:block/jet_model")
+    vehicle_item("fighter_jet", models3d.JET, f"{NS}:block/jet_model")
+    vehicle_item("attack_jet", models3d.ATTACK_JET, f"{NS}:block/attack_jet_model")
+    vehicle_item("bomber", models3d.BOMBER, f"{NS}:block/bomber_model")
     for name in models3d.VEHICLES:
         write(f"{ASSETS}/blockstates/{name}.json", {"variants": {"": {"model": f"{NS}:block/{name}"}}})
 
@@ -177,7 +179,7 @@ def gen_blocks(client_jar):
 LANG = {
     "itemGroup.rubymod.ruby_wars": "Ruby Wars",
     "key.category.rubymod.ruby_wars": "Ruby Wars",
-    "key.rubymod.reload": "Reload Gun",
+    "key.rubymod.reload": "Reload Gun / Next Aircraft Weapon",
     "item.rubymod.ruby": "Ruby",
     "item.rubymod.light_ammo": "Light Ammo",
     "item.rubymod.heavy_ammo": "Heavy Ammo",
@@ -212,8 +214,15 @@ LANG = {
     "item.rubymod.suppressor": "Suppressor",
     "item.rubymod.jeep": "Jeep",
     "item.rubymod.tank": "Tank",
-    "item.rubymod.jet": "Jet",
-    "entity.rubymod.jet": "Jet",
+    "item.rubymod.fighter_jet": "Fighter Jet",
+    "item.rubymod.attack_jet": "Attack Jet",
+    "item.rubymod.bomber": "Bomber",
+    "entity.rubymod.fighter_jet": "Fighter Jet",
+    "entity.rubymod.attack_jet": "Attack Jet",
+    "entity.rubymod.bomber": "Bomber",
+    "entity.rubymod.target_dummy": "Target Dummy",
+    "block.rubymod.attack_jet_model": "Attack Jet",
+    "block.rubymod.bomber_model": "Bomber",
     "entity.rubymod.jeep": "Jeep",
     "entity.rubymod.tank": "Tank",
     "block.rubymod.jeep_model": "Jeep",

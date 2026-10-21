@@ -17,11 +17,14 @@ import dev.rubymod.game.SeasonData;
 import dev.rubymod.game.SeasonTicker;
 import dev.rubymod.game.Shop;
 import dev.rubymod.game.SpawnShield;
+import dev.rubymod.gun.BlockDamage;
 import dev.rubymod.gun.GunItem;
 import dev.rubymod.gun.GunStats;
 import dev.rubymod.gun.Gunfire;
 import dev.rubymod.registry.ModBlocks;
 import dev.rubymod.block.DefenseBlockEntity;
+import dev.rubymod.entity.AircraftEntity;
+import dev.rubymod.entity.AircraftType;
 import dev.rubymod.entity.MortarShellEntity;
 import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.registry.ModComponents;
@@ -256,7 +259,8 @@ public final class SelfTest {
 			Gunfire.tryFire(level, alpha, rifle, (GunItem) ModItems.ARR_RIFLE);
 			gunWorks = target.getHealth() < before && GunItem.ammo(rifle) == 29;
 			gunDetail = "health " + before + " -> " + target.getHealth() + ", ammo " + GunItem.ammo(rifle) + ", shooter at " + alpha.position()
-					+ " looking " + alpha.getLookAngle() + ", target at " + target.position() + ", gamemode " + alpha.gameMode.getGameModeForPlayer();
+					+ " looking " + alpha.getLookAngle() + ", target at " + target.position() + ", gamemode " + alpha.gameMode.getGameModeForPlayer() + ", removed " + target.isRemoved() + ", in level " + (level.getEntity(target.getId()) != null)
+					+ ", pickable " + target.isPickable() + ", difficulty " + level.getDifficulty();
 			target.discard();
 		}
 		check("guns: rifle hits a target 5 blocks away and uses a round [" + gunDetail + "]", gunWorks);
@@ -265,6 +269,36 @@ public final class SelfTest {
 		GunStats modded = ((GunItem) ModItems.ARR_RIFLE).stats(moddedRifle);
 		check("attachments: Extended Mag makes a 30-round rifle hold " + modded.magazine(), modded.magazine() == 45);
 		check("attachments: Suppressor silences the gun", modded.silenced());
+
+		// ----- Block damage -----
+		BlockPos wallPos = range.offset(3, 0, 3);
+		check("block damage: pistol-strength bullets break dirt in 3 hits (took " + hitsToBreak(level, wallPos, Blocks.DIRT, alpha) + ")",
+				hitsToBreak(level, wallPos, Blocks.DIRT, alpha) == 3);
+		int stoneHits = hitsToBreak(level, wallPos, Blocks.STONE, alpha);
+		check("block damage: stone takes 7 hits (took " + stoneHits + ")", stoneHits == 7);
+		check("block damage: bullets don't break Reinforced Concrete", hitsToBreak(level, wallPos, ModBlocks.REINFORCED_CONCRETE, alpha) < 0);
+		level.setBlockAndUpdate(wallPos, Blocks.AIR.defaultBlockState());
+
+		// ----- Aircraft weapons -----
+		AircraftEntity jet = ModEntities.ATTACK_JET.create(level, EntitySpawnReason.COMMAND);
+		if (jet != null) {
+			jet.setPos(range.getX() + 0.5, range.getY() + 25, range.getZ() - 10.5);
+			level.addFreshEntity(jet);
+			jet.nextWeapon();
+			AircraftType.Weapon selected = jet.selectedWeapon();
+			int before = jet.ammo(AircraftType.Weapon.AGM);
+			jet.fireSelected(alpha, null, Vec3.atCenterOf(range));
+			check("aircraft: R switches the attack jet to guided missiles (" + selected + ")",
+					selected == AircraftType.Weapon.AGM);
+			check("aircraft: firing a guided missile uses one (" + before + " -> " + jet.ammo(AircraftType.Weapon.AGM) + ")",
+					jet.ammo(AircraftType.Weapon.AGM) == before - 1);
+			jet.nextWeapon();
+			int bombs = jet.ammo(AircraftType.Weapon.BOMBS);
+			jet.fireSelected(alpha, null, null);
+			check("aircraft: bombs drop in the air (" + bombs + " -> " + jet.ammo(AircraftType.Weapon.BOMBS) + ")",
+					jet.ammo(AircraftType.Weapon.BOMBS) == bombs - 1);
+			jet.discard();
+		}
 
 		// ----- Spawn shield -----
 		data.phase = Phase.WAR;
@@ -321,6 +355,17 @@ public final class SelfTest {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
 		}
 		Explosions.clearHits();
+	}
+
+	/** How many 5-damage bullet hits break a block of this kind (-1 if 40 hits don't). */
+	private static int hitsToBreak(ServerLevel level, BlockPos pos, net.minecraft.world.level.block.Block block, FakePlayer shooter) {
+		level.setBlockAndUpdate(pos, block.defaultBlockState());
+		for (int i = 1; i <= 40; i++) {
+			if (BlockDamage.hit(level, pos, 5.0F, shooter)) {
+				return i;
+			}
+		}
+		return -1;
 	}
 
 	/** The first air block above the ground, loading (and generating) the chunk if needed. */

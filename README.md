@@ -42,10 +42,13 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Fire a mortar / launch a missile | Right-click the Mortar or Missile Silo holding shells or a missile |
 | Load a turret | Right-click it with Heavy Ammo |
 | Recharge an interceptor | Right-click it with a Ruby |
-| Deploy a vehicle | Right-click the ground with a Jeep, Tank, or Jet item |
+| Deploy a vehicle | Right-click the ground with a Jeep, Tank, Fighter Jet, Attack Jet, or Bomber item |
 | Get in / drive / get out | Right-click the vehicle / W-S drive, A-D steer / Sneak |
 | Aim and fire the tank cannon | Look to turn the turret, left-click to fire |
-| Fly the jet | W/S throttle, look to steer, left-click missiles, Space drops a bomb, Sneak to eject (you get a parachute) |
+| Taxi an aircraft | W/S throttle (S at idle throttle brakes), A/D steer the nose wheel |
+| Take off | Line up on a runway, full throttle, and when the HUD says ROTATE, look up |
+| Fly | Look where you want to go. Climbing costs speed, diving gains it; too slow and you stall |
+| Aircraft weapons | Left-click fires, R switches weapon (cannon / missiles / bombs), Space drops flares, Sneak ejects (parachute) |
 
 ## What's in the Armory
 
@@ -65,12 +68,62 @@ Killing 5 players in a row earns an Air Strike Flare.
 no tracers, hides the sniper glint). Hold the attachment in your main hand and the gun
 in your off hand, then right-click. Each gun takes one of each.
 
-Vehicles: the **Jet** (fast, needs speed to take off, stalls if it slows down in
-the air, 8 wing missiles that reload over time, bombs), the **Jeep** (fast, 4 seats),
-and the **Tank** (slow, 2 seats, a turret that follows your aim, main
-cannon, nearly bulletproof). Bullets barely scratch them; rockets, mines, and
-explosions are how you take them out. Ruby armor, sword, and pickaxe sit between
-iron and diamond.
+Vehicles: the **Jeep** (fast, 4 seats) and the **Tank** (slow, 2 seats, a turret
+that follows your aim, main cannon, nearly bulletproof). Bullets barely scratch
+them; rockets, missiles, mines, and explosions are how you take them out. Ruby armor,
+sword, and pickaxe sit between iron and diamond.
+
+## Aircraft
+
+Three aircraft, flown in the style of Nuclear Option. All of them have to take off
+from the ground: taxi out, roll down a runway (or a long, flat road) until the HUD
+says ROTATE, then pull up. Land gently: hitting the ground or a wall hard destroys
+the aircraft.
+
+| Aircraft | Takeoff speed | Weapons |
+| --- | --- | --- |
+| **Fighter Jet** | 58 km/h, ~40 blocks of runway | Nose cannon, 4 heat-seeking air-to-air missiles, 8 flare bursts |
+| **Attack Jet** | 54 km/h | Heavy cannon, 6 guided ground-attack missiles, 4 bombs, 6 flares |
+| **Bomber** | 61 km/h, needs the longest runway | 16 bombs, 10 flares |
+
+The **pilot HUD** shows speed and altitude tapes, radar altitude, climb rate, a
+compass, a pitch ladder, the flight path marker (where you're actually going),
+throttle, hull, weapons, and warnings (STALL, PULL UP, MISSILE).
+
+Targeting:
+- **Missiles:** keep a target inside the seeker circle until the box closes and
+  turns red (LOCK). Air-to-air missiles lock aircraft in the air; guided missiles
+  lock vehicles and anything on the ground. Fire without a lock and a guided
+  missile flies to the amber diamond: the exact point you're looking at, with
+  its distance.
+- **Bombs:** the red CCIP pipper shows where a bomb released right now would land
+  (the HUD simulates the fall). Put it on the target and click.
+- **Flares:** a missile chasing you will often go for fresh flares instead.
+
+One air-to-air missile downs a fighter; a tank takes two or three guided missiles.
+
+## Block damage
+
+Bullets chip away at blocks, scaled by gun damage: dirt takes about 3 pistol
+rounds, stone 7, planks 9. Cracks show the damage, and it heals if a block isn't
+shot for 10 seconds. Obsidian, Reinforced Concrete, and other very hard blocks
+ignore bullets, and claims are protected exactly as they are from explosions.
+
+## Training world
+
+`dist/Ruby Wars Training/` is a ready-made singleplayer world (creative, cheats on).
+Copy it into `.minecraft/saves/`. It has:
+
+- a **gun range** with chests of every gun, ammo, and attachment, target dummies at
+  10/25/50/80 m (they show each hit's damage and headshots), and walls of dirt,
+  planks, cobblestone, stone brick, concrete, and reinforced concrete to shoot;
+- a **vehicle yard** with jeeps, tanks, obstacles, a bunker, and targets;
+- an **airfield**: a 250-block runway, all three aircraft parked on the apron,
+  a bombing range with ground targets, and target drones circling overhead.
+
+On any world, an admin can build the same thing at their feet with
+`/rubywars training` (it flattens a 130 x 370 area). `/rubywars rearm` refills
+and repairs the aircraft you're in.
 
 ## Combat details
 
@@ -90,7 +143,8 @@ Everyone: `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubyw
 Admins: `start`, `phase <lobby|build|lockdown|war|sudden_death|final_circle|ended>`,
 `timer <minutes>`, `pause`, `resume`, `reload` (config), `backup`, `revive <player>`,
 `reset confirm` (new season), `kit` (every gun, ammo, raid gear, attachments,
-vehicles, and ruby armor, for testing), `selftest` (rule checks; use on a test world).
+vehicles, aircraft, and ruby armor, for testing), `training` (build the training
+ground here), `rearm` (refill your aircraft), `selftest` (rule checks; use on a test world).
 
 ## Running the server (Linux)
 
@@ -119,8 +173,9 @@ Requires JDK 25.
     ./gradlew runClient    # dev client
     tools/test-server.sh tools/tests/smoke.txt --fresh   # headless server test + /rubywars selftest
     python tools/make_mrpack.py   # dist/ruby-wars-<version>.mrpack for players
-    RUBYMOD_AUTOTEST=1 ./gradlew runClient --args="--quickPlaySingleplayer autotest"
-                           # scripted client run that saves screenshots to run/screenshots/
+    tools/make-training-world.sh  # dist/Ruby Wars Training/ (flat world + /rubywars training)
+    tools/client-test.sh planes   # scripted client run (guns|vehicles|strikes|planes|training|full)
+                                  # screenshots in run/screenshots/, log in run/client-test.log
 
 Art is generated: edit the pixel grids in `tools/textures.py` and models/data in
 `tools/gen_assets.py`, then run them from the project root. `tools/recolor.py`

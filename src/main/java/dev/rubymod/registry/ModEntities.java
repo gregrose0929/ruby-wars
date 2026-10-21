@@ -6,7 +6,8 @@ import dev.rubymod.entity.BombEntity;
 import dev.rubymod.entity.BreachingChargeEntity;
 import dev.rubymod.entity.CruiseMissileEntity;
 import dev.rubymod.entity.GrenadeEntity;
-import dev.rubymod.entity.JetEntity;
+import dev.rubymod.entity.AircraftEntity;
+import dev.rubymod.entity.AircraftType;
 import dev.rubymod.entity.MortarShellEntity;
 import dev.rubymod.entity.RocketEntity;
 import dev.rubymod.entity.VehicleEntity;
@@ -44,8 +45,26 @@ public class ModEntities {
 	public static final EntityType<VehicleEntity> TANK = register("tank",
 			EntityType.Builder.<VehicleEntity>of(VehicleEntity::new, MobCategory.MISC).sized(3.0F, 2.0F).clientTrackingRange(10).updateInterval(1));
 
-	public static final EntityType<JetEntity> JET = register("jet",
-			EntityType.Builder.<JetEntity>of(JetEntity::new, MobCategory.MISC).sized(3.0F, 1.5F).clientTrackingRange(16).updateInterval(1));
+	public static final EntityType<dev.rubymod.entity.TargetDummyEntity> TARGET_DUMMY = register("target_dummy",
+			EntityType.Builder.<dev.rubymod.entity.TargetDummyEntity>of(dev.rubymod.entity.TargetDummyEntity::new, MobCategory.MISC).sized(0.5F, 1.975F)
+					.eyeHeight(1.7765F).clientTrackingRange(10));
+
+	private static final java.util.Map<EntityType<?>, AircraftType> AIRCRAFT_TYPES = new java.util.HashMap<>();
+	public static final EntityType<AircraftEntity> FIGHTER_JET = aircraft(AircraftType.FIGHTER, 3.0F, 1.5F);
+	public static final EntityType<AircraftEntity> ATTACK_JET = aircraft(AircraftType.ATTACK, 3.4F, 1.6F);
+	public static final EntityType<AircraftEntity> BOMBER = aircraft(AircraftType.BOMBER, 5.0F, 2.2F);
+
+	private static EntityType<AircraftEntity> aircraft(AircraftType kind, float width, float height) {
+		EntityType<AircraftEntity> type = register(kind.id(),
+				EntityType.Builder.<AircraftEntity>of(AircraftEntity::new, MobCategory.MISC).sized(width, height).clientTrackingRange(20).updateInterval(1));
+		AIRCRAFT_TYPES.put(type, kind);
+		return type;
+	}
+
+	/** The flight numbers for an aircraft entity type. */
+	public static AircraftType aircraftType(EntityType<?> type) {
+		return AIRCRAFT_TYPES.getOrDefault(type, AircraftType.FIGHTER);
+	}
 
 	private static <T extends Entity> EntityType<T> register(String name, EntityType.Builder<T> builder) {
 		ResourceKey<EntityType<?>> key = ResourceKey.create(Registries.ENTITY_TYPE, RubyMod.id(name));
@@ -55,6 +74,9 @@ public class ModEntities {
 	public static void initialize() {
 		FabricDefaultAttributeRegistry.register(JEEP, VehicleEntity.jeepAttributes());
 		FabricDefaultAttributeRegistry.register(TANK, VehicleEntity.tankAttributes());
-		FabricDefaultAttributeRegistry.register(JET, JetEntity.attributes());
+		FabricDefaultAttributeRegistry.register(TARGET_DUMMY, net.minecraft.world.entity.decoration.ArmorStand.createAttributes());
+		FabricDefaultAttributeRegistry.register(FIGHTER_JET, AircraftEntity.attributes(AircraftType.FIGHTER));
+		FabricDefaultAttributeRegistry.register(ATTACK_JET, AircraftEntity.attributes(AircraftType.ATTACK));
+		FabricDefaultAttributeRegistry.register(BOMBER, AircraftEntity.attributes(AircraftType.BOMBER));
 	}
 }
