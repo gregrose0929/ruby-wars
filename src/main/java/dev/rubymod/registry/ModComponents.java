@@ -25,6 +25,12 @@ public class ModComponents {
 			DataComponentType.<List<String>>builder().persistent(Codec.STRING.listOf())
 					.networkSynchronized(ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list())).build());
 
+	/** A Field Radio's channel (1-8). */
+	public static final DataComponentType<Integer> RADIO_CHANNEL = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("radio_channel"),
+			DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());
+
 	/** A machine's upgrade tier, kept on the item when it's picked up. */
 	public static final DataComponentType<Integer> MACHINE_TIER = Registry.register(
 			BuiltInRegistries.DATA_COMPONENT_TYPE,

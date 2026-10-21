@@ -63,9 +63,33 @@ public class VehicleEntity extends Mob {
 		return isTank();
 	}
 
+	/** Paint scheme (see PaintKitItem.SCHEMES): 0 = factory default. */
+	private static final EntityDataAccessor<Integer> PAINT = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.INT);
+
+	public int paint() {
+		return entityData.get(PAINT);
+	}
+
+	public void setPaint(int paint) {
+		entityData.set(PAINT, paint);
+	}
+
+	@Override
+	protected void addAdditionalSaveData(net.minecraft.world.level.storage.ValueOutput output) {
+		super.addAdditionalSaveData(output);
+		output.putInt("paint", paint());
+	}
+
+	@Override
+	protected void readAdditionalSaveData(net.minecraft.world.level.storage.ValueInput input) {
+		super.readAdditionalSaveData(input);
+		setPaint(input.getIntOr("paint", 0));
+	}
+
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
 		super.defineSynchedData(builder);
+		builder.define(PAINT, 0);
 		builder.define(TURRET_YAW, 0.0F);
 		builder.define(BARREL_PITCH, 0.0F);
 		builder.define(RELOAD, 0);
@@ -137,7 +161,7 @@ public class VehicleEntity extends Mob {
 
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-		if (player.isSecondaryUseActive() || isVehicle() && getPassengers().size() >= seats()) {
+		if (player.isSecondaryUseActive() || isVehicle() && getPassengers().size() >= seats() || player.getItemInHand(hand).is(dev.rubymod.registry.ModItems.PAINT_KIT)) {
 			return InteractionResult.PASS;
 		}
 		if (!level().isClientSide()) {

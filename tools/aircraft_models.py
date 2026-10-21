@@ -350,12 +350,48 @@ def railgun():
     return Part("root", children=[Part("base", boxes=base), turret])
 
 
+# Paint schemes (Paint Kit): name -> palette overrides. Aircraft that aren't painted (guns, drone) skip them.
+SCHEMES = {
+    "desert": {"skin": (184, 160, 116), "skin2": (160, 136, 96), "under": (196, 186, 160), "camo": (150, 122, 84)},
+    "arctic": {"skin": (214, 218, 222), "skin2": (190, 196, 202), "under": (228, 230, 232), "camo": (160, 168, 176)},
+    "urban": {"skin": (112, 116, 122), "skin2": (90, 94, 100), "under": (150, 154, 160), "camo": (70, 74, 80)},
+    "night": {"skin": (46, 48, 54), "skin2": (36, 38, 42), "under": (40, 42, 46), "camo": None},
+    "ruby": {"skin": (150, 26, 46), "skin2": (60, 54, 56), "under": (40, 36, 38), "camo": (44, 38, 40)},
+}
+PAINTABLE = ("fighter_jet", "attack_jet", "bomber", "attack_heli")
+
+def recon_drone():
+    body = [
+        B(-2.5, 4, -5, 2.5, 7.5, 5, "skin"),                           # fuselage pod
+        B(-2, 7.5, -3, 2, 8.5, 3, "skin2"),
+        B(-1.5, 4.5, 5, 1.5, 7, 6.5, "dark"),                          # nose
+        B(-1.4, 2, 2.5, 1.4, 4, 5.4, "dark"),                          # gimbal
+        B(-1, 2.3, 5.4, 1, 3.7, 5.8, "glass"),                         # camera lens
+        B(-0.4, 7.5, -0.4, 0.4, 10, 0.4, "dark"),                      # rotor mast
+        B(-0.3, 4, -9, 0.3, 6, -5, "skin2"),                           # tail boom
+        B(-0.2, 6, -9, 0.2, 9, -7, "skin2", flash=True),               # tail fin
+        B(-3.5, 0, -3, -3, 0.6, 4, "strut"), B(3, 0, -3, 3.5, 0.6, 4, "strut"),     # skids
+        B(-3.2, 0.6, -1, -2.8, 4, -0.4, "strut"), B(2.8, 0.6, -1, 3.2, 4, -0.4, "strut"),
+        B(-3.2, 0.6, 2, -2.8, 4, 2.6, "strut"), B(2.8, 0.6, 2, 3.2, 4, 2.6, "strut"),
+        B(2.5, 6, -1, 3, 6.6, 0, "light_green", light=True), B(-3, 6, -1, -2.5, 6.6, 0, "light_red", light=True),
+        B(-0.3, 8.5, -2.5, 0.3, 9.6, -1.8, "light_white", light=True),
+    ]
+    rotor = Part("rotor", pivot=(0, 10, 0), boxes=[
+        B(-0.8, 0, -0.8, 0.8, 1, 0.8, "dark"),
+        B(-0.5, 0.3, 0.8, 0.5, 0.6, 12, "rotor"), B(-0.5, 0.3, -12, 0.5, 0.6, -0.8, "rotor"),
+        B(0.8, 0.3, -0.5, 12, 0.6, 0.5, "rotor"), B(-12, 0.3, -0.5, -0.8, 0.6, 0.5, "rotor"),
+        B(-0.55, 0.25, 10.5, 0.55, 0.65, 12, "tip"), B(-0.55, 0.25, -12, 0.55, 0.65, -10.5, "tip"),
+    ])
+    return Part("root", children=[Part("body", boxes=body), rotor])
+
+
 AIRCRAFT = {
     "fighter_jet": (fighter, {"skin": (128, 136, 146), "skin2": (100, 108, 118), "under": (172, 178, 184), "camo": None}),
     "attack_jet": (attack_jet, {"skin": (86, 98, 70), "skin2": (78, 90, 64), "under": (150, 156, 150), "camo": (62, 70, 50)}),
     "bomber": (bomber, {"skin": (158, 162, 166), "skin2": (120, 124, 130), "under": (64, 68, 74), "camo": None}),
     "attack_heli": (helicopter, {"skin": (70, 78, 62), "skin2": (60, 68, 54), "under": (70, 78, 62), "camo": (48, 54, 42)}),
     "railgun": (railgun, {"skin": (70, 74, 82), "skin2": (56, 60, 66), "under": (40, 42, 46), "camo": None}),
+    "recon_drone": (recon_drone, {"skin": (70, 76, 84), "skin2": (52, 56, 62), "under": (60, 64, 70), "camo": None}),
     "heavy_aa_gun": (heavy_aa_gun, {"skin": (92, 102, 78), "skin2": (78, 88, 66), "under": (60, 66, 52), "camo": (64, 72, 54)}),
 }
 
@@ -590,6 +626,11 @@ def main(root_dir):
                 if a and ((r > 230 and g < 80) or (g > 230 and r < 80) or (r > 245 and g > 245) or (r == 255 and 140 <= g <= 160 and bl < 60)):
                     glow[y][x] = (r, g, bl, 255)
         write_png(os.path.join(root_dir, "src/main/resources/assets/rubymod/textures/entity/aircraft", name + "_glow.png"), glow)
+        if name in PAINTABLE:
+            for scheme, colors in SCHEMES.items():
+                alt = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
+                paint(alt, root, {**palette, **colors}, 100 + i)
+                write_png(os.path.join(root_dir, "src/main/resources/assets/rubymod/textures/entity/aircraft", name + "_" + scheme + ".png"), alt)
         method = "".join(w.capitalize() if j else w for j, w in enumerate(name.split("_")))
         lines.append(f"\tpublic static LayerDefinition {method}() {{")
         lines.append("\t\tMeshDefinition mesh = new MeshDefinition();")

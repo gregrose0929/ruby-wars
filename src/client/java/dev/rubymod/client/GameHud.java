@@ -208,7 +208,7 @@ public class GameHud implements HudElement {
 		}
 		var radar = ClientState.radar;
 		int x = w - 110;
-		int y = 60;
+		int y = dev.rubymod.client.map.Minimap.SIZE + 26;
 		g.fill(x - 4, y - 4, w - 4, y + 34, PANEL);
 		g.text(font, "RADAR", x, y, GOLD);
 		String contacts = radar.contacts() == 0 ? "No contacts" : radar.contacts() + " contact" + (radar.contacts() == 1 ? "" : "s");
@@ -228,7 +228,7 @@ public class GameHud implements HudElement {
 	private void drawKillFeed(GuiGraphicsExtractor g, Font font, int w) {
 		long now = System.currentTimeMillis();
 		ClientState.KILLS.removeIf(k -> now - k.at() > 7000);
-		int y = 104;
+		int y = dev.rubymod.client.map.Minimap.SIZE + 66;
 		for (ClientState.Kill kill : ClientState.KILLS) {
 			var info = kill.info();
 			String text = info.killer() + "  [" + info.weapon() + (info.headshot() ? " - HEADSHOT" : "") + "]  " + info.victim();

@@ -140,6 +140,9 @@ public class ModBlocks {
 	public static final Block POINT_DEFENSE = machine("point_defense", dev.rubymod.industry.MachineKind.POINT_DEFENSE, Shapes.block());
 	public static final Block CONSTRUCTOR = machine("constructor", dev.rubymod.industry.MachineKind.CONSTRUCTOR, Shapes.block());
 	public static final Block TESLA_COIL = machine("tesla_coil", dev.rubymod.industry.MachineKind.TESLA_COIL, Block.box(3, 0, 3, 13, 16, 13));
+	/** Where a player fell: holds their gear (see GraveBlock). */
+	public static final Block WAR_GRAVE = register("war_grave", dev.rubymod.block.GraveBlock::new,
+			props().mapColor(MapColor.COLOR_GREEN).strength(-1.0F, 3600000.0F).sound(SoundType.METAL).noOcclusion().noLootTable());
 	/** Jump on it to ride up to the next Elevator above, sneak to go down. */
 	public static final Block ELEVATOR = register("elevator", Block::new,
 			props().mapColor(MapColor.METAL).strength(3.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());

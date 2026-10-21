@@ -76,6 +76,13 @@ public final class GameEvents {
 							dev.rubymod.industry.Grid.consumedPerSecond(id)));
 				}
 				TrainingGround.tick();
+				Waypoints.sync(server);
+				Raids.tick(server);
+				if (SeasonData.get().phase == Phase.BUILD) {
+					for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+						Research.onDayLogin(player, SeasonTicker.currentDay());
+					}
+				}
 			}
 			dev.rubymod.industry.Grid.endTick(server.overworld().getGameTime());
 			if (server.getTickCount() % 1200 == 0) {
@@ -87,6 +94,16 @@ public final class GameEvents {
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> BattleDirector.onJoin(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BattleDirector.onLeave(server, handler.getPlayer()));
 
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Ping.TYPE, (payload, context) ->
+				Waypoints.ping(context.player(), payload));
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.LookQuery.TYPE, (payload, context) ->
+				LookInfo.answer(context.player(), payload));
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ResearchUnlock.TYPE, (payload, context) -> {
+			String error = Research.unlock(context.player(), payload.node());
+			if (error != null) {
+				context.player().sendOverlayMessage(Component.literal(error).withStyle(ChatFormatting.RED));
+			}
+		});
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.Reload.TYPE, (payload, context) -> {
 			if (context.player().getMainHandItem().getItem() instanceof dev.rubymod.item.ArchitectWandItem) {
 				dev.rubymod.item.ArchitectWandItem.undo(context.player());
@@ -164,6 +181,12 @@ public final class GameEvents {
 			if (entity instanceof ServerPlayer player && damageTaken > 0 && source.getSourcePosition() != null) {
 				Net.send(player, new Payloads.DamageFrom(source.getSourcePosition().x, source.getSourcePosition().z));
 			}
+		});
+		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
+			if (entity instanceof ServerPlayer player) {
+				dev.rubymod.block.GraveBlock.bury(player);
+			}
+			return true;
 		});
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity instanceof ServerPlayer player) {

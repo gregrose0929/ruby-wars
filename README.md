@@ -51,6 +51,9 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Fly | Look where you want to go. Climbing costs speed, diving gains it; too slow and you stall |
 | Aircraft weapons | Left-click fires, R switches weapon, Space drops flares, T designates a target, V weapon camera, G landing gear, Sneak ejects (parachute) |
 | Helicopter | W/S climb and descend, look to turn, look down to fly forward (up to go back), A/D strafe |
+| Ping / spot | B: mark the spot you're looking at for your squad, or spot the enemy under your crosshair (10 s) |
+| Map | M: the full map (scroll to zoom, drag to pan). The minimap is always top right |
+| Research | J: the research tree |
 
 In any vehicle the view is truly first person: no hands, no held item, and the
 hotbar and hearts make way for the vehicle's HUD.
@@ -278,16 +281,110 @@ and repairs the aircraft you're in.
 - A **kill feed** in the top-right shows who killed whom, with which weapon, and
   headshots.
 
+## Guns up close
+
+Guns are full 3D models (40 to 60 parts each, with painted rails, vents, stippled
+grips, wood grain and markings) in your hands, in other players' hands, in your
+inventory and on the ground. In first person you hold them with both arms, and:
+
+- **Aim down sights** lines up the real sight with your eye: iron sights with a
+  glowing front post, the red dot when one is fitted, and a proper scope with a
+  mil-dot reticle on the sniper.
+- **Firing** kicks the gun back, flashes the muzzle, cycles the slide, bolt or
+  pump, and throws spent brass that tumbles away.
+- **Reloading** tilts the gun, drops the old magazine and slots a new one in with
+  your other hand, then works the charging handle (shotgun shells go in one at a
+  time; launchers load a fresh rocket).
+- Sprinting lowers the gun, switching raises it, and it sways behind your mouse.
+- Attachments show on the model: suppressor, red dot, vertical grip, extended mag.
+
+Tanks and jeeps are detailed animated models too: road wheels and sprockets that
+turn, track links that move, a turret and gun that recoils with a muzzle flash,
+smoke launchers, stowage and markings. Vehicle and aircraft items show the real
+model in your inventory.
+
+## Squads
+
+Team up with up to 3 others (`squadMaxSize`): `/squad create <name>`,
+`/squad invite <player>`, `/squad join <name>`, `/squad leave`, `/squad kick <name>`,
+and `/sc <message>` for squad chat. Squadmates can't hurt each other, share
+each other's claims, respawn at any standing squad Heart, see each other on the
+map and through walls (name, distance and health), share pings and spotted
+enemies, and share research. Squads lock when Battle Day starts, and Battle Day
+ends when one squad (or one solo player) is left.
+
+## Map, waypoints and pings
+
+The minimap (top right) shows the terrain you've explored, claim borders (yours
+green, your squad's blue, others red), squadmates, and markers: waypoints, your
+grave, pings, supply drops and raids. M opens the full map. Markers also float in
+the world with their distance. `/waypoint add <name>` saves where you stand
+(`/waypoint list`, `/waypoint remove <name>`). B pings a spot for your squad, or
+spots an enemy for 10 seconds; eliminated players can still spot for their squad
+while they spectate.
+
+## Look-at info
+
+Look at a machine, defense, Heart, grave, vehicle, guard or squadmate and a
+panel at the top of the screen shows what matters: owner, tier, status and grid
+charge for machines, ammo for turrets, integrity for Hearts, armor and crew for
+vehicles, the lock on a grave.
+
+## Gear & Support (Armory page 4)
+
+- **Field Pack / Heavy Rucksack:** backpacks with 27 or 54 slots. Right-click to open.
+- **Field Radio:** needs Simple Voice Chat (in the modpack). Hold it and talk:
+  everyone carrying a radio on the same channel hears you, at any range.
+  Right-click to change channel (1-8). A captured radio lets the enemy listen in.
+- **Guard Contracts:** hire a Rifleman or an AT Gunner. Right-click the ground to
+  post them. They fight monsters and raiders any time and enemy players (and their
+  guards) when PvP is on. Right-click your guard to switch between holding a post
+  and following you; sneak + right-click packs them back up (not on Battle Day).
+  Up to 4 each (`maxGuards`).
+- **Recon Drone:** climbs over you and circles for 90 seconds, marking every enemy
+  within 56 blocks for your squad. It can be shot down.
+- **Paint Kit:** right-click a vehicle or aircraft to respray it: woodland, desert,
+  arctic, urban, night or ruby.
+
+## War Graves
+
+When you die, everything you carry goes into a War Grave where you fell (an ammo
+crate with your helmet and dog tags) instead of scattering. Only you can open it
+for 5 minutes (`graveLockSeconds`), then anyone can loot it. It shows on your map,
+and crumbles once it's empty.
+
+## Practice raids
+
+On build days 3, 6, 9 and 12 (`raidDays`), once you or a squadmate is online,
+scouts warn you and a few minutes later a squad of AI raiders (4, 6 or 8 by Heart
+tier) lands outside your claim and marches on your Heart. Every raider standing
+at the Heart loots your bank each second (up to 20%). Kill them all within 6
+minutes for a bonus (15 rubies and 2 research points); each kill pays 3 rubies,
+to you or to whoever's guard made it. Turrets fire on raiders even before Battle
+Day. You can also call one on yourself once a day with `/rubywars raid`.
+
+## Research
+
+Advanced Armory gear starts locked. Press J to open the tree: four branches
+(Arms, Vehicles, Defense, Support), 16 unlocks costing 2 to 5 points. You earn 1
+point for each build day you log in, 1 for clearing all three daily bounties,
+and 2 for each raid you repel, which isn't enough for everything, so squads split
+the tree (squadmates share unlocks). Basic guns, the Heart, base blocks, basic
+industry and basic defenses never need research. Locked Armory items say what
+unlocks them. Turn it off with `"research": false`.
+
 ## Commands
 
 Everyone: `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
-`/rubywars untrust <player>`, `/rubywars champions`.
+`/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
+base, once a day), `/squad ...`, `/sc <message>`, `/waypoint ...`.
 
 Admins: `start`, `phase <lobby|build|lockdown|war|sudden_death|final_circle|ended>`,
 `timer <minutes>`, `pause`, `resume`, `reload` (config), `backup`, `revive <player>`,
 `reset confirm` (new season), `kit` (every gun, ammo, raid gear, attachments,
 vehicles, aircraft, and ruby armor, for testing), `training` (build the training
-ground here), `rearm` (refill your aircraft), `selftest` (rule checks; use on a test world).
+ground here), `rearm` (refill your aircraft), `raidnow <player>` (launch a raid),
+`research <player> <points>` (give research points), `selftest` (rule checks; use on a test world).
 
 ## Running the server (Linux)
 
@@ -300,7 +397,12 @@ ground here), `rearm` (refill your aircraft), `selftest` (rule checks; use on a 
    when everyone's ready.
 5. Players need the mod too. The easiest way: send them `dist/ruby-wars-1.0.0.mrpack`
    (built with `python tools/make_mrpack.py`). They import it in Modrinth App or
-   Prism Launcher, which installs Fabric, Fabric API, and Ruby Wars in one click.
+   Prism Launcher, which installs Fabric, Fabric API, and Ruby Wars in one click, plus
+   Sodium, Lithium, FerriteCore and Entity Culling (frame rate), Mouse Tweaks,
+   AppleSkin and Simple Voice Chat.
+6. For voice chat and Field Radios, also put Simple Voice Chat (for 26.3, from
+   Modrinth) in the server's `mods/` folder and open UDP port 24454. Lithium and
+   FerriteCore help the server too.
 
 The mod writes a zipped world backup to `backups/` every 24 hours and keeps the
 newest 7. Season state lives in `world/rubywars/season.json`.

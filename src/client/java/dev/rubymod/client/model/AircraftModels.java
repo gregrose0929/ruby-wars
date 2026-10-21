@@ -80,6 +80,14 @@ public final class AircraftModels {
 		return LayerDefinition.create(mesh, 256, 256);
 	}
 
+	public static LayerDefinition reconDrone() {
+		MeshDefinition mesh = new MeshDefinition();
+		PartDefinition root = mesh.getRoot();
+		PartDefinition p1_body = root.addOrReplaceChild("body", CubeListBuilder.create().texOffs(0, 0).addBox(-2.500F, -7.500F, -5.000F, 5.000F, 3.500F, 10.000F).texOffs(119, 0).addBox(-2.000F, -8.500F, -3.000F, 4.000F, 1.000F, 6.000F).texOffs(151, 0).addBox(-1.500F, -7.000F, 5.000F, 3.000F, 2.500F, 1.500F).texOffs(162, 0).addBox(-1.400F, -4.000F, 2.500F, 2.800F, 2.000F, 2.900F).texOffs(207, 0).addBox(-1.000F, -3.700F, 5.400F, 2.000F, 1.400F, 0.400F).texOffs(202, 0).addBox(-0.400F, -10.000F, -0.400F, 0.800F, 2.500F, 0.800F).texOffs(140, 0).addBox(-0.300F, -6.000F, -9.000F, 0.600F, 2.000F, 4.000F).texOffs(175, 0).addBox(-0.200F, -9.000F, -9.000F, 0.400F, 3.000F, 2.000F).texOffs(85, 0).addBox(3.000F, -0.600F, -3.000F, 0.500F, 0.600F, 7.000F).texOffs(102, 0).addBox(-3.500F, -0.600F, -3.000F, 0.500F, 0.600F, 7.000F).texOffs(182, 0).addBox(2.800F, -4.000F, -1.000F, 0.400F, 3.400F, 0.600F).texOffs(187, 0).addBox(-3.200F, -4.000F, -1.000F, 0.400F, 3.400F, 0.600F).texOffs(192, 0).addBox(2.800F, -4.000F, 2.000F, 0.400F, 3.400F, 0.600F).texOffs(197, 0).addBox(-3.200F, -4.000F, 2.000F, 0.400F, 3.400F, 0.600F).texOffs(246, 0).addBox(-3.000F, -6.600F, -1.000F, 0.500F, 0.600F, 1.000F).texOffs(251, 0).addBox(2.500F, -6.600F, -1.000F, 0.500F, 0.600F, 1.000F).texOffs(214, 0).addBox(-0.300F, -9.600F, -2.500F, 0.600F, 1.100F, 0.700F), PartPose.offsetAndRotation(0.000F, 0.000F, 0.000F, -0.000F, -0.000F, 0.000F));
+		PartDefinition p1_rotor = root.addOrReplaceChild("rotor", CubeListBuilder.create().texOffs(219, 0).addBox(-0.800F, -1.000F, -0.800F, 1.600F, 1.000F, 1.600F).texOffs(31, 0).addBox(-0.500F, -0.600F, 0.800F, 1.000F, 0.300F, 11.200F).texOffs(58, 0).addBox(-0.500F, -0.600F, -12.000F, 1.000F, 0.300F, 11.200F).texOffs(0, 15).addBox(-12.000F, -0.600F, -0.500F, 11.200F, 0.300F, 1.000F).texOffs(27, 15).addBox(0.800F, -0.600F, -0.500F, 11.200F, 0.300F, 1.000F).texOffs(228, 0).addBox(-0.550F, -0.650F, 10.500F, 1.100F, 0.400F, 1.500F).texOffs(237, 0).addBox(-0.550F, -0.650F, -12.000F, 1.100F, 0.400F, 1.500F), PartPose.offsetAndRotation(0.000F, -10.000F, 0.000F, -0.000F, -0.000F, 0.000F));
+		return LayerDefinition.create(mesh, 256, 256);
+	}
+
 	public static LayerDefinition heavyAaGun() {
 		MeshDefinition mesh = new MeshDefinition();
 		PartDefinition root = mesh.getRoot();

@@ -125,9 +125,21 @@ public class AircraftEntity extends Mob {
 				.add(Attributes.STEP_HEIGHT, 1.1);
 	}
 
+	/** Paint scheme (see PaintKitItem.SCHEMES): 0 = factory default. */
+	private static final EntityDataAccessor<Integer> PAINT = SynchedEntityData.defineId(AircraftEntity.class, EntityDataSerializers.INT);
+
+	public int paint() {
+		return entityData.get(PAINT);
+	}
+
+	public void setPaint(int paint) {
+		entityData.set(PAINT, paint);
+	}
+
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
 		super.defineSynchedData(builder);
+		builder.define(PAINT, 0);
 		AircraftType type = ModEntities.aircraftType(getType());
 		builder.define(ROLL, 0.0F);
 		builder.define(WEAPON, 0);
@@ -263,7 +275,7 @@ public class AircraftEntity extends Mob {
 
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-		if (player.isSecondaryUseActive() || isVehicle()) {
+		if (player.isSecondaryUseActive() || isVehicle() || player.getItemInHand(hand).is(dev.rubymod.registry.ModItems.PAINT_KIT)) {
 			return InteractionResult.PASS;
 		}
 		if (!level().isClientSide()) {
@@ -907,6 +919,7 @@ public class AircraftEntity extends Mob {
 	@Override
 	protected void addAdditionalSaveData(ValueOutput output) {
 		super.addAdditionalSaveData(output);
+		output.putInt("paint", paint());
 		output.putInt("cannon_ammo", ammo(Weapon.CANNON));
 		output.putInt("missiles", entityData.get(MISSILES));
 		output.putInt("bombs", entityData.get(BOMBS));
@@ -924,6 +937,7 @@ public class AircraftEntity extends Mob {
 	@Override
 	protected void readAdditionalSaveData(ValueInput input) {
 		super.readAdditionalSaveData(input);
+		setPaint(input.getIntOr("paint", 0));
 		entityData.set(CANNON_AMMO, input.getIntOr("cannon_ammo", kind.cannonAmmo()));
 		entityData.set(MISSILES, input.getIntOr("missiles", kind.missiles()));
 		entityData.set(BOMBS, input.getIntOr("bombs", kind.bombs() + kind.rockets()));

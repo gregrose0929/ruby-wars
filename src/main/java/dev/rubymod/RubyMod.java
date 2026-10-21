@@ -39,9 +39,13 @@ public class RubyMod implements ModInitializer {
 		ModEntities.initialize();
 		ModTabs.initialize();
 		Payloads.register();
+		dev.rubymod.net.MorePayloads.register();
 		GameConfig.load();
 		GameEvents.register();
-		CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> RubyWarsCommand.register(dispatcher));
+		CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {
+			RubyWarsCommand.register(dispatcher);
+			dev.rubymod.command.SquadCommand.register(dispatcher);
+		});
 
 		BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.UNDERGROUND_ORES,
 				ResourceKey.create(Registries.PLACED_FEATURE, id("ore_ruby")));

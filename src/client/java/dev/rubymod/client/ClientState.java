@@ -14,6 +14,14 @@ public final class ClientState {
 	public static Payloads.Radar radar;
 	public static long radarReceivedAt;
 
+	/** Map markers, squadmates and claims (see Waypoints). */
+	public static dev.rubymod.net.MorePayloads.MapSync map;
+	/** Latest look-at answer and when it arrived. */
+	public static dev.rubymod.net.MorePayloads.LookInfo look;
+	public static long lookAt;
+	/** Research points and unlocks. */
+	public static dev.rubymod.net.MorePayloads.ResearchSync research;
+
 	public static long reloadStartedAt;
 	public static int reloadTicks;
 

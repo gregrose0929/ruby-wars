@@ -119,6 +119,7 @@ public final class AutoTest {
 		switch (mode) {
 			case "guns" -> gunsScript();
 			case "view" -> viewScript();
+			case "features" -> featuresScript();
 			case "vehicles" -> vehiclesScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
@@ -220,6 +221,76 @@ public final class AutoTest {
 			mc.gui.setScreen(null);
 			command(mc, "gamemode creative @a");
 		});
+	}
+
+	/** Squads, map, markers, look-at, guards, raiders, research, paint, blueprint ghost. */
+	private static void featuresScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset confirm");
+			command(mc, "rubywars start");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 10");
+			command(mc, "waypoint add Rally Point");
+		});
+		then(10, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				var level = player.level();
+				net.minecraft.core.BlockPos base = player.blockPosition();
+				// A guard, a squad of raiders, a generator to look at, a painted tank.
+				var guard = dev.rubymod.entity.SoldierEntity.guard(level, player, base.offset(-3, 0, 6), dev.rubymod.entity.SoldierEntity.RIFLEMAN);
+				level.addFreshEntity(guard);
+				var at = dev.rubymod.entity.SoldierEntity.guard(level, player, base.offset(3, 0, 6), dev.rubymod.entity.SoldierEntity.AT_GUNNER);
+				level.addFreshEntity(at);
+				for (int i = 0; i < 3; i++) {
+					var r = dev.rubymod.entity.SoldierEntity.raider(level, base.offset(-4 + i * 4, 0, 22), base, i == 2 ? 1 : 0, -1);
+					r.setNoAi(true);
+					level.addFreshEntity(r);
+				}
+				level.setBlockAndUpdate(base.offset(0, 0, 3), dev.rubymod.registry.ModBlocks.COMBUSTION_GENERATOR.defaultBlockState());
+				if (level.getBlockEntity(base.offset(0, 0, 3)) instanceof dev.rubymod.industry.MachineBlockEntity m) {
+					m.setOwner(player.getUUID());
+				}
+				var tank = dev.rubymod.registry.ModEntities.TANK.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+				tank.snapTo(base.getX() + 10, base.getY(), base.getZ() + 14, 200, 0);
+				tank.setPaint(1);
+				level.addFreshEntity(tank);
+				var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+				jeep.snapTo(base.getX() - 10, base.getY(), base.getZ() + 14, 160, 0);
+				jeep.setPaint(5);
+				level.addFreshEntity(jeep);
+				dev.rubymod.game.Research.addPoints(player.getUUID(), 6);
+				dev.rubymod.game.Research.sync(player);
+				// A blueprint of a little 3x3 tower.
+				for (var p : net.minecraft.core.BlockPos.betweenClosed(base.offset(20, 0, 0), base.offset(22, 3, 2))) {
+					level.setBlockAndUpdate(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState());
+				}
+				var data = dev.rubymod.industry.Blueprints.capture(level, base.offset(20, 0, 0), base.offset(22, 3, 2));
+				var paper = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.BLUEPRINT);
+				paper.set(ModComponents.BLUEPRINT, data);
+				player.getInventory().setItem(8, paper);
+			});
+		});
+		then(40, mc -> shot(mc, "features-overview"));
+		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 21"));
+		then(20, mc -> shot(mc, "features-look-machine"));
+		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ 26.5 5"));
+		then(20, mc -> shot(mc, "features-look-guard"));
+		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 15"));
+		then(5, mc -> dev.rubymod.client.map.Pinger.ping(mc));
+		then(30, mc -> shot(mc, "features-ping"));
+		then(2, mc -> {
+			mc.player.getInventory().setSelectedSlot(8);
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 50");
+		});
+		then(20, mc -> shot(mc, "features-blueprint-ghost"));
+		then(2, mc -> mc.gui.setScreen(new ResearchScreen()));
+		then(12, mc -> shot(mc, "features-research"));
+		then(2, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));
+		then(12, mc -> shot(mc, "features-map"));
+		then(2, mc -> mc.gui.setScreen(null));
+		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~ ~4 ~-6 0 25"));
+		then(20, mc -> shot(mc, "features-paint"));
 	}
 
 	private static void tourScript() {

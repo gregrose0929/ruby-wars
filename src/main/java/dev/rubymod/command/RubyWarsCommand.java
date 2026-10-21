@@ -51,6 +51,31 @@ public final class RubyWarsCommand {
 				.then(Commands.literal("champions").executes(RubyWarsCommand::champions))
 				.then(Commands.literal("leaderboard").executes(RubyWarsCommand::leaderboard))
 				.then(Commands.literal("bounties").executes(RubyWarsCommand::bounties))
+				.then(Commands.literal("raid").executes(c -> {
+					String error = dev.rubymod.game.Raids.request(c.getSource().getPlayerOrException());
+					if (error != null) {
+						c.getSource().sendFailure(Component.literal(error));
+						return 0;
+					}
+					return ok(c, "Practice raid called. Defend your Heart!");
+				}))
+				.then(Commands.literal("raidnow").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.then(Commands.argument("player", EntityArgument.player()).executes(c -> {
+							String error = dev.rubymod.game.Raids.force(EntityArgument.getPlayer(c, "player"));
+							if (error != null) {
+								c.getSource().sendFailure(Component.literal(error));
+								return 0;
+							}
+							return ok(c, "Raid launched.");
+						})))
+				.then(Commands.literal("research").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.then(Commands.argument("player", EntityArgument.player()).then(Commands.argument("points", IntegerArgumentType.integer(0))
+								.executes(c -> {
+									var target = EntityArgument.getPlayer(c, "player");
+									dev.rubymod.game.Research.addPoints(target.getUUID(), IntegerArgumentType.getInteger(c, "points"));
+									dev.rubymod.game.Research.sync(target);
+									return ok(c, "Research points given.");
+								}))))
 				.then(Commands.literal("trust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, true))))
 				.then(Commands.literal("untrust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, false))))
 				.then(Commands.literal("start").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::start))

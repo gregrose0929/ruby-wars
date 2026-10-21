@@ -24,6 +24,30 @@ def gradle_property(name):
     raise SystemExit(f"{name} not found in gradle.properties")
 
 
+# Extra mods the pack pulls from Modrinth: (project slug, client, server).
+# Sodium/Lithium/FerriteCore/Entity Culling: frame rate and memory. Mouse Tweaks: inventory
+# scrolling and drag-moving. AppleSkin: food numbers. Simple Voice Chat: proximity voice and the
+# Field Radio (the server needs it too, with UDP port 24454 open).
+EXTRA_MODS = [
+    ("sodium", "required", "unsupported"),
+    ("lithium", "required", "required"),
+    ("ferrite-core", "required", "required"),
+    ("entityculling", "required", "unsupported"),
+    ("mouse-tweaks", "required", "unsupported"),
+    ("appleskin", "required", "optional"),
+    ("simple-voice-chat", "required", "required"),
+]
+
+
+def latest(slug):
+    query = urllib.parse.urlencode({"game_versions": json.dumps([MC_VERSION]), "loaders": json.dumps(["fabric"])})
+    with urllib.request.urlopen(f"https://api.modrinth.com/v2/project/{slug}/version?{query}") as response:
+        versions = json.load(response)
+    release = next((v for v in versions if v["version_type"] == "release"), versions[0])
+    file = next((f for f in release["files"] if f["primary"]), release["files"][0])
+    return release["version_number"], file
+
+
 def latest_fabric_api():
     query = urllib.parse.urlencode({"game_versions": json.dumps([MC_VERSION]), "loaders": json.dumps(["fabric"])})
     with urllib.request.urlopen(f"https://api.modrinth.com/v2/project/fabric-api/version?{query}") as response:
@@ -56,6 +80,16 @@ def main():
         }],
         "dependencies": {"minecraft": MC_VERSION, "fabric-loader": loader},
     }
+    for slug, client, server in EXTRA_MODS:
+        version_number, f = latest(slug)
+        index["files"].append({
+            "path": f"mods/{f['filename']}",
+            "hashes": {"sha1": f["hashes"]["sha1"], "sha512": f["hashes"]["sha512"]},
+            "env": {"client": client, "server": server},
+            "downloads": [f["url"]],
+            "fileSize": f["size"],
+        })
+        print(f"  + {slug} {version_number}")
 
     os.makedirs("dist", exist_ok=True)
     out = f"dist/ruby-wars-{version}.mrpack"

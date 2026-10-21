@@ -363,6 +363,59 @@ public final class SelfTest {
 		SeasonTicker.resume();
 		check("timer: pause keeps the time left", Math.abs(paused - 600_000L) < 2_000L && data.pausedRemaining == -1);
 
+		// ----- Squads, research, graves, guards, raids, waypoints -----
+		data.player(bravo.getUUID(), "TestBravo").eliminated = false;
+		claim.trusted.remove(bravo.getUUID().toString());
+		check("squads: make a squad", dev.rubymod.game.Squads.create(alpha, "Test Squad") == null);
+		dev.rubymod.game.Squads.invite(alpha, bravo);
+		check("squads: an invited player can join", dev.rubymod.game.Squads.join(bravo, "Test Squad") == null);
+		check("squads: no friendly fire on Battle Day", runAs(Phase.WAR, () -> !Rules.canHurt(alpha, bravo)));
+		check("squads: squadmates share claims", claim.canUse(bravo.getUUID()));
+		check("research: advanced gear starts locked", !dev.rubymod.game.Research.unlocked(bravo, "tank"));
+		dev.rubymod.game.Research.addPoints(bravo.getUUID(), 5);
+		check("research: points unlock it", dev.rubymod.game.Research.unlock(bravo, "motor_pool") == null
+				&& dev.rubymod.game.Research.unlocked(bravo, "tank"));
+		check("research: squadmates share research", dev.rubymod.game.Research.unlocked(alpha, "jeep"));
+		check("research: basic guns never need research", dev.rubymod.game.Research.unlocked(alpha, "arr_rifle"));
+
+		BlockPos graveSpot = surface(level, base.offset(30, 0, 30));
+		bravo.snapTo(graveSpot.getX() + 0.5, graveSpot.getY(), graveSpot.getZ() + 0.5, 0, 0);
+		bravo.getInventory().clearContent();
+		bravo.getInventory().add(new ItemStack(ModItems.RUBY, 7));
+		boolean buried = dev.rubymod.block.GraveBlock.bury(bravo);
+		dev.rubymod.block.GraveBlockEntity grave = null;
+		for (BlockPos p : BlockPos.betweenClosed(graveSpot.offset(-1, -1, -1), graveSpot.offset(1, 12, 1))) {
+			if (level.getBlockEntity(p) instanceof dev.rubymod.block.GraveBlockEntity g) {
+				grave = g;
+			}
+		}
+		check("graves: dying leaves a War Grave with your gear", buried && grave != null && grave.countItem(ModItems.RUBY) == 7
+				&& bravo.getInventory().countItem(ModItems.RUBY) == 0);
+		check("graves: only the owner can open it at first", grave != null && grave.canOpen(bravo) && !grave.canOpen(alpha));
+		if (grave != null) {
+			level.setBlockAndUpdate(grave.getBlockPos(), Blocks.AIR.defaultBlockState());
+		}
+
+		BlockPos post = surface(level, base.offset(6, 0, 6));
+		var guard = dev.rubymod.entity.SoldierEntity.guard(level, alpha, post, dev.rubymod.entity.SoldierEntity.RIFLEMAN);
+		var zombie = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
+		var raider = dev.rubymod.entity.SoldierEntity.raider(level, post.offset(3, 0, 0), claim.pos(), dev.rubymod.entity.SoldierEntity.RIFLEMAN, -1);
+		if (guard != null && zombie != null && raider != null) {
+			zombie.snapTo(post.getX() + 2, post.getY(), post.getZ(), 0, 0);
+			check("guards: guards fight monsters", guard.isHostileTo(zombie));
+			check("guards: guards never shoot squadmates", runAs(Phase.WAR, () -> !guard.isHostileTo(bravo)));
+			check("raids: raiders are enemies of every base and its guards", raider.isEnemyOfClaim(claim) && guard.isHostileTo(raider)
+					&& raider.isHostileTo(guard));
+		} else {
+			fail("guards: couldn't create soldiers");
+		}
+		check("waypoints: add a waypoint", dev.rubymod.game.Waypoints.add(alpha, "Base") == null
+				&& dev.rubymod.game.Waypoints.list(alpha).stream().anyMatch(w -> w.name.equals("Base")));
+		dev.rubymod.game.Waypoints.remove(alpha, "Base");
+		dev.rubymod.game.Squads.leave(bravo);
+		dev.rubymod.game.Squads.leave(alpha);
+		check("squads: leaving the last member disbands the squad", data.squads.isEmpty());
+
 		// ----- Ore -----
 		int ore = 0;
 		for (BlockPos p : BlockPos.betweenClosed(spawn.getX() - 24, -60, spawn.getZ() - 24, spawn.getX() + 24, 0, spawn.getZ() + 24)) {

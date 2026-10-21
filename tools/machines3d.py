@@ -22,6 +22,20 @@ def vents(z, y0, y1, x0=4, x1=12):
     return [vbox([x0, y, z], [x1, y + 0.6, z + 0.3], BLACK) for y in range(int(y0), int(y1), 2)]
 
 
+WAR_GRAVE = [
+    vbox([1, 0, 3], [15, 7, 13], OLIVE),                                      # ammo crate
+    vbox([1, 7, 3], [15, 8, 13], OLIVE_DARK),                                 # lid
+    vbox([0.6, 1, 2.6], [1.2, 6, 13.4], OLIVE_DARK), vbox([14.8, 1, 2.6], [15.4, 6, 13.4], OLIVE_DARK),   # handles / ribs
+    vbox([4, 2, 2.6], [12, 5, 3], TAN),                                       # stencil plate
+    vbox([5, 3, 2.5], [11, 4, 2.6], BLACK),
+    vbox([1, 0, 7.6], [15, 8.2, 8.4], DARK),                                  # strap
+    vbox([5, 8, 5], [11, 10.5, 11], OLIVE_DARK),                              # helmet
+    vbox([4.5, 8, 4.5], [11.5, 8.6, 11.5], OLIVE_DARK),                       # helmet brim
+    vbox([5.5, 10.5, 5.5], [10.5, 11.2, 10.5], OLIVE),
+    vbox([7.6, 5, 2.4], [8.4, 9, 2.6], STEEL),                                # dog tag chain
+    vbox([7, 4, 2.3], [9, 5.2, 2.5], LIGHT),                                  # dog tags
+]
+
 MACHINES = {
     "combustion_generator": casing() + [
         vbox([3.5, 3, 0.6], [12.5, 9.5, 1.1], BLACK),                          # firebox door frame

@@ -197,7 +197,11 @@ public final class BattleDirector {
 		}
 		if (data.phase == Phase.BUILD) {
 			Bounties.today(player);
+			if (data.phase == Phase.BUILD) {
+				Research.onDayLogin(player, SeasonTicker.currentDay());
+			}
 		}
+		Research.sync(player);
 		if (Rules.isEliminated(player.getUUID())) {
 			player.setGameMode(GameType.SPECTATOR);
 			player.sendSystemMessage(Component.literal("You've been eliminated this season. You can watch as a spectator.").withStyle(ChatFormatting.GRAY));
@@ -241,8 +245,7 @@ public final class BattleDirector {
 		if (!data.phase.isBattle()) {
 			return;
 		}
-		SeasonData.Claim claim = data.claimOf(victim.getUUID());
-		boolean canRespawn = data.phase.heartsGiveRespawns() && claim != null && !claim.destroyed;
+		boolean canRespawn = data.phase.heartsGiveRespawns() && respawnHeart(victim.getUUID()) != null;
 		if (!canRespawn) {
 			eliminate(server, victim.getUUID(), record, null);
 		}
@@ -257,8 +260,8 @@ public final class BattleDirector {
 		if (!data.phase.isBattle()) {
 			return;
 		}
-		SeasonData.Claim claim = data.claimOf(player.getUUID());
-		if (claim != null && !claim.destroyed) {
+		SeasonData.Claim claim = respawnHeart(player.getUUID());
+		if (claim != null) {
 			ServerLevel level = player.level().getServer().overworld();
 			BlockPos spot = safeSpotNear(level, claim.pos());
 			player.teleportTo(level, spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, Set.<Relative>of(), player.getYRot(), player.getXRot(), true);
@@ -266,6 +269,22 @@ public final class BattleDirector {
 			player.sendSystemMessage(Component.literal("Respawned at your Ruby Heart. Spawn protection for "
 					+ SpawnShield.TICKS / 20 + "s (ends if you shoot).").withStyle(ChatFormatting.GREEN), true);
 		}
+	}
+
+	/** Your own standing Heart, or else a squadmate's. */
+	public static SeasonData.Claim respawnHeart(UUID player) {
+		SeasonData data = SeasonData.get();
+		SeasonData.Claim own = data.claimOf(player);
+		if (own != null && !own.destroyed) {
+			return own;
+		}
+		for (UUID mate : Squads.mates(player)) {
+			SeasonData.Claim claim = data.claimOf(mate);
+			if (claim != null && !claim.destroyed) {
+				return claim;
+			}
+		}
+		return null;
 	}
 
 	private static BlockPos safeSpotNear(ServerLevel level, BlockPos heart) {
@@ -315,14 +334,10 @@ public final class BattleDirector {
 		if (!data.phase.pvp() || data.players.size() < 2) {
 			return;
 		}
-		List<SeasonData.PlayerRecord> alive = new ArrayList<>();
-		for (SeasonData.PlayerRecord record : data.players.values()) {
-			if (!record.eliminated) {
-				alive.add(record);
-			}
-		}
-		if (alive.size() <= 1) {
-			data.winner = alive.isEmpty() ? "" : alive.get(0).name;
+		// One squad (or one solo player) left standing wins.
+		java.util.Set<String> sides = Squads.aliveSides();
+		if (sides.size() <= 1) {
+			data.winner = sides.isEmpty() ? "" : sides.iterator().next();
 			enterPhase(server, Phase.ENDED);
 		}
 	}
@@ -402,6 +417,7 @@ public final class BattleDirector {
 			}
 		}
 		ACTIVE_DROPS.add(top);
+		Waypoints.global("Supply drop", top, 3, 180);
 		dropsVisibleUntil = SeasonTicker.now() + 3 * 60_000L;
 		Alerts.broadcast(level.getServer(), Component.literal("SUPPLY DROP landed at " + top.getX() + ", " + top.getY() + ", " + top.getZ() + "!")
 				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));

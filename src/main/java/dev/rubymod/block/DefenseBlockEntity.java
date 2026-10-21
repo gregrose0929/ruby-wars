@@ -80,7 +80,7 @@ public class DefenseBlockEntity extends BlockEntity {
 		SeasonData.Claim claim;
 		switch (block.kind()) {
 			case SENTRY_TURRET -> {
-				if (t % 4 == 0 && Rules.phase().pvp() && (claim = claimHere(serverLevel, pos)) != null) {
+				if (t % 4 == 0 && (claim = claimHere(serverLevel, pos)) != null && (Rules.phase().pvp() || dev.rubymod.game.Raids.active(claim))) {
 					be.tickTurret(serverLevel, pos, claim);
 				}
 			}
@@ -147,13 +147,19 @@ public class DefenseBlockEntity extends BlockEntity {
 			return;
 		}
 		Vec3 gun = Vec3.atCenterOf(pos).add(0, 0.7, 0);
-		Optional<Player> target = enemiesNear(level, gun, TURRET_RANGE, claim).stream()
+		List<net.minecraft.world.entity.LivingEntity> candidates = new java.util.ArrayList<>();
+		if (Rules.phase().pvp()) {
+			candidates.addAll(enemiesNear(level, gun, TURRET_RANGE, claim));
+		}
+		candidates.addAll(level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, new AABB(gun, gun).inflate(TURRET_RANGE),
+				s -> s.isAlive() && s.isEnemyOfClaim(claim)));
+		Optional<net.minecraft.world.entity.LivingEntity> target = candidates.stream()
 				.filter(p -> canSee(level, gun, p.getEyePosition()) || canSee(level, gun, p.position().add(0, 1, 0)))
 				.min(Comparator.comparingDouble(p -> p.distanceToSqr(gun)));
 		if (target.isEmpty()) {
 			return;
 		}
-		Player victim = target.get();
+		net.minecraft.world.entity.LivingEntity victim = target.get();
 		Vec3 aim = victim.position().add(0, victim.getBbHeight() * 0.6, 0);
 		victim.setInvulnerableTime(0);
 		victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, owner(level, claim)), TURRET_DAMAGE);

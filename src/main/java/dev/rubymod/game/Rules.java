@@ -102,6 +102,9 @@ public final class Rules {
 		if (v instanceof net.minecraft.server.level.ServerPlayer sv && SpawnShield.isShielded(sv)) {
 			return false;
 		}
+		if (!GameConfig.get().friendlyFire && Squads.same(a.getUUID(), v.getUUID())) {
+			return false;
+		}
 		return phase().pvp();
 	}
 
@@ -112,7 +115,7 @@ public final class Rules {
 
 	/** True if the two players are the same, or trust each other's claims. */
 	public static boolean isFriendly(UUID a, UUID b) {
-		if (a.equals(b)) {
+		if (a.equals(b) || Squads.same(a, b)) {
 			return true;
 		}
 		SeasonData.Claim claimA = SeasonData.get().claimOf(a);

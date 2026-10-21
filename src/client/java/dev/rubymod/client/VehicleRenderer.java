@@ -47,6 +47,7 @@ public class VehicleRenderer extends EntityRenderer<VehicleEntity, VehicleRender
 		public float recoil;
 		public boolean flash;
 		public float flashRoll;
+		public int paint;
 	}
 
 	private final VehicleModel tank;
@@ -98,10 +99,16 @@ public class VehicleRenderer extends EntityRenderer<VehicleEntity, VehicleRender
 		state.recoil = reload > 0 && since < 8 ? 1.0F - since / 8.0F : 0.0F;
 		state.flash = reload > 0 && since < 2;
 		state.flashRoll = (entity.tickCount * 0.7F) % 6.28F;
+		state.paint = entity.paint();
 	}
 
 	private static Identifier texture(boolean tank, boolean glow) {
 		return RubyMod.id("textures/entity/vehicle/" + (tank ? "tank" : "jeep") + (glow ? "_glow" : "") + ".png");
+	}
+
+	private static Identifier painted(boolean tank, int paint) {
+		String scheme = dev.rubymod.item.PaintKitItem.scheme(paint);
+		return RubyMod.id("textures/entity/vehicle/" + (tank ? "tank" : "jeep") + (scheme.isEmpty() ? "" : "_" + scheme) + ".png");
 	}
 
 	@Override
@@ -110,7 +117,7 @@ public class VehicleRenderer extends EntityRenderer<VehicleEntity, VehicleRender
 		poseStack.pushPose();
 		poseStack.rotateDegrees(Axis.YP, -state.yaw);
 		poseStack.scale(-1.0F, -1.0F, 1.0F);
-		collector.submitModel(model, state, poseStack, texture(state.tank, false), state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+		collector.submitModel(model, state, poseStack, painted(state.tank, state.paint), state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
 		collector.submitModel(model, state, poseStack, RenderTypes.eyes(texture(state.tank, true)), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);

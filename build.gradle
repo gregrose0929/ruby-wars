@@ -9,6 +9,7 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
+	maven { url = "https://maven.maxhenkel.de/repository/public" }
 }
 
 loom {
@@ -29,6 +30,9 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Simple Voice Chat API (optional at runtime: the Field Radio uses it when the mod is installed).
+	compileOnly "de.maxhenkel.voicechat:voicechat-api:2.6.24"
 }
 
 processResources {

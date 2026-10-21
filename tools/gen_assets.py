@@ -29,7 +29,9 @@ def write(path, obj):
 
 # ---------------------------------------------------------------- items
 SIMPLE_ITEMS = ["extended_mag", "red_dot_sight", "vertical_grip", "suppressor", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
-                "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge", "aa_missile", "at_missile", "c4", "blueprint"]
+                "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge", "aa_missile", "at_missile", "c4", "blueprint",
+                "field_pack", "heavy_rucksack", "field_radio",
+                "guard_contract", "at_guard_contract", "recon_drone", "paint_kit"]
 HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe", "architect_wand", "remodeler"]
 ARMOR_ITEMS = ["ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"]
 GUNS = ["service_pistol", "combat_shotgun", "arr_rifle", "longshot_sniper", "ruby_blaster", "rocket_launcher", "skyhammer", "lancer"]
@@ -222,6 +224,11 @@ def gen_blocks(client_jar):
         write(f"{ASSETS}/blockstates/{name}.json", {"variants": {
             f"facing={f}": {"model": f"{NS}:block/{name}", "y": y} for f, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270))}})
         client_item(name, f"{NS}:block/{name}")
+    write(f"{ASSETS}/models/block/war_grave.json", {"parent": "minecraft:block/block",
+          "textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"}, "elements": machines3d.WAR_GRAVE})
+    write(f"{ASSETS}/blockstates/war_grave.json", {"variants": {
+        f"facing={f}": {"model": f"{NS}:block/war_grave", "y": y} for f, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270))}})
+    client_item("war_grave", f"{NS}:block/war_grave")
     for name in models3d.VEHICLES:
         write(f"{ASSETS}/blockstates/{name}.json", {"variants": {"": {"model": f"{NS}:block/{name}"}}})
 
@@ -231,6 +238,19 @@ LANG = {
     "itemGroup.rubymod.ruby_wars": "Ruby Wars",
     "key.category.rubymod.ruby_wars": "Ruby Wars",
     "key.rubymod.reload": "Reload Gun / Next Aircraft Weapon",
+    "key.rubymod.ping": "Ping (mark a spot for your squad)",
+    "key.rubymod.map": "Open Map",
+    "block.rubymod.war_grave": "War Grave",
+    "item.rubymod.field_pack": "Field Pack",
+    "item.rubymod.field_radio": "Field Radio",
+    "item.rubymod.guard_contract": "Guard Contract: Rifleman",
+    "item.rubymod.at_guard_contract": "Guard Contract: AT Gunner",
+    "item.rubymod.recon_drone": "Recon Drone",
+    "item.rubymod.paint_kit": "Paint Kit",
+    "entity.rubymod.soldier": "Soldier",
+    "entity.rubymod.recon_drone": "Recon Drone",
+    "key.rubymod.research": "Research",
+    "item.rubymod.heavy_rucksack": "Heavy Rucksack",
     "key.rubymod.free_look": "Free Look (in vehicles)",
     "key.rubymod.landing_gear": "Landing Gear",
     "key.rubymod.designate": "Designate Target (aircraft)",

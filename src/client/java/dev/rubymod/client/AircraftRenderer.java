@@ -45,6 +45,7 @@ public class AircraftRenderer extends EntityRenderer<AircraftEntity, AircraftRen
 		public float rotorAngle;
 		public boolean gearDown = true;
 		public boolean hidden;
+		public int paint;
 	}
 
 	private final Map<AircraftType, AircraftModel> models = new HashMap<>();
@@ -84,6 +85,7 @@ public class AircraftRenderer extends EntityRenderer<AircraftEntity, AircraftRen
 	public void extractRenderState(AircraftEntity entity, State state, float partialTicks) {
 		super.extractRenderState(entity, state, partialTicks);
 		state.kind = entity.kind();
+		state.paint = entity.paint();
 		state.yaw = entity.getYRot(partialTicks);
 		state.pitch = entity.getXRot(partialTicks);
 		state.roll = entity.roll();
@@ -113,7 +115,9 @@ public class AircraftRenderer extends EntityRenderer<AircraftEntity, AircraftRen
 		float s = state.kind.scale();
 		poseStack.scale(s, s, s);
 		poseStack.scale(-1.0F, -1.0F, 1.0F);
-		collector.submitModel(model, state, poseStack, texture(state.kind, false), state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+		String scheme = dev.rubymod.item.PaintKitItem.scheme(state.paint);
+		Identifier skin = scheme.isEmpty() ? texture(state.kind, false) : RubyMod.id("textures/entity/aircraft/" + state.kind.id() + "_" + scheme + ".png");
+		collector.submitModel(model, state, poseStack, skin, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
 		// Lights and engine glow, full-bright; the strobes blink.
 		if ((state.ageInTicks % 30) < 22) {
 			collector.submitModel(model, state, poseStack, RenderTypes.eyes(texture(state.kind, true)), 0xF000F0, OverlayTexture.NO_OVERLAY,

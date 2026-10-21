@@ -61,6 +61,11 @@ public final class Bounties {
 	private Bounties() {
 	}
 
+	/** True when every one of today's bounties is done. */
+	public static boolean allDone(SeasonData.PlayerRecord record) {
+		return !record.bounties.isEmpty() && record.bounties.stream().allMatch(b -> b.done);
+	}
+
 	/** Make sure the player has today's bounties; hands out new ones when the day changes. */
 	public static List<Bounty> today(ServerPlayer player) {
 		SeasonData.PlayerRecord record = SeasonData.get().player(player.getUUID(), player.getName().getString());
@@ -107,6 +112,12 @@ public final class Bounties {
 				player.sendSystemMessage(Component.literal("Bounty complete: " + String.format(type.text, bounty.target) + "! +"
 						+ bounty.reward + " rubies").withStyle(ChatFormatting.GOLD));
 				Alerts.ping(player, 1.5F);
+				SeasonData.PlayerRecord record = SeasonData.get().player(player.getUUID(), player.getName().getString());
+				if (allDone(record)) {
+					Research.addPoints(player.getUUID(), 1);
+					Research.sync(player);
+					player.sendSystemMessage(Component.literal("All of today's bounties done: +1 research point.").withStyle(ChatFormatting.AQUA));
+				}
 			}
 		}
 	}

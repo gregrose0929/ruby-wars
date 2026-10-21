@@ -47,6 +47,8 @@ public class SeasonData {
 	public Map<String, Claim> claims = new LinkedHashMap<>();
 	public Map<String, PlayerRecord> players = new LinkedHashMap<>();
 	public List<String> pastChampions = new ArrayList<>();
+	public Map<String, Squads.Squad> squads = new LinkedHashMap<>();
+	public Map<String, List<Waypoints.Waypoint>> waypoints = new LinkedHashMap<>();
 
 	public static class Claim {
 		public String owner;
@@ -67,7 +69,7 @@ public class SeasonData {
 
 		public boolean canUse(UUID player) {
 			String id = player.toString();
-			return id.equals(owner) || trusted.contains(id);
+			return id.equals(owner) || trusted.contains(id) || Squads.same(UUID.fromString(owner), player);
 		}
 
 		public int radius() {
@@ -101,6 +103,9 @@ public class SeasonData {
 		public int lastHeartMoveDay = -1;
 		public int bountyDay = -1;
 		public List<Bounties.Bounty> bounties = new ArrayList<>();
+		public int researchPoints;
+		public int researchDay = -1;
+		public Set<String> research = new HashSet<>();
 	}
 
 	public static SeasonData get() {

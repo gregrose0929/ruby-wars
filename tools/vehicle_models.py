@@ -223,6 +223,15 @@ def jeep():
     return Part("root", children=[Part("body", boxes=body), ring, steering] + wheels)
 
 
+# Paint schemes (Paint Kit): name -> (paint, camo, camo2). The first is the default texture.
+SCHEMES = {
+    "desert": ((186, 160, 112), (150, 124, 84), (206, 186, 140)),
+    "arctic": ((214, 218, 222), (168, 174, 180), (238, 240, 242)),
+    "urban": ((112, 114, 120), (72, 74, 80), (150, 152, 158)),
+    "night": ((44, 46, 50), (30, 32, 34), (64, 66, 72)),
+    "ruby": ((150, 24, 44), (44, 38, 40), (190, 42, 66)),
+}
+
 VEHICLES = {
     "tank": (tank, {"paint": (90, 102, 64), "camo": (62, 72, 44), "camo2": (118, 108, 78)}),
     "jeep": (jeep, {"paint": (122, 112, 82), "camo": (98, 88, 62), "camo2": None}),
@@ -412,6 +421,10 @@ def main(root_dir):
         out_dir = os.path.join(root_dir, "src/main/resources/assets/rubymod/textures/entity/vehicle")
         write_png(os.path.join(out_dir, name + ".png"), img)
         write_png(os.path.join(out_dir, name + "_glow.png"), glow)
+        for scheme, (paint_c, camo_c, camo2_c) in SCHEMES.items():
+            alt = [[(0, 0, 0, 0)] * TEX for _ in range(TEX)]
+            paint(alt, [[(0, 0, 0, 0)] * TEX for _ in range(TEX)], root, {"paint": paint_c, "camo": camo_c, "camo2": camo2_c}, 300 + i)
+            write_png(os.path.join(out_dir, name + "_" + scheme + ".png"), alt)
 
         lines.append(f"\tpublic static LayerDefinition {name}() {{")
         lines.append("\t\tMeshDefinition mesh = new MeshDefinition();")

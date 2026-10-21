@@ -56,6 +56,26 @@ public class GameConfig {
 	public int backupIntervalHours = 24;
 	public int backupsToKeep = 7;
 
+	/** War Graves: your gear waits where you died; only you can open it for this long, then anyone can. */
+	public boolean graves = true;
+	public int graveLockSeconds = 300;
+	/** Research: advanced Armory gear starts locked (see Research). Squadmates share what they research. */
+	public boolean research = true;
+	public boolean squadsShareResearch = true;
+	/** Practice raids in the build phase: on these days, raiders by Heart tier, minutes to repel them, loot cap, rewards. */
+	public int[] raidDays = {3, 6, 9, 12};
+	public int[] raidSize = {4, 6, 8};
+	public int raidMinutes = 6;
+	public int raidMaxLootPercent = 20;
+	public int raidRewardPerKill = 3;
+	public int raidVictoryBonus = 15;
+	/** Hired guards: damage per rifle round, and how many each player may field. */
+	public float guardDamage = 3.0F;
+	public int maxGuards = 4;
+	/** Squads: players per squad, and whether squadmates can hurt each other. */
+	public int squadMaxSize = 4;
+	public boolean friendlyFire = false;
+
 	/** Economy: Trade Depot prices are multiplied by this (1.0 = the full price list). */
 	public double tradeDepotPriceMultiplier = 0.35;
 	/** Ruby Drills a player may own: without a Heart, then per Heart tier 1/2/3. */

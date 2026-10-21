@@ -50,8 +50,8 @@ public final class Shop {
 	}
 
 	/** Page 0: weapons and base. Page 1: vehicles, aircraft, and the gear to fight them. */
-	private static final int PAGES = 3;
-	private static final String[] PAGE_NAMES = {"Weapons & Base", "Vehicles & Air Defense", "Industry & Building"};
+	private static final int PAGES = 4;
+	private static final String[] PAGE_NAMES = {"Weapons & Base", "Vehicles & Air Defense", "Industry & Building", "Gear & Support"};
 	private static final int NEXT_SLOT = 53;
 	private static final int BACK_SLOT = 45;
 	private static int page;
@@ -162,6 +162,19 @@ public final class Shop {
 			item(34, ModBlocks.ELEVATOR, 2, 2);
 			item(35, ModBlocks.CAMO_NET, 16, 1);
 			item(20, ModBlocks.TESLA_COIL, 1, 35);
+
+			page = 3;
+			// Row 1: carrying
+			item(0, ModItems.FIELD_PACK, 1, 8);
+			item(1, ModItems.HEAVY_RUCKSACK, 1, 20);
+			item(2, ModItems.FIELD_RADIO, 1, 4);
+			// Row 2: support
+			item(9, ModItems.GUARD_CONTRACT, 1, 25);
+			item(10, ModItems.AT_GUARD_CONTRACT, 1, 40);
+			item(11, ModItems.RECON_DRONE, 1, 12);
+			item(12, ModItems.AIR_STRIKE_FLARE, 1, 60);
+			// Row 3: cosmetics
+			item(18, ModItems.PAINT_KIT, 1, 3);
 			page = 0;
 		}
 		return entries;
@@ -178,6 +191,15 @@ public final class Shop {
 
 	private static void item(int slot, ItemLike item, int count, int price) {
 		entries.add(new Entry(page, slot, price, () -> new ItemStack(item, count), id(item.asItem()), null));
+	}
+
+	/** The research that still locks this entry for this player, or null. */
+	private static Research.Node locked(Entry entry, ServerPlayer player) {
+		if (entry.action() != null) {
+			return null;
+		}
+		String path = entry.name().substring(entry.name().indexOf(':') + 1);
+		return Research.unlocked(player, path) ? null : Research.lockFor(path);
 	}
 
 	private static String id(Item item) {
@@ -217,7 +239,13 @@ public final class Shop {
 			ItemStack display = entry.stock().get();
 			int price = price(entry, player);
 			List<Component> lore = new ArrayList<>();
-			if (price < 0) {
+			Research.Node lock = locked(entry, player);
+			if (lock != null) {
+				lore.add(Component.literal("LOCKED: research " + lock.title() + " (" + lock.cost() + " points)")
+						.withStyle(style -> style.withItalic(false).withColor(ChatFormatting.DARK_AQUA)));
+				lore.add(Component.literal("Press J to open research").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
+				display.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, false);
+			} else if (price < 0) {
 				lore.add(Component.literal("Max tier").withStyle(ChatFormatting.GRAY));
 			} else {
 				lore.add(Component.literal("Cost: " + price + " rubies").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.RED)));
@@ -254,6 +282,11 @@ public final class Shop {
 			}
 			int price = price(entry, player);
 			if (price < 0) {
+				return;
+			}
+			Research.Node lock = locked(entry, player);
+			if (lock != null) {
+				player.sendSystemMessage(Component.literal("Locked: research " + lock.title() + " first (press J).").withStyle(ChatFormatting.DARK_AQUA), true);
 				return;
 			}
 			if (entry.action() != null) {

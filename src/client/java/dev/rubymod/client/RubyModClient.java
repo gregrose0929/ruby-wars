@@ -42,6 +42,9 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping weaponCamKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.weapon_cam", InputConstants.KEY_V, CATEGORY));
 		KeyMapping gearKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.landing_gear", InputConstants.KEY_G, CATEGORY));
 		dev.rubymod.entity.AircraftEntity.crashReporter = severity -> ClientPlayNetworking.send(new Payloads.AircraftCrash((float) severity));
+		KeyMapping pingKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.ping", InputConstants.KEY_B, CATEGORY));
+		KeyMapping mapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.map", InputConstants.KEY_M, CATEGORY));
+		KeyMapping researchKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.research", InputConstants.KEY_J, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -53,6 +56,21 @@ public class RubyModClient implements ClientModInitializer {
 				}
 			}
 			Vehicles.tick(client, freeLookKey.isDown());
+			dev.rubymod.client.map.MapCache.tick(client);
+			dev.rubymod.client.map.LookPanel.tick(client);
+			while (pingKey.consumeClick()) {
+				dev.rubymod.client.map.Pinger.ping(client);
+			}
+			while (researchKey.consumeClick()) {
+				if (client.player != null && client.gui.screen() == null) {
+					client.gui.setScreen(new ResearchScreen());
+				}
+			}
+			while (mapKey.consumeClick()) {
+				if (client.player != null && client.gui.screen() == null) {
+					client.gui.setScreen(new dev.rubymod.client.map.MapScreen());
+				}
+			}
 			if (Targeting.piloting(client) != null) {
 				// In the cockpit T designates (instead of opening chat; Enter still opens chat).
 				while (designateKey.consumeClick()) {
@@ -90,6 +108,13 @@ public class RubyModClient implements ClientModInitializer {
 			player.setXRot(Math.max(-90, player.getXRot() - payload.pitch()));
 			player.setYRot(player.getYRot() + payload.yaw());
 		});
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.MapSync.TYPE, (payload, context) -> ClientState.map = payload);
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ResearchSync.TYPE, (payload, context) -> ClientState.research = payload);
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.LookInfo.TYPE, (payload, context) -> {
+			ClientState.look = payload;
+			ClientState.lookAt = System.currentTimeMillis();
+		});
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.rubymod.client.map.BlueprintGhost::render);
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.ReloadState.TYPE, (payload, context) -> {
 			ClientState.reloadTicks = payload.ticks();
 			ClientState.reloadStartedAt = System.currentTimeMillis();
@@ -132,7 +157,10 @@ public class RubyModClient implements ClientModInitializer {
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientState.reset());
 
+		HudElementRegistry.addLast(RubyMod.id("markers"), new dev.rubymod.client.map.Markers());
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
+		HudElementRegistry.addLast(RubyMod.id("minimap"), new dev.rubymod.client.map.Minimap());
+		HudElementRegistry.addLast(RubyMod.id("look"), new dev.rubymod.client.map.LookPanel());
 		HudElementRegistry.addLast(RubyMod.id("pilot_hud"), new PilotHud());
 		HudElementRegistry.addLast(RubyMod.id("vehicle_hud"), new VehicleHud());
 		HudElementRegistry.addLast(RubyMod.id("launcher_seeker"), new LauncherSeeker());
@@ -164,6 +192,9 @@ public class RubyModClient implements ClientModInitializer {
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.rubymod.registry.ModMenus.MACHINE, MachineScreen::new);
 		AircraftRenderer.registerLayers();
 		VehicleRenderer.registerLayers();
+		DroneRenderer.registerLayer();
+		EntityRendererRegistry.register(ModEntities.SOLDIER, SoldierRenderer::new);
+		EntityRendererRegistry.register(ModEntities.RECON_DRONE, DroneRenderer::new);
 		HeavyAAGunRenderer.registerLayer();
 		EntityRendererRegistry.register(ModEntities.HEAVY_AA_GUN, HeavyAAGunRenderer::new);
 		EntityRendererRegistry.register(ModEntities.RAILGUN, HeavyAAGunRenderer::railgun);

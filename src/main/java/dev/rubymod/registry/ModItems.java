@@ -69,6 +69,16 @@ public class ModItems {
 			new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	public static final Item REMODELER = register("remodeler", dev.rubymod.item.RemodelerItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	public static final Item BLUEPRINT = register("blueprint", dev.rubymod.item.BlueprintItem::new, new Item.Properties().stacksTo(1));
+	public static final Item GUARD_CONTRACT = register("guard_contract", p -> new dev.rubymod.item.GuardContractItem(0, p),
+			new Item.Properties().stacksTo(4).rarity(Rarity.UNCOMMON));
+	public static final Item AT_GUARD_CONTRACT = register("at_guard_contract", p -> new dev.rubymod.item.GuardContractItem(1, p),
+			new Item.Properties().stacksTo(4).rarity(Rarity.RARE));
+	public static final Item RECON_DRONE = register("recon_drone", dev.rubymod.item.ReconDroneItem::new, new Item.Properties().stacksTo(4));
+	public static final Item PAINT_KIT = register("paint_kit", dev.rubymod.item.PaintKitItem::new, new Item.Properties().stacksTo(1));
+	public static final Item FIELD_RADIO = register("field_radio", dev.rubymod.item.FieldRadioItem::new, new Item.Properties().stacksTo(1));
+	public static final Item FIELD_PACK = register("field_pack", p -> new dev.rubymod.item.BackpackItem(3, p), new Item.Properties().stacksTo(1));
+	public static final Item HEAVY_RUCKSACK = register("heavy_rucksack", p -> new dev.rubymod.item.BackpackItem(6, p),
+			new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON));
 	public static final Item SKYHAMMER = register("skyhammer",
 			p -> new dev.rubymod.item.LockOnLauncherItem(dev.rubymod.item.LockOnLauncherItem.Kind.ANTI_AIR, p),
 			new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
