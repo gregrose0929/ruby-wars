@@ -34,21 +34,26 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 
 | Action | How |
 | --- | --- |
-| Fire a gun or rocket launcher | Left-click (hold for automatic guns) |
-| Aim down sights | Hold right-click (the sniper shows a full scope) |
+| Fire a gun or launcher | Left-click (hold for automatic guns) |
+| Aim down sights / lock on | Hold right-click (the sniper shows a full scope; lock-on launchers build a lock) |
 | Reload | R (rebindable under Controls > Ruby Wars) |
-| Throw grenade / flare | Right-click |
+| Throw grenade / flare / C4 | Right-click (sneak + right-click with C4 detonates your charges) |
 | Mark a target for mortars and missiles | Right-click with a Rangefinder |
 | Fire a mortar / launch a missile | Right-click the Mortar or Missile Silo holding shells or a missile |
-| Load a turret | Right-click it with Heavy Ammo |
-| Recharge an interceptor | Right-click it with a Ruby |
-| Deploy a vehicle | Right-click the ground with a Jeep, Tank, Fighter Jet, Attack Jet, or Bomber item |
+| Load a turret or flak cannon | Right-click it with Heavy Ammo |
+| Recharge an interceptor or SAM site | Right-click it with a Ruby |
+| Deploy a vehicle | Right-click the ground with a Jeep, Tank, aircraft or helicopter item |
 | Get in / drive / get out | Right-click the vehicle / W-S drive, A-D steer / Sneak |
-| Aim and fire the tank cannon | Look to turn the turret, left-click to fire |
+| Tank | Look to turn the turret, left-click fires, hold right-click for the gunner sight, Space pops smoke |
+| Look around in any vehicle | Hold Left Alt (free look; the vehicle keeps its course) |
 | Taxi an aircraft | W/S throttle (S at idle throttle brakes), A/D steer the nose wheel |
 | Take off | Line up on a runway, full throttle, and when the HUD says ROTATE, look up |
 | Fly | Look where you want to go. Climbing costs speed, diving gains it; too slow and you stall |
-| Aircraft weapons | Left-click fires, R switches weapon (cannon / missiles / bombs), Space drops flares, Sneak ejects (parachute) |
+| Aircraft weapons | Left-click fires, R switches weapon, Space drops flares, T designates a target, V weapon camera, G landing gear, Sneak ejects (parachute) |
+| Helicopter | W/S climb and descend, look to turn, look down to fly forward (up to go back), A/D strafe |
+
+In any vehicle the view is truly first person: no hands, no held item, and the
+hotbar and hearts make way for the vehicle's HUD.
 
 ## What's in the Armory
 
@@ -68,39 +73,91 @@ Killing 5 players in a row earns an Air Strike Flare.
 no tracers, hides the sniper glint). Hold the attachment in your main hand and the gun
 in your off hand, then right-click. Each gun takes one of each.
 
+The Armory has two pages: **Weapons & Base**, and **Vehicles & Air Defense**
+(the arrow in the bottom-right corner switches pages).
+
 Vehicles: the **Jeep** (fast, 4 seats) and the **Tank** (slow, 2 seats, a turret
-that follows your aim, main cannon, nearly bulletproof). Bullets barely scratch
-them; rockets, missiles, mines, and explosions are how you take them out. Ruby armor,
-sword, and pickaxe sit between iron and diamond.
+that follows your aim, main cannon, 3 smoke charges). Ruby armor, sword, and
+pickaxe sit between iron and diamond.
+
+## Fighting vehicles and aircraft
+
+Bullets don't hurt tanks and barely scratch jeeps and aircraft; ordinary blast
+splash does a little. Weapons made for it hit vehicles hard. Against a tank
+(160 armor; hits from behind or above do 1.5x):
+
+| Weapon | Damage | Notes |
+| --- | --- | --- |
+| Rocket Launcher | 48 | Laser-guided: keep aiming at the target |
+| Tank shell | 56 | |
+| **Lancer** (anti-tank launcher) | 64, x1.5 top attack = 96 | Hold right-click to lock a vehicle or anything on the ground, left-click to fire. Climbs, then dives onto the roof |
+| **Skyhammer** (anti-air launcher) | 100 | Locks aircraft in flight; fast, leads its target. Flares can fool it |
+| **Sticky C4** | 110 | Throw it onto a vehicle; sneak + right-click with C4 to detonate |
+| Landmine / **Anti-Tank Mine** | 80 / 130 | The AT mine ignores people and fires under driven vehicles |
+| Guided missile (aircraft) / bomb | 75 / 90 | |
+| Cruise missile | 250 | |
+
+Damaged vehicles smoke below half armor and burn below a quarter; destroyed ones
+leave a burning wreck. Shooters get a hit marker and a "HIT - Tank 40%" readout.
+
+Counters: tanks have **smoke launchers** (Space, 3 charges): while a vehicle is in
+smoke, missiles lose their lock and launchers can't lock it. Aircraft have
+**flares** (Space). Bases can field a **Flak Cannon** (bursting shells at enemy
+aircraft within 80 blocks; load with Heavy Ammo) and a **SAM Site** (radar-guided
+missiles out to 180 blocks; reload with rubies). Both only engage enemies of the
+claim on Battle Day. An **Airfield Pad** rearms and repairs any aircraft parked
+and stopped within 12 blocks.
 
 ## Aircraft
 
-Three aircraft, flown in the style of Nuclear Option. All of them have to take off
-from the ground: taxi out, roll down a runway (or a long, flat road) until the HUD
-says ROTATE, then pull up. Land gently: hitting the ground or a wall hard destroys
-the aircraft.
+Four aircraft, flown in the style of Nuclear Option. The jets have to take off
+from a runway (or a long, flat road): taxi out, roll until the HUD says ROTATE,
+then pull up. The takeoff roll takes 10-20 seconds.
 
-| Aircraft | Takeoff speed | Weapons |
-| --- | --- | --- |
-| **Fighter Jet** | 58 km/h, ~40 blocks of runway | Nose cannon, 4 heat-seeking air-to-air missiles, 8 flare bursts |
-| **Attack Jet** | 54 km/h | Heavy cannon, 6 guided ground-attack missiles, 4 bombs, 6 flares |
-| **Bomber** | 61 km/h, needs the longest runway | 16 bombs, 10 flares |
+| Aircraft | Top speed | Takeoff | Weapons |
+| --- | --- | --- | --- |
+| **Fighter Jet** | 250 km/h | 158 km/h, ~250-330 blocks | Fast-firing cannon, 4 air-to-air missiles, 8 flares |
+| **Attack Jet** | 215 km/h | 137 km/h | Heavy cannon (best against armor), 6 guided missiles, 4 guided bombs, 6 flares |
+| **Bomber** | 185 km/h | 130 km/h, ~400 blocks | 16 guided bombs, 10 flares |
+| **Attack Helicopter** | 158 km/h | Vertical, anywhere | Chin cannon, 24 rockets, 4 guided missiles, 6 flares |
 
-The **pilot HUD** shows speed and altitude tapes, radar altitude, climb rate, a
-compass, a pitch ladder, the flight path marker (where you're actually going),
-throttle, hull, weapons, and warnings (STALL, PULL UP, MISSILE).
+**Crashes.** Touching down faster than about 6 m/s sink, nose-first, or with the
+gear up damages the aircraft; a hard impact or flying into terrain destroys it.
+If you were shot up in the last 10 seconds, the shooter gets the kill. Gear up (G)
+makes a jet a little faster.
 
-Targeting:
-- **Missiles:** keep a target inside the seeker circle until the box closes and
-  turns red (LOCK). Air-to-air missiles lock aircraft in the air; guided missiles
-  lock vehicles and anything on the ground. Fire without a lock and a guided
-  missile flies to the amber diamond: the exact point you're looking at, with
-  its distance.
-- **Bombs:** the red CCIP pipper shows where a bomb released right now would land
-  (the HUD simulates the fall). Put it on the target and click.
-- **Flares:** a missile chasing you will often go for fresh flares instead.
+**Pilot HUD**: speed and altitude tapes, radar altitude, climb rate, compass,
+pitch ladder, flight path marker, throttle, hull, gear, weapons, and warnings
+(STALL, PULL UP, MISSILE). Landing aid: with the gear down and descending, a
+TOUCHDOWN marker shows where you'll land, plus glide-slope and sink-rate cues.
 
-One air-to-air missile downs a fighter; a tank takes two or three guided missiles.
+**Targeting** (works for every weapon):
+- **T designates** whatever is under your crosshair (a vehicle, aircraft, player or
+  ground point, up to 1500 blocks). Missiles and bombs go for it; an arrow points
+  to it when it's off screen. **Bombs are guided**: drop them anywhere near and
+  they steer onto the designated target.
+- **Missile seeker**: keep a target in the circle until the box closes and turns
+  red (LOCK). Without a lock or designation, a guided missile flies to the point
+  under your crosshair (amber diamond).
+- **Cannon**: rounds take time to arrive and drop slightly. On a target, a lead
+  circle shows where to put the pipper (it turns red: SHOOT).
+- **Bombs**: the red CCIP pipper shows where an unguided bomb would land.
+- **V: weapon camera**: ride along with your last missile or bomb to impact (your
+  aircraft holds its course meanwhile). V again to come back.
+
+## Long range
+
+Minecraft only draws things within your render distance, and freezes things
+outside the server's simulation distance. Ruby Wars works around both:
+- Missiles, bombs, shells and pilotless aircraft keep the chunks around them
+  loaded, so they keep flying when nobody is near.
+- Pilots, drivers and players holding a lock-on launcher get **radar contacts**
+  for aircraft and vehicles up to 1500 blocks away, drawn on the HUD with type and
+  range. Seekers and designation can lock contacts beyond render distance.
+- The sniper reaches 512 blocks.
+- Recommended server settings: `view-distance=16` and `simulation-distance=10`
+  in `server.properties`. Jets outrun world generation, so pre-generate the map
+  with the Chunky mod (`/chunky radius 1500`, then `/chunky start`).
 
 ## Block damage
 
@@ -117,12 +174,16 @@ Copy it into `.minecraft/saves/`. It has:
 - a **gun range** with chests of every gun, ammo, and attachment, target dummies at
   10/25/50/80 m (they show each hit's damage and headshots), and walls of dirt,
   planks, cobblestone, stone brick, concrete, and reinforced concrete to shoot;
-- a **vehicle yard** with jeeps, tanks, obstacles, a bunker, and targets;
-- an **airfield**: a 250-block runway, all three aircraft parked on the apron,
-  a bombing range with ground targets, and target drones circling overhead.
+- a **vehicle yard** with jeeps, tanks, obstacles, a bunker, targets, and an
+  anti-tank mine lane;
+- an **airfield**: a 600-block runway, every aircraft (and the helicopter) on the
+  apron with an Airfield Pad, a bombing range with ground targets, target drones
+  circling overhead (they come back 30 seconds after you shoot them down), and an
+  **air defense range** with a Flak Cannon and SAM Site to practice flares against;
+- a **Launchers** chest at the gun range with the Skyhammer, Lancer, C4 and mines.
 
 On any world, an admin can build the same thing at their feet with
-`/rubywars training` (it flattens a 130 x 370 area). `/rubywars rearm` refills
+`/rubywars training` (it flattens a 130 x 730 area). `/rubywars rearm` refills
 and repairs the aircraft you're in.
 
 ## Combat details

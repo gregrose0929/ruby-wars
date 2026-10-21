@@ -279,6 +279,25 @@ public final class SelfTest {
 		check("block damage: bullets don't break Reinforced Concrete", hitsToBreak(level, wallPos, ModBlocks.REINFORCED_CONCRETE, alpha) < 0);
 		level.setBlockAndUpdate(wallPos, Blocks.AIR.defaultBlockState());
 
+		// ----- Armor -----
+		VehicleEntity armorTest = ModEntities.TANK.create(level, EntitySpawnReason.COMMAND);
+		if (armorTest != null) {
+			armorTest.setPos(range.getX() + 0.5, range.getY(), range.getZ() + 20.5);
+			armorTest.setYRot(0);
+			level.addFreshEntity(armorTest);
+			Vec3 front = armorTest.position().add(0, 1.0, 2.2);
+			dev.rubymod.game.Armor.blast(level, null, alpha, front, 48.0F, null);
+			float afterRocket = armorTest.getHealth();
+			Vec3 rear = armorTest.position().add(0, 1.0, -2.2);
+			dev.rubymod.game.Armor.blast(level, null, alpha, rear, 48.0F, null);
+			float afterRear = armorTest.getHealth();
+			armorTest.hurtServer(level, ModDamage.source(level, ModDamage.BULLET, alpha, alpha), 50.0F);
+			check("armor: a rocket takes 48 of a tank's 160 (" + afterRocket + " left)", Math.abs(afterRocket - 112.0F) < 0.01F);
+			check("armor: from behind it takes 1.5x (" + (afterRocket - afterRear) + ")", Math.abs(afterRocket - afterRear - 72.0F) < 0.01F);
+			check("armor: bullets don't hurt tanks", armorTest.getHealth() == afterRear);
+			armorTest.discard();
+		}
+
 		// ----- Aircraft weapons -----
 		AircraftEntity jet = ModEntities.ATTACK_JET.create(level, EntitySpawnReason.COMMAND);
 		if (jet != null) {

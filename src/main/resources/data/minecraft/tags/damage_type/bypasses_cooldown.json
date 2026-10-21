@@ -1,0 +1,8 @@
+{
+	"values": [
+		"rubymod:bullet",
+		"rubymod:headshot",
+		"rubymod:turret",
+		"rubymod:anti_armor"
+	]
+}

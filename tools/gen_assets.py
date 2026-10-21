@@ -400,6 +400,9 @@ def gen_damage_types():
     for name in ["bullet", "headshot", "turret", "anti_armor"]:
         write(f"{DATA}/{NS}/damage_type/{name}.json", {"exhaustion": 0.1, "message_id": f"{NS}.{name}", "scaling": "never"})
     write(f"{DATA}/minecraft/tags/damage_type/is_projectile.json", {"values": [f"{NS}:bullet", f"{NS}:headshot", f"{NS}:turret"]})
+    # Each bullet, cannon round and warhead counts: no "recently hurt" immunity between rapid hits.
+    write(f"{DATA}/minecraft/tags/damage_type/bypasses_cooldown.json",
+          {"values": [f"{NS}:bullet", f"{NS}:headshot", f"{NS}:turret", f"{NS}:anti_armor"]})
 
 
 def main():
