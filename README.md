@@ -108,6 +108,7 @@ shows charge, capacity, and +/- per second.
 | Shield Generator | A dome (12-28 blocks) that destroys incoming rockets, shells and bombs; 1,500 charge per hit (6,000 for a cruise missile) |
 | Point Defense Gun | An automatic gatling that shoots down missiles, bombs and drones within 32-64 blocks |
 | Constructor | Builds a Blueprint, block by block, from chests next to it |
+| Tesla Coil | Arcs lightning at hostile mobs, and at enemies in your claim on Battle Day; 400 charge per zap |
 
 **Upgrades.** Every machine goes from Mk I to Mk V. Click Upgrade on its screen:
 each tier costs twice the last, paid from your inventory, then your bank. A machine
@@ -129,9 +130,14 @@ Drill next to a Refinery next to a Trade Depot is a complete ore-to-rubies line.
 | Excavator | Mines 3x3 |
 
 New building blocks: **Reinforced Glass** (a bulletproof window, about 30 rifle
-rounds or two blasts), **Floodlight**, and **Conveyor Belt**.
+rounds or two blasts), **Floodlight**, **Conveyor Belt**, **Elevator** (stand on
+it and jump to ride up to the next Elevator above, up to 48 blocks; sneak to go
+down) and **Camo Netting** (see-through, walk-through cover for gun pits and
+vehicles).
 
-## Heavy AA Gun
+`/rubywars leaderboard` ranks everyone by the rubies their economy has earned.
+
+## Heavy AA Gun and Railgun
 
 A manned twin autocannon for your base. Right-click to man it; the mount turns to
 where you look, left-click fires (alternating barrels), hold right-click for the
@@ -139,6 +145,11 @@ gun sight. Shells are proximity-fused flak: they burst near aircraft out to abou
 300 blocks. The sight boxes every aircraft in range and shows a lead marker: put
 the reticle on it (it turns red: FIRE). The 40-round magazine reloads from 4 Heavy
 Ammo.
+
+The **Railgun Emplacement** is the anti-armor counterpart: each shot draws 4,000
+charge from your power grid and takes 3 seconds to recharge. The slug crosses 400
+blocks instantly, punches through up to three targets (90 anti-armor: more than
+half a tank, or any jet) and bursts on whatever stops it.
 
 ## Fighting vehicles and aircraft
 

@@ -88,6 +88,17 @@ public class Payloads {
 		}
 	}
 
+	/** Client -> server: jump (up) or sneak (down) on an Elevator block. */
+	public record Elevator(boolean up) implements CustomPacketPayload {
+		public static final Type<Elevator> TYPE = new Type<>(RubyMod.id("elevator"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Elevator> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, Elevator::up, Elevator::new);
+
+		@Override
+		public Type<Elevator> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: the tank driver pressed jump (smoke launchers). */
 	public record VehicleSmoke() implements CustomPacketPayload {
 		public static final Type<VehicleSmoke> TYPE = new Type<>(RubyMod.id("vehicle_smoke"));
@@ -359,6 +370,7 @@ public class Payloads {
 		PayloadTypeRegistry.serverboundPlay().register(AircraftGear.TYPE, AircraftGear.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(LauncherFire.TYPE, LauncherFire.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(VehicleSmoke.TYPE, VehicleSmoke.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(Elevator.TYPE, Elevator.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(AircraftDesignate.TYPE, AircraftDesignate.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(AircraftCrash.TYPE, AircraftCrash.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Shake.TYPE, Shake.CODEC);

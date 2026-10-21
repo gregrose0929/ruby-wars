@@ -910,6 +910,27 @@ def blocks():
             belt.append(row)
     b["conveyor_belt"] = belt
 
+    # Elevator: a steel plate with up and down chevrons.
+    img = noise_tile((96, 100, 108), 5, 33)
+    outline(img, (52, 56, 62))
+    for i in range(4):
+        rect(img, 7 - i, 3 + i, 8 + i, 3 + i, (210, 30, 55))      # up chevron
+        rect(img, 7 - i, 12 - i, 8 + i, 12 - i, (210, 30, 55))    # down chevron
+    rect(img, 1, 7, 14, 8, (60, 64, 70))
+    b["elevator"] = img
+
+    # Camo netting: patchy leaves on a see-through mesh.
+    import random as _r
+    rnd = _r.Random(77)
+    img = [[(0, 0, 0, 0)] * 16 for _ in range(16)]
+    for y in range(16):
+        for x in range(16):
+            if (x + y) % 4 == 0 or (x - y) % 4 == 0:
+                img[y][x] = (58, 62, 40, 255)
+            if rnd.random() < 0.45:
+                img[y][x] = rnd.choice([(78, 92, 48, 255), (96, 110, 58, 255), (70, 60, 38, 255), (54, 70, 36, 255)])
+    b["camo_net"] = img
+
     # Reinforced glass: tinted pane with a steel frame and wire mesh.
     img = [[(150, 210, 230, 90)] * 16 for _ in range(16)]
     for i in range(16):

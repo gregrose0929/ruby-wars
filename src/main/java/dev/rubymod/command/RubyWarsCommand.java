@@ -49,6 +49,7 @@ public final class RubyWarsCommand {
 				.then(Commands.literal("status").executes(RubyWarsCommand::status))
 				.then(Commands.literal("heart").executes(RubyWarsCommand::heart))
 				.then(Commands.literal("champions").executes(RubyWarsCommand::champions))
+				.then(Commands.literal("leaderboard").executes(RubyWarsCommand::leaderboard))
 				.then(Commands.literal("bounties").executes(RubyWarsCommand::bounties))
 				.then(Commands.literal("trust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, true))))
 				.then(Commands.literal("untrust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, false))))
@@ -186,11 +187,11 @@ public final class RubyWarsCommand {
 				{ModItems.EXTENDED_MAG, 4}, {ModItems.RED_DOT_SIGHT, 4}, {ModItems.VERTICAL_GRIP, 4}, {ModItems.SUPPRESSOR, 4},
 				{ModItems.JEEP, 1}, {ModItems.TANK, 1}, {ModItems.FIGHTER_JET, 1}, {ModItems.ATTACK_JET, 1}, {ModItems.BOMBER, 1}, {ModItems.ATTACK_HELI, 1},
 				{ModItems.SKYHAMMER, 1}, {ModItems.AA_MISSILE, 8}, {ModItems.LANCER, 1}, {ModItems.AT_MISSILE, 8}, {ModItems.C4, 8},
-				{ModBlocks.AT_MINE, 4}, {ModItems.HEAVY_AA_GUN, 1}, {ModItems.ARCHITECT_WAND, 1}, {ModItems.REMODELER, 1}, {ModItems.BLUEPRINT, 2},
+				{ModBlocks.AT_MINE, 4}, {ModItems.HEAVY_AA_GUN, 1}, {ModItems.RAILGUN, 1}, {ModItems.ARCHITECT_WAND, 1}, {ModItems.REMODELER, 1}, {ModItems.BLUEPRINT, 2},
 				{ModBlocks.COMBUSTION_GENERATOR, 2}, {ModBlocks.SOLAR_PANEL, 4}, {ModBlocks.BATTERY, 2}, {ModBlocks.RUBY_DRILL, 2},
 				{ModBlocks.ORE_REFINERY, 1}, {ModBlocks.AMMO_FACTORY, 1}, {ModBlocks.TRADE_DEPOT, 1}, {ModBlocks.VAULT, 1},
 				{ModBlocks.SHIELD_GENERATOR, 1}, {ModBlocks.POINT_DEFENSE, 1}, {ModBlocks.CONSTRUCTOR, 1},
-				{ModBlocks.REINFORCED_GLASS, 32}, {ModBlocks.FLOODLIGHT, 4}, {ModBlocks.CONVEYOR, 32}, {ModBlocks.FLAK_CANNON, 1}, {ModBlocks.SAM_SITE, 1}, {ModBlocks.AIRFIELD_PAD, 1}, {ModItems.BUILDERS_WAND, 1}, {ModItems.EXCAVATOR, 1}, {ModItems.RUBY, 64},
+				{ModBlocks.REINFORCED_GLASS, 32}, {ModBlocks.FLOODLIGHT, 4}, {ModBlocks.CONVEYOR, 32}, {ModBlocks.TESLA_COIL, 1}, {ModBlocks.ELEVATOR, 4}, {ModBlocks.CAMO_NET, 32}, {ModBlocks.FLAK_CANNON, 1}, {ModBlocks.SAM_SITE, 1}, {ModBlocks.AIRFIELD_PAD, 1}, {ModItems.BUILDERS_WAND, 1}, {ModItems.EXCAVATOR, 1}, {ModItems.RUBY, 64},
 				{ModBlocks.ARMORY, 1}, {ModBlocks.MORTAR, 1}, {ModBlocks.MISSILE_SILO, 1}};
 		for (Object[] entry : stacks) {
 			give(player, new ItemStack((net.minecraft.world.level.ItemLike) entry[0], (Integer) entry[1]));
@@ -206,6 +207,23 @@ public final class RubyWarsCommand {
 		if (!player.getInventory().add(stack)) {
 			player.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
 		}
+	}
+
+	private static int leaderboard(CommandContext<CommandSourceStack> c) {
+		var top = dev.rubymod.industry.Grid.leaderboard();
+		c.getSource().sendSystemMessage(Component.literal("Ruby Wars tycoons (rubies earned / in the bank)").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		if (top.isEmpty()) {
+			c.getSource().sendSystemMessage(Component.literal("Nobody has earned anything yet. Build a Ruby Drill and a Trade Depot!")
+					.withStyle(ChatFormatting.GRAY));
+		}
+		int rank = 1;
+		for (var e : top) {
+			var record = SeasonData.get().player(java.util.UUID.fromString(e.getKey()));
+			String name = record != null && !record.name.isEmpty() ? record.name : e.getKey().substring(0, 8);
+			c.getSource().sendSystemMessage(Component.literal(String.format(java.util.Locale.ROOT, "%2d. %-16s %,8d  /  %,d", rank++, name,
+					e.getValue().lifetimeEarned / 1000, e.getValue().milliRubies / 1000)).withStyle(rank == 2 ? ChatFormatting.YELLOW : ChatFormatting.WHITE));
+		}
+		return 1;
 	}
 
 	private static int champions(CommandContext<CommandSourceStack> c) {

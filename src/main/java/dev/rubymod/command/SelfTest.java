@@ -489,6 +489,20 @@ public final class SelfTest {
 			shell.discard();
 		}
 
+		// Tesla Coil: zaps a hostile mob in range.
+		grid.charge = 9000;
+		var tesla = machine(level, at.offset(4, 2, 2), ModBlocks.TESLA_COIL, alpha);
+		Zombie victim = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
+		if (victim != null) {
+			victim.setNoAi(true);
+			victim.setPos(at.getX() + 7.5, at.getY() + 2, at.getZ() + 2.5);
+			level.addFreshEntity(victim);
+			runMachines(level, 16, tesla);
+			check("tesla: zaps a zombie in range (" + victim.getHealth() + "/20)", victim.getHealth() < 20.0F);
+			victim.discard();
+		}
+		level.setBlockAndUpdate(at.offset(4, 2, 2), Blocks.AIR.defaultBlockState());
+
 		// Architect's Wand shapes.
 		int room = dev.rubymod.item.BuildShapes.shape(dev.rubymod.item.BuildShapes.Mode.ROOM, BlockPos.ZERO, new BlockPos(4, 3, 4)).size();
 		int wall = dev.rubymod.item.BuildShapes.shape(dev.rubymod.item.BuildShapes.Mode.WALL, BlockPos.ZERO, new BlockPos(6, 2, 0)).size();

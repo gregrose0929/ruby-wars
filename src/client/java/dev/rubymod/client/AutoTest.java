@@ -388,6 +388,10 @@ public final class AutoTest {
 				origin.z - 6, origin.x, origin.y, origin.z - 26)));
 		then(1, mc -> mc.player.getAbilities().flying = true);
 		then(30, mc -> shot(mc, "yard-overview"));
+		then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x, origin.y + 7,
+				origin.z - 32, origin.x, origin.y + 2, origin.z - 44)));
+		then(1, mc -> mc.player.getAbilities().flying = true);
+		then(30, mc -> shot(mc, "yard-north"));
 		then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x - 11, origin.y + 3,
 				origin.z - 19, origin.x - 11, origin.y, origin.z - 24)));
 		then(1, mc -> mc.player.getAbilities().flying = true);
@@ -568,6 +572,75 @@ public final class AutoTest {
 			mc.options.setCameraType(CameraType.FIRST_PERSON);
 			command(mc, "ride @p dismount");
 		});
+
+		// Railgun vs a tank.
+		then(10, mc -> {
+			command(mc, "kill @e[type=rubymod:heavy_aa_gun]");
+			command(mc, String.format(java.util.Locale.ROOT, "summon rubymod:railgun %.1f %.1f %.1f {Rotation:[0f,0f]}", origin.x, origin.y, origin.z - 2));
+			command(mc, String.format(java.util.Locale.ROOT, "summon rubymod:tank %.1f %.1f %.1f {Rotation:[90f,0f]}", origin.x, origin.y, origin.z + 40));
+			command(mc, "gamemode survival @a");
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var p = server.getPlayerList().getPlayers().get(0);
+				dev.rubymod.industry.Grid.account(p.getUUID()).charge = 9000;
+			});
+		});
+		then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:railgun,limit=1,sort=nearest]"));
+		then(10, mc -> {
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof dev.rubymod.entity.VehicleEntity v) {
+					track = v;
+				}
+			}
+		});
+		then(25, mc -> shot(mc, "industry-railgun-sight"));
+		then(2, mc -> ClientPlayNetworking.send(new Payloads.VehicleFire()));
+		then(2, mc -> shot(mc, "industry-railgun-beam"));
+		then(20, mc -> {
+			log("tank after railgun: {}", track == null ? "none" : track.isAlive() ? "hp " + ((net.minecraft.world.entity.LivingEntity) track).getHealth() : "destroyed");
+			track = null;
+			command(mc, "ride @p dismount");
+			command(mc, "gamemode creative @a");
+		});
+
+		// Tesla Coil vs a zombie, and an Elevator ride.
+		then(10, mc -> {
+			command(mc, String.format(java.util.Locale.ROOT, "setblock %d %d %d rubymod:tesla_coil", (int) Math.floor(origin.x) - 8,
+					(int) Math.floor(origin.y), (int) Math.floor(origin.z) - 2));
+			command(mc, String.format(java.util.Locale.ROOT, "summon husk %.1f %.1f %.1f {NoAI:1b}", origin.x - 12, origin.y, origin.z - 2));
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> dev.rubymod.industry.Grid.account(new java.util.UUID(0, 0)).charge = 9000);
+			command(mc, String.format(java.util.Locale.ROOT, "setblock %d %d %d rubymod:elevator", (int) Math.floor(origin.x) + 8,
+					(int) Math.floor(origin.y) - 1, (int) Math.floor(origin.z) - 6));
+			command(mc, String.format(java.util.Locale.ROOT, "setblock %d %d %d rubymod:elevator", (int) Math.floor(origin.x) + 8,
+					(int) Math.floor(origin.y) + 9, (int) Math.floor(origin.z) - 6));
+			command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x - 4, origin.y + 1, origin.z - 6,
+					origin.x - 10, origin.y + 1, origin.z - 2));
+		});
+		then(1, mc -> mc.player.getAbilities().flying = false);
+		then(12, mc -> shot(mc, "industry-tesla"));
+		then(30, mc -> {
+			boolean found = false;
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof net.minecraft.world.entity.monster.zombie.Zombie z) {
+					log("husk near the tesla coil: hp {} (20 max)", z.getHealth());
+					found = true;
+				}
+			}
+			if (!found) {
+				log("husk near the tesla coil: gone (zapped to death)");
+			}
+			command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f", origin.x + 8.5, origin.y + 2, origin.z - 5.5));
+		});
+		then(10, mc -> {
+			command(mc, "execute at @p run setblock ~ ~-1 ~ rubymod:elevator");
+			command(mc, "execute at @p run setblock ~ ~9 ~ rubymod:elevator");
+		});
+		then(10, mc -> {
+			start = mc.player.position();
+			ClientPlayNetworking.send(new Payloads.Elevator(true));
+		});
+		then(10, mc -> log("elevator ride: {} -> {}", String.format("%.1f", start.y), String.format("%.1f", mc.player.getY())));
 	}
 
 	/** Screenshots of every aircraft model, parked and flying, and the helicopter flown. */

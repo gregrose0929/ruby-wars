@@ -15,7 +15,8 @@ public enum MachineKind {
 	VAULT("Ruby Vault", "Your bank: deposit rubies, earn daily interest. Raiders can crack it on Battle Day.", 1, 0, 25),
 	SHIELD_GENERATOR("Shield Generator", "Projects a dome that destroys incoming rockets, shells and bombs. Uses charge per hit.", 0, 0, 40),
 	POINT_DEFENSE("Point Defense Gun", "Automatic gatling that shreds missiles, bombs and drones nearby. Uses charge.", 0, 0, 35),
-	CONSTRUCTOR("Constructor", "Builds a Blueprint, pulling blocks from containers next to it.", 1, 0, 15);
+	CONSTRUCTOR("Constructor", "Builds a Blueprint, pulling blocks from containers next to it.", 1, 0, 15),
+	TESLA_COIL("Tesla Coil", "Zaps hostile mobs, and enemies inside your claim on Battle Day. Uses charge per zap.", 0, 0, 30);
 
 	public static final int MAX_TIER = 5;
 	public static final String[] TIER_NAMES = {"Mk I", "Mk II", "Mk III", "Mk IV", "Mk V"};
@@ -87,6 +88,7 @@ public enum MachineKind {
 		return switch (this) {
 			case SHIELD_GENERATOR -> 8 + 4 * tier;
 			case POINT_DEFENSE -> 24 + 8 * tier;
+			case TESLA_COIL -> 6 + 2 * tier;
 			default -> 0;
 		};
 	}

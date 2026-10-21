@@ -135,6 +135,7 @@ public final class Shop {
 			item(18, ModBlocks.FLAK_CANNON, 1, 45);
 			item(19, ModBlocks.SAM_SITE, 1, 90);
 			item(20, ModItems.HEAVY_AA_GUN, 1, 70);
+			item(21, ModItems.RAILGUN, 1, 90);
 
 			page = 2;
 			// Row 1: power
@@ -158,6 +159,9 @@ public final class Shop {
 			item(32, ModBlocks.REINFORCED_GLASS, 8, 3);
 			item(33, ModBlocks.FLOODLIGHT, 2, 1);
 			item(31, ModBlocks.CONVEYOR, 16, 2);
+			item(34, ModBlocks.ELEVATOR, 2, 2);
+			item(35, ModBlocks.CAMO_NET, 16, 1);
+			item(20, ModBlocks.TESLA_COIL, 1, 35);
 			page = 0;
 		}
 		return entries;

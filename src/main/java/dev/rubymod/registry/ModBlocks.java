@@ -139,6 +139,13 @@ public class ModBlocks {
 	public static final Block SHIELD_GENERATOR = machine("shield_generator", dev.rubymod.industry.MachineKind.SHIELD_GENERATOR, Shapes.block());
 	public static final Block POINT_DEFENSE = machine("point_defense", dev.rubymod.industry.MachineKind.POINT_DEFENSE, Shapes.block());
 	public static final Block CONSTRUCTOR = machine("constructor", dev.rubymod.industry.MachineKind.CONSTRUCTOR, Shapes.block());
+	public static final Block TESLA_COIL = machine("tesla_coil", dev.rubymod.industry.MachineKind.TESLA_COIL, Block.box(3, 0, 3, 13, 16, 13));
+	/** Jump on it to ride up to the next Elevator above, sneak to go down. */
+	public static final Block ELEVATOR = register("elevator", Block::new,
+			props().mapColor(MapColor.METAL).strength(3.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops());
+	/** See-through netting you can walk through: hides bases, guns and vehicles from the air. */
+	public static final Block CAMO_NET = register("camo_net", p -> new dev.rubymod.block.ShapedBlock(Shapes.block(), p),
+			props().mapColor(MapColor.COLOR_GREEN).strength(0.3F).sound(SoundType.WOOL).noOcclusion().noCollision());
 
 	private static Block machine(String name, dev.rubymod.industry.MachineKind kind, net.minecraft.world.phys.shapes.VoxelShape shape) {
 		float strength = kind == dev.rubymod.industry.MachineKind.VAULT ? 25.0F : 5.0F;

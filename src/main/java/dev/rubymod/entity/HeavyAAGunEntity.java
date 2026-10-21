@@ -96,6 +96,20 @@ public class HeavyAAGunEntity extends Mob {
 		return entityData.get(RELOAD);
 	}
 
+	protected void setReloadLeft(int ticks) {
+		entityData.set(RELOAD, ticks);
+	}
+
+	/** Length of a full reload/recharge, for the HUD bar. */
+	public int reloadTicks() {
+		return RELOAD_TICKS;
+	}
+
+	/** Shell speed for the sight's lead calculation (blocks per tick). */
+	public double shellSpeed() {
+		return SHELL_SPEED;
+	}
+
 	/** Where the barrels point. */
 	public Vec3 aim() {
 		return Vec3.directionFromRotation(gunPitch(), turretYaw());
@@ -118,10 +132,14 @@ public class HeavyAAGunEntity extends Mob {
 		if (!level().isClientSide()) {
 			player.startRiding(this);
 			if (player instanceof ServerPlayer sp) {
-				sp.sendOverlayMessage(Component.literal("Heavy AA Gun: look to aim, left-click fires, hold right-click for the sight. Sneak to leave."));
+				sp.sendOverlayMessage(Component.literal(mountHint()));
 			}
 		}
 		return InteractionResult.SUCCESS;
+	}
+
+	protected String mountHint() {
+		return "Heavy AA Gun: look to aim, left-click fires, hold right-click for the sight. Sneak to leave.";
 	}
 
 	@Override
@@ -189,11 +207,15 @@ public class HeavyAAGunEntity extends Mob {
 		int reload = reloadLeft();
 		if (reload > 0) {
 			entityData.set(RELOAD, reload - 1);
-			if (reload == 1) {
+			if (reload == 1 && usesMagazine()) {
 				entityData.set(AMMO, MAGAZINE);
 				level().playSound(null, getX(), getY(), getZ(), SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.PLAYERS, 1.5F, 0.6F);
 			}
 		}
+	}
+
+	protected boolean usesMagazine() {
+		return true;
 	}
 
 	/** Left-click from the gunner (VehicleFire packet). */

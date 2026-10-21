@@ -53,14 +53,17 @@ public final class AAGunHud {
 		// Aircraft: box + lead marker.
 		Vec3 muzzle = gun.position().add(0, 1.5, 0);
 		for (Entity e : mc.level.entitiesForRendering()) {
-			if (!(e instanceof AircraftEntity a) || a.onGround() || a.hasPassenger(mc.player) || e.distanceTo(gun) > RANGE) {
+			boolean railgun = gun instanceof dev.rubymod.entity.RailgunEntity;
+			boolean target = e instanceof AircraftEntity a && !a.onGround() || railgun && dev.rubymod.game.Armor.isArmored(e) && e != gun;
+			if (!target || e.hasPassenger(mc.player) || e.distanceTo(gun) > (railgun ? 400 : RANGE)) {
 				continue;
 			}
+			Entity a = e;
 			Vec3 pos = a.getBoundingBox().getCenter();
 			Vec3 vel = new Vec3(a.getX() - a.xo, a.getY() - a.yo, a.getZ() - a.zo);
-			double t = pos.distanceTo(muzzle) / HeavyAAGunEntity.SHELL_SPEED;
+			double t = pos.distanceTo(muzzle) / gun.shellSpeed();
 			for (int i = 0; i < 3; i++) {
-				t = pos.add(vel.scale(t)).distanceTo(muzzle) / HeavyAAGunEntity.SHELL_SPEED;
+				t = pos.add(vel.scale(t)).distanceTo(muzzle) / gun.shellSpeed();
 			}
 			Vec3 lead = pos.add(vel.scale(t)).add(0, 0.5 * 0.03 * t * t, 0);
 			float[] p = project(camera, pos, w, h);
@@ -88,8 +91,12 @@ public final class AAGunHud {
 		int bx = cx - 60;
 		int by = h - 30;
 		g.fill(bx - 2, by - 12, bx + 122, by + 8, 0x70000000);
-		if (reload > 0) {
-			float done = 1.0F - reload / (float) HeavyAAGunEntity.RELOAD_TICKS;
+		if (gun instanceof dev.rubymod.entity.RailgunEntity) {
+			float done = reload > 0 ? 1.0F - reload / (float) gun.reloadTicks() : 1.0F;
+			g.fill(bx, by, bx + Math.round(120 * done), by + 6, reload > 0 ? AMBER : 0xFFFF3070);
+			g.text(font, reload > 0 ? "RAILGUN CHARGING" : "RAILGUN READY (4,000 charge)", bx, by - 10, reload > 0 ? AMBER : 0xFFFF5A82, false);
+		} else if (reload > 0) {
+			float done = 1.0F - reload / (float) gun.reloadTicks();
 			g.fill(bx, by, bx + Math.round(120 * done), by + 6, AMBER);
 			g.text(font, "RELOADING (4 Heavy Ammo)", bx, by - 10, AMBER, false);
 		} else {

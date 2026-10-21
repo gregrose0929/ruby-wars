@@ -139,6 +139,9 @@ def gen_blocks(client_jar):
     write(f"{ASSETS}/blockstates/conveyor.json", {"variants": {
         f"facing={f}": {"model": f"{NS}:block/conveyor", "y": y} for f, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270))}})
     client_item("conveyor", f"{NS}:block/conveyor")
+    cube_all("elevator")
+    write(f"{ASSETS}/models/block/camo_net.json", {"parent": "minecraft:block/cube_all", "textures": {"all": f"{NS}:block/camo_net"}})
+    simple_state("camo_net")
     write(f"{ASSETS}/models/block/reinforced_glass.json", {"parent": "minecraft:block/cube_all",
           "textures": {"all": {"force_translucent": True, "sprite": f"{NS}:block/reinforced_glass"}}})
     simple_state("reinforced_glass")
@@ -190,6 +193,9 @@ def gen_blocks(client_jar):
     write(f"{ASSETS}/models/block/heavy_aa_icon.json", {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"},
                                                         "elements": machines3d.HEAVY_AA_ICON})
     vehicle_item("heavy_aa_gun", machines3d.HEAVY_AA_ICON, f"{NS}:block/heavy_aa_icon")
+    write(f"{ASSETS}/models/block/railgun_icon.json", {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"},
+                                                       "elements": machines3d.RAILGUN_ICON})
+    vehicle_item("railgun", machines3d.RAILGUN_ICON, f"{NS}:block/railgun_icon")
 
     # Industry machines: 3D models, facing the way they were placed.
     for name, elements in machines3d.MACHINES.items():
@@ -230,9 +236,14 @@ LANG = {
     "block.rubymod.reinforced_glass": "Reinforced Glass",
     "block.rubymod.floodlight": "Floodlight",
     "block.rubymod.conveyor": "Conveyor Belt",
+    "block.rubymod.tesla_coil": "Tesla Coil",
+    "block.rubymod.elevator": "Elevator",
+    "block.rubymod.camo_net": "Camo Netting",
     "item.rubymod.remodeler": "Remodeler",
     "item.rubymod.blueprint": "Blueprint",
     "item.rubymod.heavy_aa_gun": "Heavy AA Gun",
+    "item.rubymod.railgun": "Railgun Emplacement",
+    "entity.rubymod.railgun": "Railgun Emplacement",
     "entity.rubymod.heavy_aa_gun": "Heavy AA Gun",
     "block.rubymod.combustion_generator": "Combustion Generator",
     "block.rubymod.solar_panel": "Solar Panel",
@@ -383,7 +394,7 @@ def gen_loot():
 
     for name in ["ruby_block", "ruby_heart", "armory", "sandbags", "concrete_wall", "reinforced_concrete", "sentry_turret",
                  "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "barbed_wire", "mortar", "missile_silo",
-                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor", "reinforced_glass", "floodlight", "conveyor"]:
+                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor", "reinforced_glass", "floodlight", "conveyor", "tesla_coil", "elevator", "camo_net"]:
         drop_self(name)
 
     def ore(name):

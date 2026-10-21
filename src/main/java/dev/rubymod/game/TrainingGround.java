@@ -153,7 +153,7 @@ public final class TrainingGround {
 				origin.getX() + MAX_X + 40, origin.getY() + 200, origin.getZ() + MAX_Z + 120);
 		for (Entity e : level.getEntities((Entity) null, area,
 				e -> (e instanceof TargetDummyEntity || e instanceof VehicleEntity || e instanceof AircraftEntity
-						|| e instanceof dev.rubymod.entity.HeavyAAGunEntity || e instanceof net.minecraft.world.entity.Display.TextDisplay)
+						|| e instanceof dev.rubymod.entity.HeavyAAGunEntity || e instanceof net.minecraft.world.entity.item.ItemEntity || e instanceof net.minecraft.world.entity.Display.TextDisplay)
 						&& e.getPassengers().stream().noneMatch(p -> p instanceof Player))) {
 			e.discard();
 		}
@@ -213,6 +213,8 @@ public final class TrainingGround {
 		cmds.add("summon rubymod:jeep ~25 ~ ~2 {Rotation:[0f,0f]}");
 		cmds.add("summon rubymod:tank ~35 ~ ~2 {Rotation:[0f,0f]}");
 		cmds.add("summon rubymod:tank ~45 ~ ~2 {Rotation:[0f,0f]}");
+		cmds.add("summon rubymod:railgun ~55 ~ ~2 {Rotation:[0f,0f]}");
+		label(cmds, 55, 3.2, 2, "RAILGUN - 4,000 charge a shot from your grid", "white", 0.7);
 		// Obstacles: sandbag lines, a ramp, a bunker to shell.
 		cmds.add(fill(18, 0, 20, 30, 0, 20, "rubymod:sandbags"));
 		cmds.add(fill(38, 0, 26, 52, 0, 26, "rubymod:sandbags"));
@@ -349,6 +351,26 @@ public final class TrainingGround {
 		label(cmds, 30, 3.0, -20, "BASE DEFENSE", "yellow", 1.0);
 		cmds.add("setblock ~28 ~ ~-26 rubymod:shield_generator[facing=south]");
 		cmds.add("setblock ~32 ~ ~-26 rubymod:point_defense[facing=south]");
+		cmds.add("setblock ~36 ~ ~-26 rubymod:tesla_coil[facing=south]");
+		label(cmds, 36, 1.9, -26, "Tesla Coil", "aqua", 0.7);
+
+		// Elevator tower: jump to ride up, sneak to go down.
+		cmds.add(fill(22, 0, -46, 26, 0, -42, "polished_andesite"));
+		cmds.add(fill(22, 9, -46, 26, 9, -42, "polished_andesite"));
+		cmds.add(fill(22, 10, -46, 26, 10, -46, "rubymod:reinforced_glass"));
+		cmds.add("setblock ~24 ~ ~-44 rubymod:elevator");
+		cmds.add("setblock ~24 ~9 ~-44 rubymod:elevator");
+		cmds.add(fill(22, 1, -46, 22, 8, -46, "rubymod:concrete_wall"));
+		cmds.add(fill(26, 1, -46, 26, 8, -46, "rubymod:concrete_wall"));
+		label(cmds, 24, 2.5, -41, "ELEVATOR: stand on it, jump to go up, sneak to go down", "yellow", 0.8);
+		// A gun pit hidden under camo netting.
+		cmds.add("summon rubymod:heavy_aa_gun ~-24 ~ ~-44 {Rotation:[180f,0f]}");
+		cmds.add(fill(-28, 4, -48, -20, 4, -40, "rubymod:camo_net"));
+		cmds.add(fill(-28, 0, -48, -28, 3, -48, "oak_fence"));
+		cmds.add(fill(-20, 0, -48, -20, 3, -48, "oak_fence"));
+		cmds.add(fill(-28, 0, -40, -28, 3, -40, "oak_fence"));
+		cmds.add(fill(-20, 0, -40, -20, 3, -40, "oak_fence"));
+		label(cmds, -24, 5.5, -39, "CAMO NETTING over a Heavy AA Gun", "yellow", 0.8);
 		label(cmds, 28, 1.9, -26, "Shield", "aqua", 0.7);
 		label(cmds, 32, 1.9, -26, "Point Defense", "aqua", 0.7);
 		for (int x = -36; x <= 36; x += 12) {

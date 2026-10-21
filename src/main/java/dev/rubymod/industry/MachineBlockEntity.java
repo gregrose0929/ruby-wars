@@ -173,6 +173,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			case SHIELD_GENERATOR -> tickShield(level);
 			case POINT_DEFENSE -> tickPointDefense(level);
 			case CONSTRUCTOR -> Blueprints.tickConstructor(level, this);
+			case TESLA_COIL -> tickTesla(level);
 		}
 		if (kind.outputs > 0 && ticks % 10 == 0) {
 			pushOutputs(level);
@@ -456,6 +457,53 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		} else {
 			Armor.hit(level, target, null, ownerPlayer(level), 3.0F + tier);
 		}
+	}
+
+	/** Tesla Coil: every 3/4 second, an arc to the nearest hostile in range. */
+	private void tickTesla(ServerLevel level) {
+		if (ticks % 15 != 0) {
+			return;
+		}
+		int r = kind().radius(tier);
+		Vec3 top = Vec3.atCenterOf(worldPosition).add(0, 0.9, 0);
+		SeasonData.Claim claim = SeasonData.get().claimOf(owner);
+		net.minecraft.world.entity.LivingEntity target = null;
+		double best = r;
+		for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+				new AABB(top, top).inflate(r), e -> e.isAlive() && !e.isSpectator())) {
+			boolean hostile = e instanceof net.minecraft.world.entity.monster.Enemy
+					|| e instanceof Player p && claim != null && Rules.phase().pvp() && Rules.isEnemyOf(claim, p);
+			double d = e.position().distanceTo(top);
+			if (hostile && d < best && canSee(level, top, e.getEyePosition())) {
+				best = d;
+				target = e;
+			}
+		}
+		if (target == null) {
+			status = IDLE;
+			return;
+		}
+		if (!Grid.consume(owner, 400)) {
+			status = NO_POWER;
+			return;
+		}
+		status = WORKING;
+		// A jagged arc.
+		Vec3 to = target.getBoundingBox().getCenter();
+		Vec3 prev = top;
+		var random = level.getRandom();
+		for (int i = 1; i <= 8; i++) {
+			Vec3 p = top.lerp(to, i / 8.0).add(i < 8 ? (random.nextDouble() - 0.5) * 0.8 : 0, i < 8 ? (random.nextDouble() - 0.5) * 0.8 : 0,
+					i < 8 ? (random.nextDouble() - 0.5) * 0.8 : 0);
+			for (int k = 0; k <= 4; k++) {
+				Vec3 q = prev.lerp(p, k / 4.0);
+				level.sendParticles(ParticleTypes.ELECTRIC_SPARK, true, false, q.x, q.y, q.z, 1, 0, 0, 0, 0);
+			}
+			level.sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0, 0, 0, 0);
+			prev = p;
+		}
+		level.playSound(null, worldPosition, SoundEvents.TRIDENT_THUNDER.value(), SoundSource.BLOCKS, 0.5F, 1.8F);
+		target.hurtServer(level, dev.rubymod.registry.ModDamage.source(level, dev.rubymod.registry.ModDamage.TURRET, null, ownerPlayer(level)), 3.0F + tier);
 	}
 
 	private boolean hostileAircraft(AircraftEntity a) {

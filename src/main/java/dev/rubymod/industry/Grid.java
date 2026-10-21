@@ -195,6 +195,12 @@ public final class Grid {
 		}
 	}
 
+	/** Players by rubies earned through their economy (Trade Depot sales, deposits, interest), best first. */
+	public static java.util.List<Map.Entry<String, Account>> leaderboard() {
+		return accounts.entrySet().stream().filter(e -> e.getValue().lifetimeEarned > 0)
+				.sorted((a, b) -> Long.compare(b.getValue().lifetimeEarned, a.getValue().lifetimeEarned)).limit(10).toList();
+	}
+
 	/** Wipe everything (new season). */
 	public static void reset() {
 		accounts.clear();

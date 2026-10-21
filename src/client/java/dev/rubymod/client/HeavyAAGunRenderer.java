@@ -26,8 +26,10 @@ import net.minecraft.util.Mth;
 /** The Heavy AA Gun: the mount turns with the gunner, the barrels elevate and recoil when firing. */
 public class HeavyAAGunRenderer extends EntityRenderer<HeavyAAGunEntity, HeavyAAGunRenderer.State> {
 	public static final ModelLayerLocation LAYER = new ModelLayerLocation(RubyMod.id("heavy_aa_gun"), "main");
-	private static final Identifier TEXTURE = RubyMod.id("textures/entity/aircraft/heavy_aa_gun.png");
-	private static final float SCALE = 1.25F;
+	public static final ModelLayerLocation RAILGUN_LAYER = new ModelLayerLocation(RubyMod.id("railgun"), "main");
+	private final Identifier texture;
+	private final Identifier glow;
+	private final float scale;
 
 	public static class State extends EntityRenderState {
 		public float baseYaw;
@@ -59,13 +61,25 @@ public class HeavyAAGunRenderer extends EntityRenderer<HeavyAAGunEntity, HeavyAA
 	private final Model model;
 
 	public HeavyAAGunRenderer(EntityRendererProvider.Context context) {
+		this(context, LAYER, "heavy_aa_gun", 1.25F);
+	}
+
+	public HeavyAAGunRenderer(EntityRendererProvider.Context context, ModelLayerLocation layer, String name, float scale) {
 		super(context);
 		this.shadowRadius = 1.6F;
-		this.model = new Model(context.bakeLayer(LAYER));
+		this.model = new Model(context.bakeLayer(layer));
+		this.texture = RubyMod.id("textures/entity/aircraft/" + name + ".png");
+		this.glow = RubyMod.id("textures/entity/aircraft/" + name + "_glow.png");
+		this.scale = scale;
+	}
+
+	public static HeavyAAGunRenderer railgun(EntityRendererProvider.Context context) {
+		return new HeavyAAGunRenderer(context, RAILGUN_LAYER, "railgun", 1.2F);
 	}
 
 	public static void registerLayer() {
 		ModelLayerRegistry.registerModelLayer(LAYER, AircraftModels::heavyAaGun);
+		ModelLayerRegistry.registerModelLayer(RAILGUN_LAYER, AircraftModels::railgun);
 	}
 
 	@Override
@@ -93,9 +107,10 @@ public class HeavyAAGunRenderer extends EntityRenderer<HeavyAAGunEntity, HeavyAA
 		}
 		poseStack.pushPose();
 		poseStack.rotateDegrees(Axis.YP, -state.baseYaw);
-		poseStack.scale(SCALE, SCALE, SCALE);
+		poseStack.scale(scale, scale, scale);
 		poseStack.scale(-1.0F, -1.0F, 1.0F);
-		collector.submitModel(model, state, poseStack, TEXTURE, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+		collector.submitModel(model, state, poseStack, texture, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+		collector.submitModel(model, state, poseStack, RenderTypes.eyes(glow), 0xF000F0, OverlayTexture.NO_OVERLAY, state.outlineColor);
 		poseStack.popPose();
 		super.submit(state, poseStack, collector, camera);
 	}

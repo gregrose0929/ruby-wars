@@ -134,9 +134,29 @@ MACHINES = {
         vbox([3, 4, 0.6], [13, 9, 1], LENS),                                   # blueprint display
         *[vbox([x, 5, 0.4], [x + 0.3, 8, 0.6], WHITE) for x in (5, 8, 11)],
     ],
+    "tesla_coil": [
+        vbox([3, 0, 3], [13, 2, 13], DARK),                                    # base
+        vbox([4, 2, 4], [12, 4, 12], STEEL),
+        vbox([6, 4, 6], [10, 11, 10], DARK),                                   # insulator column
+        *[vbox([5.5, y, 5.5], [10.5, y + 0.8, 10.5], BRASS) for y in (4.6, 6.2, 7.8, 9.4)],   # copper windings
+        vbox([4.5, 11, 4.5], [11.5, 13, 11.5], STEEL),                         # toroid
+        vbox([5, 13, 5], [11, 14.5, 11], LIGHT),
+        vbox([7, 14.5, 7], [9, 16, 9], RUBY),                                  # ruby tip
+    ],
 }
 
 # Items / icons.
+RAILGUN_ICON = [
+    vbox([1, 0, 1], [15, 2, 15], DARK),                                         # base plate
+    vbox([4, 2, 4], [12, 5, 12], STEEL),                                        # turntable
+    vbox([3, 5, 5], [5, 10, 11], DARK), vbox([11, 5, 5], [13, 10, 11], DARK),   # supports
+    vbox([6, 6, -8], [7.2, 7.2, 10], LIGHT, tilt([8, 7, 8], 22.5, "x")),         # rails, raised
+    vbox([8.8, 6, -8], [10, 7.2, 10], LIGHT, tilt([8, 7, 8], 22.5, "x")),
+    vbox([7, 6.2, -6], [9, 7, 6], RED_LIGHT, tilt([8, 7, 8], 22.5, "x")),        # glowing coil
+    vbox([5.5, 5.5, 8], [10.5, 9, 12], DARK, tilt([8, 7, 8], 22.5, "x")),        # breech
+    *[vbox([x, 2, z], [x + 2, 4, z + 2], RUBY) for x in (1.5, 12.5) for z in (1.5, 12.5)],   # capacitors
+]
+
 HEAVY_AA_ICON = [
     vbox([0, 0, 6], [16, 1.5, 10], OLIVE_DARK), vbox([6, 0, 0], [10, 1.5, 16], OLIVE_DARK),    # outriggers
     vbox([5, 1.5, 5], [11, 5, 11], DARK),                                       # pedestal

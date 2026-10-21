@@ -275,11 +275,42 @@ def heavy_aa_gun():
     return Part("root", children=[Part("base", boxes=base), turret])
 
 
+def railgun():
+    base = [
+        B(-18, 0, -18, 18, 3, 18, "skin2"),                            # armored base plate
+        B(-19, 0, -6, 19, 2, 6, "dark"), B(-6, 0, -19, 6, 2, 19, "dark"),
+        B(-8, 3, -8, 8, 8, 8, "dark"),                                 # pedestal
+        B(-14, 3, -14, -10, 7, -10, "glow_box"), B(10, 3, -14, 14, 7, -10, "glow_box"),   # capacitor banks
+        B(-14, 3, 10, -10, 7, 14, "glow_box"), B(10, 3, 10, 14, 7, 14, "glow_box"),
+    ]
+    guns = Part("guns", pivot=(0, 10, 0), boxes=[
+        B(-6, -4, -12, 6, 4, 8, "dark"),                               # breech / power block
+        B(-4.5, 1, 8, -2.5, 3, 56, "metal"),                           # upper rail pair
+        B(2.5, 1, 8, 4.5, 3, 56, "metal"),
+        B(-4.5, -3, 8, -2.5, -1, 56, "metal"),                         # lower rail pair
+        B(2.5, -3, 8, 4.5, -1, 56, "metal"),
+        *[B(-5.5, -4, z, 5.5, 4, z + 2, "skin", ) for z in (14, 26, 38, 50)],      # rail clamps
+        *[B(-2, -1, z, 2, 1, z + 10, "glow_box") for z in (16, 28, 40)],          # glowing accelerator coils
+        B(-3, -2, 56, 3, 2, 58, "dark", muzzle=True),                   # muzzle
+        B(-6.5, 4, -10, 6.5, 6, 6, "skin2"),                            # cooling fins
+        *[B(-6.5, 6, z, 6.5, 7, z + 1, "dark") for z in (-8, -5, -2, 1, 4)],
+    ])
+    turret = Part("turret", pivot=(0, 8, 0), boxes=[
+        B(-12, 0, -12, 12, 2.5, 12, "skin"),                           # turntable
+        B(-11, 2.5, -6, -7, 16, 8, "skin"), B(7, 2.5, -6, 11, 16, 8, "skin"),   # trunnion supports
+        B(-3, 2.5, -16, 3, 5.5, -10, "dark"),                          # gunner seat
+        B(-3, 5.5, -17, 3, 12, -15, "dark"),
+        B(-9, 5, -16, -5, 9, -12, "glass"),                            # targeting console
+    ], children=[guns])
+    return Part("root", children=[Part("base", boxes=base), turret])
+
+
 AIRCRAFT = {
     "fighter_jet": (fighter, {"skin": (128, 136, 146), "skin2": (100, 108, 118), "under": (172, 178, 184), "camo": None}),
     "attack_jet": (attack_jet, {"skin": (86, 98, 70), "skin2": (78, 90, 64), "under": (150, 156, 150), "camo": (62, 70, 50)}),
     "bomber": (bomber, {"skin": (158, 162, 166), "skin2": (120, 124, 130), "under": (64, 68, 74), "camo": None}),
     "attack_heli": (helicopter, {"skin": (70, 78, 62), "skin2": (60, 68, 54), "under": (70, 78, 62), "camo": (48, 54, 42)}),
+    "railgun": (railgun, {"skin": (70, 74, 82), "skin2": (56, 60, 66), "under": (40, 42, 46), "camo": None}),
     "heavy_aa_gun": (heavy_aa_gun, {"skin": (92, 102, 78), "skin2": (78, 88, 66), "under": (60, 66, 52), "camo": (64, 72, 54)}),
 }
 
@@ -403,6 +434,8 @@ def pixel(b, face, px, py, fw, fh, pal, rnd):
     if b.flags.get("muzzle") and face == "front":
         r = math.hypot(px + 0.5 - fw / 2, py + 0.5 - fh / 2)
         return ((12, 12, 12) if r < min(fw, fh) * 0.3 else (46, 48, 52)) + (255,)
+    if mat == "glow_box":
+        return ((255, 40, 90) if (px + py) % 3 else (255, 70, 60)) + (255,)
     if mat == "metal":
         c = mul(MATERIALS["metal"], 1.15 if py == 0 else 0.9 if py == fh - 1 else 1.0)
         return clamp((c[0] + n, c[1] + n, c[2] + n)) + (255,)

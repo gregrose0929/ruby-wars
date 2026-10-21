@@ -63,6 +63,8 @@ public class ModItems {
 	public static final Item RANGEFINDER = register("rangefinder", RangefinderItem::new, new Item.Properties().stacksTo(1));
 	public static final Item HEAVY_AA_GUN = register("heavy_aa_gun", p -> new VehicleItem(() -> ModEntities.HEAVY_AA_GUN, p),
 			new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
+	public static final Item RAILGUN = register("railgun", p -> new VehicleItem(() -> ModEntities.RAILGUN, p),
+			new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item ARCHITECT_WAND = register("architect_wand", dev.rubymod.item.ArchitectWandItem::new,
 			new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	public static final Item REMODELER = register("remodeler", dev.rubymod.item.RemodelerItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE));

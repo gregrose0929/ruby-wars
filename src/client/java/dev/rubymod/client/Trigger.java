@@ -20,6 +20,7 @@ public final class Trigger {
 	}
 
 	private static boolean wasJumping;
+	private static boolean wasSneaking;
 
 	private static boolean drivingArmedVehicle(Minecraft mc) {
 		if (mc.player == null) {
@@ -61,6 +62,16 @@ public final class Trigger {
 				&& tank.getControllingPassenger() == mc.player) {
 			ClientPlayNetworking.send(new Payloads.VehicleSmoke());
 		}
+		boolean sneaking = mc.player != null && mc.gui.screen() == null && mc.options.keyShift.isDown();
+		if (mc.player != null && mc.player.getVehicle() == null
+				&& mc.level.getBlockState(mc.player.blockPosition().below()).is(dev.rubymod.registry.ModBlocks.ELEVATOR)) {
+			if (jumping && !wasJumping) {
+				ClientPlayNetworking.send(new Payloads.Elevator(true));
+			} else if (sneaking && !wasSneaking) {
+				ClientPlayNetworking.send(new Payloads.Elevator(false));
+			}
+		}
+		wasSneaking = sneaking;
 		wasJumping = jumping;
 		boolean down = mc.player != null && mc.gui.screen() == null && mc.options.keyAttack.isDown();
 		boolean pressed = down && !wasDown;

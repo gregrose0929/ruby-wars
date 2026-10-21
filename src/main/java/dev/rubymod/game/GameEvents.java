@@ -136,6 +136,7 @@ public final class GameEvents {
 				launcher.fire(player, held, payload.targetId() >= 0 ? player.level().getEntity(payload.targetId()) : null);
 			}
 		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.Elevator.TYPE, (payload, context) -> Elevators.ride(context.player(), payload.up()));
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleSmoke.TYPE, (payload, context) -> {
 			if (context.player().getVehicle() instanceof VehicleEntity vehicle) {
 				vehicle.popSmoke(context.player());

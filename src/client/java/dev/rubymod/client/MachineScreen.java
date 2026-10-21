@@ -135,6 +135,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			case VAULT -> drawVault(g);
 			case SHIELD_GENERATOR -> info(g, "Dome radius", kind.radius(tier) + " blocks", "1,500 charge per rocket stopped");
 			case POINT_DEFENSE -> info(g, "Range", kind.radius(tier) + " blocks", "200 charge per burst");
+			case TESLA_COIL -> info(g, "Range", kind.radius(tier) + " blocks, " + (3 + tier) + " damage", "400 charge per zap");
 			case CONSTRUCTOR -> drawConstructor(g);
 		}
 		for (Button b : buttons) {
@@ -325,7 +326,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 						kind.cycle(next) / 20.0) + (kind == MachineKind.RUBY_DRILL ? ", more rubies" : kind == MachineKind.ORE_REFINERY && next == 4 ? ", x3 ore" : "");
 				case TRADE_DEPOT -> "+6% prices, sells faster";
 				case VAULT -> "Interest " + kind.interestPercent(menu.tier()) + "% -> " + kind.interestPercent(next) + "%";
-				case SHIELD_GENERATOR, POINT_DEFENSE -> kind.radius(menu.tier()) + " -> " + kind.radius(next) + " blocks";
+				case SHIELD_GENERATOR, POINT_DEFENSE, TESLA_COIL -> kind.radius(menu.tier()) + " -> " + kind.radius(next) + " blocks";
 				case CONSTRUCTOR -> "Builds faster";
 			};
 			lines.add(Component.literal(gain).withStyle(net.minecraft.ChatFormatting.GRAY));
