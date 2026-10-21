@@ -10,6 +10,7 @@ repositories {
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
 	maven { url = "https://maven.maxhenkel.de/repository/public" }
+	maven { url = "https://api.modrinth.com/maven" }
 }
 
 loom {
@@ -33,6 +34,8 @@ dependencies {
 
 	// Simple Voice Chat API (optional at runtime: the Field Radio uses it when the mod is installed).
 	compileOnly "de.maxhenkel.voicechat:voicechat-api:2.6.24"
+	// Run the dev client and test server with Simple Voice Chat, to exercise the Field Radio plugin.
+	localRuntime "maven.modrinth:simple-voice-chat:fabric-2.6.24+26.3"
 }
 
 processResources {
