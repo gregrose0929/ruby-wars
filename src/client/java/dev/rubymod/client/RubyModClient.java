@@ -5,6 +5,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import dev.rubymod.RubyMod;
 import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.net.Payloads;
+import dev.rubymod.registry.ModBlocks;
 import dev.rubymod.registry.ModEntities;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -93,14 +94,15 @@ public class RubyModClient implements ClientModInitializer {
 
 		EntityRendererRegistry.register(ModEntities.FRAG_GRENADE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.SMOKE_GRENADE, ThrownItemRenderer::new);
-		EntityRendererRegistry.register(ModEntities.ROCKET, context -> new ThrownItemRenderer<>(context, 1.5F, true));
-		EntityRendererRegistry.register(ModEntities.MORTAR_SHELL, context -> new ThrownItemRenderer<>(context, 1.5F, false));
-		EntityRendererRegistry.register(ModEntities.CRUISE_MISSILE, context -> new ThrownItemRenderer<>(context, 3.0F, true));
-		EntityRendererRegistry.register(ModEntities.BOMB, context -> new ThrownItemRenderer<>(context, 2.0F, false));
 		EntityRendererRegistry.register(ModEntities.AIR_STRIKE_FLARE, context -> new ThrownItemRenderer<>(context, 1.0F, true));
 		EntityRendererRegistry.register(ModEntities.BREACHING_CHARGE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.JEEP, VehicleRenderer::new);
 		EntityRendererRegistry.register(ModEntities.TANK, VehicleRenderer::new);
 		EntityRendererRegistry.register(ModEntities.JET, JetRenderer::new);
+		EntityRendererRegistry.register(ModEntities.ROCKET,
+				context -> new ProjectileModelRenderer<>(context, r -> r.isShell() ? ModBlocks.TANK_SHELL_MODEL : ModBlocks.ROCKET_MODEL, 1.6F));
+		EntityRendererRegistry.register(ModEntities.MORTAR_SHELL, context -> new ProjectileModelRenderer<>(context, e -> ModBlocks.MORTAR_SHELL_MODEL, 1.4F));
+		EntityRendererRegistry.register(ModEntities.CRUISE_MISSILE, context -> new ProjectileModelRenderer<>(context, e -> ModBlocks.CRUISE_MISSILE_MODEL, 2.2F));
+		EntityRendererRegistry.register(ModEntities.BOMB, context -> new ProjectileModelRenderer<>(context, e -> ModBlocks.BOMB_MODEL, 1.6F));
 	}
 }

@@ -160,6 +160,10 @@ def gen_blocks(client_jar):
     # Vehicles: never placed as blocks; VehicleRenderer draws these models scaled up.
     for name in models3d.VEHICLES:
         write(f"{ASSETS}/models/block/{name}.json", models3d.vehicle_model(name))
+    for name, elements in models3d.PROJECTILES.items():
+        write(f"{ASSETS}/models/block/{name}.json", {"textures": {"parts": f"{NS}:block/vehicle_parts",
+              "particle": f"{NS}:block/vehicle_parts"}, "elements": elements})
+        write(f"{ASSETS}/blockstates/{name}.json", {"variants": {"": {"model": f"{NS}:block/{name}"}}})
     write(f"{ASSETS}/models/block/tank_icon.json",
           {"textures": {"parts": f"{NS}:block/vehicle_parts", "particle": f"{NS}:block/vehicle_parts"}, "elements": models3d_blocks.TANK_ICON})
     vehicle_item("jeep", models3d.JEEP, f"{NS}:block/jeep_model")

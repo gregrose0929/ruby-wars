@@ -214,7 +214,7 @@ public class VehicleEntity extends Mob {
 		cannonCooldown = 60;
 		Vec3 aim = Vec3.directionFromRotation(barrelPitch(), turretYaw());
 		Vec3 muzzle = muzzlePosition();
-		RocketEntity shell = RocketEntity.shell(level(), driver, muzzle, aim.scale(2.6), 4.0F);
+		RocketEntity shell = RocketEntity.tankShell(level(), driver, muzzle, aim.scale(2.6), 4.0F);
 		level().addFreshEntity(shell);
 		ServerLevel level = (ServerLevel) level();
 		level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 4.0F, 0.5F);

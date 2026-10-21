@@ -226,3 +226,43 @@ VEHICLES = {
 def vehicle_model(name):
     return {"textures": {"parts": "rubymod:block/vehicle_parts", "particle": "rubymod:block/vehicle_parts"},
             "ambientocclusion": False, "elements": VEHICLES[name]}
+
+
+# ----------------------------------------------------------------- projectiles (front = -Z, centered on 8,8)
+
+PROJECTILES = {
+    "rocket_model": [
+        vbox([7.25, 7.25, 2], [8.75, 8.75, 13], OLIVE),
+        vbox([7.5, 7.5, 0.5], [8.5, 8.5, 2], RUBY),
+        vbox([5.5, 7.75, 11], [10.5, 8.25, 13.5], DARK),
+        vbox([7.75, 5.5, 11], [8.25, 10.5, 13.5], DARK),
+        vbox([7.4, 7.4, 13], [8.6, 8.6, 14], RED_LIGHT),
+    ],
+    "tank_shell_model": [
+        vbox([7.2, 7.2, 4], [8.8, 8.8, 12], BRASS),
+        vbox([7.4, 7.4, 2.5], [8.6, 8.6, 4], DARK),
+        vbox([7.6, 7.6, 1.5], [8.4, 8.4, 2.5], BLACK),
+        vbox([7.3, 7.3, 12], [8.7, 8.7, 13], RED_LIGHT),
+    ],
+    "mortar_shell_model": [
+        vbox([7, 7, 3], [9, 9, 11], OLIVE),
+        vbox([7.5, 7.5, 1.5], [8.5, 8.5, 3], DARK),
+        vbox([6, 7.8, 10.5], [10, 8.2, 13], DARK),
+        vbox([7.8, 6, 10.5], [8.2, 10, 13], DARK),
+    ],
+    "cruise_missile_model": [
+        vbox([7, 7, -2], [9, 9, 16], WHITE),
+        vbox([7.4, 7.4, -4], [8.6, 8.6, -2], RUBY),
+        vbox([3, 7.8, 6], [13, 8.2, 10], LIGHT),
+        vbox([5.5, 7.8, 14], [10.5, 8.2, 16], STEEL),
+        vbox([7.8, 5.5, 14], [8.2, 10.5, 16], STEEL),
+        vbox([7.3, 7.3, 16], [8.7, 8.7, 17], RED_LIGHT),
+    ],
+    "bomb_model": [
+        vbox([6.5, 6.5, 3], [9.5, 9.5, 12], DARK),
+        vbox([7, 7, 1.5], [9, 9, 3], STEEL),
+        vbox([5, 7.8, 12], [11, 8.2, 15], OLIVE_DARK),
+        vbox([7.8, 5, 12], [8.2, 11, 15], OLIVE_DARK),
+        vbox([6.4, 6.4, 6], [9.6, 9.6, 7], BRASS),
+    ],
+}

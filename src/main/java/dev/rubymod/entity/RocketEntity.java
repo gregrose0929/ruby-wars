@@ -23,6 +23,8 @@ import net.minecraft.world.phys.Vec3;
 public class RocketEntity extends ModProjectile {
 	private static final double SPEED = 1.6;
 	private static final int LIFETIME = 140;
+	private static final net.minecraft.network.syncher.EntityDataAccessor<Boolean> SHELL =
+			net.minecraft.network.syncher.SynchedEntityData.defineId(RocketEntity.class, net.minecraft.network.syncher.EntityDataSerializers.BOOLEAN);
 	private boolean guided = true;
 	private float power = 3.0F;
 
@@ -31,6 +33,24 @@ public class RocketEntity extends ModProjectile {
 	}
 
 	/** An unguided heavy round (tank shells, jet missiles). */
+	@Override
+	protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+		super.defineSynchedData(builder);
+		builder.define(SHELL, false);
+	}
+
+	/** Drawn as a tank shell instead of a rocket. */
+	public boolean isShell() {
+		return entityData.get(SHELL);
+	}
+
+	/** A tank round: looks like a shell instead of a rocket. */
+	public static RocketEntity tankShell(Level level, LivingEntity shooter, Vec3 from, Vec3 velocity, float power) {
+		RocketEntity shell = shell(level, shooter, from, velocity, power);
+		shell.entityData.set(SHELL, true);
+		return shell;
+	}
+
 	public static RocketEntity shell(Level level, LivingEntity shooter, Vec3 from, Vec3 velocity, float power) {
 		RocketEntity rocket = fire(level, shooter);
 		rocket.guided = false;

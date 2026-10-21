@@ -97,6 +97,11 @@ public class ModBlocks {
 	public static final Block TANK_TURRET_MODEL = registerModelOnly("tank_turret_model");
 	public static final Block TANK_BARREL_MODEL = registerModelOnly("tank_barrel_model");
 	public static final Block JET_MODEL = registerModelOnly("jet_model");
+	public static final Block ROCKET_MODEL = registerModelOnly("rocket_model");
+	public static final Block TANK_SHELL_MODEL = registerModelOnly("tank_shell_model");
+	public static final Block MORTAR_SHELL_MODEL = registerModelOnly("mortar_shell_model");
+	public static final Block CRUISE_MISSILE_MODEL = registerModelOnly("cruise_missile_model");
+	public static final Block BOMB_MODEL = registerModelOnly("bomb_model");
 
 	private static Block registerModelOnly(String name) {
 		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, RubyMod.id(name));
