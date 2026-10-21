@@ -126,22 +126,92 @@ public class GameHud implements HudElement {
 		g.text(font, rate, 92 - font.width(rate), y + 10, net >= 0 ? 0xFF5BE37D : RED);
 	}
 
+	/**
+	 * The ammo panel (bottom right): gun name and fire mode, a big round count (amber when low,
+	 * flashing red when empty), reserve ammo, a row of rounds, and fitted attachments. Launchers
+	 * show their rockets or missiles. A reload prompt appears under the crosshair when you're low.
+	 */
 	private void drawAmmo(GuiGraphicsExtractor g, Font font, Player player, int w, int h) {
 		ItemStack held = player.getMainHandItem();
-		if (!(held.getItem() instanceof GunItem gun) || player.getVehicle() instanceof dev.rubymod.entity.AircraftEntity) {
+		if (player.getVehicle() instanceof dev.rubymod.entity.AircraftEntity) {
 			return;
 		}
-		GunStats stats = gun.stats(held);
-		int ammo = GunItem.ammo(held);
-		int reserve = player.getInventory().countItem(stats.ammo().item());
-		String mag = ammo + " / " + stats.magazine();
-		String res = player.isCreative() ? "inf" : String.valueOf(reserve);
-		int x = w - 100;
-		int y = h - 40;
-		g.fill(x - 4, y - 4, w - 4, y + 22, PANEL);
-		g.text(font, held.getHoverName(), x, y, GRAY);
-		g.text(font, mag, x, y + 11, ammo == 0 ? RED : WHITE);
-		g.text(font, "[" + res + "]", x + font.width(mag) + 6, y + 11, GRAY);
+		int ammo;
+		int magazine;
+		int reserve;
+		String mode;
+		java.util.List<String> attachments = java.util.List.of();
+		if (held.getItem() instanceof GunItem gun) {
+			GunStats stats = gun.stats(held);
+			ammo = GunItem.ammo(held);
+			magazine = stats.magazine();
+			reserve = player.getInventory().countItem(stats.ammo().item());
+			mode = stats.automatic() ? "AUTO" : stats.pellets() > 1 ? "PUMP" : stats.scoped() ? "BOLT" : "SEMI";
+			attachments = held.getOrDefault(dev.rubymod.registry.ModComponents.ATTACHMENTS, java.util.List.<String>of());
+		} else if (held.getItem() instanceof dev.rubymod.item.RocketLauncherItem || held.getItem() instanceof dev.rubymod.item.LockOnLauncherItem) {
+			var rocket = held.getItem() instanceof dev.rubymod.item.RocketLauncherItem ? dev.rubymod.registry.ModItems.ROCKET
+					: held.is(dev.rubymod.registry.ModItems.SKYHAMMER) ? dev.rubymod.registry.ModItems.AA_MISSILE : dev.rubymod.registry.ModItems.AT_MISSILE;
+			boolean loaded = player.getCooldowns().getCooldownPercent(held, 0.0F) <= 0.0F;
+			ammo = loaded ? 1 : 0;
+			magazine = 1;
+			reserve = player.getInventory().countItem(rocket);
+			mode = held.getItem() instanceof dev.rubymod.item.LockOnLauncherItem ? "LOCK-ON" : "SINGLE";
+		} else {
+			return;
+		}
+		boolean creative = player.isCreative();
+		int pw = 124;
+		int ph = 44;
+		int x = w - pw - 4;
+		int y = h - ph - 4;
+		g.fillGradient(x, y, x + pw, y + ph, 0xC0181C22, 0xC00E1013);
+		g.fill(x, y, x + 2, y + ph, 0xFFD0154A);
+		String name = font.plainSubstrByWidth(held.getHoverName().getString().toUpperCase(java.util.Locale.ROOT), pw - 16 - font.width(mode));
+		g.text(font, name, x + 7, y + 4, 0xFF8B93A1, false);
+		g.text(font, mode, x + pw - 5 - font.width(mode), y + 4, 0xFF5A6370, false);
+		boolean low = ammo == 0 || magazine > 1 && ammo <= magazine / 4;
+		boolean blink = (System.currentTimeMillis() / 300) % 2 == 0;
+		int color = ammo == 0 ? (blink ? RED : 0xFF7A1F2A) : low ? GOLD : WHITE;
+		String count = String.valueOf(ammo);
+		g.pose().pushMatrix();
+		g.pose().translate(x + 7, y + 15);
+		g.pose().scale(2.0F, 2.0F);
+		g.text(font, count, 0, 0, color, true);
+		g.pose().popMatrix();
+		int rx = x + 9 + font.width(count) * 2;
+		g.text(font, "/ " + (creative ? "∞" : reserve), rx, y + 22, 0xFF8B93A1, false);
+		// Rounds left as pips (one per round up to 30, scaled for bigger mags).
+		int pips = Math.min(30, magazine);
+		int filled = Math.round(pips * (ammo / (float) Math.max(1, magazine)));
+		int px = x + 7;
+		for (int i = 0; i < pips; i++) {
+			int pxx = px + i * 4;
+			if (pxx > x + pw - 6) {
+				break;
+			}
+			g.fill(pxx, y + 36, pxx + 2, y + 40, i < filled ? (low ? GOLD : 0xFFDDE2E8) : 0xFF2A2F36);
+		}
+		// Attachments
+		int ax = x + pw - 6;
+		for (String a : attachments) {
+			var item = switch (a) {
+				case "EXTENDED_MAG" -> dev.rubymod.registry.ModItems.EXTENDED_MAG;
+				case "RED_DOT" -> dev.rubymod.registry.ModItems.RED_DOT_SIGHT;
+				case "GRIP" -> dev.rubymod.registry.ModItems.VERTICAL_GRIP;
+				default -> dev.rubymod.registry.ModItems.SUPPRESSOR;
+			};
+			ax -= 10;
+			g.pose().pushMatrix();
+			g.pose().translate(ax, y + 15);
+			g.pose().scale(0.6F, 0.6F);
+			g.item(new ItemStack(item), 0, 0);
+			g.pose().popMatrix();
+		}
+		// Prompt under the crosshair.
+		if (ClientState.reloadTicks <= 0 && low && magazine > 1) {
+			String prompt = !creative && reserve == 0 ? "NO AMMO" : "RELOAD [" + RubyModClient.reloadKey.getTranslatedKeyMessage().getString() + "]";
+			g.centeredText(font, prompt, w / 2, h / 2 + 22, !creative && reserve == 0 ? RED : GOLD);
+		}
 	}
 
 	private void drawReload(GuiGraphicsExtractor g, int w, int h) {
