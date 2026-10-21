@@ -279,12 +279,19 @@ public final class GunView {
 		pos.x += Mth.sin(bobPhase) * 0.012F * bobAmount * bob + swayX * -0.004F;
 		pos.y += Math.abs(Mth.cos(bobPhase)) * -0.014F * bobAmount * bob + swayY * 0.003F + Mth.sin(ms / 900.0F) * 0.003F * (1 - ads);
 		pos.z += recoil * (0.05F - 0.025F * ads);
-		pos.add(-0.10F * sprint, -0.07F * sprint, 0.04F * sprint);
+		// Rifles swing across the chest when sprinting; shoulder launchers just drop and tilt down.
+		boolean shoulder = isLauncher(model);
+		float sprintYaw = shoulder ? 6.0F : 30.0F;
+		if (shoulder) {
+			pos.add(0.02F * sprint, -0.14F * sprint, 0.06F * sprint);
+		} else {
+			pos.add(-0.10F * sprint, -0.07F * sprint, 0.04F * sprint);
+		}
 		pos.add(-0.12F * reloadTilt, 0.06F * reloadTilt, 0.04F * reloadTilt);
 		pos.y -= (1.0F - smooth(equip)) * 0.45F;
 
-		float gunPitch = recoil * (5.0F - 2.0F * ads) - 24.0F * sprint + 8.0F * reloadTilt - (1.0F - smooth(equip)) * 55.0F + swayY * 0.6F;
-		float gunYaw = view.yaw * (1.0F - ads) + 30.0F * sprint + 16.0F * reloadTilt + swayX * 0.8F;
+		float gunPitch = recoil * (5.0F - 2.0F * ads) - (shoulder ? 14.0F : 24.0F) * sprint + 8.0F * reloadTilt - (1.0F - smooth(equip)) * 55.0F + swayY * 0.6F;
+		float gunYaw = view.yaw * (1.0F - ads) + sprintYaw * sprint + 16.0F * reloadTilt + swayX * 0.8F;
 		float gunRoll = recoilRoll * recoil * 0.5F + 6.0F * sprint + 28.0F * reloadTilt - swayX * 0.6F;
 
 		Matrix4f gun = new Matrix4f()
