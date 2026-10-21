@@ -227,6 +227,7 @@ public final class BattleDirector {
 		SeasonData data = SeasonData.get();
 		SeasonData.PlayerRecord record = data.player(victim.getUUID(), victim.getName().getString());
 		record.deaths++;
+		record.killstreakBefore = record.killstreak;
 		record.killstreak = 0;
 		SeasonData.markDirty();
 
@@ -238,6 +239,26 @@ public final class BattleDirector {
 			k.kills++;
 			k.killstreak++;
 			k.bestKillstreak = Math.max(k.bestKillstreak, k.killstreak);
+			String streak = switch (k.killstreak) {
+				case 3 -> "TRIPLE KILL";
+				case 5 -> "RAMPAGE";
+				case 7 -> "UNSTOPPABLE";
+				case 10 -> "LEGENDARY";
+				default -> null;
+			};
+			if (streak != null && k.killstreak != GameConfig.get().killstreakForAirStrike) {
+				Alerts.title(killer, streak, k.killstreak + " kills without dying", ChatFormatting.RED);
+				killer.level().playSound(null, killer.blockPosition(), SoundEvents.RAID_HORN.value(), net.minecraft.sounds.SoundSource.PLAYERS, 0.4F, 1.6F);
+				if (k.killstreak >= 5) {
+					Alerts.broadcast(server, Component.literal(killer.getName().getString() + " is on a " + k.killstreak + "-kill streak (" + streak + ")!")
+							.withStyle(ChatFormatting.RED));
+				}
+			}
+			// Ending someone's streak is worth calling out.
+			if (record.killstreakBefore >= 3) {
+				Alerts.broadcast(server, Component.literal(killer.getName().getString() + " ended " + record.name + "'s " + record.killstreakBefore
+						+ "-kill streak.").withStyle(ChatFormatting.GOLD));
+			}
 			if (k.killstreak == GameConfig.get().killstreakForAirStrike) {
 				killer.getInventory().add(new ItemStack(ModItems.AIR_STRIKE_FLARE));
 				Alerts.title(killer, k.killstreak + " KILL STREAK", "Air Strike Flare unlocked!", ChatFormatting.GOLD);

@@ -97,6 +97,8 @@ public class SeasonData {
 		public int deaths;
 		public int heartsDestroyed;
 		public int killstreak;
+		/** The streak this player had when they last died (for "ended X's streak"). */
+		public transient int killstreakBefore;
 		public int missilesUsed;
 		public boolean heartGiven;
 		public int bestKillstreak;
