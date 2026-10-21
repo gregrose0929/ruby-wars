@@ -2,7 +2,6 @@ package dev.rubymod.item;
 
 import java.util.function.Supplier;
 
-import dev.rubymod.entity.VehicleEntity;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -14,14 +13,15 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
 
-/** Right-click the ground to deploy a Jeep or Tank. Right-click the vehicle to get in. */
+/** Right-click the ground to deploy a Jeep, Tank, or Jet. Right-click the vehicle to get in. */
 public class VehicleItem extends Item {
-	private final Supplier<EntityType<VehicleEntity>> type;
+	private final Supplier<? extends EntityType<? extends Mob>> type;
 
-	public VehicleItem(Supplier<EntityType<VehicleEntity>> type, Properties properties) {
+	public VehicleItem(Supplier<? extends EntityType<? extends Mob>> type, Properties properties) {
 		super(properties);
 		this.type = type;
 	}
@@ -32,7 +32,7 @@ public class VehicleItem extends Item {
 			return InteractionResult.SUCCESS;
 		}
 		BlockPos pos = context.getClickedPos().relative(context.getClickedFace());
-		VehicleEntity vehicle = type.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+		Mob vehicle = type.get().create(level, EntitySpawnReason.SPAWN_ITEM_USE);
 		if (vehicle == null) {
 			return InteractionResult.FAIL;
 		}

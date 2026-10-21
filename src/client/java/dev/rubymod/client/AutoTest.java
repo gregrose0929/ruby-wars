@@ -90,8 +90,13 @@ public final class AutoTest {
 			command(mc, "weather clear");
 			command(mc, "gamemode creative @a");
 			command(mc, "kill @e[type=!minecraft:player]");
-			command(mc, "execute at @p run fill ~-6 ~-1 ~-6 ~20 ~-1 ~20 minecraft:smooth_stone");
-			command(mc, "execute at @p run fill ~-6 ~ ~-6 ~20 ~10 ~20 minecraft:air");
+			// A flat 60x60 arena (split into quarters to stay under the fill limit).
+			for (String q : new String[] {"~-30 ~-1 ~-30 ~0 ~14 ~0", "~1 ~-1 ~-30 ~30 ~14 ~0", "~-30 ~-1 ~1 ~0 ~14 ~30", "~1 ~-1 ~1 ~30 ~14 ~30"}) {
+				command(mc, "execute at @p run fill " + q + " minecraft:air");
+			}
+			for (String q : new String[] {"~-30 ~-1 ~-30 ~0 ~-1 ~0", "~1 ~-1 ~-30 ~30 ~-1 ~0", "~-30 ~-1 ~1 ~0 ~-1 ~30", "~1 ~-1 ~1 ~30 ~-1 ~30"}) {
+				command(mc, "execute at @p run fill " + q + " minecraft:smooth_stone");
+			}
 			command(mc, "clear @a");
 		});
 		then(15, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 10"));
@@ -173,11 +178,11 @@ public final class AutoTest {
 	private static void vehiclesScript() {
 		then(5, mc -> {
 			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 180 15");
-			command(mc, "execute at @p run summon rubymod:tank ~-4 ~ ~-9 {Rotation:[150f,0f]}");
-			command(mc, "execute at @p run summon rubymod:jeep ~4 ~ ~-8 {Rotation:[210f,0f]}");
+			command(mc, "execute at @p run summon rubymod:tank ~-5 ~ ~-10 {Rotation:[150f,0f]}");
+			command(mc, "execute at @p run summon rubymod:jeep ~5 ~ ~-9 {Rotation:[210f,0f]}");
 		});
 		then(20, mc -> shot(mc, "vehicles-front"));
-		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~-8 ~3 ~-14 -60 25"));
+		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~-14 ~4 ~-6 -125 20"));
 		then(15, mc -> shot(mc, "vehicles-side"));
 		then(2, mc -> {
 			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
@@ -202,6 +207,63 @@ public final class AutoTest {
 		then(2, mc -> ClientPlayNetworking.send(new Payloads.VehicleFire()));
 		then(3, mc -> shot(mc, "vehicles-tank-firing"));
 		then(15, mc -> command(mc, "ride @p dismount"));
+
+		// Jet: spawn it high up, throttle up, climb, shoot, bomb.
+		then(10, mc -> {
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+			command(mc, "execute at @p run summon rubymod:jet ~ ~70 ~6 {Rotation:[0f,0f]}");
+		});
+		then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:jet,limit=1,sort=nearest]"));
+		then(10, mc -> {
+			if (!(mc.player.getVehicle() instanceof dev.rubymod.entity.JetEntity)) {
+				log("FAIL: could not board the jet");
+				return;
+			}
+			start = mc.player.getVehicle().position();
+			mc.options.keyUp.setDown(true);
+			mc.player.setXRot(0);
+		});
+		then(70, mc -> {
+			if (mc.player.getVehicle() instanceof dev.rubymod.entity.JetEntity jet) {
+				log("jet after 70 ticks of throttle: speed {} throttle {} altitude change {}", String.format("%.2f", jet.speed()),
+						String.format("%.2f", jet.throttle()), String.format("%.1f", jet.getY() - start.y));
+				start = jet.position();
+				mc.player.setXRot(-25);
+			}
+		});
+		then(30, mc -> {
+			if (mc.player.getVehicle() instanceof dev.rubymod.entity.JetEntity jet) {
+				log("jet climbing: altitude change {} over 30 ticks, pitch {}", String.format("%.1f", jet.getY() - start.y), jet.getXRot());
+				mc.player.setXRot(0);
+			}
+		});
+		then(5, mc -> shot(mc, "jet-flying"));
+		then(2, mc -> ClientPlayNetworking.send(new Payloads.VehicleFire()));
+		then(4, mc -> shot(mc, "jet-missile"));
+		then(2, mc -> ClientPlayNetworking.send(new Payloads.VehicleBomb()));
+		then(20, mc -> {
+			mc.options.keyUp.setDown(false);
+			command(mc, "ride @p dismount");
+			command(mc, "kill @e[type=rubymod:jet]");
+		});
+		then(40, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			command(mc, "kill @e[type=rubymod:tank]");
+			command(mc, "kill @e[type=rubymod:jeep]");
+		});
+		// Air strike flyover over a spot ahead of the player.
+		then(20, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				var level = (net.minecraft.server.level.ServerLevel) player.level();
+				Vec3 target = player.position().add(0, 0, 22);
+				level.addFreshEntity(dev.rubymod.entity.JetEntity.airStrike(level, player, target, 90.0F));
+			});
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~-8 0 -10");
+		});
+		then(40, mc -> shot(mc, "airstrike-flyover"));
+		then(25, mc -> shot(mc, "airstrike-impact"));
 		then(2, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 	}
 

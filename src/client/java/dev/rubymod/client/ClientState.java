@@ -23,6 +23,9 @@ public final class ClientState {
 	/** Recent kills, newest first. */
 	public static final ArrayDeque<Kill> KILLS = new ArrayDeque<>();
 
+	public static float shake;
+	public static int shakeTicks;
+
 	public static long hitMarkerAt;
 	public static long damagedAt;
 	public static double damageX;

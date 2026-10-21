@@ -23,9 +23,21 @@ import net.minecraft.world.phys.Vec3;
 public class RocketEntity extends ModProjectile {
 	private static final double SPEED = 1.6;
 	private static final int LIFETIME = 140;
+	private boolean guided = true;
+	private float power = 3.0F;
 
 	public RocketEntity(EntityType<? extends RocketEntity> type, Level level) {
 		super(type, level);
+	}
+
+	/** An unguided heavy round (tank shells, jet missiles). */
+	public static RocketEntity shell(Level level, LivingEntity shooter, Vec3 from, Vec3 velocity, float power) {
+		RocketEntity rocket = fire(level, shooter);
+		rocket.guided = false;
+		rocket.power = power;
+		rocket.setPos(from);
+		rocket.setDeltaMovement(velocity);
+		return rocket;
 	}
 
 	public static RocketEntity fire(Level level, LivingEntity shooter) {
@@ -56,9 +68,11 @@ public class RocketEntity extends ModProjectile {
 	@Override
 	public void tick() {
 		if (level() instanceof ServerLevel level) {
-			steer();
+			if (guided) {
+				steer();
+			}
 			if (tickCount > LIFETIME) {
-				explode(level, 3.0F, true);
+				explode(level, power, true);
 				return;
 			}
 			if (tickCount % 2 == 0) {
@@ -85,6 +99,6 @@ public class RocketEntity extends ModProjectile {
 
 	@Override
 	protected void onImpact(ServerLevel level, HitResult hitResult) {
-		explode(level, 3.0F, true);
+		explode(level, power, true);
 	}
 }

@@ -1,5 +1,6 @@
 package dev.rubymod.game;
 
+import dev.rubymod.entity.JetEntity;
 import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.gun.GunItem;
 import dev.rubymod.gun.Gunfire;
@@ -82,6 +83,13 @@ public final class GameEvents {
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleFire.TYPE, (payload, context) -> {
 			if (context.player().getVehicle() instanceof VehicleEntity vehicle) {
 				vehicle.fireCannon(context.player());
+			} else if (context.player().getVehicle() instanceof JetEntity jet) {
+				jet.fireMissile(context.player());
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleBomb.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof JetEntity jet) {
+				jet.dropBomb(context.player());
 			}
 		});
 

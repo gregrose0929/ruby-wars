@@ -46,6 +46,6 @@ public class BombEntity extends ModProjectile {
 
 	@Override
 	protected void onImpact(ServerLevel level, HitResult hitResult) {
-		explode(level, 4.0F, true);
+		explode(level, 5.0F, true);
 	}
 }

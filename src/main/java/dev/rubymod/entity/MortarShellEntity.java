@@ -23,6 +23,7 @@ public class MortarShellEntity extends ModProjectile implements Interceptable {
 	public static final double GRAVITY = 0.05;
 	private double targetX;
 	private double targetZ;
+	private boolean whistled;
 
 	public MortarShellEntity(EntityType<? extends MortarShellEntity> type, Level level) {
 		super(type, level);
@@ -67,8 +68,10 @@ public class MortarShellEntity extends ModProjectile implements Interceptable {
 		super.tick();
 		if (level() instanceof ServerLevel level) {
 			level.sendParticles(ParticleTypes.SMOKE, getX(), getY(), getZ(), 1, 0, 0, 0, 0);
-			if (getDeltaMovement().y < 0 && tickCount % 10 == 0) {
-				level.playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.HOSTILE, 2.0F, 0.5F);
+			if (getDeltaMovement().y < 0 && !whistled) {
+				// Incoming! A falling whistle so people below have a moment to scatter.
+				whistled = true;
+				level.playSound(null, getX(), getY(), getZ(), SoundEvents.TRIDENT_RIPTIDE_3.value(), SoundSource.HOSTILE, 6.0F, 0.5F);
 			}
 			if (tickCount > 600) {
 				discard();
@@ -78,7 +81,7 @@ public class MortarShellEntity extends ModProjectile implements Interceptable {
 
 	@Override
 	protected void onImpact(ServerLevel level, HitResult hitResult) {
-		explode(level, 3.0F, true);
+		explode(level, 4.5F, true);
 	}
 
 	@Override

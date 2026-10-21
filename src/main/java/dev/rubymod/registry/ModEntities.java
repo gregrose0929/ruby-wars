@@ -6,6 +6,7 @@ import dev.rubymod.entity.BombEntity;
 import dev.rubymod.entity.BreachingChargeEntity;
 import dev.rubymod.entity.CruiseMissileEntity;
 import dev.rubymod.entity.GrenadeEntity;
+import dev.rubymod.entity.JetEntity;
 import dev.rubymod.entity.MortarShellEntity;
 import dev.rubymod.entity.RocketEntity;
 import dev.rubymod.entity.VehicleEntity;
@@ -43,6 +44,9 @@ public class ModEntities {
 	public static final EntityType<VehicleEntity> TANK = register("tank",
 			EntityType.Builder.<VehicleEntity>of(VehicleEntity::new, MobCategory.MISC).sized(3.0F, 2.0F).clientTrackingRange(10).updateInterval(1));
 
+	public static final EntityType<JetEntity> JET = register("jet",
+			EntityType.Builder.<JetEntity>of(JetEntity::new, MobCategory.MISC).sized(3.0F, 1.5F).clientTrackingRange(16).updateInterval(1));
+
 	private static <T extends Entity> EntityType<T> register(String name, EntityType.Builder<T> builder) {
 		ResourceKey<EntityType<?>> key = ResourceKey.create(Registries.ENTITY_TYPE, RubyMod.id(name));
 		return Registry.register(BuiltInRegistries.ENTITY_TYPE, key, builder.build(key));
@@ -51,5 +55,6 @@ public class ModEntities {
 	public static void initialize() {
 		FabricDefaultAttributeRegistry.register(JEEP, VehicleEntity.jeepAttributes());
 		FabricDefaultAttributeRegistry.register(TANK, VehicleEntity.tankAttributes());
+		FabricDefaultAttributeRegistry.register(JET, JetEntity.attributes());
 	}
 }

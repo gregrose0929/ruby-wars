@@ -1,5 +1,6 @@
 package dev.rubymod.client;
 
+import dev.rubymod.entity.JetEntity;
 import dev.rubymod.entity.VehicleEntity;
 import dev.rubymod.gun.GunItem;
 import dev.rubymod.item.RocketLauncherItem;
@@ -17,9 +18,16 @@ public final class Trigger {
 	private Trigger() {
 	}
 
+	private static boolean wasJumping;
+
 	private static boolean drivingArmedVehicle(Minecraft mc) {
-		return mc.player != null && mc.player.getVehicle() instanceof VehicleEntity vehicle && vehicle.getControllingPassenger() == mc.player
-				&& vehicle.hasWeapon();
+		if (mc.player == null) {
+			return false;
+		}
+		if (mc.player.getVehicle() instanceof JetEntity jet) {
+			return jet.getControllingPassenger() == mc.player;
+		}
+		return mc.player.getVehicle() instanceof VehicleEntity vehicle && vehicle.getControllingPassenger() == mc.player && vehicle.hasWeapon();
 	}
 
 	/** Should left-click be taken away from vanilla (no punching, no mining)? */
@@ -33,6 +41,11 @@ public final class Trigger {
 
 	/** Called every client tick. */
 	public static void tick(Minecraft mc) {
+		boolean jumping = mc.player != null && mc.gui.screen() == null && mc.options.keyJump.isDown();
+		if (jumping && !wasJumping && mc.player.getVehicle() instanceof JetEntity jet && jet.getControllingPassenger() == mc.player) {
+			ClientPlayNetworking.send(new Payloads.VehicleBomb());
+		}
+		wasJumping = jumping;
 		boolean down = mc.player != null && mc.gui.screen() == null && mc.options.keyAttack.isDown();
 		boolean pressed = down && !wasDown;
 		wasDown = down;

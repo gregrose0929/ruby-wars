@@ -23,7 +23,7 @@ public final class HeavyWeapons {
 	private static final int MORTAR_MIN = 40;
 	private static final int MORTAR_MAX = 250;
 	private static final int MORTAR_RELOAD_TICKS = 100;
-	private static final int VOLLEY = 3;
+	private static final int VOLLEY = 5;
 	private static final Map<Long, Long> MORTAR_READY_AT = new HashMap<>();
 
 	private HeavyWeapons() {
@@ -34,7 +34,7 @@ public final class HeavyWeapons {
 		String targetText = target == null ? "No target marked. Use a Rangefinder first."
 				: "Target: " + target.getX() + ", " + target.getY() + ", " + target.getZ() + " (" + (int) Math.sqrt(target.distSqr(pos)) + " blocks)";
 		if (mortar) {
-			player.sendSystemMessage(Component.literal("Mortar: right-click with Mortar Shells to fire a 3-shell volley. Range "
+			player.sendSystemMessage(Component.literal("Mortar: right-click with Mortar Shells to fire a 5-shell volley. Range "
 					+ MORTAR_MIN + "-" + MORTAR_MAX + ". " + targetText));
 		} else {
 			SeasonData.PlayerRecord record = SeasonData.get().player(player.getUUID(), player.getName().getString());
@@ -83,7 +83,7 @@ public final class HeavyWeapons {
 		int shells = player.isCreative() ? VOLLEY : Math.min(VOLLEY, held.getCount());
 		Vec3 from = Vec3.atCenterOf(mortar).add(0, 1.0, 0);
 		for (int i = 0; i < shells; i++) {
-			Vec3 aim = Vec3.atCenterOf(target).add(level.getRandom().triangle(0, 3), 0, level.getRandom().triangle(0, 3));
+			Vec3 aim = Vec3.atCenterOf(target).add(level.getRandom().triangle(0, 4), 0, level.getRandom().triangle(0, 4));
 			MortarShellEntity shell = MortarShellEntity.launch(level, player, from.add(0, i * 0.6, 0), aim);
 			level.addFreshEntity(shell);
 		}

@@ -6,6 +6,10 @@ import dev.rubymod.registry.ModEntities;
 import dev.rubymod.registry.ModItems;
 
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -36,6 +40,10 @@ import net.minecraft.world.phys.Vec3;
  * kill them.
  */
 public class VehicleEntity extends Mob {
+	private static final EntityDataAccessor<Float> TURRET_YAW = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Float> BARREL_PITCH = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.FLOAT);
+	/** Turret traverse speed, degrees per tick. */
+	private static final float TRAVERSE = 4.0F;
 	private int cannonCooldown;
 
 	public VehicleEntity(EntityType<? extends VehicleEntity> type, Level level) {
@@ -46,6 +54,23 @@ public class VehicleEntity extends Mob {
 	/** Does the driver have a weapon to fire with the attack button? */
 	public boolean hasWeapon() {
 		return isTank();
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		super.defineSynchedData(builder);
+		builder.define(TURRET_YAW, 0.0F);
+		builder.define(BARREL_PITCH, 0.0F);
+	}
+
+	/** Where the turret points (world yaw, degrees). */
+	public float turretYaw() {
+		return entityData.get(TURRET_YAW);
+	}
+
+	/** Barrel elevation (negative = up, like player pitch). */
+	public float barrelPitch() {
+		return entityData.get(BARREL_PITCH);
 	}
 
 	public boolean isTank() {
@@ -187,13 +212,37 @@ public class VehicleEntity extends Mob {
 			return;
 		}
 		cannonCooldown = 60;
-		Vec3 look = driver.getLookAngle();
-		RocketEntity shell = RocketEntity.fire(level(), driver);
-		shell.setPos(getX() + look.x * 2.5, getY() + 1.9 + look.y * 2.5, getZ() + look.z * 2.5);
-		shell.setDeltaMovement(look.scale(2.2));
+		Vec3 aim = Vec3.directionFromRotation(barrelPitch(), turretYaw());
+		Vec3 muzzle = muzzlePosition();
+		RocketEntity shell = RocketEntity.shell(level(), driver, muzzle, aim.scale(2.6), 4.0F);
 		level().addFreshEntity(shell);
-		level().playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 3.0F, 0.6F);
-		((ServerLevel) level()).sendParticles(ParticleTypes.EXPLOSION, getX() + look.x * 2.5, getY() + 1.9, getZ() + look.z * 2.5, 1, 0, 0, 0, 0);
+		ServerLevel level = (ServerLevel) level();
+		level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 4.0F, 0.5F);
+		level.sendParticles(ParticleTypes.EXPLOSION, muzzle.x, muzzle.y, muzzle.z, 2, 0.1, 0.1, 0.1, 0);
+		level.sendParticles(ParticleTypes.LARGE_SMOKE, muzzle.x, muzzle.y, muzzle.z, 12, 0.3, 0.3, 0.3, 0.05);
+		Explosions.shake(level, muzzle, 2.0F, 12);
+		// Recoil: the tank rocks back a little.
+		setDeltaMovement(getDeltaMovement().add(aim.multiply(-0.25, 0, -0.25)));
+	}
+
+	/** World position of the barrel tip (model: turret on top of the hull, barrel pivot ahead of center). */
+	public Vec3 muzzlePosition() {
+		double scale = 3.0 / 16.0;
+		Vec3 pivot = position().add(0, (7.0 + 1.6) * scale, 0).add(Vec3.directionFromRotation(0, turretYaw()).scale(4.5 * scale));
+		return pivot.add(Vec3.directionFromRotation(barrelPitch(), turretYaw()).scale(15.5 * scale));
+	}
+
+	private void aimTurret() {
+		LivingEntity driver = getControllingPassenger();
+		if (driver == null) {
+			return;
+		}
+		float yaw = turretYaw();
+		float yawStep = Mth.clamp(Mth.wrapDegrees(driver.getYHeadRot() - yaw), -TRAVERSE, TRAVERSE);
+		entityData.set(TURRET_YAW, Mth.wrapDegrees(yaw + yawStep));
+		float pitch = barrelPitch();
+		float targetPitch = Mth.clamp(driver.getXRot(), -20.0F, 8.0F);
+		entityData.set(BARREL_PITCH, pitch + Mth.clamp(targetPitch - pitch, -3.0F, 3.0F));
 	}
 
 	@Override
@@ -201,6 +250,12 @@ public class VehicleEntity extends Mob {
 		super.tick();
 		if (cannonCooldown > 0) {
 			cannonCooldown--;
+		}
+		if (isTank() && !level().isClientSide()) {
+			if (tickCount == 1 && turretYaw() == 0.0F) {
+				entityData.set(TURRET_YAW, getYRot());
+			}
+			aimTurret();
 		}
 		if (level() instanceof ServerLevel level && getHealth() < getMaxHealth() * 0.3F && tickCount % 4 == 0) {
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + getBbHeight(), getZ(), 1, 0.3, 0.1, 0.3, 0.01);

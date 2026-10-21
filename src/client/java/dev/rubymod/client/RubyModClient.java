@@ -35,6 +35,16 @@ public class RubyModClient implements ClientModInitializer {
 				}
 			}
 			Trigger.tick(client);
+			if (client.player != null && ClientState.shakeTicks > 0) {
+				ClientState.shakeTicks--;
+				float s = ClientState.shake * (ClientState.shakeTicks / 20.0F + 0.2F);
+				var random = client.player.getRandom();
+				client.player.setXRot(client.player.getXRot() + (random.nextFloat() - 0.5F) * s);
+				client.player.setYRot(client.player.getYRot() + (random.nextFloat() - 0.5F) * s);
+				if (ClientState.shakeTicks == 0) {
+					ClientState.shake = 0;
+				}
+			}
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Recoil.TYPE, (payload, context) -> {
@@ -72,6 +82,10 @@ public class RubyModClient implements ClientModInitializer {
 			ClientState.damageX = payload.x();
 			ClientState.damageZ = payload.z();
 		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Shake.TYPE, (payload, context) -> {
+			ClientState.shake = Math.max(ClientState.shake, payload.strength());
+			ClientState.shakeTicks = Math.max(ClientState.shakeTicks, payload.ticks());
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientState.reset());
 
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
@@ -87,5 +101,6 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.BREACHING_CHARGE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.JEEP, VehicleRenderer::new);
 		EntityRendererRegistry.register(ModEntities.TANK, VehicleRenderer::new);
+		EntityRendererRegistry.register(ModEntities.JET, JetRenderer::new);
 	}
 }

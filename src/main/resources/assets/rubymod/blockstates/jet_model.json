@@ -1,0 +1,7 @@
+{
+	"variants": {
+		"": {
+			"model": "rubymod:block/jet_model"
+		}
+	}
+}

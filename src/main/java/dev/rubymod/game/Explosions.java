@@ -5,15 +5,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import dev.rubymod.net.Net;
+import dev.rubymod.net.Payloads;
 import dev.rubymod.registry.ModBlocks;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * Every explosion in the world passes its list of blocks through {@link #filter}
@@ -33,6 +37,27 @@ public final class Explosions {
 
 	public static void explode(ServerLevel level, Entity source, double x, double y, double z, float power, boolean breakBlocks) {
 		level.explode(source, x, y, z, power, breakBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
+		if (power >= 3.0F) {
+			Vec3 at = new Vec3(x, y, z);
+			shake(level, at, power * 0.9F, (int) (6 + power * 3));
+			level.sendParticles(ParticleTypes.LARGE_SMOKE, x, y + 0.5, z, (int) (power * 6), power * 0.25, power * 0.3, power * 0.25, 0.04);
+			level.sendParticles(ParticleTypes.FLAME, x, y + 0.3, z, (int) (power * 4), power * 0.2, power * 0.15, power * 0.2, 0.08);
+			level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y + 1, z, (int) power * 2, power * 0.3, 0.5, power * 0.3, 0.02);
+		}
+	}
+
+	/** Shake the camera of every player near a blast; stronger the closer they are. */
+	public static void shake(ServerLevel level, Vec3 at, float strength, int ticks) {
+		double reach = 10 + strength * 10;
+		for (ServerPlayer player : level.players()) {
+			double distance = player.position().distanceTo(at);
+			if (distance < reach) {
+				float felt = (float) (strength * (1.0 - distance / reach));
+				if (felt > 0.15F) {
+					Net.send(player, new Payloads.Shake(felt, ticks));
+				}
+			}
+		}
 	}
 
 	public static List<BlockPos> filter(ServerLevel level, List<BlockPos> positions, float radius) {

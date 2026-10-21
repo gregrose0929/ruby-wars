@@ -62,12 +62,7 @@ public class AirStrikeFlareEntity extends ModProjectile {
 	}
 
 	private void callStrike(ServerLevel level) {
-		Vec3 along = Vec3.directionFromRotation(0, lineYaw);
-		for (int i = -2; i <= 2; i++) {
-			Vec3 drop = position().add(along.scale(i * 5)).add(0, 40, 0);
-			level.addFreshEntity(BombEntity.drop(level, getOwner() != null ? getOwner() : this, drop));
-		}
-		level.playSound(null, getX(), getY() + 30, getZ(), SoundEvents.ENDER_DRAGON_FLAP, SoundSource.HOSTILE, 8.0F, 0.5F);
+		level.addFreshEntity(JetEntity.airStrike(level, getOwner() != null ? getOwner() : this, position(), lineYaw));
 		discard();
 	}
 

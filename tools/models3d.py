@@ -109,3 +109,120 @@ GUNS = {
 
 def gun_model(name):
     return {"textures": {"parts": "rubymod:item/gun_parts", "particle": "rubymod:item/gun_parts"}, "elements": GUNS[name]}
+
+
+# ----------------------------------------------------------------- vehicles
+# Vehicles face the low-Z side (front = -Z). VehicleRenderer scales these up.
+
+def vbox(frm, to, swatch, rotation=None, front=None):
+    element = box(frm, to, swatch, rotation)
+    for face in element["faces"].values():
+        face["texture"] = "#parts"
+    if front is not None:
+        element["faces"]["north"]["uv"] = uv(front)
+    return element
+
+
+TANK_HULL = [
+    # Tracks with road wheels.
+    vbox([0, 0, 0.5], [3.5, 4, 15.5], RUBBER),
+    vbox([12.5, 0, 0.5], [16, 4, 15.5], RUBBER),
+    *[vbox([-0.3, 0.8, z], [0.2, 3.2, z + 2.4], DARK) for z in (1.5, 4.5, 7.5, 10.5, 13)],
+    *[vbox([15.8, 0.8, z], [16.3, 3.2, z + 2.4], DARK) for z in (1.5, 4.5, 7.5, 10.5, 13)],
+    vbox([0, 4, 0], [3.6, 4.4, 16], OLIVE_DARK),                 # track guards
+    vbox([12.4, 4, 0], [16, 4.4, 16], OLIVE_DARK),
+    # Hull.
+    vbox([3.5, 1, 1], [12.5, 4.5, 15], OLIVE_DARK),
+    vbox([2, 4.4, 2], [14, 7, 14.5], OLIVE),
+    vbox([2, 3.6, 0.6], [14, 5.6, 2.6], OLIVE, tilt([8, 4.6, 1.6], -22.5, "x")),  # sloped glacis
+    vbox([5, 7, 11], [11, 7.3, 14], BLACK),                      # engine grille
+    vbox([2.5, 5.2, 1.6], [4, 6.2, 2.1], WHITE),                 # headlights
+    vbox([12, 5.2, 1.6], [13.5, 6.2, 2.1], WHITE),
+    vbox([13, 7, 2.5], [14, 8, 6], BRASS),                       # stowed crates
+    vbox([2, 7, 12.5], [5, 8.2, 14.2], OLIVE_DARK),
+]
+
+# The turret is drawn on top of the hull and spins on its own; its center (8, *, 8) is the pivot.
+TANK_TURRET = [
+    vbox([4, 0, 4], [12, 3, 12.5], OLIVE),
+    vbox([4.5, 3, 4.5], [11.5, 3.4, 12], OLIVE_DARK),
+    vbox([6, 0.4, 2.8], [10, 2.6, 4], OLIVE_DARK),               # gun mantlet
+    vbox([6, 3.4, 7.5], [8.8, 3.9, 10.3], DARK),                 # hatch
+    vbox([9.5, 3.4, 6], [10, 4.4, 9.5], BLACK),                  # roof machine gun
+    vbox([11, 3.4, 10.5], [11.3, 10, 10.8], BLACK),              # antenna
+    vbox([12, 0.5, 6], [13, 2.5, 10], OLIVE_DARK),               # side stowage
+]
+
+# The barrel pivots at (8, 1.6, 3.5) in turret space and points toward -Z.
+TANK_BARREL = [
+    vbox([7.35, 1, -11], [8.65, 2.2, 3.5], STEEL),
+    vbox([7.1, 0.7, -12.2], [8.9, 2.5, -11], DARK),              # muzzle brake
+    vbox([7.2, 0.85, -2], [8.8, 2.35, 0.5], DARK),               # fume extractor
+]
+
+JEEP = [
+    # Wheels and hubs.
+    *[vbox([x, 0, z], [x + 3, 4, z + 4], RUBBER) for x in (0, 13) for z in (1, 11)],
+    *[vbox([x, 1.3, z + 1.3], [x + 0.2, 2.7, z + 2.7], LIGHT) for x in (-0.1, 15.9) for z in (1, 11)],
+    vbox([2, 2.5, 0], [14, 5, 16], OLIVE_DARK),                  # chassis
+    vbox([2.5, 5, 0], [13.5, 7, 5.5], OLIVE),                    # hood
+    vbox([3.5, 3, -0.2], [12.5, 6.5, 0], BLACK),                 # grille
+    vbox([3.5, 5.5, -0.4], [5, 6.5, 0], WHITE),                  # headlights
+    vbox([11, 5.5, -0.4], [12.5, 6.5, 0], WHITE),
+    vbox([0, 4, 0.5], [3.2, 4.6, 5.5], OLIVE),                   # fenders
+    vbox([12.8, 4, 0.5], [16, 4.6, 5.5], OLIVE),
+    vbox([0, 4, 10.5], [3.2, 4.6, 15.5], OLIVE),
+    vbox([12.8, 4, 10.5], [16, 4.6, 15.5], OLIVE),
+    vbox([2, 5, 5.5], [3, 8, 16], OLIVE),                        # tub sides and back
+    vbox([13, 5, 5.5], [14, 8, 16], OLIVE),
+    vbox([2, 5, 15], [14, 8, 16], OLIVE),
+    vbox([4, 5, 8], [7, 7.2, 10], TAN),                          # seats
+    vbox([9, 5, 8], [12, 7.2, 10], TAN),
+    vbox([4, 5, 11.5], [12, 7.2, 13.5], TAN),
+    vbox([3, 7, 5.5], [13, 10.5, 6], LENS),                      # windshield
+    vbox([2.5, 7, 5.4], [3, 11, 6.1], BLACK),
+    vbox([13, 7, 5.4], [13.5, 11, 6.1], BLACK),
+    vbox([2.5, 10.5, 5.4], [13.5, 11, 6.1], BLACK),
+    vbox([2, 8, 12.5], [3, 12.5, 13.5], DARK),                   # roll bar
+    vbox([13, 8, 12.5], [14, 12.5, 13.5], DARK),
+    vbox([2, 11.5, 12.5], [14, 12.5, 13.5], DARK),
+    vbox([7.5, 12.5, 8], [8.5, 13.5, 13.5], BLACK),              # mounted machine gun
+    vbox([7.6, 12.6, 6.5], [8.4, 13.4, 8], STEEL),
+    vbox([6, 5, 16], [10, 9, 17], RUBBER),                       # spare tire
+]
+
+JET = [
+    vbox([6.5, 3, -8], [9.5, 6, 20], LIGHT),                     # fuselage
+    vbox([7, 2.6, -6], [9, 3, 18], STEEL),                       # belly
+    vbox([7, 3.5, -10.5], [9, 5.5, -8], DARK),                   # nose cone
+    vbox([7.5, 4, -12], [8.5, 5, -10.5], BLACK),                 # pitot
+    vbox([7, 6, -5], [9, 7.6, 3], LENS),                         # canopy
+    vbox([-8, 3.8, 4], [24, 4.6, 11], STEEL),                    # wings
+    vbox([-8.5, 3.6, 7.5], [-7.5, 4.8, 11.5], RUBY),             # wing tips
+    vbox([23.5, 3.6, 7.5], [24.5, 4.8, 11.5], RUBY),
+    vbox([7.6, 6, 14], [8.4, 12.5, 20], STEEL),                  # tail fin
+    vbox([7.5, 11.5, 17.5], [8.5, 12.5, 20], RUBY),
+    vbox([2, 4.2, 16], [14, 4.8, 20], STEEL),                    # stabilizers
+    vbox([7, 3.4, 20], [9, 5.6, 22], BLACK),                     # engine nozzle
+    vbox([7.3, 3.7, 21.5], [8.7, 5.3, 22.2], RED_LIGHT),         # afterburner glow
+    vbox([0, 2.6, 3], [1.2, 3.8, 10], WHITE),                    # wing missiles
+    vbox([0, 2.6, 2], [1.2, 3.8, 3], RUBY),
+    vbox([14.8, 2.6, 3], [16, 3.8, 10], WHITE),
+    vbox([14.8, 2.6, 2], [16, 3.8, 3], RUBY),
+    vbox([7.4, 1.4, 0], [8.6, 2.6, 3], BLACK),                   # landing gear
+    vbox([3, 1.4, 9], [4, 3.8, 11], BLACK),
+    vbox([12, 1.4, 9], [13, 3.8, 11], BLACK),
+]
+
+VEHICLES = {
+    "tank_model": TANK_HULL,
+    "tank_turret_model": TANK_TURRET,
+    "tank_barrel_model": TANK_BARREL,
+    "jeep_model": JEEP,
+    "jet_model": JET,
+}
+
+
+def vehicle_model(name):
+    return {"textures": {"parts": "rubymod:block/vehicle_parts", "particle": "rubymod:block/vehicle_parts"},
+            "ambientocclusion": False, "elements": VEHICLES[name]}

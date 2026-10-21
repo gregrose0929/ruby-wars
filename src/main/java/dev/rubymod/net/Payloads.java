@@ -44,6 +44,31 @@ public class Payloads {
 		}
 	}
 
+	/** Client -> server: the jet pilot pressed jump (drop a bomb). */
+	public record VehicleBomb() implements CustomPacketPayload {
+		public static final Type<VehicleBomb> TYPE = new Type<>(RubyMod.id("vehicle_bomb"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, VehicleBomb> CODEC = StreamCodec.unit(new VehicleBomb());
+
+		@Override
+		public Type<VehicleBomb> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: shake the camera (a big explosion nearby). */
+	public record Shake(float strength, int ticks) implements CustomPacketPayload {
+		public static final Type<Shake> TYPE = new Type<>(RubyMod.id("shake"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Shake> CODEC = StreamCodec.composite(
+				ByteBufCodecs.FLOAT, Shake::strength,
+				ByteBufCodecs.VAR_INT, Shake::ticks,
+				Shake::new);
+
+		@Override
+		public Type<Shake> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: kick the camera after a shot. */
 	public record Recoil(float pitch, float yaw) implements CustomPacketPayload {
 		public static final Type<Recoil> TYPE = new Type<>(RubyMod.id("recoil"));
@@ -176,6 +201,8 @@ public class Payloads {
 		PayloadTypeRegistry.serverboundPlay().register(Reload.TYPE, Reload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(VehicleFire.TYPE, VehicleFire.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Fire.TYPE, Fire.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(VehicleBomb.TYPE, VehicleBomb.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(Shake.TYPE, Shake.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Recoil.TYPE, Recoil.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ReloadState.TYPE, ReloadState.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HitMarker.TYPE, HitMarker.CODEC);

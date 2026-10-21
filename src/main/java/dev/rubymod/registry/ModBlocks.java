@@ -94,6 +94,9 @@ public class ModBlocks {
 	// --- Vehicle models (never placed; the vehicle renderers draw these block models) ---
 	public static final Block JEEP_MODEL = registerModelOnly("jeep_model");
 	public static final Block TANK_MODEL = registerModelOnly("tank_model");
+	public static final Block TANK_TURRET_MODEL = registerModelOnly("tank_turret_model");
+	public static final Block TANK_BARREL_MODEL = registerModelOnly("tank_barrel_model");
+	public static final Block JET_MODEL = registerModelOnly("jet_model");
 
 	private static Block registerModelOnly(String name) {
 		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, RubyMod.id(name));
