@@ -416,6 +416,16 @@ public final class AutoTest {
 				log("raid started: {}", error == null ? "ok" : error);
 			});
 		});
+		then(100, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				player.teleportTo(player.getX() + 18, player.getY(), player.getZ() + 8);
+				player.setYRot(-90);
+				player.setXRot(10);
+			});
+		});
+		then(20, mc -> shot(mc, "raid-claim-edge"));
 		for (int i = 0; i < 12; i++) {
 			int n = i;
 			then(200, mc -> {

@@ -339,6 +339,9 @@ the world with their distance. Right-click the full map to drop a waypoint (or r
 spots an enemy for 10 seconds; eliminated players can still spot for their squad
 while they spectate.
 
+Near the edge of a claim (within 16 blocks), its border shows in the world as
+glowing bands in the same colors.
+
 ## Look-at info
 
 Look at a machine, defense, Heart, grave, vehicle, guard or squadmate and a

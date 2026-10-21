@@ -140,6 +140,7 @@ public class RubyModClient implements ClientModInitializer {
 		});
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.rubymod.client.map.BlueprintGhost::render);
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.rubymod.client.gun.BulletHoles::render);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.rubymod.client.map.ClaimBorders::render);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.BulletHole.TYPE, (payload, context) ->
 				dev.rubymod.client.gun.BulletHoles.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.ReloadState.TYPE, (payload, context) -> {

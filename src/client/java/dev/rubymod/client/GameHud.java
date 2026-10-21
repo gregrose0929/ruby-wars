@@ -158,7 +158,7 @@ public class GameHud implements HudElement {
 		if (e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
 			y = 26;
 		}
-		panel(g, 4, y, 150, y + 12 + ClientState.bounties.size() * 17);
+		panel(g, 4, y, 166, y + 12 + ClientState.bounties.size() * 17);
 		g.text(font, "DAILY BOUNTIES", 9, y + 3, 0xFF8B93A1, false);
 		int ly = y + 14;
 		for (String line : ClientState.bounties) {
@@ -170,12 +170,12 @@ public class GameHud implements HudElement {
 			int progress = Integer.parseInt(p[1]);
 			int target = Math.max(1, Integer.parseInt(p[2]));
 			String what = p[0].replace(" on monsters", "").replace(" of any kind", "").replace(" or deepslate", "");
-			String text = font.plainSubstrByWidth(what + "  " + progress + "/" + target, 116);
+			String text = font.plainSubstrByWidth(what + "  " + progress + "/" + target, 134);
 			g.text(font, text, 9, ly, done ? 0xFF5BE37D : WHITE, false);
 			String reward = "+" + p[3];
-			g.text(font, reward, 146 - font.width(reward), ly, done ? 0xFF5BE37D : 0xFFFF5A82, false);
-			g.fill(9, ly + 10, 146, ly + 12, 0xFF2A2F35);
-			g.fill(9, ly + 10, 9 + Math.round(137 * Math.min(1.0F, progress / (float) target)), ly + 12, done ? 0xFF5BE37D : GOLD);
+			g.text(font, reward, 162 - font.width(reward), ly, done ? 0xFF5BE37D : 0xFFFF5A82, false);
+			g.fill(9, ly + 10, 162, ly + 12, 0xFF2A2F35);
+			g.fill(9, ly + 10, 9 + Math.round(153 * Math.min(1.0F, progress / (float) target)), ly + 12, done ? 0xFF5BE37D : GOLD);
 			ly += 17;
 		}
 	}
