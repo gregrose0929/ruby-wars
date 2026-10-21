@@ -39,8 +39,7 @@ LOG=run/test-output.log
 	done
 	sleep 2
 	while IFS= read -r line || [ -n "$line" ]; do
-		line="${line%$'
-'}"
+		line="$(printf '%s' "$line" | tr -d '')"
 		case "$line" in
 			"" | \#*) ;;
 			wait\ *) sleep "${line#wait }" ;;

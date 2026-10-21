@@ -37,7 +37,7 @@ public class AttachmentItem extends Item {
 		ItemStack gun = player.getItemInHand(hand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
 		if (!(gun.getItem() instanceof GunItem)) {
 			if (player instanceof ServerPlayer sp) {
-				sp.sendOverlayMessage(Component.literal("Hold a gun in your other hand to fit the " + attachment.title + "."));
+				sp.sendOverlayMessage(Component.literal("Hold a gun in your off hand to fit the " + attachment.title + "."));
 			}
 			return InteractionResult.FAIL;
 		}
@@ -62,6 +62,6 @@ public class AttachmentItem extends Item {
 	@SuppressWarnings("deprecation")
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
 		builder.accept(Component.literal(attachment.effect).withStyle(ChatFormatting.GRAY));
-		builder.accept(Component.literal("Hold a gun in your other hand and right-click").withStyle(ChatFormatting.DARK_GRAY));
+		builder.accept(Component.literal("Hold this in your main hand, a gun in your off hand, and right-click").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

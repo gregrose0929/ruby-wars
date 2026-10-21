@@ -34,22 +34,23 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 
 | Action | How |
 | --- | --- |
-| Fire | Right-click (hold for automatic guns) |
-| Aim / zoom | Sneak |
+| Fire a gun or rocket launcher | Left-click (hold for automatic guns) |
+| Aim down sights | Hold right-click (the sniper shows a full scope) |
 | Reload | R (rebindable under Controls > Ruby Wars) |
 | Throw grenade / flare | Right-click |
 | Mark a target for mortars and missiles | Right-click with a Rangefinder |
 | Fire a mortar / launch a missile | Right-click the Mortar or Missile Silo holding shells or a missile |
 | Load a turret | Right-click it with Heavy Ammo |
 | Recharge an interceptor | Right-click it with a Ruby |
-| Deploy a vehicle | Right-click the ground with a Jeep or Tank item |
+| Deploy a vehicle | Right-click the ground with a Jeep, Tank, or Jet item |
 | Get in / drive / get out | Right-click the vehicle / W-S drive, A-D steer / Sneak |
-| Fire the tank cannon | Left-click while driving the Tank |
+| Aim and fire the tank cannon | Look to turn the turret, left-click to fire |
+| Fly the jet | W/S throttle, look to steer, left-click missiles, Space drops a bomb, Sneak to eject (you get a parachute) |
 
 ## What's in the Armory
 
-Guns: Service Pistol, Viper SMG, Combat Shotgun, AR-R Rifle, Longshot Sniper,
-Bulldog LMG, Ruby Blaster. Throwables: frag and smoke grenades. Raid gear: Rocket
+Guns: Service Pistol, AR-R Rifle, Combat Shotgun, Longshot Sniper, and the Ruby
+Blaster. Throwables: frag and smoke grenades. Raid gear: Rocket
 Launcher, Rangefinder, Breaching Charge, Mortar, Missile Silo, Cruise Missile.
 Defenses: Sandbags, Concrete Wall (takes 4 blasts), Reinforced Concrete (ignores
 grenades), Blast Door (only you can open it), Sentry Turret, Missile Interceptor,
@@ -61,10 +62,12 @@ Killing 5 players in a row earns an Air Strike Flare.
 
 **Gun attachments** (Armory, row 5): Extended Mag (+50% magazine), Red Dot Sight
 (tighter spread, more zoom), Vertical Grip (-40% recoil), and Suppressor (quiet,
-no tracers, hides the sniper glint). Hold the gun in one hand and the attachment in
-the other, then right-click. Each gun takes one of each.
+no tracers, hides the sniper glint). Hold the attachment in your main hand and the gun
+in your off hand, then right-click. Each gun takes one of each.
 
-Vehicles: the **Jeep** (fast, 4 seats) and the **Tank** (slow, 2 seats, main
+Vehicles: the **Jet** (fast, needs speed to take off, stalls if it slows down in
+the air, 8 wing missiles that reload over time, bombs), the **Jeep** (fast, 4 seats),
+and the **Tank** (slow, 2 seats, a turret that follows your aim, main
 cannon, nearly bulletproof). Bullets barely scratch them; rockets, mines, and
 explosions are how you take them out. Ruby armor, sword, and pickaxe sit between
 iron and diamond.
