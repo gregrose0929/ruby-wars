@@ -139,6 +139,7 @@ public final class GunView {
 		if (slot != lastSlot || !ItemStack.isSameItem(stack, lastStack)) {
 			equip = 0.0F;
 			lastSlot = slot;
+			localSound(player, isLauncher(model) ? dev.rubymod.registry.ModSounds.SHELL_IN : dev.rubymod.registry.ModSounds.BOLT, 0.35F);
 		}
 		lastStack = stack;
 		equip = Math.min(1.0F, equip + dt * 3.2F);
