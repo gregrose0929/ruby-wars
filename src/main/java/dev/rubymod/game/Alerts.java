@@ -47,13 +47,20 @@ public final class Alerts {
 
 	public static void intruder(ServerLevel level, SeasonData.Claim claim, Player intruder, BlockPos alarm) {
 		UUID owner = UUID.fromString(claim.owner);
-		LAST_INTRUDER.put(owner, level.getGameTime());
-		ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(owner);
-		if (ownerPlayer != null) {
-			ownerPlayer.sendSystemMessage(Component.literal("ALARM: " + intruder.getName().getString() + " is in your base near "
-					+ alarm.getX() + ", " + alarm.getY() + ", " + alarm.getZ()).withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
-			ping(ownerPlayer, 0.5F);
+		java.util.List<UUID> side = new java.util.ArrayList<>(Squads.mates(owner));
+		side.add(owner);
+		for (UUID id : side) {
+			LAST_INTRUDER.put(id, level.getGameTime());
+			ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
+			if (p != null) {
+				String base = id.equals(owner) ? "your base" : claim.ownerName + "'s base";
+				p.sendSystemMessage(Component.literal("ALARM: " + intruder.getName().getString() + " is in " + base + " near "
+						+ alarm.getX() + ", " + alarm.getY() + ", " + alarm.getZ()).withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+				ping(p, 0.5F);
+			}
 		}
+		// The alarm also spots the intruder for the defenders' map for a few seconds.
+		Waypoints.spot(intruder, owner, 6);
 	}
 
 	public static void sendRadar(ServerPlayer owner, int contacts, int nearest, int bearing, boolean missile) {
