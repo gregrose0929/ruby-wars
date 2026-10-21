@@ -384,6 +384,10 @@ public final class TrainingGround {
 		chest(cmds, 3, -18, "Machines", List.of("rubymod:combustion_generator*4", "rubymod:solar_panel*8", "rubymod:battery*4",
 				"rubymod:ruby_drill*2", "rubymod:ore_refinery*2", "rubymod:ammo_factory", "rubymod:trade_depot*2", "rubymod:vault",
 				"rubymod:shield_generator", "rubymod:point_defense", "rubymod:constructor", "rubymod:heavy_aa_gun*2", "minecraft:coal_block*16"));
+		chest(cmds, 6, -18, "Gear and Support", List.of("rubymod:field_pack", "rubymod:heavy_rucksack", "rubymod:field_radio", "rubymod:field_radio",
+				"rubymod:guard_contract*4", "rubymod:at_guard_contract*2", "rubymod:recon_drone*4", "rubymod:paint_kit"));
+		label(cmds, 6, 1.6, -18, "Gear: packs, radios, guards, drones, paint", "aqua", 0.6);
+		label(cmds, 0, 4.2, -18, "Try /rubywars raid on a base to practice defending it (after placing a Heart)", "gray", 0.6);
 	}
 
 	/** Fuel, the pillbox Blueprint and building blocks for the industry yard (needs the blocks placed first). */

@@ -424,8 +424,8 @@ public final class AutoTest {
 							dev.rubymod.entity.SoldierEntity::isRaider);
 					var guards = level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, player.getBoundingBox().inflate(200), sol -> !sol.isRaider());
 					double nearest = raiders.stream().mapToDouble(r -> r.distanceTo(player)).min().orElse(-1);
-					log("t+{}s raiders {} (nearest {}m) guards {} bank {}", (n + 1) * 10, raiders.size(), Math.round(nearest), guards.size(),
-							dev.rubymod.industry.Grid.rubies(player.getUUID()));
+					log("t+{}s raiders {} (nearest {}m) guards {} bank {} tick {}ms fps {}", (n + 1) * 10, raiders.size(), Math.round(nearest), guards.size(),
+							dev.rubymod.industry.Grid.rubies(player.getUUID()), String.format("%.2f", server.getAverageTickTimeNanos() / 1e6), mc.getFps());
 				});
 				if (n % 3 == 0) {
 					shot(mc, "raid-" + (n + 1) * 10);
