@@ -368,7 +368,12 @@ public final class AutoTest {
 				IntegratedServer server = mc.getSingleplayerServer();
 				server.execute(() -> Shop.open(server.getPlayerList().getPlayers().get(0), p));
 			});
-			then(15, mc -> shot(mc, "gear-armory-" + p));
+			then(10, mc -> {
+				if (mc.gui.screen() instanceof ArmoryScreen armory) {
+					armory.selected = p == 0 ? 1 : 0;
+				}
+			});
+			then(5, mc -> shot(mc, "gear-armory-" + p));
 			then(2, mc -> mc.player.closeContainer());
 		}
 		then(5, mc -> {

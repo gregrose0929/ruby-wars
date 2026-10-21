@@ -194,6 +194,7 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.JEEP, VehicleRenderer::new);
 		EntityRendererRegistry.register(ModEntities.TANK, VehicleRenderer::new);
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.rubymod.registry.ModMenus.MACHINE, MachineScreen::new);
+		net.minecraft.client.gui.screens.MenuScreens.register(dev.rubymod.registry.ModMenus.ARMORY, ArmoryScreen::new);
 		AircraftRenderer.registerLayers();
 		VehicleRenderer.registerLayers();
 		DroneRenderer.registerLayer();

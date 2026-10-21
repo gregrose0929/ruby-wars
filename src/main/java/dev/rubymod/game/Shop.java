@@ -226,8 +226,22 @@ public final class Shop {
 		SimpleContainer container = new SimpleContainer(SLOTS);
 		fill(container, player, page);
 		String title = "Armory: " + PAGE_NAMES[page];
-		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShopMenu(id, inventory, container, page),
-				Component.literal(title + "  -  " + countRubies(player) + " rubies")));
+		player.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<Integer>() {
+			@Override
+			public Integer getScreenOpeningData(ServerPlayer p) {
+				return page;
+			}
+
+			@Override
+			public Component getDisplayName() {
+				return Component.literal(title);
+			}
+
+			@Override
+			public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, Inventory inventory, Player p) {
+				return new ArmoryMenu(id, inventory, container, page);
+			}
+		});
 	}
 
 	private static void fill(Container container, ServerPlayer player, int page) {
@@ -344,33 +358,16 @@ public final class Shop {
 	}
 
 	/** A chest menu where clicking a slot buys it instead of picking it up. */
-	private static class ShopMenu extends ChestMenu {
-		private final Container shop;
-		private final int page;
+	/** A click in the Armory screen (see ArmoryMenu). */
+	static void click(ServerPlayer player, int slot, Container container, int page) {
+		buy(player, slot, container, page);
+	}
 
-		ShopMenu(int id, Inventory inventory, Container shop, int page) {
-			super(MenuType.GENERIC_9x6, id, inventory, shop, 6);
-			this.shop = shop;
-			this.page = page;
-		}
+	static int pageCount() {
+		return PAGES;
+	}
 
-		@Override
-		public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
-			if (slotIndex >= 0 && slotIndex < SLOTS && player instanceof ServerPlayer serverPlayer) {
-				buy(serverPlayer, slotIndex, shop, page);
-			}
-			// Nothing in the shop can be picked up or moved.
-			sendAllDataToRemote();
-		}
-
-		@Override
-		public ItemStack quickMoveStack(Player player, int slotIndex) {
-			return ItemStack.EMPTY;
-		}
-
-		@Override
-		public boolean stillValid(Player player) {
-			return true;
-		}
+	public static String pageName(int page) {
+		return page >= 0 && page < PAGE_NAMES.length ? PAGE_NAMES[page] : "";
 	}
 }

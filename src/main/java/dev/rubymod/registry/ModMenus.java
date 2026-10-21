@@ -14,6 +14,11 @@ public class ModMenus {
 			RubyMod.id("machine"),
 			new ExtendedMenuType<>(MachineMenu::new, MachineMenu.Opening.CODEC));
 
+	public static final ExtendedMenuType<dev.rubymod.game.ArmoryMenu, Integer> ARMORY = Registry.register(
+			BuiltInRegistries.MENU,
+			RubyMod.id("armory"),
+			new ExtendedMenuType<>(dev.rubymod.game.ArmoryMenu::new, net.minecraft.network.codec.ByteBufCodecs.VAR_INT.cast()));
+
 	public static void initialize() {
 	}
 }
