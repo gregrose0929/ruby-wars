@@ -152,6 +152,10 @@ public class RubyModClient implements ClientModInitializer {
 		});
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.KillFeed.TYPE, (payload, context) -> {
 			ClientState.KILLS.addFirst(new ClientState.Kill(payload, System.currentTimeMillis()));
+			if (context.player() != null && payload.victim().equals(context.player().getName().getString())) {
+				ClientState.lastDeath = payload;
+				ClientState.lastDeathAt = System.currentTimeMillis();
+			}
 			while (ClientState.KILLS.size() > 5) {
 				ClientState.KILLS.removeLast();
 			}

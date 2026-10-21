@@ -12,7 +12,8 @@
 		"GameRendererMixin",
 		"SpecialModelRenderersAccessor",
 		"FirstPersonHandsInvoker",
-		"FirstPersonHandsMixin"
+		"FirstPersonHandsMixin",
+		"DeathScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

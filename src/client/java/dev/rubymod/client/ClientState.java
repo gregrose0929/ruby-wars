@@ -21,6 +21,9 @@ public final class ClientState {
 	public static long lookAt;
 	/** When the current combat tag runs out (ms). */
 	public static long combatUntil;
+	/** The kill feed entry where you were the victim (for the death screen). */
+	public static dev.rubymod.net.Payloads.KillFeed lastDeath;
+	public static long lastDeathAt;
 	/** Research points and unlocks. */
 	public static dev.rubymod.net.MorePayloads.ResearchSync research;
 
