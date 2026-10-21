@@ -113,7 +113,7 @@ public final class Gunfire {
 			hitPos = blockHit.getLocation();
 			BlockPos pos = blockHit.getBlockPos();
 			BlockState state = level.getBlockState(pos);
-			level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), hitPos.x, hitPos.y, hitPos.z, 4, 0.05, 0.05, 0.05, 0.1);
+			impact(level, blockHit, state, stats);
 			if (stats.special() == GunStats.Special.BREACH && isBreachable(state) && Rules.canWeaponBreak(level, pos, state)) {
 				level.destroyBlock(pos, false, shooter);
 			} else if (BlockDamage.hit(level, pos, stats.damage(), shooter)) {
@@ -175,6 +175,31 @@ public final class Gunfire {
 		Bounties.onGunHit(shooter, target, headshot);
 		level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, hitPos.x, hitPos.y, hitPos.z, 1, 0.1, 0.1, 0.1, 0.0);
 		Net.send(shooter, new Payloads.HitMarker(headshot, killed));
+	}
+
+	/** A bullet hitting a block: chips, a dust puff, sparks off stone and metal, the block's hit sound, and a bullet hole. */
+	private static void impact(ServerLevel level, BlockHitResult hit, BlockState state, GunStats stats) {
+		Vec3 p = hit.getLocation();
+		Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i());
+		Vec3 out = p.add(n.scale(0.05));
+		level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state), out.x, out.y, out.z, 8, 0.06, 0.06, 0.06, 0.15);
+		level.sendParticles(ParticleTypes.SMOKE, out.x, out.y, out.z, 2, 0.04, 0.04, 0.04, 0.01);
+		var sound = state.getSoundType();
+		boolean hard = sound == net.minecraft.world.level.block.SoundType.METAL || sound == net.minecraft.world.level.block.SoundType.STONE
+				|| sound == net.minecraft.world.level.block.SoundType.DEEPSLATE || sound == net.minecraft.world.level.block.SoundType.NETHERITE_BLOCK;
+		if (hard && stats.ammo() != AmmoType.RUBY_CELL) {
+			level.sendParticles(ParticleTypes.CRIT, out.x, out.y, out.z, 3, 0.02, 0.02, 0.02, 0.25);
+		}
+		level.playSound(null, p.x, p.y, p.z, sound.getHitSound(), net.minecraft.sounds.SoundSource.BLOCKS, 0.7F, sound.getPitch() * 1.3F);
+		if (state.isSolidRender() && stats.ammo() != AmmoType.RUBY_CELL) {
+			var hole = new dev.rubymod.net.MorePayloads.BulletHole((float) p.x, (float) p.y, (float) p.z, (byte) hit.getDirection().get3DDataValue(),
+					stats.ammo() == AmmoType.SHELLS ? (byte) 0 : stats.ammo() == AmmoType.SNIPER ? (byte) 2 : (byte) 1);
+			for (ServerPlayer viewer : level.players()) {
+				if (viewer.distanceToSqr(p) < 64 * 64) {
+					Net.send(viewer, hole);
+				}
+			}
+		}
 	}
 
 	private static boolean isBreachable(BlockState state) {

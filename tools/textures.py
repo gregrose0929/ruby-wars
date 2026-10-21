@@ -1158,7 +1158,32 @@ def parts_atlas(seed):
     return img
 
 
+def bullet_hole():
+    """A bullet hole decal: dark core, scorched cracked rim, transparent outside."""
+    rnd = random.Random(77)
+    img = [[(0, 0, 0, 0)] * 16 for _ in range(16)]
+    for y in range(16):
+        for x in range(16):
+            dx, dy = x - 7.5, y - 7.5
+            r = (dx * dx + dy * dy) ** 0.5
+            if r < 2.2:
+                img[y][x] = (12, 10, 10, 255)
+            elif r < 3.6:
+                img[y][x] = (40, 34, 30, 230)
+            elif r < 5.5 and rnd.random() < 0.55:
+                img[y][x] = (60, 54, 48, int(170 * (5.5 - r) / 2))
+    for _ in range(5):                      # cracks
+        import math
+        a = rnd.uniform(0, 6.28)
+        for s in range(3, 8):
+            x, y = int(7.5 + math.cos(a) * s), int(7.5 + math.sin(a) * s)
+            if 0 <= x < 16 and 0 <= y < 16:
+                img[y][x] = (30, 28, 26, 180)
+    return img
+
+
 def main(root):
+    write_png(os.path.join(root, "textures/misc", "bullet_hole.png"), bullet_hole())
     write_png(os.path.join(root, "textures/item", "gun_parts.png"), parts_atlas(40))
     write_png(os.path.join(root, "textures/block", "vehicle_parts.png"), parts_atlas(41))
     for name, rows in ITEMS.items():

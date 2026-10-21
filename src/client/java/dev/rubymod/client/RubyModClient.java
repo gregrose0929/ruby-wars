@@ -116,6 +116,9 @@ public class RubyModClient implements ClientModInitializer {
 			ClientState.lookAt = System.currentTimeMillis();
 		});
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.rubymod.client.map.BlueprintGhost::render);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.rubymod.client.gun.BulletHoles::render);
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.BulletHole.TYPE, (payload, context) ->
+				dev.rubymod.client.gun.BulletHoles.add(payload));
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.ReloadState.TYPE, (payload, context) -> {
 			ClientState.reloadTicks = payload.ticks();
 			ClientState.reloadStartedAt = System.currentTimeMillis();

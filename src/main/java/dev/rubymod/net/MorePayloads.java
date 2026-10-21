@@ -134,7 +134,21 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: a bullet hole at this point on a block face (size: 0 small, 1 normal, 2 large). */
+	public record BulletHole(float x, float y, float z, byte face, byte size) implements CustomPacketPayload {
+		public static final Type<BulletHole> TYPE = new Type<>(RubyMod.id("bullet_hole"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BulletHole> CODEC = StreamCodec.composite(
+				ByteBufCodecs.FLOAT, BulletHole::x, ByteBufCodecs.FLOAT, BulletHole::y, ByteBufCodecs.FLOAT, BulletHole::z,
+				ByteBufCodecs.BYTE, BulletHole::face, ByteBufCodecs.BYTE, BulletHole::size, BulletHole::new);
+
+		@Override
+		public Type<BulletHole> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(BulletHole.TYPE, BulletHole.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Ping.TYPE, Ping.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(LookQuery.TYPE, LookQuery.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ResearchUnlock.TYPE, ResearchUnlock.CODEC);

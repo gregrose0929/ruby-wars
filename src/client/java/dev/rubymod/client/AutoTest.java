@@ -122,6 +122,7 @@ public final class AutoTest {
 			case "features" -> featuresScript();
 			case "raid" -> raidScript();
 			case "gear" -> gearScript();
+			case "impact" -> impactScript();
 			case "vehicles" -> vehiclesScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
@@ -407,6 +408,31 @@ public final class AutoTest {
 			});
 		});
 		then(20, mc -> shot(mc, "gear-grave"));
+	}
+
+	/** Rifle fire into a stone wall: debris, sparks, bullet holes. */
+	private static void impactScript() {
+		then(5, mc -> {
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 180 0");
+			command(mc, "execute at @p run fill ~-3 ~ ~-6 ~3 ~3 ~-6 minecraft:stone_bricks");
+			command(mc, "give @a rubymod:arr_rifle");
+			command(mc, "give @a rubymod:heavy_ammo 64");
+		});
+		then(10, mc -> mc.player.getInventory().setSelectedSlot(0));
+		for (int i = 0; i < 12; i++) {
+			int n = i;
+			then(4, mc -> {
+				mc.player.setYRot(180 + (n % 4 - 1.5F) * 6);
+				mc.player.setXRot((n / 4 - 1) * 6);
+				ClientPlayNetworking.send(new Payloads.Fire());
+			});
+		}
+		then(1, mc -> shot(mc, "impact-firing"));
+		then(20, mc -> {
+			mc.player.setYRot(180);
+			mc.player.setXRot(0);
+		});
+		then(10, mc -> shot(mc, "impact-holes"));
 	}
 
 	private static void tourScript() {
