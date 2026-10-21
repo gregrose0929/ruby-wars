@@ -321,11 +321,14 @@ public final class TrainingGround {
 		}
 
 		// Ore line: drill -> refinery -> trade depot -> (rubies to the bank), overflow into a chest.
-		label(cmds, -6, 3.0, -20, "ORE LINE: Drill > Refinery > Trade Depot", "yellow", 1.0);
-		cmds.add("setblock ~-10 ~ ~-24 rubymod:ruby_drill[facing=south]");
-		cmds.add("setblock ~-9 ~ ~-24 rubymod:ore_refinery[facing=south]");
-		cmds.add("setblock ~-8 ~ ~-24 rubymod:trade_depot[facing=south]");
-		cmds.add("setblock ~-10 ~ ~-25 chest[facing=south]");
+		label(cmds, -10, 3.0, -20, "ORE LINE: Drill > Refinery > Conveyor > Trade Depot", "yellow", 1.0);
+		cmds.add("setblock ~-15 ~ ~-24 rubymod:ruby_drill[facing=south]");
+		cmds.add("setblock ~-14 ~ ~-24 rubymod:ore_refinery[facing=south]");
+		for (int x = -13; x <= -10; x++) {
+			cmds.add("setblock ~" + x + " ~ ~-24 rubymod:conveyor[facing=east]");
+		}
+		cmds.add("setblock ~-9 ~ ~-24 rubymod:trade_depot[facing=south]");
+		cmds.add("setblock ~-15 ~ ~-25 chest[facing=south]");
 		cmds.add("setblock ~-6 ~ ~-24 rubymod:vault[facing=south]");
 		label(cmds, -6, 1.9, -24, "Bank", "aqua", 0.7);
 		cmds.add("setblock ~-3 ~ ~-24 rubymod:ammo_factory[facing=south]");

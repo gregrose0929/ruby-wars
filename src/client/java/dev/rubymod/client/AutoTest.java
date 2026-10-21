@@ -388,15 +388,45 @@ public final class AutoTest {
 				origin.z - 6, origin.x, origin.y, origin.z - 26)));
 		then(1, mc -> mc.player.getAbilities().flying = true);
 		then(30, mc -> shot(mc, "yard-overview"));
-		then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x - 7, origin.y + 3,
-				origin.z - 19, origin.x - 7, origin.y, origin.z - 24)));
+		then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x - 11, origin.y + 3,
+				origin.z - 19, origin.x - 11, origin.y, origin.z - 24)));
 		then(1, mc -> mc.player.getAbilities().flying = true);
 		then(25, mc -> shot(mc, "yard-ore-line"));
 		then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x + 22, origin.y + 6,
 				origin.z - 22, origin.x + 16, origin.y, origin.z - 29)));
 		then(1, mc -> mc.player.getAbilities().flying = true);
 		then(240, mc -> shot(mc, "yard-constructor-building"));
-		for (int[] m : new int[][] {{16, -24}, {-6, -24}, {-8, -24}, {-30, -24}}) {
+		then(200, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x - 11, origin.y + 2,
+				origin.z - 21, origin.x - 11, origin.y, origin.z - 24)));
+		for (int i = 0; i < 4; i++) {
+			then(i == 0 ? 5 : 100, mc -> {
+				IntegratedServer server = mc.getSingleplayerServer();
+				server.execute(() -> {
+					var level = server.overworld();
+					StringBuilder sb = new StringBuilder();
+					for (int x : new int[] {-15, -14, -9}) {
+						if (level.getBlockEntity(net.minecraft.core.BlockPos.containing(origin.x + x, origin.y, origin.z - 24))
+								instanceof dev.rubymod.industry.MachineBlockEntity be) {
+							sb.append(be.kind()).append('[');
+							for (int k = 0; k < be.getContainerSize(); k++) {
+								if (!be.getItem(k).isEmpty()) {
+									sb.append(be.getItem(k)).append(' ');
+								}
+							}
+							sb.append("] ");
+						}
+					}
+					var items = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+							new net.minecraft.world.phys.AABB(origin.x - 16, origin.y - 1, origin.z - 26, origin.x - 8, origin.y + 2, origin.z - 22));
+					sb.append("items on belt: ");
+					items.forEach(it -> sb.append(it.getItem()).append(String.format(java.util.Locale.ROOT, "@%.1f ", it.getX() - origin.x)));
+					sb.append(" bank ").append(dev.rubymod.industry.Grid.milliRubies(new java.util.UUID(0, 0)));
+					log("ore line: {}", sb);
+				});
+			});
+		}
+		then(5, mc -> shot(mc, "yard-conveyor"));
+		for (int[] m : new int[][] {{16, -24}, {-6, -24}, {-9, -24}, {-30, -24}, {-15, -24}}) {
 			then(5, mc -> {
 				command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f", origin.x + m[0], origin.y, origin.z + m[1] + 2.5));
 				IntegratedServer server = mc.getSingleplayerServer();

@@ -527,25 +527,54 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	}
 
 	/** Push outputs into neighboring containers (chests, hoppers, other machines' inputs). */
+	/**
+	 * Push outputs onward. Machines and conveyor belts come first (so a production line
+	 * keeps flowing); plain chests next to the machine only catch what's left over.
+	 */
 	private void pushOutputs(ServerLevel level) {
-		for (Direction dir : Direction.values()) {
-			BlockEntity neighbor = level.getBlockEntity(worldPosition.relative(dir));
-			if (!(neighbor instanceof Container target) || neighbor instanceof net.minecraft.world.level.block.entity.HopperBlockEntity) {
-				continue;
-			}
-			for (int i = firstOutput(); i < items.size(); i++) {
-				ItemStack s = items.get(i);
-				if (s.isEmpty()) {
+		for (int pass = 0; pass < 2; pass++) {
+			for (Direction dir : Direction.values()) {
+				BlockPos side = worldPosition.relative(dir);
+				if (pass == 0 && dir.getAxis().isHorizontal() && ConveyorBlock.leadsAway(level.getBlockState(side), dir)) {
+					dropOnBelt(level, side);
 					continue;
 				}
-				ItemStack rest = HopperBlockEntity.addItem(this, target, s.copy(), dir.getOpposite());
-				if (rest.getCount() != s.getCount()) {
-					items.set(i, rest);
-					setChanged();
+				BlockEntity neighbor = level.getBlockEntity(side);
+				if (!(neighbor instanceof Container target) || neighbor instanceof net.minecraft.world.level.block.entity.HopperBlockEntity
+						|| (neighbor instanceof MachineBlockEntity) != (pass == 0)) {
+					continue;
+				}
+				for (int i = firstOutput(); i < items.size(); i++) {
+					ItemStack s = items.get(i);
+					if (s.isEmpty()) {
+						continue;
+					}
+					ItemStack rest = HopperBlockEntity.addItem(this, target, s.copy(), dir.getOpposite());
+					if (rest.getCount() != s.getCount()) {
+						items.set(i, rest);
+						setChanged();
+					}
 				}
 			}
 		}
 	}
+
+	/** A few items at a time onto a conveyor belt. */
+	private void dropOnBelt(ServerLevel level, BlockPos belt) {
+		for (int i = firstOutput(); i < items.size(); i++) {
+			ItemStack s = items.get(i);
+			if (!s.isEmpty()) {
+				net.minecraft.world.entity.item.ItemEntity drop = new net.minecraft.world.entity.item.ItemEntity(level,
+						belt.getX() + 0.5, belt.getY() + 0.3, belt.getZ() + 0.5, s.split(Math.min(4, s.getCount())));
+				drop.setDeltaMovement(Vec3.ZERO);
+				drop.setPickUpDelay(20);
+				level.addFreshEntity(drop);
+				setChanged();
+				return;
+			}
+		}
+	}
+
 
 	// ----- Upgrades and buttons -----
 

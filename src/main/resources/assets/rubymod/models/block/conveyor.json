@@ -1,0 +1,100 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "rubymod:block/conveyor_frame",
+		"frame": "rubymod:block/conveyor_frame",
+		"belt": "rubymod:block/conveyor_belt"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				4,
+				16
+			],
+			"faces": {
+				"north": {
+					"texture": "#frame"
+				},
+				"south": {
+					"texture": "#frame"
+				},
+				"east": {
+					"texture": "#frame"
+				},
+				"west": {
+					"texture": "#frame"
+				},
+				"down": {
+					"texture": "#frame"
+				},
+				"up": {
+					"texture": "#belt"
+				}
+			}
+		},
+		{
+			"from": [
+				0,
+				4,
+				0
+			],
+			"to": [
+				1,
+				5,
+				16
+			],
+			"faces": {
+				"north": {
+					"texture": "#frame"
+				},
+				"south": {
+					"texture": "#frame"
+				},
+				"east": {
+					"texture": "#frame"
+				},
+				"west": {
+					"texture": "#frame"
+				},
+				"up": {
+					"texture": "#frame"
+				}
+			}
+		},
+		{
+			"from": [
+				15,
+				4,
+				0
+			],
+			"to": [
+				16,
+				5,
+				16
+			],
+			"faces": {
+				"north": {
+					"texture": "#frame"
+				},
+				"south": {
+					"texture": "#frame"
+				},
+				"east": {
+					"texture": "#frame"
+				},
+				"west": {
+					"texture": "#frame"
+				},
+				"up": {
+					"texture": "#frame"
+				}
+			}
+		}
+	]
+}

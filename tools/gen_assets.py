@@ -128,6 +128,17 @@ def simple_state(name):
 def gen_blocks(client_jar):
     for name in ["ruby_block", "ruby_ore", "deepslate_ruby_ore", "ruby_heart", "sandbags", "concrete_wall", "reinforced_concrete"]:
         cube_all(name)
+    # Conveyor belt: a slab with an animated belt on top, rotated to face the way it runs.
+    belt_faces = {f: {"texture": "#frame"} for f in ("north", "south", "east", "west", "down")}
+    belt_faces["up"] = {"texture": "#belt"}
+    write(f"{ASSETS}/models/block/conveyor.json", {"parent": "minecraft:block/block",
+          "textures": {"particle": f"{NS}:block/conveyor_frame", "frame": f"{NS}:block/conveyor_frame", "belt": f"{NS}:block/conveyor_belt"},
+          "elements": [{"from": [0, 0, 0], "to": [16, 4, 16], "faces": belt_faces},
+                       {"from": [0, 4, 0], "to": [1, 5, 16], "faces": {f: {"texture": "#frame"} for f in ("north", "south", "east", "west", "up")}},
+                       {"from": [15, 4, 0], "to": [16, 5, 16], "faces": {f: {"texture": "#frame"} for f in ("north", "south", "east", "west", "up")}}]})
+    write(f"{ASSETS}/blockstates/conveyor.json", {"variants": {
+        f"facing={f}": {"model": f"{NS}:block/conveyor", "y": y} for f, y in (("north", 0), ("east", 90), ("south", 180), ("west", 270))}})
+    client_item("conveyor", f"{NS}:block/conveyor")
     write(f"{ASSETS}/models/block/reinforced_glass.json", {"parent": "minecraft:block/cube_all",
           "textures": {"all": {"force_translucent": True, "sprite": f"{NS}:block/reinforced_glass"}}})
     simple_state("reinforced_glass")
@@ -218,6 +229,7 @@ LANG = {
     "item.rubymod.architect_wand": "Architect's Wand",
     "block.rubymod.reinforced_glass": "Reinforced Glass",
     "block.rubymod.floodlight": "Floodlight",
+    "block.rubymod.conveyor": "Conveyor Belt",
     "item.rubymod.remodeler": "Remodeler",
     "item.rubymod.blueprint": "Blueprint",
     "item.rubymod.heavy_aa_gun": "Heavy AA Gun",
@@ -371,7 +383,7 @@ def gen_loot():
 
     for name in ["ruby_block", "ruby_heart", "armory", "sandbags", "concrete_wall", "reinforced_concrete", "sentry_turret",
                  "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "barbed_wire", "mortar", "missile_silo",
-                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor", "reinforced_glass", "floodlight"]:
+                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor", "reinforced_glass", "floodlight", "conveyor"]:
         drop_self(name)
 
     def ore(name):

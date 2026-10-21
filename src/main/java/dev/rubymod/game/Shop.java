@@ -157,6 +157,7 @@ public final class Shop {
 			item(30, ModBlocks.CONSTRUCTOR, 1, 30);
 			item(32, ModBlocks.REINFORCED_GLASS, 8, 3);
 			item(33, ModBlocks.FLOODLIGHT, 2, 1);
+			item(31, ModBlocks.CONVEYOR, 16, 2);
 			page = 0;
 		}
 		return entries;

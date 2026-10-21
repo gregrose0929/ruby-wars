@@ -893,6 +893,23 @@ def blocks():
     rect(img, 3, 6, 12, 7, (200, 200, 190))
     b["claymore"] = img
 
+    # Conveyor: steel frame, and an animated rubber belt (8 frames, the ridges move "up" = the way the belt runs).
+    frame = noise_tile((88, 92, 100), 6, 31)
+    outline(frame, (50, 54, 60))
+    rect(frame, 0, 6, 15, 7, (200, 160, 40))
+    b["conveyor_frame"] = frame
+    belt = []
+    for k in range(8):
+        for y in range(16):
+            row = []
+            for x in range(16):
+                ridge = (y + 2 * k) % 4 == 0
+                edge = x in (0, 15)
+                c = (60, 64, 70) if edge else (46, 46, 50) if ridge else (28, 28, 31)
+                row.append(c + (255,))
+            belt.append(row)
+    b["conveyor_belt"] = belt
+
     # Reinforced glass: tinted pane with a steel frame and wire mesh.
     img = [[(150, 210, 230, 90)] * 16 for _ in range(16)]
     for i in range(16):
@@ -1002,6 +1019,8 @@ def main(root):
     # Door item icon reuses the door halves.
     for name, img in blocks().items():
         write_png(os.path.join(root, "textures/block", name + ".png"), img)
+    with open(os.path.join(root, "textures/block", "conveyor_belt.png.mcmeta"), "w") as f:
+        f.write('{"animation": {"frametime": 2}}' + chr(10))
     door = [row[:] for row in blocks()["blast_door_top"][:8]] + [row[:] for row in blocks()["blast_door_bottom"][8:]]
     write_png(os.path.join(root, "textures/item", "blast_door.png"), door)
     icon = [[PAL[ITEMS["ruby"][y // 8][x // 8]] for x in range(128)] for y in range(128)]

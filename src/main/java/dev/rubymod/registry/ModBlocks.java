@@ -120,6 +120,8 @@ public class ModBlocks {
 	/** Bulletproof window: see-through, shrugs off small arms (~30 rifle rounds) and takes two blasts. */
 	public static final Block REINFORCED_GLASS = register("reinforced_glass", net.minecraft.world.level.block.TransparentBlock::new,
 			props().mapColor(MapColor.NONE).strength(8.0F, 6.0F).requiresCorrectToolForDrops().sound(SoundType.GLASS).noOcclusion());
+	public static final Block CONVEYOR = register("conveyor", dev.rubymod.industry.ConveyorBlock::new,
+			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
 	/** A bright base light. */
 	public static final Block FLOODLIGHT = register("floodlight", p -> new dev.rubymod.block.ShapedBlock(Block.box(3, 0, 3, 13, 14, 13), p),
 			props().mapColor(MapColor.METAL).strength(2.0F, 4.0F).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 15));
