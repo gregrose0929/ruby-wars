@@ -280,6 +280,9 @@ public final class AutoTest {
 					level.addFreshEntity(r);
 				}
 				level.setBlockAndUpdate(base.offset(0, 0, 3), dev.rubymod.registry.ModBlocks.COMBUSTION_GENERATOR.defaultBlockState());
+				level.setBlockAndUpdate(base.offset(3, 0, 9), dev.rubymod.registry.ModBlocks.FLAK_CANNON.defaultBlockState());
+				level.setBlockAndUpdate(base.offset(-3, 0, 9), dev.rubymod.registry.ModBlocks.SAM_SITE.defaultBlockState());
+				level.setBlockAndUpdate(base.offset(0, 0, 10), dev.rubymod.registry.ModBlocks.SENTRY_TURRET.defaultBlockState());
 				if (level.getBlockEntity(base.offset(0, 0, 3)) instanceof dev.rubymod.industry.MachineBlockEntity m) {
 					m.setOwner(player.getUUID());
 				}

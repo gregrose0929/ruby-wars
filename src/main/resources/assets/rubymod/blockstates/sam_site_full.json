@@ -1,0 +1,7 @@
+{
+	"variants": {
+		"": {
+			"model": "rubymod:block/sam_site_full"
+		}
+	}
+}

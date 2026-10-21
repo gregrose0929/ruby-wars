@@ -17,7 +17,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
-/** The Sentry Turret's gun head: it slews toward whatever it last fired at, and slowly scans when idle. */
+/** Sentry, Flak Cannon and SAM Site heads: they slew toward whatever they last fired at, and slowly scan when idle. */
 public class SentryRenderer implements BlockEntityRenderer<DefenseBlockEntity, SentryRenderer.State> {
 	public static class State extends BlockEntityRenderState {
 		public boolean sentry;
@@ -36,7 +36,8 @@ public class SentryRenderer implements BlockEntityRenderer<DefenseBlockEntity, S
 	@Override
 	public void extractRenderState(DefenseBlockEntity be, State state, float partial, Vec3 camera, ModelFeatureRenderer.CrumblingOverlay crumbling) {
 		BlockEntityRenderState.extractBase(be, state, crumbling);
-		state.sentry = be.getBlockState().is(ModBlocks.SENTRY_TURRET);
+		var block = be.getBlockState();
+		state.sentry = block.is(ModBlocks.SENTRY_TURRET) || block.is(ModBlocks.FLAK_CANNON) || block.is(ModBlocks.SAM_SITE);
 		if (!state.sentry || be.getLevel() == null) {
 			return;
 		}
@@ -48,7 +49,8 @@ public class SentryRenderer implements BlockEntityRenderer<DefenseBlockEntity, S
 		state.yaw = since < 40.0F ? be.aimYaw : be.aimYaw + Mth.wrapDegrees(scan - be.aimYaw) * hold;
 		state.head.randomSeedPos = be.getBlockPos();
 		state.head.blockPos = be.getBlockPos();
-		state.head.blockState = ModBlocks.SENTRY_HEAD.defaultBlockState();
+		state.head.blockState = (block.is(ModBlocks.FLAK_CANNON) ? ModBlocks.FLAK_HEAD : block.is(ModBlocks.SAM_SITE) ? ModBlocks.SAM_HEAD
+				: ModBlocks.SENTRY_HEAD).defaultBlockState();
 		if (be.getLevel() instanceof ClientLevel level) {
 			state.head.biome = level.getBiome(be.getBlockPos());
 			state.head.cardinalLighting = level.cardinalLighting();

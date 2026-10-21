@@ -56,7 +56,13 @@ public class DefenseBlockEntity extends BlockEntity {
 		super(ModBlockEntities.DEFENSE, pos, state);
 	}
 
-	/** Block event 1: the sentry fired toward this yaw (0-255 = 0-360 degrees). */
+	/** Tell nearby clients which way the gun is pointing (they turn its head; see SentryRenderer). */
+	private void aimAt(ServerLevel level, BlockPos pos, Vec3 from, Vec3 to) {
+		float yaw = (float) Math.toDegrees(Math.atan2(-(to.x - from.x), to.z - from.z));
+		level.blockEvent(pos, getBlockState().getBlock(), 1, Math.floorMod(Math.round(yaw / 360.0F * 256.0F), 256));
+	}
+
+	/** Block event 1: the gun is aiming toward this yaw (0-255 = 0-360 degrees). */
 	@Override
 	public boolean triggerEvent(int id, int param) {
 		if (id == 1) {
@@ -177,8 +183,7 @@ public class DefenseBlockEntity extends BlockEntity {
 		}
 		net.minecraft.world.entity.LivingEntity victim = target.get();
 		Vec3 aim = victim.position().add(0, victim.getBbHeight() * 0.6, 0);
-		float yaw = (float) Math.toDegrees(Math.atan2(-(aim.x - gun.x), aim.z - gun.z));
-		level.blockEvent(pos, getBlockState().getBlock(), 1, Math.floorMod(Math.round(yaw / 360.0F * 256.0F), 256));
+		aimAt(level, pos, gun, aim);
 		victim.setInvulnerableTime(0);
 		victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, owner(level, claim)), TURRET_DAMAGE);
 		ammo--;
@@ -291,6 +296,9 @@ public class DefenseBlockEntity extends BlockEntity {
 		}
 		Vec3 gun = Vec3.atCenterOf(pos).add(0, 1.2, 0);
 		AircraftEntity target = airTarget(level, gun, FLAK_RANGE, claim);
+		if (target != null) {
+			aimAt(level, pos, gun, target.position());
+		}
 		if (target == null) {
 			return;
 		}
@@ -318,6 +326,9 @@ public class DefenseBlockEntity extends BlockEntity {
 		}
 		Vec3 top = Vec3.atCenterOf(pos).add(0, 1.0, 0);
 		AircraftEntity target = airTarget(level, top, SAM_RANGE, claim);
+		if (target != null) {
+			aimAt(level, pos, top, target.position());
+		}
 		if (target == null) {
 			return;
 		}

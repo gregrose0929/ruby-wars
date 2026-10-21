@@ -76,6 +76,8 @@ BLOCKS = {
     "flak_cannon": [
         vbox([1, 0, 1], [15, 3, 15], DARK),                          # base
         vbox([3, 3, 3], [13, 5, 13], STEEL),                         # turntable
+    ],
+    "flak_head": [
         vbox([4, 5, 5], [12, 10, 12], OLIVE),                        # mount
         vbox([4.5, 10, 6], [11.5, 10.5, 11], OLIVE_DARK),
         vbox([5, 8, -3], [6.5, 9.5, 9], BLACK, tilt([8, 8.75, 8], 45, "x")),   # twin barrels, raised
@@ -88,6 +90,8 @@ BLOCKS = {
         vbox([0, 0, 0], [16, 3, 16], DARK),                          # base
         vbox([1, 3, 1], [15, 3.4, 15], BRASS),                       # hazard trim
         vbox([3, 3, 3], [13, 5, 13], STEEL),                         # turntable
+    ],
+    "sam_head": [
         vbox([2, 5, 2], [14, 13, 14], LIGHT, tilt([8, 9, 8], 22.5, "x")),   # launcher box, raised
         *[vbox([x, y, 1.6], [x + 4, y + 3.5, 2], BLACK, tilt([8, 9, 8], 22.5, "x")) for x in (3, 9) for y in (5.5, 9.5)],
         *[vbox([x + 1.5, y + 1.25, 1.4], [x + 2.5, y + 2.25, 1.7], RED_LIGHT, tilt([8, 9, 8], 22.5, "x")) for x in (3, 9) for y in (5.5, 9.5)],
@@ -150,3 +154,5 @@ def extent(elements, axis):
 
 
 BLOCKS["sentry_turret_full"] = BLOCKS["sentry_turret"] + BLOCKS["sentry_head"]
+BLOCKS["flak_cannon_full"] = BLOCKS["flak_cannon"] + BLOCKS["flak_head"]
+BLOCKS["sam_site_full"] = BLOCKS["sam_site"] + BLOCKS["sam_head"]
