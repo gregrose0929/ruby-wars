@@ -111,10 +111,16 @@ public final class Claims {
 		}
 		claim.hp = Math.max(0, claim.hp - damage);
 		SeasonData.markDirty();
-		ServerPlayer owner = level.getServer().getPlayerList().getPlayer(UUID.fromString(claim.owner));
-		if (owner != null) {
-			Alerts.title(owner, "HEART UNDER ATTACK", "HP " + claim.hp + " / " + claim.maxHp(), ChatFormatting.RED);
-			Alerts.ping(owner, 0.5F);
+		// The owner and their squad (who respawn at this Heart too) all get the alert.
+		java.util.List<UUID> side = new java.util.ArrayList<>(Squads.mates(UUID.fromString(claim.owner)));
+		side.add(UUID.fromString(claim.owner));
+		for (UUID id : side) {
+			ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
+			if (p != null) {
+				String whose = id.toString().equals(claim.owner) ? "HEART UNDER ATTACK" : claim.ownerName.toUpperCase() + "'S HEART UNDER ATTACK";
+				Alerts.title(p, whose, "HP " + claim.hp + " / " + claim.maxHp(), ChatFormatting.RED);
+				Alerts.ping(p, 0.5F);
+			}
 		}
 		if (claim.hp <= 0) {
 			destroyHeart(level, claim, attacker);
