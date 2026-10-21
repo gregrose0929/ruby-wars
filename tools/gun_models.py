@@ -94,11 +94,11 @@ def red_dot(z0, y):
     """Holographic red dot sitting on a rail top at height y, from z0 to z0 + 3.2."""
     return [
         B(-0.8, y, z0, 0.8, y + 0.6, z0 + 3.2, "black_metal"),                 # mount
-        B(-0.9, y + 0.6, z0 + 0.2, -0.55, y + 2.4, z0 + 3.0, "black_metal"),   # hood sides
-        B(0.55, y + 0.6, z0 + 0.2, 0.9, y + 2.4, z0 + 3.0, "black_metal"),
-        B(-0.9, y + 2.4, z0 + 0.2, 0.9, y + 2.8, z0 + 3.0, "black_metal"),     # hood top
-        B(-0.55, y + 0.6, z0 + 2.7, 0.55, y + 2.4, z0 + 2.8, "lens"),          # front window
-        B(-0.55, y + 0.6, z0 + 0.3, 0.55, y + 2.4, z0 + 0.35, "lens_clear"),   # rear window
+        B(-1.0, y + 0.6, z0 + 0.2, -0.8, y + 2.6, z0 + 3.0, "black_metal"),    # hood sides (thin, for a wide window)
+        B(0.8, y + 0.6, z0 + 0.2, 1.0, y + 2.6, z0 + 3.0, "black_metal"),
+        B(-1.0, y + 2.6, z0 + 0.2, 1.0, y + 2.85, z0 + 3.0, "black_metal"),    # hood top
+        B(-0.8, y + 0.6, z0 + 2.7, 0.8, y + 2.6, z0 + 2.8, "lens"),            # front window
+        B(-0.8, y + 0.6, z0 + 0.3, 0.8, y + 2.6, z0 + 0.35, "lens_clear"),     # rear window
         B(-0.1, y + 1.4, z0 + 2.6, 0.1, y + 1.6, z0 + 2.7, "glow_red"),        # the dot
         B(0.9, y + 0.8, z0 + 1.0, 1.15, y + 1.6, z0 + 2.2, "black_metal", knurl=True),  # brightness knob
     ]
@@ -604,6 +604,8 @@ def paint(img, glow, root, seed):
             for py in range(fh):
                 for px in range(fw):
                     c, g = pixel(b, face, px, py, fw, fh, rnd)
+                    if g == "clear":
+                        continue                                  # see-through glass (cutout discards it)
                     if g != "only":
                         img[fy + py][fx + px] = clamp(c) + (255,)
                     if g:
@@ -639,6 +641,11 @@ def pixel(b, face, px, py, fw, fh, rnd):
         shade *= 1.08 - 0.16 * (py / (fh - 1))            # lighter toward the top of each side
     c = mul(c, shade)
 
+    if mat in ("lens", "lens_clear") and b.size[2] < 0.3:
+        # Thin sight windows are glass you look through: clear, with a faint glint stripe.
+        if mat == "lens" and abs(px - py - fw * 0.15) < 0.6 and face in ("front", "back") and px < fw * 0.4:
+            return (190, 220, 240), False
+        return (0, 0, 0), "clear"
     if mat in ("lens", "lens_clear", "lens_thermal"):
         t = (px + py * 0.6) / max(1, fw + fh * 0.6)
         c = mix(mul(base, 1.5), mul(base, 0.6), t)

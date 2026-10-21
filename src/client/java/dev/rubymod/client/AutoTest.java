@@ -124,6 +124,17 @@ public final class AutoTest {
 			case "gear" -> gearScript();
 			case "impact" -> impactScript();
 			case "follow" -> followScript();
+			case "attach" -> {
+				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
+				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));
+				then(15, mc -> shot(mc, "attach-hip"));
+				then(2, mc -> aim(mc, true));
+				then(18, mc -> shot(mc, "attach-aim"));
+				then(2, mc -> aim(mc, false));
+				then(2, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
+				then(12, mc -> shot(mc, "attach-third"));
+				then(2, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+			}
 			case "ghostbench" -> then(5, mc -> {
 				var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
 				var wall = net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState();
