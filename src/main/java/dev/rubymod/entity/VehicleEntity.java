@@ -213,9 +213,10 @@ public class VehicleEntity extends Mob {
 			// Driver/commander stands in the cupola (head and shoulders above the turret roof); a second rider on the engine deck.
 			return new Vec3(index == 0 ? 0.45 : 0, height + (index == 0 ? 0.45 : 0.1), index == 0 ? -0.1 : -1.2).yRot((float) Math.toRadians(-getYRot()));
 		}
-		double side = index % 2 == 0 ? 0.45 : -0.45;
-		double front = index < 2 ? 0.3 : -0.7;
-		return new Vec3(side, height, front).yRot((float) Math.toRadians(-getYRot()));
+		// Jeep seats (the model's seats are at z 1 px (front) and -15 px (back), 0.5 block either side).
+		double side = index % 2 == 0 ? 0.5 : -0.5;
+		double front = index < 2 ? 0.0 : -0.95;
+		return new Vec3(side, 0.28, front).yRot((float) Math.toRadians(-getYRot()));
 	}
 
 	@Override

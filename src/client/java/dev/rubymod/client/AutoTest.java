@@ -609,6 +609,19 @@ public final class AutoTest {
 		then(30, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 		then(10, mc -> shot(mc, "vehicles-tank-first-person"));
 		then(15, mc -> command(mc, "ride @p dismount"));
+		then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:jeep,limit=1,sort=nearest]"));
+		then(5, mc -> {
+			mc.player.setXRot(5);
+			mc.player.setYRot(mc.player.getVehicle() != null ? mc.player.getVehicle().getYRot() : 0);
+		});
+		then(20, mc -> {
+			log("jeep eye {} above jeep, local {}, jeep yaw {}, player yaw {}", String.format("%.2f", mc.player.getEyeY() - mc.player.getVehicle().getY()),
+					mc.player.position().subtract(mc.player.getVehicle().position()), mc.player.getVehicle().getYRot(), mc.player.getYRot());
+			shot(mc, "vehicles-jeep-first-person");
+		});
+		then(2, mc -> mc.player.setYRot(mc.player.getYRot() + 180));
+		then(5, mc -> shot(mc, "vehicles-jeep-first-person-b"));
+		then(5, mc -> command(mc, "ride @p dismount"));
 
 		then(40, mc -> {
 			mc.options.setCameraType(CameraType.FIRST_PERSON);

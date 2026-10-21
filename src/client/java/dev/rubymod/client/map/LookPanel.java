@@ -32,7 +32,10 @@ public class LookPanel implements HudElement {
 		HitResult hit = mc.hitResult;
 		BlockPos pos = BlockPos.ZERO;
 		int entity = -1;
-		if (hit instanceof EntityHitResult e) {
+		if (hit instanceof EntityHitResult e && e.getEntity() == mc.player.getVehicle()) {
+			lastEntity = -2;
+			return;
+		} else if (hit instanceof EntityHitResult e) {
 			entity = e.getEntity().getId();
 		} else if (hit instanceof BlockHitResult b && hit.getType() == HitResult.Type.BLOCK) {
 			pos = b.getBlockPos();

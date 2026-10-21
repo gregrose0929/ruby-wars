@@ -183,7 +183,10 @@ def jeep():
         B(-19, 4, 28, 19, 7, 32, "dark"),                                   # bumper
         B(-20, 12, 12, 20, 14, 26, "paint"),                                # front fenders
         B(-20, 12, -26, 20, 14, -12, "paint"),                              # rear fenders
-        B(-17.6, 15.5, 6, 17.6, 26, 7.2, "dark"),                           # windshield frame
+        B(-17.6, 15.5, 6, 17.6, 16.4, 7.2, "dark"),                         # windshield frame: bottom, top, sides, center post
+        B(-17.6, 25, 6, 17.6, 26, 7.2, "dark"),
+        B(-17.6, 16.4, 6, -16.4, 25, 7.2, "dark"), B(16.4, 16.4, 6, 17.6, 25, 7.2, "dark"),
+        B(-0.6, 16.4, 6, 0.6, 25, 7.2, "dark"),
         B(-16.4, 16.4, 6.2, -0.6, 25, 7.0, "glass"), B(0.6, 16.4, 6.2, 16.4, 25, 7.0, "glass"),
         B(-17.6, 26, -24, 17.6, 27, 7.2, "dark"),                           # roof frame
         B(-17.6, 14, -24, -16.6, 26, -22.8, "dark"), B(16.6, 14, -24, 17.6, 26, -22.8, "dark"),
@@ -260,6 +263,8 @@ def paint(img, glow, root, pal, seed):
             for py in range(fh):
                 for px in range(fw):
                     c, g = pixel(b, face, px, py, fw, fh, pal, rnd)
+                    if g == "clear":
+                        continue
                     if g != "only":
                         img[fy + py][fx + px] = clamp(c) + (255,)
                     if g:
@@ -327,10 +332,12 @@ def pixel(b, face, px, py, fw, fh, pal, rnd):
     c = MATERIALS.get(mat, (255, 0, 255))
     c = mul(c, shade)
     if mat == "glass":
-        c = (30 + py * 3, 52 + py * 3, 70 + py * 3) if (px + py) % 7 > 1 else (150, 180, 200)
+        # Windows you can see through: a dark frame, a couple of glint streaks, clear in between.
         if edge:
-            c = (36, 38, 40)
-        return c, False
+            return (36, 38, 40), False
+        if face not in ("front", "back"):
+            return (30 + py * 3, 52 + py * 3, 70 + py * 3), False
+        return (0, 0, 0), "clear"
     if mat == "grille" and (px % 3 == 0):
         c = (14, 14, 14)
     if mat == "grille" and fl.get("grille") is None and face == "top" and py % 3 == 0:
