@@ -124,6 +124,23 @@ public final class AutoTest {
 			case "gear" -> gearScript();
 			case "impact" -> impactScript();
 			case "follow" -> followScript();
+			case "ghostbench" -> then(5, mc -> {
+				var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+				var wall = net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState();
+				java.util.List<Integer> cells = new java.util.ArrayList<>();
+				for (int y = 0; y < 8; y++) {
+					for (int z = 0; z < 16; z++) {
+						for (int x = 0; x < 16; x++) {
+							boolean shell = x == 0 || z == 0 || x == 15 || z == 15 || y == 0 || y == 7;
+							cells.add(shell ? 0 : -1);
+						}
+					}
+				}
+				var data = new dev.rubymod.industry.Blueprints.Data(16, 8, 16, java.util.List.of(wall), cells);
+				long t0 = System.nanoTime();
+				var shape = dev.rubymod.client.map.BlueprintGhost.shape(data, net.minecraft.core.Direction.NORTH);
+				log("ghost shape for {} blocks took {} ms", data.blocks(), (System.nanoTime() - t0) / 1_000_000);
+			});
 			case "vehicles" -> vehiclesScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();

@@ -65,10 +65,10 @@ public final class BlueprintGhost {
 	}
 
 	/** The structure's merged shape, relative to the Constructor. */
-	private static VoxelShape shape(Blueprints.Data data, Direction facing) {
+	public static VoxelShape shape(Blueprints.Data data, Direction facing) {
 		VoxelShape shape = Shapes.empty();
 		int count = 0;
-		for (int i = 0; i < data.cells().size() && count < 1500; i++) {
+		for (int i = 0; i < data.cells().size() && count < 3000; i++) {
 			if (data.at(i) == null) {
 				continue;
 			}
