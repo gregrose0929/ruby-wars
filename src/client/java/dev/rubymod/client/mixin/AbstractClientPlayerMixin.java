@@ -20,6 +20,10 @@ public abstract class AbstractClientPlayerMixin {
 			cir.setReturnValue(cir.getReturnValueF() * 0.3F); // Tank gunner sight.
 			return;
 		}
+		if (firstPerson && self.isUsingItem() && self.getUseItem().getItem() instanceof dev.rubymod.item.LockOnLauncherItem) {
+			cir.setReturnValue(cir.getReturnValueF() * 0.7F);
+			return;
+		}
 		if (!firstPerson || !GunItem.isAiming(self) || !(self.getUseItem().getItem() instanceof GunItem gun)) {
 			return;
 		}

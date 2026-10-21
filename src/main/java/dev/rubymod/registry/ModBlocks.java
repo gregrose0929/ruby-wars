@@ -76,6 +76,17 @@ public class ModBlocks {
 	public static final Block ALARM_BLOCK = register("alarm_block",
 			p -> new DefenseBlock(DefenseBlock.Kind.ALARM, Shapes.block(), p),
 			props().mapColor(MapColor.COLOR_RED).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
+	public static final Block FLAK_CANNON = register("flak_cannon",
+			p -> new DefenseBlock(DefenseBlock.Kind.FLAK, Shapes.block(), p),
+			props().mapColor(MapColor.METAL).strength(4.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
+	public static final Block SAM_SITE = register("sam_site",
+			p -> new DefenseBlock(DefenseBlock.Kind.SAM, Shapes.block(), p),
+			props().mapColor(MapColor.METAL).strength(5.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
+	public static final Block AIRFIELD_PAD = register("airfield_pad",
+			p -> new DefenseBlock(DefenseBlock.Kind.AIRFIELD_PAD, Block.box(0, 0, 0, 16, 2, 16), p),
+			props().mapColor(MapColor.COLOR_YELLOW).strength(3.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
+	public static final Block AT_MINE = register("at_mine", dev.rubymod.block.AtMineBlock::new,
+			props().mapColor(MapColor.COLOR_GREEN).strength(0.5F).sound(SoundType.METAL).noOcclusion());
 	public static final Block CLAYMORE = register("claymore", ClaymoreBlock::new,
 			props().mapColor(MapColor.COLOR_GREEN).strength(0.5F).sound(SoundType.METAL).noOcclusion());
 	public static final Block LANDMINE = register("landmine", LandmineBlock::new,

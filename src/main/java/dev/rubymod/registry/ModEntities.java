@@ -45,6 +45,9 @@ public class ModEntities {
 	public static final EntityType<VehicleEntity> TANK = register("tank",
 			EntityType.Builder.<VehicleEntity>of(VehicleEntity::new, MobCategory.MISC).sized(3.0F, 2.0F).clientTrackingRange(10).updateInterval(1));
 
+	public static final EntityType<dev.rubymod.entity.StickyChargeEntity> STICKY_CHARGE = register("sticky_charge",
+			EntityType.Builder.<dev.rubymod.entity.StickyChargeEntity>of(dev.rubymod.entity.StickyChargeEntity::new, MobCategory.MISC).sized(0.3F, 0.3F)
+					.clientTrackingRange(8).updateInterval(2));
 	public static final EntityType<dev.rubymod.entity.WreckEntity> WRECK = register("wreck",
 			EntityType.Builder.<dev.rubymod.entity.WreckEntity>of(dev.rubymod.entity.WreckEntity::new, MobCategory.MISC).sized(0.5F, 0.5F)
 					.clientTrackingRange(10).noSave());

@@ -8,6 +8,10 @@ cd "$(dirname "$0")/.."
 if [ -d "/c/Program Files/Java/jdk-25" ]; then export JAVA_HOME="C:\Program Files\Java\jdk-25"; fi
 MODE="${1:-full}"
 mkdir -p run/saves
+# Start every run from a clean copy of the test world (run/saves/autotest-template), so a death or
+# a changed world from the last run doesn't leak in. Defaults to the training world.
+if [ ! -d run/saves/autotest-template ] && [ -d "dist/Ruby Wars Training" ]; then cp -r "dist/Ruby Wars Training" run/saves/autotest-template; fi
+if [ -d run/saves/autotest-template ]; then rm -rf run/saves/autotest; cp -r run/saves/autotest-template run/saves/autotest; fi
 if [ ! -d run/saves/autotest ]; then
 	echo "Create run/saves/autotest first (copy any test world there)."
 	exit 1

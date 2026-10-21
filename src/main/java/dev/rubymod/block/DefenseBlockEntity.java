@@ -1,5 +1,8 @@
 package dev.rubymod.block;
 
+import dev.rubymod.entity.AircraftEntity;
+import dev.rubymod.entity.RocketEntity;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -99,6 +102,21 @@ public class DefenseBlockEntity extends BlockEntity {
 			case CLAYMORE -> {
 				if (t % 4 == 0 && Rules.phase().pvp() && (claim = claimHere(serverLevel, pos)) != null) {
 					tickClaymore(serverLevel, pos, state, claim);
+				}
+			}
+			case FLAK -> {
+				if (t % 5 == 0) {
+					be.tickFlak(serverLevel, pos, claimHere(serverLevel, pos));
+				}
+			}
+			case SAM -> {
+				if (t % 10 == 0) {
+					be.tickSam(serverLevel, pos, claimHere(serverLevel, pos));
+				}
+			}
+			case AIRFIELD_PAD -> {
+				if (t % 40 == 0) {
+					tickPad(serverLevel, pos);
 				}
 			}
 		}
@@ -214,6 +232,90 @@ public class DefenseBlockEntity extends BlockEntity {
 		level.playSound(null, pos, SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 2.0F, 1.0F);
 		level.sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 3, 0.3, 0.2, 0.3, 0);
 		Alerts.intruder(level, claim, intruders.get(0), pos);
+	}
+
+	// ----- Anti-aircraft: Flak Cannon and SAM Site -----
+
+	private static final double FLAK_RANGE = 80;
+	private static final double SAM_RANGE = 180;
+
+	/**
+	 * Aircraft this air defense should shoot at: in a claim, enemy-flown aircraft on
+	 * Battle Day; anywhere, target drones (so the training range has something to shoot).
+	 */
+	private static AircraftEntity airTarget(ServerLevel level, Vec3 from, double range, SeasonData.Claim claim) {
+		AircraftEntity best = null;
+		double bestDist = range;
+		for (AircraftEntity a : level.getEntitiesOfClass(AircraftEntity.class, new AABB(from, from).inflate(range), a -> a.isAlive() && !a.onGround())) {
+			var pilot = a.getControllingPassenger();
+			boolean hostile = pilot != null ? claim != null && Rules.phase().pvp() && Rules.isEnemyOf(claim, pilot) : a.isDrone();
+			double dist = a.position().distanceTo(from);
+			if (hostile && dist < bestDist && canSee(level, from, a.getBoundingBox().getCenter())) {
+				best = a;
+				bestDist = dist;
+			}
+		}
+		return best;
+	}
+
+	private void tickFlak(ServerLevel level, BlockPos pos, SeasonData.Claim claim) {
+		if (ammo <= 0) {
+			return;
+		}
+		Vec3 gun = Vec3.atCenterOf(pos).add(0, 1.2, 0);
+		AircraftEntity target = airTarget(level, gun, FLAK_RANGE, claim);
+		if (target == null) {
+			return;
+		}
+		// Lead the target, plus a fuse error that grows with range.
+		Vec3 center = target.getBoundingBox().getCenter();
+		double t = center.distanceTo(gun) / 6.0;
+		Vec3 velocity = target.getDeltaMovement().lengthSqr() > 0.01 ? target.getDeltaMovement()
+				: Vec3.directionFromRotation(target.getXRot(), target.getYRot()).scale(target.groundSpeed());
+		double error = 0.6 + center.distanceTo(gun) / 30.0;
+		var random = level.getRandom();
+		Vec3 burst = center.add(velocity.scale(t)).add((random.nextDouble() - 0.5) * 2 * error, (random.nextDouble() - 0.5) * 2 * error,
+				(random.nextDouble() - 0.5) * 2 * error);
+		level.sendParticles(ParticleTypes.EXPLOSION, true, true, burst.x, burst.y, burst.z, 2, 0.5, 0.5, 0.5, 0);
+		level.sendParticles(ParticleTypes.LARGE_SMOKE, true, false, burst.x, burst.y, burst.z, 8, 0.8, 0.8, 0.8, 0.02);
+		level.playSound(null, burst.x, burst.y, burst.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 3.0F, 1.3F);
+		level.playSound(null, pos, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.BLOCKS, 2.0F, 0.6F);
+		dev.rubymod.game.Armor.blast(level, null, claim != null ? owner(level, claim) : null, burst, 14.0F, null);
+		ammo--;
+		setChanged();
+	}
+
+	private void tickSam(ServerLevel level, BlockPos pos, SeasonData.Claim claim) {
+		if (charges <= 0) {
+			return;
+		}
+		Vec3 top = Vec3.atCenterOf(pos).add(0, 1.0, 0);
+		AircraftEntity target = airTarget(level, top, SAM_RANGE, claim);
+		if (target == null) {
+			return;
+		}
+		var missile = RocketEntity.missile(level, claim != null ? owner(level, claim) : null, null, top.add(0, 0.8, 0), new Vec3(0, 3.0, 0),
+				3.0F, 8.0, target, null).withAntiArmor(100.0F);
+		level.addFreshEntity(missile);
+		level.playSound(null, pos, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.BLOCKS, 4.0F, 0.5F);
+		level.sendParticles(ParticleTypes.LARGE_SMOKE, true, false, top.x, top.y, top.z, 20, 0.6, 0.4, 0.6, 0.05);
+		charges--;
+		cooldown = 100;
+		setChanged();
+	}
+
+	// ----- Airfield Pad -----
+
+	private static void tickPad(ServerLevel level, BlockPos pos) {
+		Vec3 center = Vec3.atCenterOf(pos);
+		for (AircraftEntity a : level.getEntitiesOfClass(AircraftEntity.class, new AABB(center, center).inflate(12, 4, 12),
+				a -> a.isAlive() && a.onGround() && a.groundSpeed() < 0.1)) {
+			boolean done = a.rearmStep();
+			if (a.getControllingPassenger() instanceof ServerPlayer pilot) {
+				pilot.sendOverlayMessage(net.minecraft.network.chat.Component.literal(done ? "Rearmed and repaired" : "Rearming..."));
+			}
+			level.sendParticles(ParticleTypes.HAPPY_VILLAGER, a.getX(), a.getY() + 1.5, a.getZ(), 4, 1.0, 0.5, 1.0, 0);
+		}
 	}
 
 	// ----- Claymore -----

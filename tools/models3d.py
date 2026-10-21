@@ -104,6 +104,26 @@ GUNS = {
         box([6, 2, 7.25], [7.5, 6, 8.75], RUBBER),           # rear grip
         box([10, 2.5, 7.25], [11.5, 6, 8.75], RUBBER),       # front grip
     ],
+    "skyhammer": [
+        box([-6, 6.5, 7], [18, 8.5, 9], OLIVE),              # launch tube
+        box([-6.5, 6.25, 6.75], [-5.5, 8.75, 9.25], DARK),   # rear cap
+        box([18, 6.75, 7.25], [19.5, 8.25, 8.75], DARK, front=LENS),  # seeker dome
+        box([2, 8.5, 7.6], [4, 9.8, 8.4], BLACK, front=LENS),  # sight
+        box([7, 8.5, 5.8], [9, 11.5, 6.4], STEEL),           # IFF antenna
+        box([3, 3.5, 7.4], [6, 6.5, 8.6], DARK),             # gripstock
+        box([4, 1.5, 7.3], [5.5, 4, 8.7], RUBBER, tilt([4.75, 4, 8], -22.5)),  # grip
+        box([12, 6.3, 6.9], [12.6, 8.7, 9.1], BRASS),        # band
+    ],
+    "lancer": [
+        box([-5, 5.5, 6.25], [17, 9.5, 9.75], OLIVE_DARK),   # fat launch tube
+        box([17, 5.25, 6], [18, 9.75, 10], DARK),            # front cap
+        box([-5.5, 5.25, 6], [-4.5, 9.75, 10], DARK),        # rear cap
+        box([0, 9.5, 5.5], [6, 12.5, 10.5], DARK),           # command launch unit
+        box([6, 10, 6.5], [6.4, 12, 9.5], BLACK, front=LENS),  # CLU optics
+        box([-0.6, 10.2, 7], [0, 11.8, 9], BLACK),           # eyepiece
+        box([1.5, 2, 7.25], [3, 5.5, 8.75], RUBBER),         # grip
+        box([12, 5.3, 6.1], [12.6, 9.7, 9.9], BRASS),        # band
+    ],
 }
 
 

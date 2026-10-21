@@ -1,5 +1,6 @@
 package dev.rubymod.entity;
 
+import dev.rubymod.game.Countermeasures;
 import dev.rubymod.game.Explosions;
 import dev.rubymod.registry.ModDamage;
 import dev.rubymod.registry.ModEntities;
@@ -48,6 +49,9 @@ public class VehicleEntity extends Mob {
 	/** Ticks the main gun takes to reload. */
 	public static final int RELOAD_TICKS = 60;
 	private static final EntityDataAccessor<Integer> RELOAD = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> SMOKE = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.INT);
+	public static final int SMOKE_CHARGES = 3;
+	private int smokeCooldown;
 
 	public VehicleEntity(EntityType<? extends VehicleEntity> type, Level level) {
 		super(type, level);
@@ -65,6 +69,7 @@ public class VehicleEntity extends Mob {
 		builder.define(TURRET_YAW, 0.0F);
 		builder.define(BARREL_PITCH, 0.0F);
 		builder.define(RELOAD, 0);
+		builder.define(SMOKE, SMOKE_CHARGES);
 	}
 
 	/** Where the turret points (world yaw, degrees). */
@@ -75,6 +80,27 @@ public class VehicleEntity extends Mob {
 	/** Ticks until the main gun can fire again (synced for the tank HUD). */
 	public int reloadLeft() {
 		return entityData.get(RELOAD);
+	}
+
+	public int smokeCharges() {
+		return entityData.get(SMOKE);
+	}
+
+	/** Space in the tank: smoke launchers. Breaks missile locks for 8 seconds. */
+	public void popSmoke(ServerPlayer driver) {
+		if (!isTank() || getControllingPassenger() != driver || smokeCooldown > 0 || smokeCharges() <= 0) {
+			return;
+		}
+		smokeCooldown = 100;
+		entityData.set(SMOKE, smokeCharges() - 1);
+		ServerLevel level = (ServerLevel) level();
+		Countermeasures.smokeScreen(level, position(), 6.0, 160);
+		for (int i = 0; i < 8; i++) {
+			double a = i * Math.PI / 4;
+			level.sendParticles(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, true, false, getX() + Math.cos(a) * 3, getY() + 1.5, getZ() + Math.sin(a) * 3,
+					8, 0.8, 0.8, 0.8, 0.02);
+		}
+		level.playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 2.0F, 1.6F);
 	}
 
 	/** Barrel elevation (negative = up, like player pitch). */
@@ -262,6 +288,9 @@ public class VehicleEntity extends Mob {
 	@Override
 	public void tick() {
 		super.tick();
+		if (smokeCooldown > 0) {
+			smokeCooldown--;
+		}
 		if (cannonCooldown > 0) {
 			cannonCooldown--;
 			if (!level().isClientSide()) {

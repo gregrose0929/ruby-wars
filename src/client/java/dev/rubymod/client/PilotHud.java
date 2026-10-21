@@ -58,6 +58,7 @@ public class PilotHud implements HudElement {
 		drawHeading(g, font, aircraft, w);
 		drawStatus(g, font, aircraft, kind, w, h);
 		drawWeapons(g, font, camera, aircraft, w, h);
+		drawContacts(g, font, camera, mc, w, h);
 		drawDesignation(g, font, camera, aircraft, w, h);
 		drawWarnings(g, font, mc, aircraft, kind, w, h);
 	}
@@ -290,10 +291,10 @@ public class PilotHud implements HudElement {
 	private void drawSeeker(GuiGraphicsExtractor g, Font font, Camera camera, Weapon weapon, int w, int h) {
 		// Seeker cone.
 		circle(g, w / 2, h / 2, (int) (h / 2.0 / Math.tan(Math.toRadians(camera.getFov() / 2.0)) * Math.tan(Math.toRadians(12))), DIM);
-		Entity target = Targeting.candidate;
+		Contacts.Target target = Targeting.candidate;
 		boolean locked = Targeting.locked(weapon);
 		if (target != null) {
-			float[] p = project(camera, target.getBoundingBox().getCenter(), w, h);
+			float[] p = project(camera, target.pos(), w, h);
 			if (p != null) {
 				int x = (int) p[0];
 				int y = (int) p[1];
@@ -304,8 +305,8 @@ public class PilotHud implements HudElement {
 				g.outline(x - size, y - size, size * 2, size * 2, col);
 				if (locked) {
 					diamond(g, x, y, 4, RED);
-					String d = Math.round(Math.sqrt(target.distanceToSqr(camera.position()))) + "m";
-					g.text(font, "LOCK " + d, x + size + 3, y - 4, RED, false);
+					String d = Math.round(target.pos().distanceTo(camera.position())) + "m";
+					g.text(font, "LOCK " + target.name() + " " + d, x + size + 3, y - 4, RED, false);
 				}
 			}
 		}
@@ -355,6 +356,22 @@ public class PilotHud implements HudElement {
 		g.text(font, "BOMB " + Math.round(impact.distanceTo(aircraft.position())) + "m", x + 10, y - 4, RED, false);
 	}
 
+	// ----- Long-range contacts -----
+
+	/** Aircraft and vehicles beyond render distance: a small diamond, type and range. */
+	private void drawContacts(GuiGraphicsExtractor g, Font font, Camera camera, Minecraft mc, int w, int h) {
+		for (Contacts.Target t : Contacts.remote(mc)) {
+			float[] p = project(camera, t.pos(), w, h);
+			if (p == null || p[0] < 0 || p[0] > w || p[1] < 0 || p[1] > h) {
+				continue;
+			}
+			int col = t.airborne() ? 0xFFFF9050 : 0xFFD0D060;
+			diamond(g, (int) p[0], (int) p[1], 3, col);
+			String s = t.name() + " " + Math.round(t.pos().distanceTo(camera.position())) + "m";
+			g.text(font, s, (int) p[0] + 6, (int) p[1] - 4, col, false);
+		}
+	}
+
 	// ----- Designation and weapon camera -----
 
 	/** The designated target: a square on it, or an arrow at the screen edge pointing to it. */
@@ -365,7 +382,7 @@ public class PilotHud implements HudElement {
 			return;
 		}
 		int d = (int) Math.round(target.distanceTo(aircraft.position()));
-		String label = (Designation.entity != null ? "TGT " + Designation.entity.getName().getString() : "TGT POINT") + " " + d + "m";
+		String label = (Designation.entity != null ? "TGT " + Designation.entity.name() : "TGT POINT") + " " + d + "m";
 		float[] p = project(camera, target, w, h);
 		if (p != null && p[0] > 10 && p[0] < w - 10 && p[1] > 10 && p[1] < h - 10) {
 			int x = (int) p[0];

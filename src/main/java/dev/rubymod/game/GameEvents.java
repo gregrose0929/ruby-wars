@@ -60,6 +60,8 @@ public final class GameEvents {
 			}
 			LagCompensation.record(server);
 			CannonRounds.tick();
+			Countermeasures.tick();
+			Range.tick(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
@@ -104,6 +106,18 @@ public final class GameEvents {
 				var target = payload.entityId() >= 0 ? context.player().level().getEntity(payload.entityId()) : null;
 				var point = payload.hasPoint() ? new net.minecraft.world.phys.Vec3(payload.x(), payload.y(), payload.z()) : null;
 				aircraft.designate(context.player(), target, point);
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.LauncherFire.TYPE, (payload, context) -> {
+			ServerPlayer player = context.player();
+			ItemStack held = player.getMainHandItem();
+			if (held.getItem() instanceof dev.rubymod.item.LockOnLauncherItem launcher && player.getVehicle() == null) {
+				launcher.fire(player, held, payload.targetId() >= 0 ? player.level().getEntity(payload.targetId()) : null);
+			}
+		});
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleSmoke.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof VehicleEntity vehicle) {
+				vehicle.popSmoke(context.player());
 			}
 		});
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftGear.TYPE, (payload, context) -> {

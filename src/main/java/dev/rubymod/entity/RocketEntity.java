@@ -31,6 +31,8 @@ import net.minecraft.world.phys.Vec3;
 public class RocketEntity extends ModProjectile {
 	private static final double LAUNCHER_SPEED = 1.6;
 	private static final int LIFETIME = 160;
+	/** Guided missiles fly longer (about 1000 blocks for a Skyhammer). */
+	private static final int GUIDED_LIFETIME = 260;
 	private static final EntityDataAccessor<Boolean> SHELL = SynchedEntityData.defineId(RocketEntity.class, EntityDataSerializers.BOOLEAN);
 	/** Entity id of what this missile is homing on (-1 = none); lets the target's HUD warn them. */
 	private static final EntityDataAccessor<Integer> TARGET = SynchedEntityData.defineId(RocketEntity.class, EntityDataSerializers.INT);
@@ -43,6 +45,7 @@ public class RocketEntity extends ModProjectile {
 	private double turnRate;
 	private Entity launchedFrom;
 	private float antiArmor = 48.0F;
+	private boolean topAttack;
 
 	public RocketEntity(EntityType<? extends RocketEntity> type, Level level) {
 		super(type, level);
@@ -74,9 +77,11 @@ public class RocketEntity extends ModProjectile {
 		return rocket;
 	}
 
-	/** An unguided round. */
-	public static RocketEntity shell(Level level, LivingEntity shooter, Vec3 from, Vec3 velocity, float power) {
-		RocketEntity rocket = fire(level, shooter);
+	/** An unguided round. {@code shooter} may be null (fired by a defense block). */
+	public static RocketEntity shell(Level level, Entity shooter, Vec3 from, Vec3 velocity, float power) {
+		RocketEntity rocket = new RocketEntity(ModEntities.ROCKET, level);
+		rocket.setOwner(shooter);
+		rocket.setItem(ModItems.ROCKET.getDefaultInstance());
 		rocket.laserGuided = false;
 		rocket.power = power;
 		rocket.speed = velocity.length();
@@ -93,6 +98,12 @@ public class RocketEntity extends ModProjectile {
 		return shell;
 	}
 
+	/** Fly a top-attack profile: climb above the target, then dive onto it (anti-tank missiles). */
+	public RocketEntity topAttack() {
+		this.topAttack = true;
+		return this;
+	}
+
 	/** Set how much this round hurts vehicles and aircraft (see {@link dev.rubymod.game.Armor}). */
 	public RocketEntity withAntiArmor(float damage) {
 		this.antiArmor = damage;
@@ -105,7 +116,7 @@ public class RocketEntity extends ModProjectile {
 	}
 
 	/** A homing missile fired from {@code launcher} (an aircraft) at an entity or a point. */
-	public static RocketEntity missile(Level level, LivingEntity shooter, Entity launcher, Vec3 from, Vec3 velocity, float power,
+	public static RocketEntity missile(Level level, Entity shooter, Entity launcher, Vec3 from, Vec3 velocity, float power,
 			double turnRate, Entity target, Vec3 point) {
 		RocketEntity rocket = shell(level, shooter, from, velocity, power);
 		rocket.launchedFrom = launcher;
@@ -149,7 +160,7 @@ public class RocketEntity extends ModProjectile {
 					return;
 				}
 			}
-			if (tickCount > LIFETIME) {
+			if (tickCount > (turnRate > 0 ? GUIDED_LIFETIME : LIFETIME)) {
 				explode(level, power, true);
 				return;
 			}
@@ -182,6 +193,12 @@ public class RocketEntity extends ModProjectile {
 			homingEntity = null;
 			entityData.set(TARGET, -1);
 		}
+		if (homingEntity != null && Countermeasures.obscured(level, homingEntity)) {
+			// Smoke: the seeker loses the target and flies on to where it last saw it.
+			homingPoint = homingEntity.position();
+			homingEntity = null;
+			entityData.set(TARGET, -1);
+		}
 		if (homingEntity != null) {
 			Vec3 decoy = Countermeasures.decoyFor(level, homingEntity, this);
 			if (decoy != null) {
@@ -204,10 +221,17 @@ public class RocketEntity extends ModProjectile {
 		} else {
 			aim = homingPoint;
 		}
+		if (topAttack) {
+			double horizontal = Math.sqrt(Math.pow(aim.x - getX(), 2) + Math.pow(aim.z - getZ(), 2));
+			// Climb to ~20 above the target, then pitch over early enough to come straight down on the roof.
+			if (horizontal > Math.max(18.0, (getY() - aim.y) * 1.3)) {
+				aim = new Vec3(aim.x, Math.max(aim.y + 20.0, getY()), aim.z);
+			}
+		}
 		Vec3 current = getDeltaMovement().normalize();
 		Vec3 wanted = aim.subtract(position()).normalize();
 		double angle = Math.acos(Math.max(-1, Math.min(1, current.dot(wanted))));
-		double maxTurn = Math.toRadians(turnRate);
+		double maxTurn = Math.toRadians(topAttack ? Math.max(turnRate, 12.0) : turnRate);
 		Vec3 next = angle <= maxTurn ? wanted : current.lerp(wanted, maxTurn / angle).normalize();
 		setDeltaMovement(next.scale(speed));
 	}

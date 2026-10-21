@@ -107,7 +107,6 @@ public class AircraftEntity extends Mob {
 	private Vec3 droneCenter;
 	private int bombsLeft;
 	private Entity strikeOwner;
-	private long forcedChunk = Long.MIN_VALUE;
 
 	public AircraftEntity(EntityType<? extends AircraftEntity> type, Level level) {
 		super(type, level);
@@ -497,7 +496,7 @@ public class AircraftEntity extends Mob {
 			return null;
 		}
 		Vec3 to = target.position().subtract(position());
-		if (to.length() > 300) {
+		if (to.length() > dev.rubymod.game.Range.CONTACT_RANGE) {
 			return null;
 		}
 		double angle = Math.toDegrees(Math.acos(Mth.clamp(to.normalize().dot(forward()), -1, 1)));
@@ -728,21 +727,11 @@ public class AircraftEntity extends Mob {
 	}
 
 	private void keepChunkLoaded(ServerLevel level) {
-		int cx = (int) Math.floor(getX()) >> 4;
-		int cz = (int) Math.floor(getZ()) >> 4;
-		long key = ((long) cx << 32) | (cz & 0xFFFFFFFFL);
-		if (key != forcedChunk) {
-			releaseChunk(level);
-			level.setChunkForced(cx, cz, true);
-			forcedChunk = key;
-		}
+		dev.rubymod.game.Range.keepLoaded(level, this);
 	}
 
 	private void releaseChunk(ServerLevel level) {
-		if (forcedChunk != Long.MIN_VALUE) {
-			level.setChunkForced((int) (forcedChunk >> 32), (int) forcedChunk, false);
-			forcedChunk = Long.MIN_VALUE;
-		}
+		// Chunk tickets expire on their own.
 	}
 
 	@Override
@@ -778,6 +767,27 @@ public class AircraftEntity extends Mob {
 	}
 
 	/** Refill ammo, missiles, bombs, and flares (training range resupply). */
+	/** A target drone (circles on autopilot, no pilot). */
+	public boolean isDrone() {
+		return droneCenter != null;
+	}
+
+	/** Server: how fast it's actually moving (blocks/tick). */
+	public double groundSpeed() {
+		return serverVelocity.length();
+	}
+
+	/** One step of rearming on an Airfield Pad: some of every store back, 10% hull. True when fully done. */
+	public boolean rearmStep() {
+		entityData.set(CANNON_AMMO, Math.min(kind.cannonAmmo(), ammo(Weapon.CANNON) + Math.max(1, kind.cannonAmmo() / 5)));
+		entityData.set(MISSILES, Math.min(kind.missiles(), entityData.get(MISSILES) + 1));
+		entityData.set(BOMBS, Math.min(kind.bombs(), entityData.get(BOMBS) + Math.max(1, kind.bombs() / 4)));
+		entityData.set(FLARES, Math.min(kind.flares(), flares() + 2));
+		setHealth(Math.min(getMaxHealth(), getHealth() + getMaxHealth() * 0.1F));
+		return ammo(Weapon.CANNON) >= kind.cannonAmmo() && entityData.get(MISSILES) >= kind.missiles() && entityData.get(BOMBS) >= kind.bombs()
+				&& flares() >= kind.flares() && getHealth() >= getMaxHealth();
+	}
+
 	public void rearm() {
 		entityData.set(CANNON_AMMO, kind.cannonAmmo());
 		entityData.set(MISSILES, kind.missiles());

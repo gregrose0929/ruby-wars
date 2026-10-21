@@ -383,7 +383,7 @@ public final class AutoTest {
 		// A 9-wide, 320-long runway heading south (+Z) from the player, with the air above it cleared.
 		then(5, mc -> {
 			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
-			for (int z = 0; z < 320; z += 40) {
+			for (int z = 0; z < 720; z += 40) {
 				command(mc, "execute at @p run fill ~-7 ~ ~" + z + " ~7 ~14 ~" + (z + 39) + " minecraft:air");
 				command(mc, "execute at @p run fill ~-7 ~-1 ~" + z + " ~7 ~-1 ~" + (z + 39) + " minecraft:smooth_stone");
 				command(mc, "execute at @p run fill ~-4 ~-1 ~" + z + " ~4 ~-1 ~" + (z + 39) + " minecraft:gray_concrete");
@@ -411,7 +411,7 @@ public final class AutoTest {
 		});
 		then(15, mc -> shot(mc, "planes-hud-taxi"));
 		// Takeoff roll: hold the nose level until rotate speed, then pull up.
-		for (int i = 0; i < 16; i++) {
+		for (int i = 0; i < 40; i++) {
 			int n = i;
 			then(10, mc -> {
 				var a = aircraft(mc);
@@ -426,11 +426,11 @@ public final class AutoTest {
 					log("fighter lifted off after {} blocks of runway at {} km/h", String.format("%.0f", a.position().distanceTo(runwayStart)),
 							Math.round(a.speed() * 72));
 				}
-				if (n % 2 == 1) {
+				if (n % 4 == 3) {
 					log("takeoff t={}: speed {} km/h, throttle {}, on ground {}, alt +{}", (n + 1) * 10, Math.round(a.speed() * 72),
 							String.format("%.2f", a.throttle()), a.onGround(), String.format("%.1f", a.getY() - runwayStart.y));
 				}
-				if (n == 7) {
+				if (n == 20) {
 					shot(mc, "planes-hud-rotate");
 				}
 			});
@@ -469,7 +469,7 @@ public final class AutoTest {
 			log("drone found: {}, selected weapon {}", track != null, a == null ? null : a.selectedWeapon());
 		});
 		then(25, mc -> {
-			log("seeker: candidate {}, lock ticks {}, locked {}", Targeting.candidate == null ? "none" : Targeting.candidate.getName().getString(),
+			log("seeker: candidate {}, lock ticks {}, locked {}", Targeting.candidate == null ? "none" : Targeting.candidate.name(),
 					Targeting.lockTicks, Targeting.locked(dev.rubymod.entity.AircraftType.Weapon.AAM));
 			shot(mc, "planes-hud-lock");
 			Trigger.fireAircraft(dev.rubymod.entity.AircraftType.Weapon.AAM);
@@ -498,7 +498,7 @@ public final class AutoTest {
 				log("FAIL: could not board the attack jet");
 				return;
 			}
-			a.setDeltaMovement(0, 0, 1.5);
+			a.launch(2.6);
 			mc.options.keyUp.setDown(true);
 			ClientPlayNetworking.send(new Payloads.AircraftCycle());
 			for (var e : mc.level.entitiesForRendering()) {
@@ -510,7 +510,7 @@ public final class AutoTest {
 		then(30, mc -> {
 			var a = aircraft(mc);
 			log("attack jet: weapon {}, seeker {}, locked {}, speed {} km/h", a == null ? null : a.selectedWeapon(),
-					Targeting.candidate == null ? "none" : Targeting.candidate.getName().getString(),
+					Targeting.candidate == null ? "none" : Targeting.candidate.name(),
 					Targeting.locked(dev.rubymod.entity.AircraftType.Weapon.AGM), a == null ? 0 : Math.round(a.speed() * 72));
 			shot(mc, "planes-hud-agm");
 			Trigger.fireAircraft(dev.rubymod.entity.AircraftType.Weapon.AGM);
@@ -534,6 +534,7 @@ public final class AutoTest {
 				log("FAIL: could not board the bomber");
 				return;
 			}
+			a.launch(2.4);
 			mc.options.keyUp.setDown(true);
 			mc.player.setYRot(0);
 			mc.player.setXRot(25);
@@ -556,10 +557,92 @@ public final class AutoTest {
 			command(mc, "kill @e[type=rubymod:bomber]");
 		});
 
+		// Handheld launchers: Skyhammer vs a drone, Lancer vs a tank.
+		then(20, mc -> {
+			command(mc, "clear @a");
+			command(mc, "give @a rubymod:skyhammer");
+			command(mc, "give @a rubymod:aa_missile 4");
+			command(mc, "execute as @p at @s positioned over world_surface run tp @s ~ ~ ~ 0 -25");
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var p = server.getPlayerList().getPlayers().get(0);
+				Vec3 center = Vec3.atBottomCenterOf(p.level().getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,
+						p.blockPosition())).add(0, 35, 60);
+				var level = (net.minecraft.server.level.ServerLevel) p.level();
+				boolean added = level.addFreshEntity(dev.rubymod.entity.AircraftEntity.targetDrone(level, center, 30));
+				log("skyhammer drone added {} at {} (player at {})", added, center, p.position());
+			});
+		});
+		then(30, mc -> {
+			mc.player.getInventory().setSelectedSlot(0);
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof dev.rubymod.entity.AircraftEntity d && !d.isVehicle()) {
+					track = d;
+				}
+			}
+			aim(mc, true);
+		});
+		then(40, mc -> {
+			log("skyhammer: candidate {}, lock ticks {}, locked {}", LauncherSeeker.candidate == null ? "none" : LauncherSeeker.candidate.getName().getString(),
+					LauncherSeeker.lockTicks, LauncherSeeker.locked());
+			shot(mc, "launcher-skyhammer-lock");
+			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.getId() : -1));
+		});
+		then(8, mc -> shot(mc, "launcher-skyhammer-fired"));
+		then(70, mc -> {
+			aim(mc, false);
+			log("drone after Skyhammer: {}", track == null ? "none" : track.isAlive() ? "alive, hp " + ((net.minecraft.world.entity.LivingEntity) track).getHealth() : "destroyed");
+			track = null;
+			command(mc, "kill @e[type=rubymod:fighter_jet]");
+			command(mc, "clear @a");
+			command(mc, "give @a rubymod:lancer");
+			command(mc, "give @a rubymod:at_missile 4");
+			command(mc, "execute as @p at @s positioned over world_surface run tp @s ~ ~ ~ 0 5");
+			command(mc, "execute at @p positioned ~ ~ ~45 positioned over world_surface run summon rubymod:tank ~ ~ ~ {Rotation:[90f,0f]}");
+		});
+		then(20, mc -> {
+			mc.player.getInventory().setSelectedSlot(0);
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof dev.rubymod.entity.VehicleEntity v) {
+					track = v;
+				}
+			}
+			aim(mc, true);
+		});
+		then(40, mc -> {
+			log("lancer: candidate {}, locked {}", LauncherSeeker.candidate == null ? "none" : LauncherSeeker.candidate.getName().getString(),
+					LauncherSeeker.locked());
+			shot(mc, "launcher-lancer-lock");
+			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.getId() : -1));
+		});
+		then(25, mc -> {
+			track = null; // stop following so the camera can watch the dive
+			shot(mc, "launcher-lancer-climb");
+		});
+		for (int i = 0; i < 8; i++) {
+			then(10, mc -> {
+				for (var e : mc.level.entitiesForRendering()) {
+					if (e instanceof dev.rubymod.entity.RocketEntity r) {
+						log("lancer missile at {} vel {} target {}", r.position(), r.getDeltaMovement(), r.targetId());
+					}
+				}
+			});
+		}
+		then(20, mc -> {
+			aim(mc, false);
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof dev.rubymod.entity.VehicleEntity v) {
+					log("tank after Lancer: hp {}", v.getHealth());
+				}
+			}
+			command(mc, "gamemode creative @a");
+			command(mc, "kill @e[type=rubymod:tank]");
+		});
+
 		// Crash check: fly a fighter into a stone wall.
 		then(20, mc -> {
 			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
-			command(mc, "execute at @p run fill ~-10 ~20 ~40 ~10 ~40 ~41 minecraft:stone");
+			command(mc, "execute at @p run fill ~-10 ~0 ~40 ~10 ~40 ~41 minecraft:stone");
 			log("crash test wall at z {} y {}..{}", Math.round(mc.player.getZ() + 40), Math.round(mc.player.getY() + 20), Math.round(mc.player.getY() + 40));
 			command(mc, "execute at @p run summon rubymod:fighter_jet ~ ~30 ~ {Rotation:[0f,0f]}");
 		});
@@ -570,7 +653,7 @@ public final class AutoTest {
 				log("FAIL: crash test could not board the fighter");
 				return;
 			}
-			a.launch(1.6);
+			a.launch(3.0);
 			mc.player.setYRot(0);
 			mc.player.setXRot(0);
 		});

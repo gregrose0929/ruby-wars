@@ -2,7 +2,7 @@
 together and fitting them into inventory slots. Imported by gen_assets.py.
 Uses the same swatch atlas as the vehicles (textures/block/vehicle_parts.png)."""
 from models3d import (BLACK, BRASS, DARK, LENS, LIGHT, OLIVE, OLIVE_DARK, RED_LIGHT, RUBY, STEEL, TANK_BARREL, TANK_HULL,
-                      TANK_TURRET, tilt, vbox)
+                      TANK_TURRET, WHITE, tilt, vbox)
 
 BLOCKS = {
     "sentry_turret": [
@@ -62,6 +62,41 @@ BLOCKS = {
         vbox([2, 0, 2], [14, 1, 14], DARK),
         vbox([4, 1, 4], [12, 1.8, 12], OLIVE_DARK),
         vbox([7, 1.8, 7], [9, 2.4, 9], RED_LIGHT),                   # pressure trigger
+    ],
+    "at_mine": [
+        vbox([1, 0, 1], [15, 2, 15], OLIVE_DARK),
+        vbox([2, 2, 2], [14, 2.6, 14], OLIVE),
+        vbox([6, 2.6, 6], [10, 3.2, 10], DARK),                      # pressure plate
+        vbox([7.5, 3.2, 7.5], [8.5, 3.6, 8.5], BRASS),
+    ],
+    "flak_cannon": [
+        vbox([1, 0, 1], [15, 3, 15], DARK),                          # base
+        vbox([3, 3, 3], [13, 5, 13], STEEL),                         # turntable
+        vbox([4, 5, 5], [12, 10, 12], OLIVE),                        # mount
+        vbox([4.5, 10, 6], [11.5, 10.5, 11], OLIVE_DARK),
+        vbox([5, 8, -3], [6.5, 9.5, 9], BLACK, tilt([8, 8.75, 8], 45, "x")),   # twin barrels, raised
+        vbox([9.5, 8, -3], [11, 9.5, 9], BLACK, tilt([8, 8.75, 8], 45, "x")),
+        vbox([4.6, 7.6, -4], [6.9, 9.9, -3], DARK, tilt([8, 8.75, 8], 45, "x")),  # muzzle brakes
+        vbox([9.1, 7.6, -4], [11.4, 9.9, -3], DARK, tilt([8, 8.75, 8], 45, "x")),
+        vbox([12, 5, 6], [14, 9, 11], BRASS),                        # shell box
+    ],
+    "sam_site": [
+        vbox([0, 0, 0], [16, 3, 16], DARK),                          # base
+        vbox([1, 3, 1], [15, 3.4, 15], BRASS),                       # hazard trim
+        vbox([3, 3, 3], [13, 5, 13], STEEL),                         # turntable
+        vbox([2, 5, 2], [14, 13, 14], LIGHT, tilt([8, 9, 8], 22.5, "x")),   # launcher box, raised
+        *[vbox([x, y, 1.6], [x + 4, y + 3.5, 2], BLACK, tilt([8, 9, 8], 22.5, "x")) for x in (3, 9) for y in (5.5, 9.5)],
+        *[vbox([x + 1.5, y + 1.25, 1.4], [x + 2.5, y + 2.25, 1.7], RED_LIGHT, tilt([8, 9, 8], 22.5, "x")) for x in (3, 9) for y in (5.5, 9.5)],
+    ],
+    "airfield_pad": [
+        vbox([0, 0, 0], [16, 1.5, 16], DARK),
+        vbox([0.5, 1.5, 0.5], [15.5, 1.7, 1.5], BRASS),              # hazard edges
+        vbox([0.5, 1.5, 14.5], [15.5, 1.7, 15.5], BRASS),
+        vbox([0.5, 1.5, 1.5], [1.5, 1.7, 14.5], BRASS),
+        vbox([14.5, 1.5, 1.5], [15.5, 1.7, 14.5], BRASS),
+        vbox([4, 1.5, 7], [12, 1.7, 9], WHITE),                      # "H" marking
+        vbox([4, 1.5, 4], [5.5, 1.7, 12], WHITE),
+        vbox([10.5, 1.5, 4], [12, 1.7, 12], WHITE),
     ],
     "claymore": [
         vbox([4, 1, 7], [12, 6, 8.5], OLIVE),                        # curved face

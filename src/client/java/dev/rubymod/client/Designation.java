@@ -28,7 +28,7 @@ import net.minecraft.world.phys.Vec3;
 public final class Designation {
 	private static final double RANGE = 1500;
 
-	public static Entity entity;
+	public static Contacts.Target entity;
 	public static Vec3 point;
 	/** Where to put the cannon pipper to hit the lead target (a world direction from the camera), or null. */
 	public static Vec3 leadDirection;
@@ -45,10 +45,7 @@ public final class Designation {
 
 	/** The designated spot as it is now. */
 	public static Vec3 target() {
-		if (entity != null && entity.isAlive()) {
-			return entity.getBoundingBox().getCenter();
-		}
-		return point;
+		return entity != null ? entity.pos() : point;
 	}
 
 	/** T pressed. */
@@ -59,18 +56,25 @@ public final class Designation {
 		}
 		Vec3 eye = mc.player.getEyePosition();
 		Vec3 look = mc.player.getLookAngle();
-		Entity best = null;
+		Contacts.Target best = null;
 		double bestAngle = 2.0;
+		java.util.List<Contacts.Target> options = new java.util.ArrayList<>(Contacts.remote(mc));
 		for (Entity e : mc.level.entitiesForRendering()) {
 			if (e == aircraft || e == mc.player || !e.isAlive() || e.getVehicle() != null || aircraft.hasPassenger(e)
-					|| !(Armor.isArmored(e) || e instanceof LivingEntity) || e.distanceTo(aircraft) > RANGE) {
+					|| !(Armor.isArmored(e) || e instanceof LivingEntity)) {
 				continue;
 			}
-			Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
+			options.add(Contacts.of(e));
+		}
+		for (Contacts.Target t : options) {
+			if (t.pos().distanceTo(aircraft.position()) > RANGE) {
+				continue;
+			}
+			Vec3 to = t.pos().subtract(eye);
 			double angle = Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, to.normalize().dot(look)))));
 			if (angle < bestAngle) {
 				bestAngle = angle;
-				best = e;
+				best = t;
 			}
 		}
 		Vec3 ground = null;
@@ -80,7 +84,7 @@ public final class Designation {
 		}
 		entity = best;
 		point = ground;
-		ClientPlayNetworking.send(new Payloads.AircraftDesignate(best != null ? best.getId() : -1, ground != null,
+		ClientPlayNetworking.send(new Payloads.AircraftDesignate(best != null ? best.id() : -1, ground != null,
 				ground != null ? ground.x : 0, ground != null ? ground.y : 0, ground != null ? ground.z : 0));
 		mc.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.4F, best != null || ground != null ? 1.8F : 0.8F);
 	}
@@ -120,9 +124,12 @@ public final class Designation {
 			}
 			return;
 		}
-		if (entity != null && !entity.isAlive()) {
-			point = entity.position();
-			entity = null;
+		if (entity != null) {
+			Contacts.Target now = Contacts.refresh(mc, entity);
+			if (now == null) {
+				point = entity.pos();
+			}
+			entity = now;
 		}
 		// Remember what we just launched.
 		for (Entity e : mc.level.entitiesForRendering()) {
@@ -145,7 +152,7 @@ public final class Designation {
 	private static void computeLead(Minecraft mc, AircraftEntity aircraft) {
 		leadDirection = null;
 		leadTarget = null;
-		Entity target = entity != null && entity.distanceTo(aircraft) < 400 ? entity : null;
+		Entity target = entity != null && entity.visible() && entity.pos().distanceTo(aircraft.position()) < 400 ? mc.level.getEntity(entity.id()) : null;
 		if (target == null) {
 			Vec3 look = aircraft.forward();
 			double bestAngle = 10.0;

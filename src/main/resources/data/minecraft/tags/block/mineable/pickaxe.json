@@ -14,6 +14,10 @@
 		"rubymod:claymore",
 		"rubymod:landmine",
 		"rubymod:mortar",
-		"rubymod:missile_silo"
+		"rubymod:missile_silo",
+		"rubymod:at_mine",
+		"rubymod:flak_cannon",
+		"rubymod:sam_site",
+		"rubymod:airfield_pad"
 	]
 }

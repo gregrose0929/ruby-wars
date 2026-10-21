@@ -13,14 +13,49 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Flares. An aircraft drops a burst of hot flares behind it; a missile homing
- * on that aircraft that passes near a fresh flare may chase the flare instead.
+ * Flares and smoke. An aircraft drops a burst of hot flares behind it; a missile
+ * homing on that aircraft that passes near a fresh flare may chase the flare
+ * instead. A tank pops a smoke screen around itself: while a target sits in
+ * smoke, missiles lose their lock and launchers can't lock it.
  */
 public final class Countermeasures {
 	private record Flare(Entity dropper, Vec3 pos, long expires, Set<Integer> tested) {
 	}
 
 	private static final List<Flare> FLARES = new ArrayList<>();
+
+	private record Smoke(ServerLevel level, Vec3 pos, double radius, long expires) {
+	}
+
+	private static final List<Smoke> SMOKE = new ArrayList<>();
+
+	/** A smoke screen of {@code radius} around {@code pos} for {@code ticks}. */
+	public static void smokeScreen(ServerLevel level, Vec3 pos, double radius, int ticks) {
+		SMOKE.add(new Smoke(level, pos, radius, level.getGameTime() + ticks));
+		level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 2.0F, 0.5F);
+	}
+
+	/** Is this entity hidden in smoke right now? */
+	public static boolean obscured(ServerLevel level, Entity target) {
+		Vec3 p = target.getBoundingBox().getCenter();
+		for (Smoke s : SMOKE) {
+			if (s.level() == level && s.pos().distanceTo(p) < s.radius() && level.getGameTime() < s.expires()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Every server tick: thick smoke for the screens, and forget old ones. */
+	public static void tick() {
+		SMOKE.removeIf(s -> s.level().getGameTime() >= s.expires());
+		for (Smoke s : SMOKE) {
+			if (s.level().getGameTime() % 3 == 0) {
+				s.level().sendParticles(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, true, false, s.pos().x, s.pos().y + 1, s.pos().z, 6,
+						s.radius() * 0.5, 1.2, s.radius() * 0.5, 0.01);
+			}
+		}
+	}
 	private static final double DECOY_RANGE = 40;
 	private static final float DECOY_CHANCE = 0.75F;
 

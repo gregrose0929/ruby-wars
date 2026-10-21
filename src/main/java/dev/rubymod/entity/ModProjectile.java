@@ -38,6 +38,9 @@ public abstract class ModProjectile extends ThrowableItemProjectile {
 	@Override
 	public void tick() {
 		super.tick();
+		if (level() instanceof ServerLevel serverLevel && isAlive()) {
+			dev.rubymod.game.Range.keepLoaded(serverLevel, this);
+		}
 		Vec3 v = getDeltaMovement();
 		if (v.lengthSqr() > 1.0E-4) {
 			setYRot((float) Math.toDegrees(Math.atan2(-v.x, v.z)));

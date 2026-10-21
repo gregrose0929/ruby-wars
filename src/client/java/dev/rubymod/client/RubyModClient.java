@@ -64,6 +64,7 @@ public class RubyModClient implements ClientModInitializer {
 				}
 			}
 			Targeting.tick(client);
+			LauncherSeeker.tick(client);
 			Trigger.tick(client);
 			if (client.player != null && ClientState.shakeTicks > 0) {
 				ClientState.shakeTicks--;
@@ -112,6 +113,7 @@ public class RubyModClient implements ClientModInitializer {
 			ClientState.damageX = payload.x();
 			ClientState.damageZ = payload.z();
 		});
+		ClientPlayNetworking.registerGlobalReceiver(Payloads.Contacts.TYPE, (payload, context) -> Contacts.receive(payload));
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.HitConfirm.TYPE, (payload, context) -> {
 			ClientState.hitConfirm = payload;
 			ClientState.hitConfirmAt = System.currentTimeMillis();
@@ -125,6 +127,7 @@ public class RubyModClient implements ClientModInitializer {
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
 		HudElementRegistry.addLast(RubyMod.id("pilot_hud"), new PilotHud());
 		HudElementRegistry.addLast(RubyMod.id("vehicle_hud"), new VehicleHud());
+		HudElementRegistry.addLast(RubyMod.id("launcher_seeker"), new LauncherSeeker());
 		// In a vehicle the vehicle HUD replaces the hotbar, hearts, hunger, armor, air and XP.
 		for (var element : java.util.List.of(VanillaHudElements.HOTBAR, VanillaHudElements.HEALTH_BAR, VanillaHudElements.FOOD_BAR,
 				VanillaHudElements.ARMOR_BAR, VanillaHudElements.AIR_BAR, VanillaHudElements.EXPERIENCE_LEVEL, VanillaHudElements.INFO_BAR,
@@ -153,6 +156,7 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.FIGHTER_JET, AircraftRenderer::new);
 		EntityRendererRegistry.register(ModEntities.ATTACK_JET, AircraftRenderer::new);
 		EntityRendererRegistry.register(ModEntities.BOMBER, AircraftRenderer::new);
+		EntityRendererRegistry.register(ModEntities.STICKY_CHARGE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.WRECK, net.minecraft.client.renderer.entity.NoopRenderer::new);
 		EntityRendererRegistry.register(ModEntities.TARGET_DUMMY, net.minecraft.client.renderer.entity.ArmorStandRenderer::new);
 		EntityRendererRegistry.register(ModEntities.ROCKET,

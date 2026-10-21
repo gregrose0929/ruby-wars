@@ -46,8 +46,14 @@ public final class Shop {
 	 * @param stock  what the buyer gets
 	 * @param action special purchase (like a Heart upgrade); returns an error message or null
 	 */
-	private record Entry(int slot, int price, Supplier<ItemStack> stock, String name, Function<ServerPlayer, String> action) {
+	private record Entry(int page, int slot, int price, Supplier<ItemStack> stock, String name, Function<ServerPlayer, String> action) {
 	}
+
+	/** Page 0: weapons and base. Page 1: vehicles, aircraft, and the gear to fight them. */
+	private static final int PAGES = 2;
+	private static final int NEXT_SLOT = 53;
+	private static final int BACK_SLOT = 45;
+	private static int page;
 
 	private static List<Entry> entries;
 
@@ -93,11 +99,6 @@ public final class Shop {
 			item(31, ModBlocks.LANDMINE, 1, 2);
 			item(32, ModBlocks.CLAYMORE, 1, 2);
 			item(33, ModBlocks.BARBED_WIRE, 8, 1);
-			item(34, ModItems.JEEP, 1, 40);
-			item(35, ModItems.TANK, 1, 100);
-			item(43, ModItems.FIGHTER_JET, 1, 150);
-			item(44, ModItems.ATTACK_JET, 1, 170);
-			item(53, ModItems.BOMBER, 1, 220);
 			// Row 5: tools and upgrades
 			item(36, ModItems.BUILDERS_WAND, 1, 6);
 			item(38, ModItems.EXTENDED_MAG, 1, 6);
@@ -111,14 +112,34 @@ public final class Shop {
 			item(48, ModItems.RUBY_BOOTS, 1, 3);
 			item(50, ModItems.RUBY_SWORD, 1, 3);
 			item(51, ModItems.RUBY_PICKAXE, 1, 4);
-			entries.add(new Entry(40, 0, () -> named(Items.NETHER_STAR, "Upgrade Ruby Heart"), "heart_upgrade", Claims::upgrade));
+			entries.add(new Entry(0, 40, 0, () -> named(Items.NETHER_STAR, "Upgrade Ruby Heart"), "heart_upgrade", Claims::upgrade));
+
+			page = 1;
+			// Row 1: vehicles and aircraft
+			item(0, ModItems.JEEP, 1, 40);
+			item(1, ModItems.TANK, 1, 100);
+			item(3, ModItems.FIGHTER_JET, 1, 150);
+			item(4, ModItems.ATTACK_JET, 1, 170);
+			item(5, ModItems.BOMBER, 1, 220);
+			item(7, ModBlocks.AIRFIELD_PAD, 1, 30);
+			// Row 2: anti-vehicle and anti-air weapons
+			item(9, ModItems.SKYHAMMER, 1, 35);
+			item(10, ModItems.AA_MISSILE, 2, 8);
+			item(12, ModItems.LANCER, 1, 40);
+			item(13, ModItems.AT_MISSILE, 2, 10);
+			item(15, ModItems.C4, 2, 10);
+			item(16, ModBlocks.AT_MINE, 1, 6);
+			// Row 3: air defense for your base
+			item(18, ModBlocks.FLAK_CANNON, 1, 45);
+			item(19, ModBlocks.SAM_SITE, 1, 90);
+			page = 0;
 		}
 		return entries;
 	}
 
 	private static void gun(int slot, Item gun, int price) {
 		int magazine = ((GunItem) gun).stats().magazine();
-		entries.add(new Entry(slot, price, () -> {
+		entries.add(new Entry(page, slot, price, () -> {
 			ItemStack stack = new ItemStack(gun);
 			stack.set(ModComponents.AMMO, magazine);
 			return stack;
@@ -126,7 +147,7 @@ public final class Shop {
 	}
 
 	private static void item(int slot, ItemLike item, int count, int price) {
-		entries.add(new Entry(slot, price, () -> new ItemStack(item, count), id(item.asItem()), null));
+		entries.add(new Entry(page, slot, price, () -> new ItemStack(item, count), id(item.asItem()), null));
 	}
 
 	private static String id(Item item) {
@@ -151,13 +172,18 @@ public final class Shop {
 
 	public static void open(ServerPlayer player, int page) {
 		SimpleContainer container = new SimpleContainer(SLOTS);
-		fill(container, player);
-		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShopMenu(id, inventory, container),
-				Component.literal("Armory  -  " + countRubies(player) + " rubies")));
+		fill(container, player, page);
+		String title = page == 0 ? "Armory: Weapons & Base" : "Armory: Vehicles & Air Defense";
+		player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new ShopMenu(id, inventory, container, page),
+				Component.literal(title + "  -  " + countRubies(player) + " rubies")));
 	}
 
-	private static void fill(Container container, ServerPlayer player) {
+	private static void fill(Container container, ServerPlayer player, int page) {
+		container.clearContent();
 		for (Entry entry : entries()) {
+			if (entry.page() != page) {
+				continue;
+			}
 			ItemStack display = entry.stock().get();
 			int price = price(entry, player);
 			List<Component> lore = new ArrayList<>();
@@ -175,11 +201,25 @@ public final class Shop {
 				Component.literal("Mine Ruby Ore deep underground,").withStyle(ChatFormatting.GRAY),
 				Component.literal("or loot supply drops.").withStyle(ChatFormatting.GRAY))));
 		container.setItem(49, info);
+		if (page + 1 < PAGES) {
+			container.setItem(NEXT_SLOT, named(Items.SPECTRAL_ARROW, "Vehicles & Air Defense ->"));
+		}
+		if (page > 0) {
+			container.setItem(BACK_SLOT, named(Items.SPECTRAL_ARROW, "<- Weapons & Base"));
+		}
 	}
 
-	private static void buy(ServerPlayer player, int slot, Container container) {
+	private static void buy(ServerPlayer player, int slot, Container container, int page) {
+		if (slot == NEXT_SLOT && page + 1 < PAGES) {
+			open(player, page + 1);
+			return;
+		}
+		if (slot == BACK_SLOT && page > 0) {
+			open(player, page - 1);
+			return;
+		}
 		for (Entry entry : entries()) {
-			if (entry.slot() != slot) {
+			if (entry.page() != page || entry.slot() != slot) {
 				continue;
 			}
 			int price = price(entry, player);
@@ -201,7 +241,7 @@ public final class Shop {
 				}
 				player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.8F, 1.0F);
 			}
-			fill(container, player);
+			fill(container, player, page);
 			return;
 		}
 	}
@@ -235,16 +275,18 @@ public final class Shop {
 	/** A chest menu where clicking a slot buys it instead of picking it up. */
 	private static class ShopMenu extends ChestMenu {
 		private final Container shop;
+		private final int page;
 
-		ShopMenu(int id, Inventory inventory, Container shop) {
+		ShopMenu(int id, Inventory inventory, Container shop, int page) {
 			super(MenuType.GENERIC_9x6, id, inventory, shop, 6);
 			this.shop = shop;
+			this.page = page;
 		}
 
 		@Override
 		public void clicked(int slotIndex, int buttonNum, ContainerInput input, Player player) {
 			if (slotIndex >= 0 && slotIndex < SLOTS && player instanceof ServerPlayer serverPlayer) {
-				buy(serverPlayer, slotIndex, shop);
+				buy(serverPlayer, slotIndex, shop, page);
 			}
 			// Nothing in the shop can be picked up or moved.
 			sendAllDataToRemote();

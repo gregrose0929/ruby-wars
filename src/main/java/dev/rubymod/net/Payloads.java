@@ -76,6 +76,29 @@ public class Payloads {
 		}
 	}
 
+	/** Client -> server: left-click with a lock-on launcher, with the seeker's locked target (-1 = none). */
+	public record LauncherFire(int targetId) implements CustomPacketPayload {
+		public static final Type<LauncherFire> TYPE = new Type<>(RubyMod.id("launcher_fire"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, LauncherFire> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, LauncherFire::targetId, LauncherFire::new);
+
+		@Override
+		public Type<LauncherFire> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the tank driver pressed jump (smoke launchers). */
+	public record VehicleSmoke() implements CustomPacketPayload {
+		public static final Type<VehicleSmoke> TYPE = new Type<>(RubyMod.id("vehicle_smoke"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, VehicleSmoke> CODEC = StreamCodec.unit(new VehicleSmoke());
+
+		@Override
+		public Type<VehicleSmoke> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: the pilot pressed T: designate this entity (-1 = none) or point (clear = forget the designation). */
 	public record AircraftDesignate(int entityId, boolean hasPoint, double x, double y, double z) implements CustomPacketPayload {
 		public static final Type<AircraftDesignate> TYPE = new Type<>(RubyMod.id("aircraft_designate"));
@@ -123,6 +146,31 @@ public class Payloads {
 
 		@Override
 		public Type<AircraftFlares> type() {
+			return TYPE;
+		}
+	}
+
+	/** One radar contact: an aircraft or vehicle (kind: 0 jeep, 1 tank, 2 fighter, 3 attack jet, 4 bomber, 5 drone). */
+	public record Contact(int id, byte kind, float x, float y, float z, boolean airborne, boolean crewed) {
+		public static final StreamCodec<RegistryFriendlyByteBuf, Contact> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, Contact::id,
+				ByteBufCodecs.BYTE, Contact::kind,
+				ByteBufCodecs.FLOAT, Contact::x,
+				ByteBufCodecs.FLOAT, Contact::y,
+				ByteBufCodecs.FLOAT, Contact::z,
+				ByteBufCodecs.BOOL, Contact::airborne,
+				ByteBufCodecs.BOOL, Contact::crewed,
+				Contact::new);
+	}
+
+	/** Server -> client: aircraft and vehicles within 1500 blocks, for the HUD (see game.Range). */
+	public record Contacts(java.util.List<Contact> contacts) implements CustomPacketPayload {
+		public static final Type<Contacts> TYPE = new Type<>(RubyMod.id("contacts"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Contacts> CODEC = StreamCodec.composite(
+				Contact.CODEC.apply(ByteBufCodecs.list()), Contacts::contacts, Contacts::new);
+
+		@Override
+		public Type<Contacts> type() {
 			return TYPE;
 		}
 	}
@@ -292,10 +340,13 @@ public class Payloads {
 		PayloadTypeRegistry.serverboundPlay().register(AircraftCycle.TYPE, AircraftCycle.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(AircraftFlares.TYPE, AircraftFlares.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(AircraftGear.TYPE, AircraftGear.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(LauncherFire.TYPE, LauncherFire.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(VehicleSmoke.TYPE, VehicleSmoke.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(AircraftDesignate.TYPE, AircraftDesignate.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(AircraftCrash.TYPE, AircraftCrash.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Shake.TYPE, Shake.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HitConfirm.TYPE, HitConfirm.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(Contacts.TYPE, Contacts.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(Recoil.TYPE, Recoil.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ReloadState.TYPE, ReloadState.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HitMarker.TYPE, HitMarker.CODEC);

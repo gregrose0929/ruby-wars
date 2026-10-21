@@ -28,7 +28,7 @@ public final class Targeting {
 	private static final int AAM_LOCK_TICKS = 15;
 	private static final int AGM_LOCK_TICKS = 20;
 
-	public static Entity candidate;
+	public static Contacts.Target candidate;
 	public static int lockTicks;
 	public static Vec3 aimPoint;
 	public static Vec3 bombImpact;
@@ -50,6 +50,7 @@ public final class Targeting {
 		return candidate != null && lockTicks >= lockTime(weapon);
 	}
 
+
 	public static void tick(Minecraft mc) {
 		AircraftEntity aircraft = piloting(mc);
 		if (aircraft == null) {
@@ -64,24 +65,36 @@ public final class Targeting {
 		Vec3 eye = mc.player.getEyePosition();
 		Vec3 look = mc.player.getLookAngle();
 
-		// Seeker.
-		Entity best = null;
+		// Seeker: visible targets, plus long-range contacts the server reports.
+		Contacts.Target best = null;
 		if (weapon == Weapon.AAM || weapon == Weapon.AGM) {
-			double range = weapon == Weapon.AAM ? 320 : 240;
+			double range = weapon == Weapon.AAM ? 1200 : 800;
 			double bestAngle = SEEKER_CONE;
+			java.util.List<Contacts.Target> options = new java.util.ArrayList<>();
 			for (Entity e : mc.level.entitiesForRendering()) {
-				if (!seekable(e, aircraft, mc.player, weapon) || e.distanceTo(aircraft) > range) {
+				if (seekable(e, aircraft, mc.player, weapon)) {
+					options.add(Contacts.of(e));
+				}
+			}
+			for (Contacts.Target t : Contacts.remote(mc)) {
+				if (t.airborne() == (weapon == Weapon.AAM)) {
+					options.add(t);
+				}
+			}
+			for (Contacts.Target t : options) {
+				if (t.pos().distanceTo(aircraft.position()) > range) {
 					continue;
 				}
-				Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
+				Vec3 to = t.pos().subtract(eye);
 				double angle = Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, to.normalize().dot(look)))));
 				if (angle < bestAngle) {
 					bestAngle = angle;
-					best = e;
+					best = t;
 				}
 			}
 		}
-		if (best != null && best == candidate) {
+		if (best != null && candidate != null && best.id() == candidate.id()) {
+			candidate = best;
 			lockTicks++;
 		} else {
 			candidate = best;

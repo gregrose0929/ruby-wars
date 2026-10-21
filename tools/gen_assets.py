@@ -27,10 +27,10 @@ def write(path, obj):
 
 # ---------------------------------------------------------------- items
 SIMPLE_ITEMS = ["extended_mag", "red_dot_sight", "vertical_grip", "suppressor", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
-                "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge"]
+                "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge", "aa_missile", "at_missile", "c4"]
 HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe"]
 ARMOR_ITEMS = ["ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"]
-GUNS = ["service_pistol", "combat_shotgun", "arr_rifle", "longshot_sniper", "ruby_blaster", "rocket_launcher"]
+GUNS = ["service_pistol", "combat_shotgun", "arr_rifle", "longshot_sniper", "ruby_blaster", "rocket_launcher", "skyhammer", "lancer"]
 
 # Guns are drawn sideways (barrel to the right). These transforms point the barrel forward in your hands.
 GUN_DISPLAY = {
@@ -199,6 +199,17 @@ LANG = {
     "item.rubymod.smoke_grenade": "Smoke Grenade",
     "item.rubymod.air_strike_flare": "Air Strike Flare",
     "item.rubymod.rocket_launcher": "Rocket Launcher",
+    "item.rubymod.skyhammer": "Skyhammer AA Launcher",
+    "item.rubymod.lancer": "Lancer AT Launcher",
+    "item.rubymod.aa_missile": "Skyhammer Missile",
+    "item.rubymod.at_missile": "Lancer Missile",
+    "item.rubymod.c4": "Sticky C4",
+    "entity.rubymod.sticky_charge": "Sticky C4",
+    "entity.rubymod.wreck": "Wreck",
+    "block.rubymod.at_mine": "Anti-Tank Mine",
+    "block.rubymod.flak_cannon": "Flak Cannon",
+    "block.rubymod.sam_site": "SAM Site",
+    "block.rubymod.airfield_pad": "Airfield Pad",
     "item.rubymod.rocket": "Rocket",
     "item.rubymod.mortar_shell": "Mortar Shell",
     "item.rubymod.cruise_missile": "Cruise Missile",
@@ -321,7 +332,8 @@ def gen_loot():
             "random_sequence": f"{NS}:blocks/{name}"})
 
     for name in ["ruby_block", "ruby_heart", "armory", "sandbags", "concrete_wall", "reinforced_concrete", "sentry_turret",
-                 "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "barbed_wire", "mortar", "missile_silo"]:
+                 "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "barbed_wire", "mortar", "missile_silo",
+                 "at_mine", "flak_cannon", "sam_site", "airfield_pad"]:
         drop_self(name)
 
     def ore(name):
@@ -347,7 +359,8 @@ def gen_loot():
 
 def gen_tags():
     pickaxe = ["ruby_block", "ruby_ore", "deepslate_ruby_ore", "armory", "concrete_wall", "reinforced_concrete", "blast_door",
-               "sentry_turret", "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "mortar", "missile_silo"]
+               "sentry_turret", "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "mortar", "missile_silo",
+               "at_mine", "flak_cannon", "sam_site", "airfield_pad"]
     write(f"{DATA}/minecraft/tags/block/mineable/pickaxe.json", {"values": [f"{NS}:{n}" for n in pickaxe]})
     write(f"{DATA}/minecraft/tags/block/mineable/shovel.json", {"values": [f"{NS}:sandbags"]})
     write(f"{DATA}/minecraft/tags/block/mineable/axe.json", {"values": [f"{NS}:barbed_wire"]})

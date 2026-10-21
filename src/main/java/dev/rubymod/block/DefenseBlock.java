@@ -39,7 +39,10 @@ public class DefenseBlock extends BaseEntityBlock {
 		INTERCEPTOR,
 		RADAR,
 		ALARM,
-		CLAYMORE
+		CLAYMORE,
+		FLAK,
+		SAM,
+		AIRFIELD_PAD
 	}
 
 	private final Kind kind;
@@ -90,7 +93,7 @@ public class DefenseBlock extends BaseEntityBlock {
 		if (!(level.getBlockEntity(pos) instanceof DefenseBlockEntity be)) {
 			return InteractionResult.TRY_WITH_EMPTY_HAND;
 		}
-		if (kind == Kind.SENTRY_TURRET && stack.is(ModItems.HEAVY_AMMO)) {
+		if ((kind == Kind.SENTRY_TURRET || kind == Kind.FLAK) && stack.is(ModItems.HEAVY_AMMO)) {
 			if (!level.isClientSide()) {
 				int space = DefenseBlockEntity.MAX_TURRET_AMMO - be.ammo;
 				int add = Math.min(space, stack.getCount());
@@ -100,11 +103,11 @@ public class DefenseBlock extends BaseEntityBlock {
 					stack.shrink(add);
 				}
 				level.playSound(null, pos, SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.BLOCKS, 1.0F, 1.0F);
-				player.sendOverlayMessage(Component.literal("Turret ammo: " + be.ammo + " / " + DefenseBlockEntity.MAX_TURRET_AMMO));
+				player.sendOverlayMessage(Component.literal((kind == Kind.FLAK ? "Flak shells: " : "Turret ammo: ") + be.ammo + " / " + DefenseBlockEntity.MAX_TURRET_AMMO));
 			}
 			return InteractionResult.SUCCESS;
 		}
-		if (kind == Kind.INTERCEPTOR && stack.is(ModItems.RUBY)) {
+		if ((kind == Kind.INTERCEPTOR || kind == Kind.SAM) && stack.is(ModItems.RUBY)) {
 			if (be.charges >= DefenseBlockEntity.MAX_CHARGES) {
 				return InteractionResult.FAIL;
 			}
@@ -115,7 +118,7 @@ public class DefenseBlock extends BaseEntityBlock {
 					stack.shrink(1);
 				}
 				level.playSound(null, pos, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 1.0F, 1.5F);
-				player.sendOverlayMessage(Component.literal("Interceptor charges: " + be.charges + " / " + DefenseBlockEntity.MAX_CHARGES));
+				player.sendOverlayMessage(Component.literal((kind == Kind.SAM ? "SAM missiles: " : "Interceptor charges: ") + be.charges + " / " + DefenseBlockEntity.MAX_CHARGES));
 			}
 			return InteractionResult.SUCCESS;
 		}
@@ -131,6 +134,9 @@ public class DefenseBlock extends BaseEntityBlock {
 				case RADAR -> "Radar Station: online. Contacts within 96 blocks show on your HUD.";
 				case ALARM -> "Alarm Block: armed. Alerts you when enemies come within 12 blocks.";
 				case CLAYMORE -> "Claymore: armed on Battle Day. Fires at enemies in front of it.";
+				case FLAK -> "Flak Cannon: " + be.ammo + " shells. Fires bursting shells at enemy aircraft within 80 blocks. Load with Heavy Ammo.";
+				case SAM -> "SAM Site: " + be.charges + "/" + DefenseBlockEntity.MAX_CHARGES + " missiles. Shoots down enemy aircraft within 180 blocks. Reload with rubies.";
+				case AIRFIELD_PAD -> "Airfield Pad: park an aircraft within 12 blocks and stop to rearm and repair it.";
 			};
 			player.sendOverlayMessage(Component.literal(status));
 		}

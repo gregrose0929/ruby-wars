@@ -37,12 +37,13 @@ public final class Trigger {
 			return false;
 		}
 		ItemStack held = mc.player.getMainHandItem();
-		return held.getItem() instanceof GunItem || held.getItem() instanceof RocketLauncherItem || drivingArmedVehicle(mc);
+		return held.getItem() instanceof GunItem || held.getItem() instanceof RocketLauncherItem
+				|| held.getItem() instanceof dev.rubymod.item.LockOnLauncherItem || drivingArmedVehicle(mc);
 	}
 
 	/** Send the fire request with the seeker's lock (if locked) or the marked ground point. */
 	public static void fireAircraft(Weapon weapon) {
-		int target = weapon != null && Targeting.locked(weapon) ? Targeting.candidate.getId() : -1;
+		int target = weapon != null && Targeting.locked(weapon) ? Targeting.candidate.id() : -1;
 		var point = Designation.point != null ? Designation.point : Targeting.aimPoint;
 		ClientPlayNetworking.send(new Payloads.AircraftFire(target, point != null, point != null ? point.x : 0, point != null ? point.y : 0,
 				point != null ? point.z : 0));
@@ -53,6 +54,9 @@ public final class Trigger {
 		boolean jumping = mc.player != null && mc.gui.screen() == null && mc.options.keyJump.isDown();
 		if (jumping && !wasJumping && Targeting.piloting(mc) != null) {
 			ClientPlayNetworking.send(new Payloads.AircraftFlares());
+		} else if (jumping && !wasJumping && mc.player.getVehicle() instanceof VehicleEntity tank && tank.isTank()
+				&& tank.getControllingPassenger() == mc.player) {
+			ClientPlayNetworking.send(new Payloads.VehicleSmoke());
 		}
 		wasJumping = jumping;
 		boolean down = mc.player != null && mc.gui.screen() == null && mc.options.keyAttack.isDown();
@@ -82,6 +86,8 @@ public final class Trigger {
 			}
 		} else if (held.getItem() instanceof RocketLauncherItem && pressed) {
 			ClientPlayNetworking.send(new Payloads.Fire());
+		} else if (held.getItem() instanceof dev.rubymod.item.LockOnLauncherItem && pressed) {
+			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.getId() : -1));
 		}
 	}
 }

@@ -20,7 +20,8 @@ public abstract class AvatarRendererMixin {
 	@Inject(method = "getArmPose(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/client/model/HumanoidModel$ArmPose;",
 			at = @At("HEAD"), cancellable = true)
 	private static void rubymod$aimGuns(Avatar avatar, ItemStack item, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
-		if (!avatar.isSwinging() && (item.getItem() instanceof GunItem || item.getItem() instanceof RocketLauncherItem)) {
+		if (!avatar.isSwinging() && (item.getItem() instanceof GunItem || item.getItem() instanceof RocketLauncherItem
+				|| item.getItem() instanceof dev.rubymod.item.LockOnLauncherItem)) {
 			cir.setReturnValue(HumanoidModel.ArmPose.CROSSBOW_HOLD);
 		}
 	}

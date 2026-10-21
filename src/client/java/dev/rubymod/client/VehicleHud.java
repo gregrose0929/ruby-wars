@@ -79,6 +79,8 @@ public class VehicleHud implements HudElement {
 		}
 		g.fill(cx - 2, cy - 2, cx + 2, cy + 2, GREEN);
 
+		int smoke = vehicle.smokeCharges();
+		g.text(font, "SMOKE x" + smoke + " [Space]", rx, y0 - 22, smoke > 0 ? GREEN : RED, false);
 		if (zoomed(mc)) {
 			drawSight(g, font, w, h, reload == 0);
 		} else {
