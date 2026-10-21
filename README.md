@@ -298,6 +298,19 @@ inventory and on the ground. In first person you hold them with both arms, and:
 - Sprinting lowers the gun, switching raises it, and it sways behind your mouse.
 - Attachments show on the model: suppressor, red dot, vertical grip, extended mag.
 
+Every gun has its own synthesized report (rifle, pistol, shotgun, a long sniper
+crack with echo, the ruby blaster's zap, a muffled suppressed shot) that carries
+across the map, plus magazine, bolt and shell sounds while reloading and brass
+that tinkles when it lands. Bullets kick up debris, dust and sparks and leave
+bullet holes for 30 seconds. Explosions throw ground debris and a dust ring and
+rumble; far away you hear a low boom, delayed by the speed of sound. Tanks,
+jeeps, jets and helicopters have engine sounds that follow their throttle.
+
+The ammo panel shows the round count (amber when low, flashing red when empty),
+reserve ammo, fire mode, a row of rounds and your attachments, and prompts you
+to reload. The Armory has its own screen: page tabs, item cards with prices,
+padlocks on gear that still needs research, and a detail panel with gun stats.
+
 Tanks and jeeps are detailed animated models too: road wheels and sprockets that
 turn, track links that move, a turret and gun that recoils with a muzzle flash,
 smoke launchers, stowage and markings. Vehicle and aircraft items show the real

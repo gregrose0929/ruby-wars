@@ -61,7 +61,7 @@ public class GameHud implements HudElement {
 		String text = hit.destroyed() ? "DESTROYED - " + hit.target() : "HIT - " + hit.target() + "  " + hit.percentLeft() + "%";
 		int col = hit.destroyed() ? GOLD : RED;
 		int width = font.width(text) + 10;
-		g.fill(w / 2 - width / 2, h / 2 + 50, w / 2 + width / 2, h / 2 + 63, PANEL);
+		panel(g, w / 2 - width / 2, h / 2 + 50, w / 2 + width / 2, h / 2 + 63);
 		g.centeredText(font, text, w / 2, h / 2 + 53, col);
 	}
 
@@ -87,7 +87,7 @@ public class GameHud implements HudElement {
 		String s = text.toString();
 		int width = font.width(s) + 12;
 		int color = phase.pvp() ? RED : phase.isBattle() ? GOLD : WHITE;
-		g.fill(w / 2 - width / 2, 2, w / 2 + width / 2, 15, PANEL);
+		panel(g, w / 2 - width / 2, 2, w / 2 + width / 2, 15);
 		g.centeredText(font, s, w / 2, 5, color);
 	}
 
@@ -98,7 +98,7 @@ public class GameHud implements HudElement {
 		int hp = ClientState.hud.heartHp();
 		int max = Math.max(1, ClientState.hud.heartMaxHp());
 		String label = hp < 0 ? (ClientState.phase().isBattle() ? "Heart: DESTROYED" : "Heart: not placed") : "Heart " + hp + "/" + max;
-		g.fill(4, 4, 96, 22, PANEL);
+		panel(g, 4, 4, 96, 22);
 		g.text(font, label, 8, 6, hp < 0 ? RED : WHITE);
 		if (hp >= 0) {
 			int barWidth = (int) (84.0 * hp / max);
@@ -114,7 +114,7 @@ public class GameHud implements HudElement {
 			return;
 		}
 		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY ? 24 : 4;
-		g.fill(4, y, 96, y + 30, PANEL);
+		panel(g, 4, y, 96, y + 30);
 		g.item(new ItemStack(dev.rubymod.registry.ModItems.RUBY), 6, y + 1);
 		g.text(font, String.format(java.util.Locale.ROOT, "%,d", e.bank()), 24, y + 5, 0xFFFF5A82);
 		long cap = Math.max(1, e.capacity());
@@ -279,7 +279,7 @@ public class GameHud implements HudElement {
 		var radar = ClientState.radar;
 		int x = w - 110;
 		int y = dev.rubymod.client.map.Minimap.SIZE + 26;
-		g.fill(x - 4, y - 4, w - 4, y + 34, PANEL);
+		panel(g, x - 4, y - 4, w - 4, y + 34);
 		g.text(font, "RADAR", x, y, GOLD);
 		String contacts = radar.contacts() == 0 ? "No contacts" : radar.contacts() + " contact" + (radar.contacts() == 1 ? "" : "s");
 		g.text(font, contacts, x, y + 10, radar.contacts() > 0 ? RED : GRAY);
@@ -303,10 +303,16 @@ public class GameHud implements HudElement {
 			var info = kill.info();
 			String text = info.killer() + "  [" + info.weapon() + (info.headshot() ? " - HEADSHOT" : "") + "]  " + info.victim();
 			int width = font.width(text);
-			g.fill(w - width - 10, y - 2, w - 4, y + 9, PANEL);
+			panel(g, w - width - 10, y - 2, w - 4, y + 9);
 			g.text(font, text, w - width - 7, y, info.headshot() ? GOLD : WHITE);
 			y += 12;
 		}
+	}
+
+	/** The HUD's panel style: a dark gradient with a ruby accent on the left. */
+	private static void panel(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) {
+		g.fillGradient(x0, y0, x1, y1, 0xC0181C22, 0xC00E1013);
+		g.fill(x0, y0, x0 + 2, y1, 0xFFD0154A);
 	}
 
 	private static String compass(int bearing) {
