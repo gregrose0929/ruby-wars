@@ -20,5 +20,9 @@ summon rubymod:cruise_missile 0 120 0
 summon rubymod:frag_grenade 0 120 0
 summon rubymod:bomb 0 120 0
 wait 8
-# Game-rule checks with fake players.
+# Game-rule checks with fake players (their test area must be loaded).
+forceload add ~290 ~290 ~460 ~350
+wait 5
 rubywars selftest
+wait 2
+forceload remove all
