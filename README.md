@@ -308,6 +308,12 @@ that tinkles when it lands. Bullets kick up debris, dust and sparks and leave
 bullet holes for 30 seconds. Explosions throw ground debris and a dust ring and
 rumble; far away you hear a low boom, delayed by the speed of sound. Tanks,
 jeeps, jets and helicopters have engine sounds that follow their throttle.
+Rounds that pass close crack past you and make you flinch, the screen edges
+bleed red when you're badly hurt, and kill streaks of 3, 5, 7 and 10 get called
+out (and so does ending someone else's). Base alarms and Heart attacks alert the
+whole squad, and an alarm spots the intruder on your map. During a practice raid
+a banner shows how many raiders are left and how long until they pull out, and
+your daily bounties sit under the bank panel with progress bars.
 
 The ammo panel shows the round count (amber when low, flashing red when empty),
 reserve ammo, fire mode, a row of rounds and your attachments, and prompts you
