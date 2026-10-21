@@ -71,6 +71,9 @@ public class GameConfig {
 	public int raidVictoryBonus = 15;
 	/** Hired guards: damage per rifle round, and how many each player may field. */
 	public float guardDamage = 3.0F;
+	/** Raiders hit a little softer than guards, so a defended base wins a fair fight. */
+	public float raiderDamage = 2.0F;
+	public float guardHealth = 40.0F;
 	public int maxGuards = 4;
 	/** Squads: players per squad, and whether squadmates can hurt each other. */
 	public int squadMaxSize = 4;

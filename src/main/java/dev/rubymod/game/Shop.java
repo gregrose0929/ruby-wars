@@ -244,7 +244,9 @@ public final class Shop {
 				lore.add(Component.literal("LOCKED: research " + lock.title() + " (" + lock.cost() + " points)")
 						.withStyle(style -> style.withItalic(false).withColor(ChatFormatting.DARK_AQUA)));
 				lore.add(Component.literal("Press J to open research").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
-				display.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, false);
+				display.set(DataComponents.CUSTOM_NAME, Component.literal("[Locked] ").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.DARK_AQUA))
+						.append(Component.literal(display.getHoverName().getString()).withStyle(style -> style.withItalic(false).withColor(ChatFormatting.DARK_GRAY))));
+				display.setCount(1);
 			} else if (price < 0) {
 				lore.add(Component.literal("Max tier").withStyle(ChatFormatting.GRAY));
 			} else {

@@ -23,6 +23,6 @@ else
 	printf 'onboardAccessibility:false\npauseOnLostFocus:false\n' > run/options.txt
 fi
 rm -f run/screenshots/autotest-*.png
-RUBYMOD_AUTOTEST="$MODE" timeout 900 ./gradlew runClient --no-daemon -q --args="--quickPlaySingleplayer autotest" > run/client-test.log 2>&1 || true
+RUBYMOD_AUTOTEST="$MODE" timeout ${CLIENT_TIMEOUT:-900} ./gradlew runClient --no-daemon -q --args="--quickPlaySingleplayer autotest" > run/client-test.log 2>&1 || true
 grep -E 'autotest\]' run/client-test.log | grep -v screenshot | cut -c1-200
 ls run/screenshots | grep autotest | tr '\n' ' '; echo

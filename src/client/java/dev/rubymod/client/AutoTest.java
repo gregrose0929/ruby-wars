@@ -120,6 +120,8 @@ public final class AutoTest {
 			case "guns" -> gunsScript();
 			case "view" -> viewScript();
 			case "features" -> featuresScript();
+			case "raid" -> raidScript();
+			case "gear" -> gearScript();
 			case "vehicles" -> vehiclesScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
@@ -291,6 +293,112 @@ public final class AutoTest {
 		then(2, mc -> mc.gui.setScreen(null));
 		then(2, mc -> command(mc, "execute as @p at @s run tp @s ~ ~4 ~-6 0 25"));
 		then(20, mc -> shot(mc, "features-paint"));
+	}
+
+	/** A real raid on a defended base: Heart, a sentry turret, two guards. Logs the fight every 10 seconds. */
+	private static void raidScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset confirm");
+			command(mc, "rubywars start");
+		});
+		then(10, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				var level = player.level();
+				var base = player.blockPosition();
+				var heart = base.offset(0, 0, 8);
+				level.setBlockAndUpdate(heart, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+				dev.rubymod.game.Claims.onHeartPlaced(level, player, heart);
+				var turret = heart.offset(2, 0, 2);
+				level.setBlockAndUpdate(turret, dev.rubymod.registry.ModBlocks.SENTRY_TURRET.defaultBlockState());
+				if (level.getBlockEntity(turret) instanceof dev.rubymod.block.DefenseBlockEntity d) {
+					d.ammo = 300;
+				}
+				level.addFreshEntity(dev.rubymod.entity.SoldierEntity.guard(level, player, heart.offset(-3, 0, 0), 0));
+				level.addFreshEntity(dev.rubymod.entity.SoldierEntity.guard(level, player, heart.offset(3, 0, -2), 1));
+				dev.rubymod.industry.Grid.deposit(player.getUUID(), 200_000L);
+				String error = dev.rubymod.game.Raids.force(player);
+				log("raid started: {}", error == null ? "ok" : error);
+			});
+		});
+		for (int i = 0; i < 12; i++) {
+			int n = i;
+			then(200, mc -> {
+				IntegratedServer server = mc.getSingleplayerServer();
+				server.execute(() -> {
+					var player = server.getPlayerList().getPlayers().get(0);
+					var level = player.level();
+					var raiders = level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, player.getBoundingBox().inflate(200),
+							dev.rubymod.entity.SoldierEntity::isRaider);
+					var guards = level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, player.getBoundingBox().inflate(200), sol -> !sol.isRaider());
+					double nearest = raiders.stream().mapToDouble(r -> r.distanceTo(player)).min().orElse(-1);
+					log("t+{}s raiders {} (nearest {}m) guards {} bank {}", (n + 1) * 10, raiders.size(), Math.round(nearest), guards.size(),
+							dev.rubymod.industry.Grid.rubies(player.getUUID()));
+				});
+				if (n % 3 == 0) {
+					shot(mc, "raid-" + (n + 1) * 10);
+				}
+			});
+		}
+	}
+
+	/** Armory pages (research locks), a backpack, a War Grave after dying. */
+	private static void gearScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset confirm");
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "give @a rubymod:field_pack");
+			command(mc, "give @a rubymod:ruby 20");
+			command(mc, "give @a rubymod:arr_rifle");
+		});
+		for (int page = 0; page < 4; page++) {
+			int p = page;
+			then(15, mc -> {
+				IntegratedServer server = mc.getSingleplayerServer();
+				server.execute(() -> Shop.open(server.getPlayerList().getPlayers().get(0), p));
+			});
+			then(15, mc -> shot(mc, "gear-armory-" + p));
+			then(2, mc -> mc.player.closeContainer());
+		}
+		then(5, mc -> {
+			int slot = mc.player.getInventory().findSlotMatchingItem(new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.FIELD_PACK));
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(5, mc -> mc.gameMode.useItem(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND));
+		then(15, mc -> shot(mc, "gear-backpack"));
+		then(2, mc -> mc.player.closeContainer());
+		then(2, mc -> {
+			command(mc, "gamerule keep_inventory false");
+			command(mc, "gamerule keepInventory false");
+		});
+		then(5, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				player.hurtServer(player.level(), player.damageSources().genericKill(), 1000.0F);
+				log("player dead: {}", player.isDeadOrDying());
+			});
+		});
+		then(30, mc -> {
+			if (mc.player.isDeadOrDying()) {
+				mc.player.respawn();
+			}
+		});
+		then(40, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> {
+				var player = server.getPlayerList().getPlayers().get(0);
+				log("grave block: {}", player.level().getBlockState(new net.minecraft.core.BlockPos(0, -61, 0)));
+				player.teleportTo(0.5, -61, -2.5);
+				player.setYRot(0);
+				player.setXRot(35);
+			});
+		});
+		then(20, mc -> shot(mc, "gear-grave"));
 	}
 
 	private static void tourScript() {

@@ -137,10 +137,12 @@ public class SoldierEntity extends PathfinderMob {
 		ItemStack weapon = new ItemStack(role() == AT_GUNNER ? ModItems.ROCKET_LAUNCHER : ModItems.ARR_RIFLE);
 		setItemSlot(EquipmentSlot.MAINHAND, weapon);
 		setDropChance(EquipmentSlot.MAINHAND, 0.0F);
+		float health = isRaider() ? 30.0F : GameConfig.get().guardHealth;
 		if (role() == AT_GUNNER) {
-			getAttribute(Attributes.MAX_HEALTH).setBaseValue(36.0);
-			setHealth(36.0F);
+			health += 6.0F;
 		}
+		getAttribute(Attributes.MAX_HEALTH).setBaseValue(health);
+		setHealth(health);
 	}
 
 	public int role() {
@@ -210,6 +212,10 @@ public class SoldierEntity extends PathfinderMob {
 		}
 		if (tickCount % 10 == 0) {
 			pickTarget(level);
+		}
+		// Guards patch themselves up between fights.
+		if (!isRaider() && getTarget() == null && tickCount % 60 == 0 && getHealth() < getMaxHealth()) {
+			heal(1.0F);
 		}
 		LivingEntity target = getTarget();
 		if (target != null && (!target.isAlive() || target.distanceTo(this) > 40 || !isHostileTo(target))) {
@@ -290,7 +296,7 @@ public class SoldierEntity extends PathfinderMob {
 			if (Armor.isArmored(target)) {
 				Armor.hit(level, target, this, attackerOwner != null ? attackerOwner : this, 1.0F);
 			} else {
-				target.hurtServer(level, source, GameConfig.get().guardDamage);
+				target.hurtServer(level, source, isRaider() ? GameConfig.get().raiderDamage : GameConfig.get().guardDamage);
 			}
 		}
 		Vec3 step = stop.subtract(from);
