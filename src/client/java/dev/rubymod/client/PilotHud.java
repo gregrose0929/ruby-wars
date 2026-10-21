@@ -455,7 +455,7 @@ public class PilotHud implements HudElement {
 	}
 
 	private void drawWeaponCam(GuiGraphicsExtractor g, Font font, Minecraft mc, int w, int h) {
-		center(g, font, "WEAPON CAM  [V] back to cockpit", w / 2, 22, GREEN);
+		center(g, font, "WEAPON CAM  [C] back to cockpit", w / 2, 22, GREEN);
 		var munition = Designation.lastMunition;
 		Vec3 target = Designation.target();
 		if (munition != null && munition.isAlive()) {

@@ -49,7 +49,7 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Taxi an aircraft | W/S throttle (S at idle throttle brakes), A/D steer the nose wheel |
 | Take off | Line up on a runway, full throttle, and when the HUD says ROTATE, look up |
 | Fly | Look where you want to go. Climbing costs speed, diving gains it; too slow and you stall |
-| Aircraft weapons | Left-click fires, R switches weapon, Space drops flares, T designates a target, V weapon camera, G landing gear, Sneak ejects (parachute) |
+| Aircraft weapons | Left-click fires, R switches weapon, Space drops flares, T designates a target, C weapon camera, G landing gear, Sneak ejects (parachute) |
 | Helicopter | W/S climb and descend, look to turn, look down to fly forward (up to go back), A/D strafe |
 | Ping / spot | B: mark the spot you're looking at for your squad, or spot the enemy under your crosshair (10 s) |
 | Map | M: the full map (scroll to zoom, drag to pan). The minimap is always top right |
@@ -223,7 +223,7 @@ TOUCHDOWN marker shows where you'll land, plus glide-slope and sink-rate cues.
 - **Cannon**: rounds take time to arrive and drop slightly. On a target, a lead
   circle shows where to put the pipper (it turns red: SHOOT).
 - **Bombs**: the red CCIP pipper shows where an unguided bomb would land.
-- **V: weapon camera**: ride along with your last missile or bomb to impact (your
+- **C: weapon camera**: ride along with your last missile or bomb to impact (your
   aircraft holds its course meanwhile). V again to come back.
 
 ## Long range

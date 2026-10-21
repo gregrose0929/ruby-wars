@@ -255,7 +255,7 @@ public final class TrainingGround {
 			cmds.add("setblock ~8 ~-1 ~" + z + " sea_lantern");
 		}
 		label(cmds, 0, 3.4, 98, "RUNWAY 18", "gold", 2.0);
-		label(cmds, 0, 2.6, 98, "Taxi on, full throttle (W), at ROTATE look up. G: gear, T: designate, V: weapon cam, R: weapon, Space: flares", "gray", 0.6);
+		label(cmds, 0, 2.6, 98, "Taxi on, full throttle (W), at ROTATE look up. G: gear, T: designate, C: weapon cam, R: weapon, Space: flares", "gray", 0.6);
 
 		// Apron with every aircraft, and an Airfield Pad that rearms them.
 		cmds.add(fill(8, -1, 100, 60, -1, 150, "light_gray_concrete"));

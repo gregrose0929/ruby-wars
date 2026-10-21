@@ -39,7 +39,7 @@ public class RubyModClient implements ClientModInitializer {
 				dev.rubymod.client.gun.ModelIconRenderer.Unbaked.MAP_CODEC);
 		reloadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.reload", InputConstants.KEY_R, CATEGORY));
 		designateKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.designate", InputConstants.KEY_T, CATEGORY));
-		KeyMapping weaponCamKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.weapon_cam", InputConstants.KEY_V, CATEGORY));
+		KeyMapping weaponCamKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.weapon_cam", InputConstants.KEY_C, CATEGORY));
 		KeyMapping gearKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.landing_gear", InputConstants.KEY_G, CATEGORY));
 		dev.rubymod.entity.AircraftEntity.crashReporter = severity -> ClientPlayNetworking.send(new Payloads.AircraftCrash((float) severity));
 		KeyMapping pingKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.ping", InputConstants.KEY_B, CATEGORY));
