@@ -152,7 +152,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 				color = GREEN;
 			}
 			case MachineBlockEntity.NO_POWER -> {
-				text = "No power - build generators";
+				text = "No power";
 				color = RED;
 			}
 			case MachineBlockEntity.OUTPUT_FULL -> {
@@ -162,8 +162,8 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			case MachineBlockEntity.NO_INPUT -> {
 				text = switch (kind()) {
 					case COMBUSTION_GENERATOR -> "Needs fuel";
-					case CONSTRUCTOR -> menu.get(15) > 0 ? "Waiting for blocks" : "Insert a Blueprint";
-					default -> "Waiting for input";
+					case CONSTRUCTOR -> menu.get(15) > 0 ? "Needs blocks" : "Needs a Blueprint";
+					default -> "Needs input";
 				};
 				color = AMBER;
 			}
@@ -263,7 +263,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		g.fill(x - 1, y - 1, x + 103, y + 9, SLOT_EDGE);
 		g.fill(x, y, x + 102, y + 8, SLOT_BG);
 		g.fillGradient(x + 1, y + 1, x + 1 + 100 * Math.min(done, total) / total, y + 7, 0xFFFF4D7A, 0xFFB0103E);
-		g.text(font, "Blueprint", 22, 30, MUTED, false);
+		g.text(font, "Plan", 26, 32, MUTED, false);
 		g.text(font, Math.min(100, 100 * done / total) + "% built", 66, 30, TEXT, false);
 		int missing = menu.get(15);
 		if (missing > 0) {

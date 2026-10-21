@@ -35,7 +35,7 @@ import net.minecraft.world.phys.Vec3;
 public final class TrainingGround {
 	private static final int MIN_X = -64;
 	private static final int MAX_X = 64;
-	private static final int MIN_Z = -16;
+	private static final int MIN_Z = -64;
 	private static final int MAX_Z = 712;
 	private static final int HEIGHT = 30;
 
@@ -82,6 +82,7 @@ public final class TrainingGround {
 		buildGunRange(cmds);
 		buildVehicleYard(cmds);
 		buildAirfield(cmds);
+		buildIndustryYard(cmds);
 
 		cmds.add("setworldspawn ~ ~ ~");
 		CommandSourceStack source = server.createCommandSourceStack().withLevel(level).withPosition(Vec3.atBottomCenterOf(origin))
@@ -94,9 +95,20 @@ public final class TrainingGround {
 		drone(level, new Vec3(ox, oy + 50, oz + 560), 45);
 		drone(level, new Vec3(ox - 20, oy + 80, oz + 620), 70);
 		drone(level, new Vec3(ox - 45, oy + 45, oz + 380), 40);
-		for (int cx = chunkX1; cx <= chunkX2; cx++) {
-			for (int cz = chunkZ1; cz <= chunkZ2; cz++) {
-				level.setChunkForced(cx, cz, false);
+		// The commands above run on the next tick; stock the machines (and let the chunks go) a bit later.
+		PENDING.add(new Pending(level, origin, chunkX1, chunkX2, chunkZ1, chunkZ2, level.getGameTime() + 40));
+	}
+
+	private record Pending(ServerLevel level, BlockPos origin, int x1, int x2, int z1, int z2, long at) {
+	}
+
+	private static final List<Pending> PENDING = new ArrayList<>();
+
+	private static void finish(Pending p) {
+		stockIndustryYard(p.level(), p.origin());
+		for (int cx = p.x1(); cx <= p.x2(); cx++) {
+			for (int cz = p.z1(); cz <= p.z2(); cz++) {
+				p.level().setChunkForced(cx, cz, false);
 			}
 		}
 	}
@@ -119,6 +131,13 @@ public final class TrainingGround {
 
 	/** Every second. */
 	public static void tick() {
+		PENDING.removeIf(p -> {
+			if (p.level().getGameTime() < p.at()) {
+				return false;
+			}
+			finish(p);
+			return true;
+		});
 		RESPAWNS.removeIf(r -> {
 			if (r.level().getGameTime() < r.at()) {
 				return false;
@@ -133,7 +152,8 @@ public final class TrainingGround {
 		AABB area = new AABB(origin.getX() + MIN_X - 40, origin.getY() - 10, origin.getZ() + MIN_Z - 40,
 				origin.getX() + MAX_X + 40, origin.getY() + 200, origin.getZ() + MAX_Z + 120);
 		for (Entity e : level.getEntities((Entity) null, area,
-				e -> (e instanceof TargetDummyEntity || e instanceof VehicleEntity || e instanceof AircraftEntity || e instanceof net.minecraft.world.entity.Display.TextDisplay)
+				e -> (e instanceof TargetDummyEntity || e instanceof VehicleEntity || e instanceof AircraftEntity
+						|| e instanceof dev.rubymod.entity.HeavyAAGunEntity || e instanceof net.minecraft.world.entity.Display.TextDisplay)
 						&& e.getPassengers().stream().noneMatch(p -> p instanceof Player))) {
 			e.discard();
 		}
@@ -274,8 +294,99 @@ public final class TrainingGround {
 		cmds.add(fill(-60, -1, 340, -30, -1, 420, "coarse_dirt"));
 		cmds.add("setblock ~-45 ~ ~370 rubymod:flak_cannon{ammo:512}");
 		cmds.add("setblock ~-45 ~ ~390 rubymod:sam_site{charges:3}");
+		cmds.add("summon rubymod:heavy_aa_gun ~-38 ~ ~380 {Rotation:[180f,0f]}");
+		cmds.add("summon rubymod:heavy_aa_gun ~-14 ~ ~520 {Rotation:[180f,0f]}");
+		label(cmds, -38, 3.2, 380, "HEAVY AA GUN - right-click to man it", "white", 0.7);
+		label(cmds, -14, 3.2, 520, "HEAVY AA GUN", "white", 0.7);
 		label(cmds, -45, 4, 380, "AIR DEFENSE RANGE", "red", 2.0);
 		label(cmds, -45, 3.2, 380, "Fly within 180 blocks to practice dodging: Space drops flares", "gray", 0.6);
+	}
+
+	// ----- Industry yard (north of spawn) -----
+
+	private static void buildIndustryYard(List<String> cmds) {
+		cmds.add(fill(-40, -1, -58, 40, -1, -14, "polished_andesite"));
+		cmds.add(fill(-40, -1, -14, 40, -1, -14, "yellow_concrete"));
+		label(cmds, 0, 3.6, -16, "INDUSTRY YARD", "gold", 2.0);
+		label(cmds, 0, 2.8, -16, "Machines share one power grid. Right-click any machine. Upgrade them with rubies.", "gray", 0.6);
+
+		// Power plant.
+		label(cmds, -28, 3.0, -20, "POWER", "yellow", 1.2);
+		cmds.add("setblock ~-32 ~ ~-24 rubymod:combustion_generator[facing=south]");
+		cmds.add("setblock ~-30 ~ ~-24 rubymod:combustion_generator[facing=south]");
+		cmds.add("setblock ~-28 ~ ~-24 rubymod:battery[facing=south]");
+		cmds.add("setblock ~-26 ~ ~-24 rubymod:battery[facing=south]");
+		for (int x = -34; x <= -22; x += 2) {
+			cmds.add("setblock ~" + x + " ~ ~-28 rubymod:solar_panel[facing=south]");
+		}
+
+		// Ore line: drill -> refinery -> trade depot -> (rubies to the bank), overflow into a chest.
+		label(cmds, -6, 3.0, -20, "ORE LINE: Drill > Refinery > Trade Depot", "yellow", 1.0);
+		cmds.add("setblock ~-10 ~ ~-24 rubymod:ruby_drill[facing=south]");
+		cmds.add("setblock ~-9 ~ ~-24 rubymod:ore_refinery[facing=south]");
+		cmds.add("setblock ~-8 ~ ~-24 rubymod:trade_depot[facing=south]");
+		cmds.add("setblock ~-10 ~ ~-25 chest[facing=south]");
+		cmds.add("setblock ~-6 ~ ~-24 rubymod:vault[facing=south]");
+		label(cmds, -6, 1.9, -24, "Bank", "aqua", 0.7);
+		cmds.add("setblock ~-3 ~ ~-24 rubymod:ammo_factory[facing=south]");
+		cmds.add("setblock ~-3 ~ ~-25 chest[facing=south]");
+		label(cmds, -3, 1.9, -24, "Ammo", "aqua", 0.7);
+
+		// Constructor building a pillbox from a Blueprint (the original is next to it).
+		label(cmds, 16, 3.0, -20, "CONSTRUCTOR: copies the pillbox from its Blueprint", "yellow", 1.0);
+		cmds.add(fill(6, 0, -34, 10, 2, -30, "stone_bricks"));
+		cmds.add(fill(7, 0, -33, 9, 1, -31, "air"));
+		cmds.add(fill(7, 1, -34, 9, 1, -34, "rubymod:reinforced_glass"));
+		cmds.add(fill(6, 3, -34, 10, 3, -30, "smooth_stone_slab"));
+		cmds.add("setblock ~16 ~ ~-24 rubymod:constructor[facing=north]");
+		cmds.add("setblock ~17 ~ ~-24 chest[facing=south]");
+		cmds.add("setblock ~18 ~ ~-24 chest[facing=south]");
+
+		// Base defenses.
+		label(cmds, 30, 3.0, -20, "BASE DEFENSE", "yellow", 1.0);
+		cmds.add("setblock ~28 ~ ~-26 rubymod:shield_generator[facing=south]");
+		cmds.add("setblock ~32 ~ ~-26 rubymod:point_defense[facing=south]");
+		label(cmds, 28, 1.9, -26, "Shield", "aqua", 0.7);
+		label(cmds, 32, 1.9, -26, "Point Defense", "aqua", 0.7);
+		for (int x = -36; x <= 36; x += 12) {
+			cmds.add("setblock ~" + x + " ~ ~-15 rubymod:floodlight");
+		}
+
+		// Building tools.
+		chest(cmds, 0, -18, "Building Tools", List.of("rubymod:architect_wand", "rubymod:remodeler", "rubymod:blueprint*1", "rubymod:blueprint*1",
+				"minecraft:stone_bricks*64", "minecraft:stone_bricks*64", "rubymod:reinforced_concrete*64", "rubymod:reinforced_glass*64",
+				"rubymod:concrete_wall*64", "rubymod:sandbags*64", "rubymod:floodlight*16"));
+		chest(cmds, 3, -18, "Machines", List.of("rubymod:combustion_generator*4", "rubymod:solar_panel*8", "rubymod:battery*4",
+				"rubymod:ruby_drill*2", "rubymod:ore_refinery*2", "rubymod:ammo_factory", "rubymod:trade_depot*2", "rubymod:vault",
+				"rubymod:shield_generator", "rubymod:point_defense", "rubymod:constructor", "rubymod:heavy_aa_gun*2", "minecraft:coal_block*16"));
+	}
+
+	/** Fuel, the pillbox Blueprint and building blocks for the industry yard (needs the blocks placed first). */
+	private static void stockIndustryYard(ServerLevel level, BlockPos origin) {
+		for (int x : new int[] {-32, -30}) {
+			if (level.getBlockEntity(origin.offset(x, 0, -24)) instanceof dev.rubymod.industry.MachineBlockEntity gen) {
+				gen.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL_BLOCK, 64));
+			}
+		}
+		if (level.getBlockEntity(origin.offset(-3, 0, -24)) instanceof dev.rubymod.industry.MachineBlockEntity ammo) {
+			ammo.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COPPER_INGOT, 32));
+			ammo.setItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GUNPOWDER, 32));
+		}
+		var data = dev.rubymod.industry.Blueprints.capture(level, origin.offset(6, 0, -34), origin.offset(10, 3, -30));
+		if (data != null && level.getBlockEntity(origin.offset(16, 0, -24)) instanceof dev.rubymod.industry.MachineBlockEntity constructor) {
+			var paper = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.BLUEPRINT);
+			paper.set(dev.rubymod.registry.ModComponents.BLUEPRINT, data);
+			constructor.setItem(0, paper);
+			constructor.setTier(3);
+		}
+		for (int x : new int[] {17, 18}) {
+			if (level.getBlockEntity(origin.offset(x, 0, -24)) instanceof net.minecraft.world.Container chest) {
+				chest.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64));
+				chest.setItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64));
+				chest.setItem(2, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModBlocks.REINFORCED_GLASS, 16));
+				chest.setItem(3, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SMOOTH_STONE_SLAB, 64));
+			}
+		}
 	}
 
 	// ----- Command helpers (all coordinates relative to the origin) -----

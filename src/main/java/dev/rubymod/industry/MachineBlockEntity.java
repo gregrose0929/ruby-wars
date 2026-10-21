@@ -126,10 +126,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		setChanged();
 	}
 
-	/** Can this player use the machine (owner, or trusted in the owner's claim)? Unowned machines are claimed by the first user. */
+	/** Can this player use the machine (owner, or trusted in the owner's claim)? Unowned machines (training ground) are shared. */
 	public boolean canUse(Player player) {
 		if (owner.equals(NOBODY)) {
-			setOwner(player.getUUID());
 			return true;
 		}
 		if (owner.equals(player.getUUID()) || Rules.isAdminBypass(player)) {

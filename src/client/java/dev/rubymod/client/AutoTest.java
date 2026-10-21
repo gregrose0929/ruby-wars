@@ -89,8 +89,12 @@ public final class AutoTest {
 			command(mc, "gamerule send_command_feedback false");
 			command(mc, "gamerule sendCommandFeedback false");
 		});
-		if (mode.equals("training")) {
-			trainingScript();
+		if (mode.equals("training") || mode.equals("yard")) {
+			if (mode.equals("training")) {
+				trainingScript();
+			} else {
+				yardScript();
+			}
 			then(20, mc -> {
 				log("done");
 				mc.stop();
@@ -119,6 +123,7 @@ public final class AutoTest {
 			case "planes" -> planesScript();
 			case "showcase" -> showcaseScript();
 			case "industry" -> industryScript();
+			case "yard" -> yardScript();
 			default -> {
 				gunsScript();
 				tourScript();
@@ -370,6 +375,44 @@ public final class AutoTest {
 			command(mc, "ride @p dismount");
 		});
 		then(10, mc -> shot(mc, "training-after-taxi"));
+	}
+
+	/** The training world's Industry Yard: the yard, the Constructor at work, and machine screens. */
+	private static void yardScript() {
+		then(0, mc -> {
+			var level = mc.getSingleplayerServer().overworld();
+			origin = Vec3.atBottomCenterOf(level.getRespawnData().pos());
+			command(mc, "gamemode creative @a");
+		});
+		then(5, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x, origin.y + 9,
+				origin.z - 6, origin.x, origin.y, origin.z - 26)));
+		then(1, mc -> mc.player.getAbilities().flying = true);
+		then(30, mc -> shot(mc, "yard-overview"));
+		then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x - 7, origin.y + 3,
+				origin.z - 19, origin.x - 7, origin.y, origin.z - 24)));
+		then(1, mc -> mc.player.getAbilities().flying = true);
+		then(25, mc -> shot(mc, "yard-ore-line"));
+		then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f facing %.1f %.1f %.1f", origin.x + 22, origin.y + 6,
+				origin.z - 22, origin.x + 16, origin.y, origin.z - 29)));
+		then(1, mc -> mc.player.getAbilities().flying = true);
+		then(240, mc -> shot(mc, "yard-constructor-building"));
+		for (int[] m : new int[][] {{16, -24}, {-6, -24}, {-8, -24}, {-30, -24}}) {
+			then(5, mc -> {
+				command(mc, String.format(java.util.Locale.ROOT, "tp @p %.1f %.1f %.1f", origin.x + m[0], origin.y, origin.z + m[1] + 2.5));
+				IntegratedServer server = mc.getSingleplayerServer();
+				server.execute(() -> {
+					var p = server.getPlayerList().getPlayers().get(0);
+					var pos = net.minecraft.core.BlockPos.containing(origin.x + m[0], origin.y, origin.z + m[1]);
+					if (p.level().getBlockEntity(pos) instanceof dev.rubymod.industry.MachineBlockEntity be) {
+						p.openMenu(be);
+					} else {
+						log("no machine at {}", pos);
+					}
+				});
+			});
+			then(20, mc -> shot(mc, "yard-screen-" + m[0]));
+			then(2, mc -> mc.player.closeContainer());
+		}
 	}
 
 	/** The industry machines, their screen, the Heavy AA Gun, and the Architect's Wand. */
