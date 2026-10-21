@@ -159,7 +159,21 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client, every second during a raid on your side: raiders left, seconds left, rubies looted (0 raiders = over). */
+	public record RaidStatus(int raiders, int seconds, int looted) implements CustomPacketPayload {
+		public static final Type<RaidStatus> TYPE = new Type<>(RubyMod.id("raid_status"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, RaidStatus> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, RaidStatus::raiders, ByteBufCodecs.VAR_INT, RaidStatus::seconds, ByteBufCodecs.VAR_INT, RaidStatus::looted,
+				RaidStatus::new);
+
+		@Override
+		public Type<RaidStatus> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(RaidStatus.TYPE, RaidStatus.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(CombatTagged.TYPE, CombatTagged.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BulletHole.TYPE, BulletHole.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Ping.TYPE, Ping.CODEC);

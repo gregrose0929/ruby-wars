@@ -150,6 +150,10 @@ public final class Raids {
 				Entity e = level.getEntity(id);
 				return e == null || !e.isAlive();
 			});
+			int left = (int) Math.max(0, (raid.endsAt - now) / 1000);
+			for (ServerPlayer p : sidePlayers(server, raid.owner)) {
+				dev.rubymod.net.Net.send(p, new dev.rubymod.net.MorePayloads.RaidStatus(raid.raiders.size(), left, (int) (raid.looted / 1000)));
+			}
 			if (raid.raiders.isEmpty()) {
 				it.remove();
 				win(server, raid);

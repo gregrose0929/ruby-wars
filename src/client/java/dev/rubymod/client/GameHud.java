@@ -46,6 +46,15 @@ public class GameHud implements HudElement {
 		drawRadar(g, font, w);
 		drawKillFeed(g, font, w);
 		drawHitConfirm(g, font, w, h);
+		var raid = ClientState.raid;
+		if (raid != null && raid.raiders() > 0 && System.currentTimeMillis() - ClientState.raidAt < 2500) {
+			String text = "RAID  " + raid.raiders() + " raider" + (raid.raiders() == 1 ? "" : "s") + " left  " + formatTime(raid.seconds())
+					+ (raid.looted() > 0 ? "  -" + raid.looted() + " rubies" : "");
+			int tw = font.width(text) + 14;
+			panel(g, w / 2 - tw / 2, 18, w / 2 + tw / 2, 31);
+			boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
+			g.centeredText(font, text, w / 2, 21, blink ? RED : 0xFFFF8080);
+		}
 		long combat = ClientState.combatUntil - System.currentTimeMillis();
 		if (combat > 0) {
 			String text = "IN COMBAT " + (combat / 1000 + 1) + "s";
