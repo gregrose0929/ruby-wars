@@ -28,36 +28,48 @@ public class RocketLauncherItem extends Item {
 		super(properties);
 	}
 
+	/** Right-click (hold) aims; left-click fires (see the Fire packet). */
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		ItemStack launcher = player.getItemInHand(hand);
-		if (!player.isCreative() && player.getInventory().countItem(ModItems.ROCKET) == 0) {
-			if (player instanceof ServerPlayer serverPlayer) {
-				serverPlayer.sendSystemMessage(Component.literal("No rockets! Buy some at the Armory."), true);
-			}
-			return InteractionResult.FAIL;
+		if (hand != InteractionHand.MAIN_HAND) {
+			return InteractionResult.PASS;
 		}
-		if (level instanceof ServerLevel serverLevel) {
-			serverLevel.addFreshEntity(RocketEntity.fire(level, player));
-			level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 2.0F, 0.6F);
-			if (!player.isCreative()) {
-				for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-					ItemStack s = player.getInventory().getItem(i);
-					if (s.is(ModItems.ROCKET)) {
-						s.shrink(1);
-						break;
-					}
+		player.startUsingItem(hand);
+		return InteractionResult.CONSUME;
+	}
+
+	@Override
+	public int getUseDuration(ItemStack stack, net.minecraft.world.entity.LivingEntity user) {
+		return 72000;
+	}
+
+	public static void fire(ServerPlayer player, ItemStack launcher) {
+		if (player.getCooldowns().isOnCooldown(launcher)) {
+			return;
+		}
+		if (!player.isCreative() && player.getInventory().countItem(ModItems.ROCKET) == 0) {
+			player.sendSystemMessage(Component.literal("No rockets! Buy some at the Armory."), true);
+			return;
+		}
+		ServerLevel level = (ServerLevel) player.level();
+		level.addFreshEntity(RocketEntity.fire(level, player));
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 2.0F, 0.6F);
+		if (!player.isCreative()) {
+			for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+				ItemStack s = player.getInventory().getItem(i);
+				if (s.is(ModItems.ROCKET)) {
+					s.shrink(1);
+					break;
 				}
 			}
 		}
 		player.getCooldowns().addCooldown(launcher, RELOAD);
-		return InteractionResult.SUCCESS;
 	}
 
 	@Override
 	@SuppressWarnings("deprecation")
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
-		builder.accept(Component.literal("Right-click to fire a Rocket").withStyle(ChatFormatting.GRAY));
+		builder.accept(Component.literal("Left-click to fire a Rocket, hold right-click to aim").withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal("Keep aiming: the rocket follows your crosshair").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

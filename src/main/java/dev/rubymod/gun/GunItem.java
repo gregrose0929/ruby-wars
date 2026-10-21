@@ -46,28 +46,24 @@ public class GunItem extends Item {
 		return stack.getOrDefault(ModComponents.AMMO, 0);
 	}
 
+	/** Right-click (hold) aims down the sights. Firing is left-click, sent as a Fire packet. */
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		ItemStack stack = player.getItemInHand(hand);
-		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-			Gunfire.tryFire(serverLevel, serverPlayer, stack, this);
+		if (hand != InteractionHand.MAIN_HAND) {
+			return InteractionResult.PASS;
 		}
-		if (stats.automatic()) {
-			player.startUsingItem(hand);
-		}
+		player.startUsingItem(hand);
 		return InteractionResult.CONSUME;
 	}
 
 	@Override
-	public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int ticksRemaining) {
-		if (stats.automatic() && level instanceof ServerLevel serverLevel && entity instanceof ServerPlayer player) {
-			Gunfire.tryFire(serverLevel, player, stack, this);
-		}
+	public int getUseDuration(ItemStack stack, LivingEntity user) {
+		return 72000;
 	}
 
-	@Override
-	public int getUseDuration(ItemStack stack, LivingEntity user) {
-		return stats.automatic() ? 72000 : 0;
+	/** Is this player aiming down the sights of a gun right now? */
+	public static boolean isAiming(LivingEntity entity) {
+		return entity.isUsingItem() && entity.getUseItem().getItem() instanceof GunItem;
 	}
 
 	@Override
@@ -109,7 +105,7 @@ public class GunItem extends Item {
 		builder.accept(Component.literal("Damage " + dmg + "  |  Range " + (int) stats.range()).withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal("Uses " + Component.translatable(stats.ammo().item().getDescriptionId()).getString())
 				.withStyle(ChatFormatting.GRAY));
-		builder.accept(Component.literal(stats.automatic() ? "Hold right-click to fire" : "Right-click to fire").withStyle(ChatFormatting.DARK_GRAY));
-		builder.accept(Component.literal("Sneak to aim, R to reload").withStyle(ChatFormatting.DARK_GRAY));
+		builder.accept(Component.literal(stats.automatic() ? "Hold left-click to fire" : "Left-click to fire").withStyle(ChatFormatting.DARK_GRAY));
+		builder.accept(Component.literal("Hold right-click to aim, R to reload").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

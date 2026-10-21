@@ -74,7 +74,7 @@ public final class Gunfire {
 			stack.set(ModComponents.AMMO, ammo - 1);
 		}
 
-		boolean aiming = player.isShiftKeyDown();
+		boolean aiming = GunItem.isAiming(player);
 		float spread = aiming ? stats.aimSpread() : stats.hipSpread();
 		Vec3 eye = player.getEyePosition();
 		for (int i = 0; i < stats.pellets(); i++) {
@@ -281,7 +281,7 @@ public final class Gunfire {
 		}
 
 		// Sniper glint: aiming a scoped rifle gives your position away.
-		if (player.tickCount % 10 == 0 && player.isShiftKeyDown()
+		if (player.tickCount % 10 == 0 && GunItem.isAiming(player)
 				&& player.getMainHandItem().getItem() instanceof GunItem gun && gun.stats(player.getMainHandItem()).special() == GunStats.Special.GLINT) {
 			Vec3 p = player.getEyePosition().add(player.getLookAngle().scale(0.6));
 			((ServerLevel) player.level()).sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0, 0, 0, 0);

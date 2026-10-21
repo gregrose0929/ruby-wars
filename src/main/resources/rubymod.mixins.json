@@ -5,6 +5,7 @@
 	"mixins": [
 		"FireBlockMixin",
 		"FlowingFluidMixin",
+		"PlayerMixin",
 		"ServerExplosionMixin"
 	],
 	"injectors": {

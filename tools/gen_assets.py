@@ -9,6 +9,8 @@ import os
 import sys
 import zipfile
 
+import models3d
+
 NS = "rubymod"
 RES = "src/main/resources"
 ASSETS = f"{RES}/assets/{NS}"
@@ -27,14 +29,14 @@ SIMPLE_ITEMS = ["extended_mag", "red_dot_sight", "vertical_grip", "suppressor", 
                 "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge"]
 HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe"]
 ARMOR_ITEMS = ["ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"]
-GUNS = ["service_pistol", "viper_smg", "combat_shotgun", "arr_rifle", "longshot_sniper", "bulldog_lmg", "ruby_blaster", "rocket_launcher"]
+GUNS = ["service_pistol", "combat_shotgun", "arr_rifle", "longshot_sniper", "ruby_blaster", "rocket_launcher"]
 
 # Guns are drawn sideways (barrel to the right). These transforms point the barrel forward in your hands.
 GUN_DISPLAY = {
     # Third person uses the crossbow's aiming transform (see AvatarRendererMixin), turned 45 degrees
     # because the crossbow sprite is diagonal and ours are horizontal.
-    "thirdperson_righthand": {"rotation": [-90, 0, -105], "translation": [2, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
-    "thirdperson_lefthand": {"rotation": [-90, 0, 165], "translation": [2, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
+    "thirdperson_righthand": {"rotation": [-90, 0, 80], "translation": [-1.5, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
+    "thirdperson_lefthand": {"rotation": [-90, 0, -20], "translation": [-1.5, 0.1, -3], "scale": [0.9, 0.9, 0.9]},
     "firstperson_righthand": {"rotation": [0, -90, 5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
     "firstperson_lefthand": {"rotation": [0, 90, -5], "translation": [1.5, 4.0, 0], "scale": [0.5, 0.5, 0.5]},
     "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
@@ -49,6 +51,21 @@ def item_model(name, parent="minecraft:item/generated", display=None, texture=No
         model["display"] = display
     write(f"{ASSETS}/models/item/{name}.json", model)
     client_item(name, f"{NS}:item/{name}")
+
+
+def gun_item(name):
+    """Flat sprite in inventories and on the ground; 3D model in hand (like the vanilla spyglass)."""
+    write(f"{ASSETS}/models/item/{name}_icon.json", {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/{name}"}})
+    model = models3d.gun_model(name)
+    model["display"] = GUN_DISPLAY
+    write(f"{ASSETS}/models/item/{name}.json", model)
+    write(f"{ASSETS}/items/{name}.json", {"model": {
+        "type": "minecraft:select",
+        "property": "minecraft:display_context",
+        "cases": [{"when": ["gui", "ground", "fixed", "on_shelf"],
+                   "model": {"type": "minecraft:model", "model": f"{NS}:item/{name}_icon"}}],
+        "fallback": {"type": "minecraft:model", "model": f"{NS}:item/{name}"},
+    }})
 
 
 def client_item(name, model):
@@ -165,11 +182,9 @@ LANG = {
     "item.rubymod.sniper_round": "Sniper Rounds",
     "item.rubymod.ruby_cell": "Ruby Cell",
     "item.rubymod.service_pistol": "Service Pistol",
-    "item.rubymod.viper_smg": "Viper SMG",
     "item.rubymod.combat_shotgun": "Combat Shotgun",
     "item.rubymod.arr_rifle": "AR-R Rifle",
     "item.rubymod.longshot_sniper": "Longshot Sniper",
-    "item.rubymod.bulldog_lmg": "Bulldog LMG",
     "item.rubymod.ruby_blaster": "Ruby Blaster",
     "item.rubymod.frag_grenade": "Frag Grenade",
     "item.rubymod.smoke_grenade": "Smoke Grenade",
@@ -358,7 +373,7 @@ def main():
         "humanoid": [{"texture": f"{NS}:ruby"}],
         "humanoid_leggings": [{"texture": f"{NS}:ruby"}]}})
     for name in GUNS:
-        item_model(name, display=GUN_DISPLAY)
+        gun_item(name)
     gen_blocks(client_jar)
     write(f"{ASSETS}/lang/en_us.json", LANG)
     gen_recipes()

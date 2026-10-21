@@ -34,11 +34,7 @@ public class RubyModClient implements ClientModInitializer {
 					ClientPlayNetworking.send(new Payloads.Reload());
 				}
 			}
-			// Tank drivers fire the main cannon with the attack button.
-			if (client.player != null && client.player.getVehicle() instanceof VehicleEntity vehicle && vehicle.isTank()
-					&& client.options.keyAttack.isDown() && client.player.tickCount % 5 == 0) {
-				ClientPlayNetworking.send(new Payloads.VehicleFire());
-			}
+			Trigger.tick(client);
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Recoil.TYPE, (payload, context) -> {

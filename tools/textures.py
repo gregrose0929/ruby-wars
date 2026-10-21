@@ -103,24 +103,6 @@ ITEMS = {
         "................",
         "................",
     ],
-    "viper_smg": [
-        "................",
-        "................",
-        "................",
-        ".....kkk........",
-        "..kkkkgkkkkkkk..",
-        ".kddglllllllllkk",
-        ".kdddddddddddddk",
-        ".kkkkddkdddkkkk.",
-        ".....kdkdgk.....",
-        "....kdk.kdk.....",
-        "....kdk.kdk.....",
-        "...kddk..kk.....",
-        "...kkk..........",
-        "................",
-        "................",
-        "................",
-    ],
     "combat_shotgun": [
         "................",
         "................",
@@ -170,24 +152,6 @@ ITEMS = {
         "..kkkdkk........",
         ".....kk.........",
         "................",
-        "................",
-        "................",
-        "................",
-        "................",
-    ],
-    "bulldog_lmg": [
-        "................",
-        "................",
-        "................",
-        "kkk..kkkkkk.....",
-        "kGokkgllllgkkkkk",
-        "kooooddddddddddk",
-        "kooookkdkkkkkkk.",
-        ".kkk.kddk.......",
-        ".....kyyYk......",
-        ".....kyyyk......",
-        ".....kyyyk......",
-        ".....kkkkk......",
         "................",
         "................",
         "................",
@@ -850,7 +814,29 @@ def blocks():
     return b
 
 
+def parts_atlas(seed):
+    """4x4 grid of 4x4 color swatches used by the 3D gun and vehicle models (see tools/models3d.py)."""
+    colors = [
+        (32, 32, 36), (62, 64, 70), (104, 108, 116), (168, 172, 180),   # black, dark steel, steel, light steel
+        (92, 58, 32), (140, 96, 56), (92, 108, 58), (64, 76, 40),       # wood dark, wood, olive, olive dark
+        (205, 30, 55), (120, 12, 32), (196, 156, 60), (90, 210, 245),   # ruby, ruby dark, brass, lens
+        (44, 44, 48), (228, 230, 234), (255, 90, 70), (200, 180, 132),  # rubber, white, red light, tan
+    ]
+    rnd = random.Random(seed)
+    img = [[(0, 0, 0, 255)] * 16 for _ in range(16)]
+    for i, (r, g, b) in enumerate(colors):
+        ox, oy = (i % 4) * 4, (i // 4) * 4
+        for y in range(4):
+            for x in range(4):
+                shade = 10 if y == 0 else (-12 if y == 3 else 0)
+                n = rnd.randint(-6, 6) + shade
+                img[oy + y][ox + x] = (max(0, min(255, r + n)), max(0, min(255, g + n)), max(0, min(255, b + n)), 255)
+    return img
+
+
 def main(root):
+    write_png(os.path.join(root, "textures/item", "gun_parts.png"), parts_atlas(40))
+    write_png(os.path.join(root, "textures/block", "vehicle_parts.png"), parts_atlas(41))
     for name, rows in ITEMS.items():
         write_png(os.path.join(root, "textures/item", name + ".png"), grid(rows))
     # Door item icon reuses the door halves.

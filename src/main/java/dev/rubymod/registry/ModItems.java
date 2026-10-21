@@ -45,13 +45,11 @@ public class ModItems {
 
 	// --- Guns ---
 	//                                                                    dmg  rate mag reload hip  aim  range pel ammo          auto  head  speed recoil zoom special
-	public static final Item SERVICE_PISTOL = gun("service_pistol", new GunStats(5.0F, 6, 12, 30, 2.0F, 0.6F, 60, 1, AmmoType.LIGHT, false, 1.5F, 1.0F, 2.0F, 0.85F, Special.NONE));
-	public static final Item VIPER_SMG = gun("viper_smg", new GunStats(3.0F, 2, 30, 35, 4.0F, 2.5F, 40, 1, AmmoType.LIGHT, true, 1.5F, 1.0F, 0.8F, 0.9F, Special.NONE));
-	public static final Item COMBAT_SHOTGUN = gun("combat_shotgun", new GunStats(3.0F, 16, 6, 50, 7.0F, 5.0F, 20, 8, AmmoType.SHELLS, false, 1.25F, 0.95F, 5.0F, 0.9F, Special.BREACH));
-	public static final Item ARR_RIFLE = gun("arr_rifle", new GunStats(5.0F, 3, 30, 40, 2.5F, 0.8F, 90, 1, AmmoType.HEAVY, true, 1.75F, 0.95F, 1.0F, 0.7F, Special.NONE));
-	public static final Item LONGSHOT_SNIPER = gun("longshot_sniper", new GunStats(16.0F, 30, 5, 60, 6.0F, 0.0F, 200, 1, AmmoType.SNIPER, false, 2.0F, 0.9F, 6.0F, 0.2F, Special.GLINT));
-	public static final Item BULLDOG_LMG = gun("bulldog_lmg", new GunStats(4.0F, 2, 100, 100, 5.0F, 3.0F, 80, 1, AmmoType.HEAVY, true, 1.5F, 0.6F, 0.7F, 0.8F, Special.NONE));
-	public static final Item RUBY_BLASTER = gun("ruby_blaster", new GunStats(7.0F, 5, 20, 40, 1.5F, 1.0F, 70, 1, AmmoType.RUBY_CELL, true, 1.5F, 1.0F, 1.2F, 0.8F, Special.BOUNCE));
+	public static final Item SERVICE_PISTOL = gun("service_pistol", new GunStats(5.0F, 6, 12, 30, 2.0F, 0.6F, 60, 1, AmmoType.LIGHT, false, 1.5F, 0.8F, 2.0F, 0.85F, Special.NONE));
+	public static final Item COMBAT_SHOTGUN = gun("combat_shotgun", new GunStats(3.0F, 16, 6, 50, 7.0F, 5.0F, 20, 8, AmmoType.SHELLS, false, 1.25F, 0.7F, 5.0F, 0.9F, Special.BREACH));
+	public static final Item ARR_RIFLE = gun("arr_rifle", new GunStats(5.0F, 3, 30, 40, 2.5F, 0.8F, 90, 1, AmmoType.HEAVY, true, 1.75F, 0.65F, 1.0F, 0.7F, Special.NONE));
+	public static final Item LONGSHOT_SNIPER = gun("longshot_sniper", new GunStats(16.0F, 30, 5, 60, 6.0F, 0.0F, 200, 1, AmmoType.SNIPER, false, 2.0F, 0.35F, 6.0F, 0.2F, Special.GLINT));
+	public static final Item RUBY_BLASTER = gun("ruby_blaster", new GunStats(7.0F, 5, 20, 40, 1.5F, 1.0F, 70, 1, AmmoType.RUBY_CELL, true, 1.5F, 0.7F, 1.2F, 0.8F, Special.BOUNCE));
 
 	// --- Throwables and raid gear ---
 	public static final Item FRAG_GRENADE = register("frag_grenade", p -> new ThrowableWeaponItem(ThrowableWeaponItem.Kind.FRAG, p), new Item.Properties().stacksTo(16));
@@ -97,7 +95,7 @@ public class ModItems {
 		return register(name, p -> new GunItem(stats, p), new Item.Properties()
 				.stacksTo(1)
 				.component(ModComponents.AMMO, stats.magazine())
-				.component(DataComponents.USE_EFFECTS, new UseEffects(true, false, stats.moveSpeed())));
+				.component(DataComponents.USE_EFFECTS, new UseEffects(false, false, stats.moveSpeed())));
 	}
 
 	private static Item register(String name, Function<Item.Properties, Item> factory, Item.Properties properties) {

@@ -414,7 +414,7 @@ public final class BattleDirector {
 		Item[][] picks = {
 				{ModItems.ROCKET_LAUNCHER, ModItems.ROCKET},
 				{ModItems.LONGSHOT_SNIPER, ModItems.SNIPER_ROUND},
-				{ModItems.BULLDOG_LMG, ModItems.HEAVY_AMMO},
+				{ModItems.RUBY_BLASTER, ModItems.RUBY_CELL},
 				{ModItems.AIR_STRIKE_FLARE, ModItems.FRAG_GRENADE},
 				{ModItems.CRUISE_MISSILE, ModItems.RANGEFINDER},
 				{ModItems.BREACHING_CHARGE, ModItems.SMOKE_GRENADE}};

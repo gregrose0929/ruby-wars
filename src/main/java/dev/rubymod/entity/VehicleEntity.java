@@ -43,6 +43,11 @@ public class VehicleEntity extends Mob {
 		setPersistenceRequired();
 	}
 
+	/** Does the driver have a weapon to fire with the attack button? */
+	public boolean hasWeapon() {
+		return isTank();
+	}
+
 	public boolean isTank() {
 		return getType() == ModEntities.TANK;
 	}

@@ -59,12 +59,10 @@ public final class Shop {
 			entries = new ArrayList<>();
 			// Row 1: guns and grenades
 			gun(0, ModItems.SERVICE_PISTOL, 2);
-			gun(1, ModItems.VIPER_SMG, 8);
+			gun(1, ModItems.ARR_RIFLE, 15);
 			gun(2, ModItems.COMBAT_SHOTGUN, 12);
-			gun(3, ModItems.ARR_RIFLE, 15);
-			gun(4, ModItems.LONGSHOT_SNIPER, 25);
-			gun(5, ModItems.BULLDOG_LMG, 25);
-			gun(6, ModItems.RUBY_BLASTER, 30);
+			gun(3, ModItems.LONGSHOT_SNIPER, 25);
+			gun(4, ModItems.RUBY_BLASTER, 30);
 			item(7, ModItems.FRAG_GRENADE, 4, 4);
 			item(8, ModItems.SMOKE_GRENADE, 4, 3);
 			// Row 2: ammo and raid gear

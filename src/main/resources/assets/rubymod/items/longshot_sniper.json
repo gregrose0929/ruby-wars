@@ -1,6 +1,24 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/longshot_sniper"
+		"type": "minecraft:select",
+		"property": "minecraft:display_context",
+		"cases": [
+			{
+				"when": [
+					"gui",
+					"ground",
+					"fixed",
+					"on_shelf"
+				],
+				"model": {
+					"type": "minecraft:model",
+					"model": "rubymod:item/longshot_sniper_icon"
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:model",
+			"model": "rubymod:item/longshot_sniper"
+		}
 	}
 }

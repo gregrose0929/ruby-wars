@@ -1,0 +1,22 @@
+#!/bin/bash
+# Launch the dev client in autotest mode and collect screenshots.
+#   tools/client-test.sh [guns|vehicles|full]
+# Screenshots land in run/screenshots/autotest-*.png; the log in run/client-test.log.
+set -e
+cd "$(dirname "$0")/.."
+MODE="${1:-full}"
+mkdir -p run/saves
+if [ ! -d run/saves/autotest ]; then
+	echo "Create run/saves/autotest first (copy any test world there)."
+	exit 1
+fi
+# Skip the first-launch accessibility screen and keep running when the window loses focus.
+if [ -f run/options.txt ]; then
+	sed -i 's/onboardAccessibility:true/onboardAccessibility:false/; s/pauseOnLostFocus:true/pauseOnLostFocus:false/' run/options.txt
+else
+	printf 'onboardAccessibility:false\npauseOnLostFocus:false\n' > run/options.txt
+fi
+rm -f run/screenshots/autotest-*.png
+RUBYMOD_AUTOTEST="$MODE" timeout 900 ./gradlew runClient --no-daemon -q --args="--quickPlaySingleplayer autotest" > run/client-test.log 2>&1 || true
+grep -E 'autotest\]' run/client-test.log | grep -v screenshot | cut -c1-200
+ls run/screenshots | grep autotest | tr '\n' ' '; echo

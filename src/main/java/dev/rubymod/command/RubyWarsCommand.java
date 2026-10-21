@@ -158,8 +158,8 @@ public final class RubyWarsCommand {
 	/** Admin testing kit: every gun loaded, ammo, raid gear, attachments, vehicles, and a full set of ruby armor. */
 	private static int kit(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
 		ServerPlayer player = c.getSource().getPlayerOrException();
-		Item[] guns = {ModItems.SERVICE_PISTOL, ModItems.VIPER_SMG, ModItems.COMBAT_SHOTGUN, ModItems.ARR_RIFLE, ModItems.LONGSHOT_SNIPER,
-				ModItems.BULLDOG_LMG, ModItems.RUBY_BLASTER};
+		Item[] guns = {ModItems.SERVICE_PISTOL, ModItems.COMBAT_SHOTGUN, ModItems.ARR_RIFLE, ModItems.LONGSHOT_SNIPER,
+				ModItems.RUBY_BLASTER};
 		for (Item gun : guns) {
 			ItemStack stack = new ItemStack(gun);
 			stack.set(ModComponents.AMMO, ((GunItem) gun).stats().magazine());

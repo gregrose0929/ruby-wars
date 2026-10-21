@@ -1,10 +1,12 @@
 package dev.rubymod.game;
 
 import dev.rubymod.entity.VehicleEntity;
+import dev.rubymod.gun.GunItem;
 import dev.rubymod.gun.Gunfire;
 import dev.rubymod.gun.LagCompensation;
 import dev.rubymod.item.BreachingChargeItem;
 import dev.rubymod.item.ExcavatorItem;
+import dev.rubymod.item.RocketLauncherItem;
 import dev.rubymod.net.Net;
 import dev.rubymod.net.Payloads;
 import dev.rubymod.registry.ModBlocks;
@@ -68,6 +70,15 @@ public final class GameEvents {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> BattleDirector.onLeave(server, handler.getPlayer()));
 
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.Reload.TYPE, (payload, context) -> Gunfire.startReload(context.player()));
+		ServerPlayNetworking.registerGlobalReceiver(Payloads.Fire.TYPE, (payload, context) -> {
+			ServerPlayer player = context.player();
+			ItemStack held = player.getMainHandItem();
+			if (held.getItem() instanceof GunItem gun) {
+				Gunfire.tryFire((ServerLevel) player.level(), player, held, gun);
+			} else if (held.getItem() instanceof RocketLauncherItem) {
+				RocketLauncherItem.fire(player, held);
+			}
+		});
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.VehicleFire.TYPE, (payload, context) -> {
 			if (context.player().getVehicle() instanceof VehicleEntity vehicle) {
 				vehicle.fireCannon(context.player());
