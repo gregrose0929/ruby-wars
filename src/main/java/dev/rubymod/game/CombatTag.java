@@ -45,7 +45,8 @@ public final class CombatTag {
 
 	/** On disconnect: a tagged player who logs out mid-fight dies where they stand. */
 	public static void onLeave(MinecraftServer server, ServerPlayer player) {
-		if (tagged(player.getUUID()) && Rules.phase().pvp() && player.isAlive() && !player.isCreative()) {
+		// Not when the server itself is shutting down (everyone disconnects then).
+		if (server.isRunning() && tagged(player.getUUID()) && Rules.phase().pvp() && player.isAlive() && !player.isCreative()) {
 			Alerts.broadcast(server, Component.literal(player.getName().getString() + " logged out in combat and was killed.")
 					.withStyle(ChatFormatting.RED));
 			player.hurtServer(player.level(), player.damageSources().genericKill(), Float.MAX_VALUE);
