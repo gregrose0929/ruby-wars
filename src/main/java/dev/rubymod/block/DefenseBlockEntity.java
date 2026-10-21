@@ -166,7 +166,7 @@ public class DefenseBlockEntity extends BlockEntity {
 		ammo--;
 		cooldown = 3;
 		setChanged();
-		level.playSound(null, pos, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.BLOCKS, 1.2F, 1.8F);
+		level.playSound(null, pos, dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.BLOCKS, 4.0F, 1.25F);
 		Vec3 step = aim.subtract(gun).normalize();
 		double length = aim.distanceTo(gun);
 		for (double d = 1; d < length; d += 1.5) {

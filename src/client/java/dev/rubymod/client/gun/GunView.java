@@ -47,6 +47,7 @@ public final class GunView {
 	/** Test hook: show the sprint pose. */
 	public static boolean debugSprint;
 	private static long lastNanos;
+	private static float lastReload = -1;
 	private static float ads;
 	private static float sprint;
 	private static float equip = 1.0F;
@@ -72,6 +73,7 @@ public final class GunView {
 		float spin;
 		float spinVel;
 		float age;
+		boolean landed;
 		final GunModel model;
 
 		Casing(GunModel model, Vec3 pos, Vec3 vel) {
@@ -207,8 +209,18 @@ public final class GunView {
 			gp.flash = flashRoll + 1.0F;
 		}
 
-		// Reload choreography.
+		// Reload choreography (with the sounds only you hear: the new mag seating, each shell going in).
 		float r = reloadProgress();
+		if (r >= 0 && lastReload >= 0) {
+			if (model.name.equals("combat_shotgun")) {
+				if ((int) ((r - 0.12F) / 0.19F) > (int) ((lastReload - 0.12F) / 0.19F) && r > 0.2F && r < 0.9F) {
+					localSound(player, dev.rubymod.registry.ModSounds.SHELL_IN, 0.7F);
+				}
+			} else if (lastReload < 0.62F && r >= 0.62F) {
+				localSound(player, dev.rubymod.registry.ModSounds.MAG_IN, 0.8F);
+			}
+		}
+		lastReload = r;
 		float reloadTilt = 0.0F;
 		Vector3f leftHand = null;
 		float[] magHand = model.anchor("mag_hand");
@@ -423,6 +435,18 @@ public final class GunView {
 			float steps = dt * 20.0F;
 			c.vel = c.vel.add(0, -0.04 * steps, 0).scale(Math.pow(0.98, steps));
 			c.pos = c.pos.add(c.vel.scale(steps));
+			double floor = player.getY() + 0.03;
+			if (c.pos.y < floor && c.vel.y < 0) {
+				// Bounce on the ground with a tinkle (first hit loudest).
+				c.pos = new Vec3(c.pos.x, floor, c.pos.z);
+				c.vel = new Vec3(c.vel.x * 0.4, -c.vel.y * 0.35, c.vel.z * 0.4);
+				c.spinVel *= 0.5F;
+				if (!c.landed) {
+					c.landed = true;
+					Minecraft.getInstance().level.playLocalSound(c.pos.x, c.pos.y, c.pos.z, dev.rubymod.registry.ModSounds.CASING,
+							net.minecraft.sounds.SoundSource.PLAYERS, 0.35F, 0.9F + (float) Math.random() * 0.2F, false);
+				}
+			}
 			c.spin += c.spinVel * dt;
 			Vector3f local = toLocal(camera, c.pos.subtract(cam));
 			if (local.z > -0.06F) {
@@ -455,6 +479,11 @@ public final class GunView {
 		org.joml.Vector3fc l = camera.leftVector();
 		return new Vector3f((float) -(rel.x * l.x() + rel.y * l.y() + rel.z * l.z()), (float) (rel.x * u.x() + rel.y * u.y() + rel.z * u.z()),
 				(float) -(rel.x * f.x() + rel.y * f.y() + rel.z * f.z()));
+	}
+
+	private static void localSound(LocalPlayer player, net.minecraft.sounds.SoundEvent sound, float volume) {
+		player.level().playLocalSound(player.getX(), player.getY(), player.getZ(), sound, net.minecraft.sounds.SoundSource.PLAYERS, volume,
+				0.95F + (float) Math.random() * 0.1F, false);
 	}
 
 	private static float approach(float value, float target, float step) {

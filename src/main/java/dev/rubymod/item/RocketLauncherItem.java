@@ -53,7 +53,7 @@ public class RocketLauncherItem extends Item {
 		}
 		ServerLevel level = (ServerLevel) player.level();
 		level.addFreshEntity(RocketEntity.fire(level, player));
-		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 2.0F, 0.6F);
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), dev.rubymod.registry.ModSounds.ROCKET_LAUNCH, SoundSource.PLAYERS, 6.0F, 1.0F);
 		if (!player.isCreative()) {
 			for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
 				ItemStack s = player.getInventory().getItem(i);

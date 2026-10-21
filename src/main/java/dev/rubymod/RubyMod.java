@@ -32,6 +32,7 @@ public class RubyMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModComponents.initialize();
+		dev.rubymod.registry.ModSounds.initialize();
 		ModItems.initialize();
 		ModBlocks.initialize();
 		ModBlockEntities.initialize();

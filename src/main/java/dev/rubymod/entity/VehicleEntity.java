@@ -281,7 +281,7 @@ public class VehicleEntity extends Mob {
 		RocketEntity shell = RocketEntity.tankShell(level(), driver, muzzle, aim.scale(2.6), 4.0F);
 		level().addFreshEntity(shell);
 		ServerLevel level = (ServerLevel) level();
-		level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 4.0F, 0.5F);
+		level.playSound(null, muzzle.x, muzzle.y, muzzle.z, dev.rubymod.registry.ModSounds.TANK_CANNON, SoundSource.PLAYERS, 12.0F, 1.0F);
 		level.sendParticles(ParticleTypes.EXPLOSION, muzzle.x, muzzle.y, muzzle.z, 2, 0.1, 0.1, 0.1, 0);
 		level.sendParticles(ParticleTypes.LARGE_SMOKE, muzzle.x, muzzle.y, muzzle.z, 12, 0.3, 0.3, 0.3, 0.05);
 		Explosions.shake(level, muzzle, 2.0F, 12);

@@ -1,0 +1,131 @@
+{
+	"rifle_shot": {
+		"sounds": [
+			{
+				"name": "rubymod:rifle_shot_0",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:rifle_shot_1",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:rifle_shot_2",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"pistol_shot": {
+		"sounds": [
+			{
+				"name": "rubymod:pistol_shot_0",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:pistol_shot_1",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:pistol_shot_2",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"shotgun_shot": {
+		"sounds": [
+			{
+				"name": "rubymod:shotgun_shot_0",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:shotgun_shot_1",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"sniper_shot": {
+		"sounds": [
+			{
+				"name": "rubymod:sniper_shot_0",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:sniper_shot_1",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"blaster_shot": {
+		"sounds": [
+			{
+				"name": "rubymod:blaster_shot_0",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:blaster_shot_1",
+				"attenuation_distance": 96
+			},
+			{
+				"name": "rubymod:blaster_shot_2",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"silenced_shot": {
+		"sounds": [
+			{
+				"name": "rubymod:silenced_shot",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"rocket_launch": {
+		"sounds": [
+			{
+				"name": "rubymod:rocket_launch",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"tank_cannon": {
+		"sounds": [
+			{
+				"name": "rubymod:tank_cannon",
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"mag_out": {
+		"sounds": [
+			"rubymod:mag_out"
+		]
+	},
+	"mag_in": {
+		"sounds": [
+			"rubymod:mag_in"
+		]
+	},
+	"bolt": {
+		"sounds": [
+			"rubymod:bolt"
+		]
+	},
+	"shell_in": {
+		"sounds": [
+			"rubymod:shell_in"
+		]
+	},
+	"casing": {
+		"sounds": [
+			"rubymod:casing_0",
+			"rubymod:casing_1",
+			"rubymod:casing_2",
+			"rubymod:casing_3"
+		]
+	},
+	"dry_fire": {
+		"sounds": [
+			"rubymod:dry_fire"
+		]
+	}
+}

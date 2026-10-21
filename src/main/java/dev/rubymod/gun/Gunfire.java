@@ -63,7 +63,7 @@ public final class Gunfire {
 		int ammo = GunItem.ammo(stack);
 		if (ammo <= 0) {
 			NEXT_SHOT.put(player.getUUID(), now + 10);
-			level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 0.6F, 1.6F);
+			level.playSound(null, player.getX(), player.getY(), player.getZ(), dev.rubymod.registry.ModSounds.DRY_FIRE, SoundSource.PLAYERS, 0.8F, 1.0F);
 			startReload(player);
 			return;
 		}
@@ -204,39 +204,27 @@ public final class Gunfire {
 	}
 
 	private static void playShot(ServerLevel level, ServerPlayer player, GunStats stats) {
-		SoundEvent sound;
-		float pitch;
-		float volume = 1.5F;
-		switch (stats.ammo()) {
-			case SHELLS -> {
-				sound = SoundEvents.GENERIC_EXPLODE.value();
-				pitch = 1.9F;
-				volume = 0.8F;
-			}
-			case SNIPER -> {
-				sound = SoundEvents.FIREWORK_ROCKET_LARGE_BLAST;
-				pitch = 0.7F;
-				volume = 3.0F;
-			}
-			case RUBY_CELL -> {
-				sound = SoundEvents.AMETHYST_BLOCK_CHIME;
-				pitch = 1.8F;
-			}
-			case HEAVY -> {
-				sound = SoundEvents.FIREWORK_ROCKET_BLAST;
-				pitch = 1.1F;
-			}
-			default -> {
-				sound = SoundEvents.FIREWORK_ROCKET_BLAST;
-				pitch = 1.6F;
-			}
-		}
+		SoundEvent sound = switch (stats.ammo()) {
+			case SHELLS -> dev.rubymod.registry.ModSounds.SHOTGUN_SHOT;
+			case SNIPER -> dev.rubymod.registry.ModSounds.SNIPER_SHOT;
+			case RUBY_CELL -> dev.rubymod.registry.ModSounds.BLASTER_SHOT;
+			case HEAVY -> dev.rubymod.registry.ModSounds.RIFLE_SHOT;
+			default -> dev.rubymod.registry.ModSounds.PISTOL_SHOT;
+		};
+		// Volume sets how far it carries (16 blocks per point): rifles ~100 blocks, the sniper ~200.
+		float volume = switch (stats.ammo()) {
+			case SNIPER -> 12.0F;
+			case SHELLS, HEAVY -> 6.0F;
+			case RUBY_CELL -> 3.0F;
+			default -> 4.0F;
+		};
 		if (stats.silenced()) {
-			volume *= 0.25F;
-			pitch += 0.4F;
+			sound = dev.rubymod.registry.ModSounds.SILENCED_SHOT;
+			volume = 1.0F;
 		}
-		level.playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, volume, pitch + (player.getRandom().nextFloat() - 0.5F) * 0.1F);
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.PLAYERS, volume, 0.95F + player.getRandom().nextFloat() * 0.1F);
 	}
+
 
 	private static Vec3 withSpread(Vec3 dir, float degrees, RandomSource random) {
 		if (degrees <= 0) {
@@ -267,7 +255,8 @@ public final class Gunfire {
 		}
 		long finish = player.level().getGameTime() + stats.reloadTicks();
 		RELOADS.put(player.getUUID(), new Reload(player.getInventory().getSelectedSlot(), gun, finish));
-		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CROSSBOW_LOADING_START.value(), SoundSource.PLAYERS, 0.8F, 1.2F);
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), stats.ammo() == AmmoType.SHELLS ? dev.rubymod.registry.ModSounds.SHELL_IN
+				: dev.rubymod.registry.ModSounds.MAG_OUT, SoundSource.PLAYERS, 0.9F, 1.0F);
 		Net.send(player, new Payloads.ReloadState(stats.reloadTicks()));
 	}
 
@@ -298,7 +287,7 @@ public final class Gunfire {
 		int needed = stats.magazine() - current;
 		int taken = player.isCreative() ? needed : takeAmmo(player, stats.ammo(), needed);
 		stack.set(ModComponents.AMMO, current + taken);
-		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.PLAYERS, 0.8F, 1.3F);
+		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), dev.rubymod.registry.ModSounds.BOLT, SoundSource.PLAYERS, 0.9F, 1.0F);
 		Net.send(player, new Payloads.ReloadState(0));
 	}
 

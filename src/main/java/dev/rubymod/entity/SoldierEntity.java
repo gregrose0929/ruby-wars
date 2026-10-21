@@ -280,7 +280,7 @@ public class SoldierEntity extends PathfinderMob {
 			}
 			Vec3 dir = aim.subtract(from).normalize();
 			level.addFreshEntity(RocketEntity.shell(level, this, from.add(dir.scale(0.8)), dir.scale(2.0), 2.5F));
-			level.playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.HOSTILE, 2.0F, 0.6F);
+			level.playSound(null, getX(), getY(), getZ(), dev.rubymod.registry.ModSounds.ROCKET_LAUNCH, SoundSource.HOSTILE, 5.0F, 1.05F);
 			cooldown = 100;
 			return;
 		}
@@ -307,7 +307,7 @@ public class SoldierEntity extends PathfinderMob {
 			level.sendParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 1, 0, 0, 0, 0);
 		}
 		level.sendParticles(ParticleTypes.SMALL_FLAME, from.x, from.y, from.z, 2, 0.05, 0.05, 0.05, 0.01);
-		level.playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.HOSTILE, 1.4F, 1.6F + random.nextFloat() * 0.2F);
+		level.playSound(null, getX(), getY(), getZ(), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.HOSTILE, 5.0F, 0.95F + random.nextFloat() * 0.1F);
 		burst++;
 		if (burst >= 3) {
 			burst = 0;
