@@ -531,6 +531,8 @@ Requires JDK 25.
     ./gradlew runClient    # dev client
     tools/test-server.sh tools/tests/smoke.txt --fresh   # headless server test + /rubywars selftest
     python tools/make_mrpack.py   # dist/ruby-wars-<version>.mrpack for players
+    tools/release.sh "notes"      # publish it on GitHub; players get the newest from
+                                  # https://github.com/gregrose0929/ruby-wars/releases/latest/download/ruby-wars.mrpack
     tools/make-training-world.sh  # dist/Ruby Wars Training/ (flat world + /rubywars training)
     tools/client-test.sh planes   # scripted client run (guns|vehicles|strikes|planes|training|full)
                                   # screenshots in run/screenshots/, log in run/client-test.log
