@@ -49,8 +49,8 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Taxi an aircraft | W/S throttle (S at idle throttle brakes), A/D steer the nose wheel |
 | Take off | Line up on a runway, full throttle, and when the HUD says ROTATE, look up |
 | Fly | Look where you want to go. Climbing costs speed, diving gains it; too slow and you stall |
-| Aircraft weapons | Left-click fires, R switches weapon, Space drops flares, T designates a target, Z autopilot, C weapon camera, G landing gear, Sneak ejects (parachute) |
-| Helicopter | W/S climb and descend, look to turn, look down to fly forward (up to go back), A/D strafe |
+| Aircraft weapons | Left-click fires, R switches weapon, X drops flares (Space too, in jets), T designates a target, Z autopilot, C weapon camera, G landing gear, Sneak ejects (parachute) |
+| Helicopter | W/S fly forward and back, A/D strafe, Space climbs, Ctrl descends, the mouse turns and aims (the chin gun and rockets hit what's under the crosshair); no keys = hover |
 | Ping / spot | B: mark the spot you're looking at for your squad, or spot the enemy under your crosshair (10 s) |
 | Map | K: the full map (scroll to zoom, drag to pan). The minimap is always top right |
 | Research | J: the research tree |

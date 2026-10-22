@@ -56,7 +56,8 @@ public final class Trigger {
 	/** Called every client tick. */
 	public static void tick(Minecraft mc) {
 		boolean jumping = mc.player != null && mc.gui.screen() == null && mc.options.keyJump.isDown();
-		if (jumping && !wasJumping && Targeting.piloting(mc) != null) {
+		// Space drops flares in jets (in the helicopter it climbs; X drops flares in any aircraft).
+		if (jumping && !wasJumping && Targeting.piloting(mc) != null && !Targeting.piloting(mc).kind().rotorcraft()) {
 			ClientPlayNetworking.send(new Payloads.AircraftFlares());
 		} else if (jumping && !wasJumping && mc.player.getVehicle() instanceof VehicleEntity tank && tank.isTank()
 				&& tank.getControllingPassenger() == mc.player) {

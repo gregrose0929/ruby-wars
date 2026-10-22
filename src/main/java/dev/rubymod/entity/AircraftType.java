@@ -54,8 +54,8 @@ public record AircraftType(String id, String name, double maxSpeed, double thrus
 	public static final AircraftType BOMBER = new AircraftType("bomber", "Bomber", 2.08, 0.0082, 1.44, 1.08, 2.5F,
 			320.0F, 2.4F, 0.0F, 0, 0, 0, Weapon.AGM, 16, 10, 1.4, 5.7, 0.0, 0, false);
 	/**
-	 * Takes off and lands anywhere. W/S climb and descend, look to turn, look down to fly forward,
-	 * A/D strafe. Chin cannon, rocket pods, guided missiles.
+	 * Takes off and lands anywhere. W/S fly forward and back, A/D strafe, Space/Ctrl climb and descend,
+	 * the mouse turns the nose and aims. Chin cannon and rockets fire at the crosshair; guided missiles.
 	 */
 	public static final AircraftType HELICOPTER = new AircraftType("attack_heli", "Attack Helicopter", 2.2, 0.02, 0.0, 0.0, 5.0F,
 			180.0F, 2.0F, 4.0F, 2, 600, 4, Weapon.AGM, 0, 6, 0.75, 2.0, 0.0, 24, true);

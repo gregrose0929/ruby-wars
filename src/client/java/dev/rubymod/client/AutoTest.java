@@ -238,6 +238,85 @@ public final class AutoTest {
 					});
 				}
 			}
+			case "heli" -> {
+				then(5, mc -> {
+					command(mc, "gamemode survival @p");
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+					command(mc, "execute at @p run summon rubymod:attack_heli ~ ~ ~3 {Rotation:[0f,0f]}");
+					command(mc, "execute at @p run summon rubymod:tank ~ ~ ~60 {Rotation:[180f,0f]}");
+				});
+				then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:attack_heli,limit=1,sort=nearest]"));
+				then(10, mc -> {
+					mc.player.setYRot(0);
+					mc.player.setXRot(0);
+					mc.options.keyJump.setDown(true);
+				});
+				then(30, mc -> mc.options.keyJump.setDown(false));
+				then(5, mc -> heliY = aircraft(mc).getY());
+				then(40, mc -> log("heli hover: drifted {} blocks vertically, speed {}", String.format("%.2f", aircraft(mc).getY() - heliY),
+						String.format("%.2f", aircraft(mc).speed())));
+				then(1, mc -> {
+					mc.player.setXRot(40); // looking down must NOT fly it forward any more
+				});
+				then(30, mc -> {
+					log("heli looking down, no keys: speed {}", String.format("%.2f", aircraft(mc).speed()));
+					mc.player.setXRot(0);
+					mc.options.keyUp.setDown(true);
+				});
+				then(40, mc -> {
+					log("heli W held 2s: speed {} km/h, nose pitch {}", Math.round(aircraft(mc).speed() * 72), Math.round(aircraft(mc).getXRot()));
+					mc.options.keyUp.setDown(false);
+				});
+				then(40, mc -> log("heli released 2s: speed {} km/h", Math.round(aircraft(mc).speed() * 72)));
+				then(1, mc -> {
+					for (var e : mc.level.entitiesForRendering()) {
+						if (e instanceof dev.rubymod.entity.VehicleEntity v) {
+							track = v;
+						}
+					}
+				});
+				then(1, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+				// Aim the crosshair at the tank (look only) and use the gun.
+				for (int i = 0; i < 40; i++) {
+					int n = i;
+					then(1, mc -> {
+						if (track == null || aircraft(mc) == null) {
+							return;
+						}
+						Vec3 to = track.getBoundingBox().getCenter().subtract(mc.player.getEyePosition());
+						mc.player.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+						mc.player.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.hypot(to.x, to.z))));
+						if (n == 10) {
+							heliHp = ((net.minecraft.world.entity.LivingEntity) track).getHealth();
+						}
+						if (n >= 10) {
+							Trigger.fireAircraft(dev.rubymod.entity.AircraftType.Weapon.CANNON);
+						}
+						if (n == 20) {
+							shot(mc, "heli-gun");
+						}
+					});
+				}
+				then(10, mc -> {
+					float hp = ((net.minecraft.world.entity.LivingEntity) track).getHealth();
+					log("heli chin gun: tank hp {} -> {} (look pitch {})", heliHp, hp, Math.round(mc.player.getXRot()));
+					heliHp = hp;
+					ClientPlayNetworking.send(new Payloads.AircraftCycle());
+				});
+				for (int i = 0; i < 4; i++) {
+					then(8, mc -> {
+						Vec3 to = track.getBoundingBox().getCenter().subtract(mc.player.getEyePosition());
+						mc.player.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+						mc.player.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.hypot(to.x, to.z))));
+						Trigger.fireAircraft(dev.rubymod.entity.AircraftType.Weapon.ROCKETS);
+					});
+				}
+				then(3, mc -> shot(mc, "heli-rockets"));
+				then(40, mc -> log("heli rockets: tank hp {} -> {}, weapon {}", heliHp, ((net.minecraft.world.entity.LivingEntity) track).getHealth(),
+						aircraft(mc).selectedWeapon()));
+				then(5, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
+				then(15, mc -> shot(mc, "heli-third"));
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));
@@ -856,6 +935,8 @@ public final class AutoTest {
 	}
 
 	private static int dropped;
+	private static double heliY;
+	private static float heliHp;
 
 	private static void tourScript() {
 		then(5, mc -> {

@@ -495,45 +495,56 @@ public class AircraftEntity extends Mob {
 	private Vec3 rotorVelocity = Vec3.ZERO;
 
 	/**
-	 * Helicopter: W/S climb and descend (no input holds altitude), the nose turns to where the
-	 * pilot looks, looking down tilts the rotor forward to fly forward (up flies backward),
-	 * A/D strafe. Lands vertically anywhere; touching down too hard or too fast damages it.
+	 * Helicopter, flown like an arcade gunship: W/S fly forward and back, A/D strafe, the
+	 * mouse turns the nose left and right, and Space / Ctrl climb and descend (read on the
+	 * pilot's client through {@link #rotorLift}). With no keys it comes to a hover and holds
+	 * its altitude. Looking up and down only aims the chin gun and rockets; it never moves
+	 * the helicopter. Touching down too hard or too fast damages it.
 	 */
 	private void flyRotor(LivingEntity pilot, Vec3 input) {
 		boolean airborne = isAirborne();
 		float yaw = getYRot();
-		float yawDelta = Mth.clamp(Mth.wrapDegrees((autopilot ? autopilotHeading : pilot.getYRot()) - yaw), -kind.turnRate(), kind.turnRate());
+		// The nose follows the pilot's look quickly, easing in over the last few degrees.
+		float wantYaw = autopilot ? autopilotHeading : pilot.getYRot();
+		float yawDelta = Mth.clamp(Mth.wrapDegrees(wantYaw - yaw) * 0.35F, -kind.turnRate() * 1.6F, kind.turnRate() * 1.6F);
 		yaw += yawDelta;
-		// Rotor tilt follows the pilot's look, limited to +-25 degrees. On autopilot the helicopter hovers level.
-		float tilt = airborne && !autopilot ? Mth.clamp(pilot.getXRot() - 10.0F, -20.0F, 25.0F) : 0.0F;
-		float pitch = Mth.lerp(0.15F, getXRot(), tilt);
-		throttle = (float) Mth.clamp(throttle + (input.z > 0 ? 0.04 : input.z < 0 ? -0.04 : (0.5 - throttle) * 0.1), 0.0, 1.0);
+		int lift = level().isClientSide() ? rotorLift.getAsInt() : 0;
+		throttle = (float) Mth.clamp(0.5 + lift * 0.5, 0.0, 1.0); // collective, for the HUD
 
 		Vec3 forward = Vec3.directionFromRotation(0, yaw);
 		Vec3 right = new Vec3(-forward.z, 0, forward.x);
 		Vec3 v = rotorVelocity;
-		// Horizontal: tilt pushes along the nose, A/D push sideways, drag.
-		Vec3 push = forward.scale(pitch / 25.0 * kind.thrust() * 2.0).add(right.scale(-input.x * kind.thrust()));
-		Vec3 horizontal = new Vec3(v.x, 0, v.z).add(push).scale(0.985);
-		if (horizontal.length() > kind.maxSpeed()) {
-			horizontal = horizontal.normalize().scale(kind.maxSpeed());
+		// Horizontal: accelerate toward the speed the keys ask for, so it answers quickly and
+		// comes to a stop by itself when you let go.
+		double fwd = input.z;
+		Vec3 wanted = forward.scale(fwd * kind.maxSpeed()).add(right.scale(-input.x * kind.maxSpeed() * 0.55));
+		Vec3 horizontal = new Vec3(v.x, 0, v.z);
+		Vec3 diff = wanted.subtract(horizontal);
+		double step = (fwd == 0 && input.x == 0 ? 0.06 : 0.045) * (airborne ? 1.0 : 0.5);
+		horizontal = diff.length() <= step ? wanted : horizontal.add(diff.normalize().scale(step));
+		// Vertical: Space climbs, Ctrl descends, otherwise hold altitude.
+		double targetClimb = lift > 0 ? 0.4 : lift < 0 ? -0.35 : 0.0;
+		if (autopilot) {
+			targetClimb = Mth.clamp((autopilotAltitude - getY()) * 0.1, -0.3, 0.3);
 		}
-		// Vertical: W climbs, S descends, otherwise hold altitude.
-		double targetClimb = input.z > 0 ? 0.35 : input.z < 0 ? -0.3 : 0.0;
-		double vy = Mth.lerp(0.08, v.y, targetClimb);
+		double vy = Mth.lerp(0.15, v.y, targetClimb);
 		if (!airborne && targetClimb <= 0) {
 			vy = Math.min(vy, 0) - 0.05;
-			horizontal = horizontal.scale(0.7); // wheels on the ground
+			horizontal = horizontal.scale(0.7); // skids on the ground
 		}
 		Vec3 velocity = new Vec3(horizontal.x, vy, horizontal.z);
 		rotorVelocity = velocity;
 		speed = horizontal.length();
 
+		// Body attitude, for looks: nose down when flying forward, banking into strafes and turns.
+		double along = horizontal.dot(forward) / kind.maxSpeed();
+		double across = horizontal.dot(right) / kind.maxSpeed();
+		float pitch = Mth.lerp(0.12F, getXRot(), (float) (along * 14.0 + diff.dot(forward) * 20.0));
 		setYRot(yaw);
-		setXRot(pitch);
+		setXRot(Mth.clamp(pitch, -20.0F, 20.0F));
 		yBodyRot = yaw;
 		yHeadRot = yaw;
-		entityData.set(ROLL, Mth.lerp(0.2F, roll(), Mth.clamp(yawDelta * 6.0F + (float) input.x * -12.0F, -30.0F, 30.0F)));
+		entityData.set(ROLL, Mth.lerp(0.15F, roll(), Mth.clamp(yawDelta * 3.0F + (float) across * -25.0F, -30.0F, 30.0F)));
 		setDeltaMovement(velocity);
 		move(MoverType.SELF, velocity);
 		if (crashCooldown > 0) {
@@ -541,10 +552,10 @@ public class AircraftEntity extends Mob {
 		}
 		double severity = 0.0;
 		if (airborne && onGround()) {
-			severity = Math.max((-velocity.y - 0.35) / 0.4, (speed - 1.0) / 1.0);
+			severity = Math.max((-velocity.y - 0.45) / 0.4, (speed - 1.2) / 1.0);
 		}
-		if (horizontalCollision && speed > 0.8) {
-			severity = Math.max(severity, (speed - 0.8) / 1.0);
+		if (horizontalCollision && speed > 0.9) {
+			severity = Math.max(severity, (speed - 0.9) / 1.0);
 		}
 		if (horizontalCollision) {
 			rotorVelocity = new Vec3(0, rotorVelocity.y, 0);
@@ -553,6 +564,33 @@ public class AircraftEntity extends Mob {
 			crashCooldown = 10;
 			crashReporter.accept(severity);
 		}
+	}
+
+	/** Helicopter climb/descend input from the pilot's client: +1 (jump held), -1 (sprint held) or 0. */
+	public static java.util.function.IntSupplier rotorLift = () -> 0;
+
+	/**
+	 * Which way the helicopter's guns fire from {@code from}: at the point under the pilot's
+	 * crosshair (block or entity, up to 300 blocks), so they hit what you're looking at.
+	 */
+	private Vec3 rotorAim(ServerPlayer pilot, Vec3 from) {
+		Vec3 eye = pilot.getEyePosition();
+		Vec3 look = pilot.getLookAngle();
+		Vec3 end = eye.add(look.scale(300));
+		var hit = level().clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, pilot));
+		Vec3 point = hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS ? end : hit.getLocation();
+		double best = eye.distanceToSqr(point);
+		for (Entity e : level().getEntities(this, new net.minecraft.world.phys.AABB(eye, point).inflate(2.0),
+				e -> e != pilot && e.isPickable() && !hasPassenger(e))) {
+			var clip = e.getBoundingBox().inflate(0.3).clip(eye, point);
+			if (clip.isPresent() && eye.distanceToSqr(clip.get()) < best) {
+				best = eye.distanceToSqr(clip.get());
+				point = clip.get();
+			}
+		}
+		Vec3 dir = point.subtract(from);
+		return dir.lengthSqr() < 1.0E-4 ? look : dir.normalize();
 	}
 
 	/** Helicopter rocket pods: a pair of unguided rockets per click. */
@@ -570,8 +608,10 @@ public class AircraftEntity extends Mob {
 			entityData.set(BOMBS, ammo(Weapon.ROCKETS) - 1);
 			Vec3 offset = new Vec3(side * 0.9 * kind.scale(), -0.2, 0).yRot((float) Math.toRadians(-getYRot()));
 			Vec3 from = position().add(0, 0.9, 0).add(offset).add(forward.scale(1.5));
-			Vec3 dir = forward.add((random.nextDouble() - 0.5) * 0.03, (random.nextDouble() - 0.5) * 0.03, (random.nextDouble() - 0.5) * 0.03);
-			level.addFreshEntity(RocketEntity.shell(level, pilot, from, dir.normalize().scale(3.5).add(serverVelocity), 2.5F).withAntiArmor(30.0F));
+			// Straight-flying rockets, aimed from each pod at the point under the crosshair.
+			Vec3 aim = rotorAim(pilot, from);
+			Vec3 dir = aim.add((random.nextDouble() - 0.5) * 0.012, (random.nextDouble() - 0.5) * 0.012, (random.nextDouble() - 0.5) * 0.012);
+			level.addFreshEntity(RocketEntity.shell(level, pilot, from, dir.normalize().scale(4.0), 2.5F).withAntiArmor(30.0F));
 		}
 		level.playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 2.5F, 1.2F);
 	}
@@ -663,8 +703,10 @@ public class AircraftEntity extends Mob {
 		cannonCooldown = kind.cannonInterval();
 		entityData.set(CANNON_AMMO, ammo(Weapon.CANNON) - 1);
 		ServerLevel level = (ServerLevel) level();
-		Vec3 dir = forward().add((random.nextDouble() - 0.5) * 0.012, (random.nextDouble() - 0.5) * 0.012, (random.nextDouble() - 0.5) * 0.012).normalize();
 		Vec3 start = gunPosition();
+		// The helicopter's chin gun swivels to the crosshair; jet cannons fire along the nose.
+		Vec3 aim = kind.rotorcraft() ? rotorAim(pilot, start) : forward();
+		Vec3 dir = aim.add((random.nextDouble() - 0.5) * 0.012, (random.nextDouble() - 0.5) * 0.012, (random.nextDouble() - 0.5) * 0.012).normalize();
 		float antiArmor = kind.cannonDamage() * (kind == AircraftType.ATTACK ? 1.0F : 0.5F);
 		dev.rubymod.game.CannonRounds.fire(level, pilot, this, start, dir.scale(dev.rubymod.game.CannonRounds.SPEED).add(serverVelocity),
 				kind.cannonDamage(), antiArmor);

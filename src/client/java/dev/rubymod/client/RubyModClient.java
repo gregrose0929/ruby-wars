@@ -30,6 +30,7 @@ public class RubyModClient implements ClientModInitializer {
 	/** T in the cockpit: designate a target (shares its default key with chat; see MinecraftMixin). */
 	public static KeyMapping designateKey;
 	public static KeyMapping autopilotKey;
+	public static KeyMapping flaresKey;
 
 	@Override
 	public void onInitializeClient() {
@@ -43,6 +44,13 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping weaponCamKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.weapon_cam", InputConstants.KEY_C, CATEGORY));
 		KeyMapping gearKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.landing_gear", InputConstants.KEY_G, CATEGORY));
 		dev.rubymod.entity.AircraftEntity.crashReporter = severity -> ClientPlayNetworking.send(new Payloads.AircraftCrash((float) severity));
+		dev.rubymod.entity.AircraftEntity.rotorLift = () -> {
+			var mc = net.minecraft.client.Minecraft.getInstance();
+			if (mc.gui.screen() != null) {
+				return 0;
+			}
+			return mc.options.keyJump.isDown() ? 1 : mc.options.keySprint.isDown() ? -1 : 0;
+		};
 		KeyMapping pingKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.ping", InputConstants.KEY_B, CATEGORY));
 		KeyMapping mapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.map", InputConstants.KEY_K, CATEGORY));
 		KeyMapping researchKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.research", InputConstants.KEY_J, CATEGORY));
@@ -50,6 +58,7 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping manualKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.manual", InputConstants.KEY_Y, CATEGORY));
 		KeyMapping squadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.squad", InputConstants.KEY_O, CATEGORY));
 		autopilotKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.autopilot", InputConstants.KEY_Z, CATEGORY));
+		flaresKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.flares", InputConstants.KEY_X, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -82,6 +91,11 @@ public class RubyModClient implements ClientModInitializer {
 			}
 			while (autopilotKey.consumeClick()) {
 				Vehicles.toggleAutopilot(client);
+			}
+			while (flaresKey.consumeClick()) {
+				if (Targeting.piloting(client) != null) {
+					ClientPlayNetworking.send(new Payloads.AircraftFlares());
+				}
 			}
 			while (researchKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {

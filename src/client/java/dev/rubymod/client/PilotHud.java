@@ -253,7 +253,7 @@ public class PilotHud implements HudElement {
 		g.text(font, "HULL " + hp + "%", x + 10, y + 11, hp < 30 ? RED : hp < 60 ? AMBER : GREEN, false);
 		boolean gear = aircraft.gearDown();
 		if (kind.rotorcraft()) {
-			g.text(font, "W/S climb  A/D strafe  look down: fly", x + 10, y + 42, DIM, false);
+			g.text(font, "WASD fly  Space/Ctrl up/down", x + 10, y + 42, DIM, false);
 			return;
 		}
 		g.text(font, gear ? "GEAR DOWN [G]" : "GEAR UP [G]", x + 10, y + 42, gear ? GREEN : AMBER, false);
@@ -278,22 +278,22 @@ public class PilotHud implements HudElement {
 			g.text(font, weapon.title.toUpperCase(), x, y, GREEN, false);
 			g.text(font, (weapon == Weapon.CANNON ? "RNDS " : "x") + ammo, x, y + 10, ammo == 0 ? RED : GREEN, false);
 			if (weapon == Weapon.ROCKETS) {
-				float[] p = projectDirection(camera, aircraft.forward(), w, h);
-				if (p != null) {
-					g.outline((int) p[0] - 8, (int) p[1] - 8, 16, 16, GREEN);
-				}
+				// Rockets fly straight to whatever is under the crosshair.
+				g.outline(w / 2 - 8, h / 2 - 8, 16, 16, GREEN);
 			}
 			g.text(font, "R: next weapon", x, y + 31, DIM, false);
 		}
-		g.text(font, "FLARES " + aircraft.flares() + "  [Space]", x, y + 20, aircraft.flares() == 0 ? RED : GREEN, false);
+		g.text(font, "FLARES " + aircraft.flares() + (aircraft.kind().rotorcraft() ? "  [X]" : "  [Space/X]"), x, y + 20,
+				aircraft.flares() == 0 ? RED : GREEN, false);
 		if (weapon == null) {
 			return;
 		}
 
 		switch (weapon) {
 			case CANNON -> {
-				// Gun pipper on the nose, and the lead circle: put the pipper on it and fire.
-				float[] p = projectDirection(camera, aircraft.forward(), w, h);
+				// Gun pipper (the nose for jets; the crosshair for the helicopter's swiveling chin gun),
+				// and the lead circle: put the pipper on it and fire.
+				float[] p = aircraft.kind().rotorcraft() ? new float[] {w / 2.0F, h / 2.0F} : projectDirection(camera, aircraft.forward(), w, h);
 				if (p != null) {
 					circle(g, (int) p[0], (int) p[1], 10, GREEN);
 					g.fill((int) p[0], (int) p[1], (int) p[0] + 1, (int) p[1] + 1, GREEN);
