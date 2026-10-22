@@ -488,6 +488,19 @@ ground here), `rearm` (refill your aircraft), `raidnow <player>` (launch a raid)
 
 ## Running the server (Linux)
 
+**Quickest: the setup script** (Debian 12/13 or Ubuntu 22.04/24.04, e.g. a Proxmox VM).
+It installs Java 25, builds the mod from this repo, downloads Fabric and the
+server mods, and sets up a service that starts on boot and restarts daily at 5 AM:
+
+    curl -fsSL https://raw.githubusercontent.com/gregrose0929/ruby-wars/main/tools/setup-server.sh -o setup-server.sh
+    sudo MEMORY=6G OP=YourName bash setup-server.sh
+
+Afterwards: `rubywars console` (Ctrl-A then D to leave), `rubywars cmd "<command>"`,
+`rubywars logs`, `rubywars restart`, and `rubywars update` to pull and rebuild the
+latest version. The server lives in `/opt/rubywars/server`.
+
+**By hand:**
+
 1. Install Java 25 (your distro's OpenJDK 25 package, or Temurin 25 from adoptium.net).
 2. Download the Fabric server launcher for Minecraft 26.3 from https://fabricmc.net/use/server/
    into an empty folder, and run it once: `java -Xmx6G -jar fabric-server-launch.jar nogui`.
