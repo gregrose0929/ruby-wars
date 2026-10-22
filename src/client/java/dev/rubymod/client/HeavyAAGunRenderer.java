@@ -91,8 +91,8 @@ public class HeavyAAGunRenderer extends EntityRenderer<HeavyAAGunEntity, HeavyAA
 	public void extractRenderState(HeavyAAGunEntity entity, State state, float partialTicks) {
 		super.extractRenderState(entity, state, partialTicks);
 		state.baseYaw = entity.getYRot();
-		state.turretYaw = entity.turretYaw();
-		state.gunPitch = entity.gunPitch();
+		state.turretYaw = Mth.rotLerp(partialTicks, entity.smoothYawO, entity.smoothYaw);
+		state.gunPitch = Mth.lerp(partialTicks, entity.smoothPitchO, entity.smoothPitch);
 		float t = entity.recoil + partialTicks;
 		state.recoil = t < 4 ? Mth.sin(t / 4.0F * (float) Math.PI) : 0.0F;
 		// The gunner sees through the sight, not the inside of the gun shield.

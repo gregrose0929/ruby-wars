@@ -44,11 +44,7 @@ public final class AAGunHud {
 		g.horizontalLine(cx + r + 2, cx + r + 8, cy, GREEN);
 		g.verticalLine(cx, cy + r + 2, cy + r + 8, GREEN);
 
-		// Where the barrels actually point (they lag the mouse a little).
-		float[] bore = project(camera, camera.position().add(gun.aim().scale(400)), w, h);
-		if (bore != null) {
-			g.outline((int) bore[0] - 3, (int) bore[1] - 3, 7, 7, AMBER);
-		}
+		// Shots go where you look, so the crosshair is the aim point.
 
 		// Aircraft: box + lead marker.
 		Vec3 muzzle = gun.position().add(0, 1.5, 0);

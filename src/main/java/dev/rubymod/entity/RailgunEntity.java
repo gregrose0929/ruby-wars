@@ -76,7 +76,7 @@ public class RailgunEntity extends HeavyAAGunEntity {
 		}
 		setReloadLeft(RECHARGE);
 		ServerLevel level = (ServerLevel) level();
-		Vec3 dir = aim();
+		Vec3 dir = gunnerAim(gunner);
 		Vec3 from = position().add(0, 1.5, 0).add(dir.scale(4.2));
 		Vec3 end = from.add(dir.scale(RANGE));
 		BlockHitResult blockHit = level.clip(new ClipContext(from, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
@@ -120,7 +120,7 @@ public class RailgunEntity extends HeavyAAGunEntity {
 		level.sendParticles(ParticleTypes.END_ROD, true, false, from.x, from.y, from.z, 20, 0.3, 0.3, 0.3, 0.2);
 		level.playSound(null, from.x, from.y, from.z, SoundEvents.TRIDENT_THUNDER.value(), SoundSource.PLAYERS, 3.0F, 1.6F);
 		level.playSound(null, from.x, from.y, from.z, SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 2.0F, 2.0F);
-		Net.send(gunner, new Payloads.Shake(1.4F, 8));
+		Net.send(gunner, new Payloads.Shake(0.5F, 4));
 		level.broadcastEntityEvent(this, (byte) 60);
 	}
 }

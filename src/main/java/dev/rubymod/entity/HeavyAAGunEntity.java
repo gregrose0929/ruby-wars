@@ -46,8 +46,9 @@ public class HeavyAAGunEntity extends Mob {
 	public static final int MAGAZINE = 40;
 	public static final int RELOAD_TICKS = 70;
 	public static final double SHELL_SPEED = 7.0;
-	private static final float TRAVERSE = 7.0F;
-	private static final float ELEVATION = 5.0F;
+	/** A crewed gun follows its gunner's view closely (degrees per tick); hand-cranked guns would feel sluggish. */
+	private static final float TRAVERSE = 40.0F;
+	private static final float ELEVATION = 30.0F;
 
 	private static final EntityDataAccessor<Float> TURRET_YAW = SynchedEntityData.defineId(HeavyAAGunEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Float> GUN_PITCH = SynchedEntityData.defineId(HeavyAAGunEntity.class, EntityDataSerializers.FLOAT);
@@ -58,6 +59,12 @@ public class HeavyAAGunEntity extends Mob {
 	private boolean leftBarrel;
 	/** Client: ticks since the last shot (for barrel recoil). */
 	public int recoil = 10;
+	/** Client: smoothed turret yaw and gun pitch (the synced values arrive 20 times a second). */
+	public float smoothYaw;
+	public float smoothYawO;
+	public float smoothPitch;
+	public float smoothPitchO;
+	private boolean smoothInit;
 
 	public HeavyAAGunEntity(EntityType<? extends HeavyAAGunEntity> type, Level level) {
 		super(type, level);
@@ -111,6 +118,12 @@ public class HeavyAAGunEntity extends Mob {
 	}
 
 	/** Where the barrels point. */
+	/** The gunner's line of sight, held to the mount's elevation limits. */
+	protected Vec3 gunnerAim(ServerPlayer gunner) {
+		float pitch = Mth.clamp(gunner.getXRot(), -85.0F, 5.0F);
+		return Vec3.directionFromRotation(pitch, gunner.getYHeadRot());
+	}
+
 	public Vec3 aim() {
 		return Vec3.directionFromRotation(gunPitch(), turretYaw());
 	}
@@ -188,6 +201,15 @@ public class HeavyAAGunEntity extends Mob {
 		super.tick();
 		if (level().isClientSide()) {
 			recoil++;
+			if (!smoothInit) {
+				smoothYaw = smoothYawO = turretYaw();
+				smoothPitch = smoothPitchO = gunPitch();
+				smoothInit = true;
+			}
+			smoothYawO = smoothYaw;
+			smoothPitchO = smoothPitch;
+			smoothYaw += Mth.wrapDegrees(turretYaw() - smoothYaw) * 0.6F;
+			smoothPitch += (gunPitch() - smoothPitch) * 0.6F;
 			return;
 		}
 		if (tickCount == 1 && turretYaw() == 0.0F) {
@@ -234,13 +256,15 @@ public class HeavyAAGunEntity extends Mob {
 		leftBarrel = !leftBarrel;
 		Vec3 muzzle = muzzle(side);
 		var random = level.getRandom();
-		Vec3 dir = aim().add((random.nextDouble() - 0.5) * 0.015, (random.nextDouble() - 0.5) * 0.015, (random.nextDouble() - 0.5) * 0.015).normalize();
+		// Shells go where the gunner is looking (the barrels are only a tick behind), with a little dispersion.
+		Vec3 dir = gunnerAim(gunner).add((random.nextDouble() - 0.5) * 0.006, (random.nextDouble() - 0.5) * 0.006,
+				(random.nextDouble() - 0.5) * 0.006).normalize();
 		CannonRounds.fireFlak(level, gunner, this, muzzle, dir.scale(SHELL_SPEED), 22.0F, 45);
 		level.sendParticles(ParticleTypes.FLAME, true, false, muzzle.x, muzzle.y, muzzle.z, 6, 0.15, 0.15, 0.15, 0.05);
 		level.sendParticles(ParticleTypes.LARGE_SMOKE, true, false, muzzle.x, muzzle.y, muzzle.z, 3, 0.2, 0.2, 0.2, 0.02);
 		level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 2.5F, 1.5F + random.nextFloat() * 0.2F);
 		level.playSound(null, muzzle.x, muzzle.y, muzzle.z, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 2.0F, 0.6F);
-		Net.send(gunner, new Payloads.Shake(0.6F, 4));
+		// No camera shake: it threw the gunner's aim off. The barrels recoil instead (entity event 60).
 		level.broadcastEntityEvent(this, (byte) 60);
 		if (ammo() == 0) {
 			startReload(gunner);
