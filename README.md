@@ -199,9 +199,9 @@ then pull up. The takeoff roll takes 10-20 seconds.
 
 | Aircraft | Top speed | Takeoff | Weapons |
 | --- | --- | --- | --- |
-| **Fighter Jet** | 250 km/h | 158 km/h, ~250-330 blocks | Fast-firing cannon, 4 air-to-air missiles, 8 flares |
-| **Attack Jet** | 215 km/h | 137 km/h | Heavy cannon (best against armor), 6 guided missiles, 4 guided bombs, 6 flares |
-| **Bomber** | 185 km/h | 130 km/h, ~400 blocks | 16 guided bombs, 10 flares |
+| **Fighter Jet** | 200 km/h | 127 km/h, ~160-210 blocks | Fast-firing cannon, 4 air-to-air missiles, 8 flares |
+| **Attack Jet** | 173 km/h | 109 km/h | Heavy cannon (best against armor), 6 guided missiles, 4 guided bombs, 6 flares |
+| **Bomber** | 150 km/h | 104 km/h, ~260 blocks | 16 guided bombs, 10 flares |
 | **Attack Helicopter** | 158 km/h | Vertical, anywhere | Chin cannon, 24 rockets, 4 guided missiles, 6 flares |
 
 **Crashes.** Touching down faster than about 6 m/s sink, nose-first, or with the

@@ -102,6 +102,10 @@ public final class Targeting {
 			lockTicks = 0;
 		}
 
+		if (weapon == Weapon.AAM || weapon == Weapon.AGM) {
+			LauncherSeeker.lockTone(mc, candidate != null, lockTicks, lockTime(weapon));
+		}
+
 		// Laser point where the pilot is looking (guided missiles fly here without a lock).
 		Vec3 end = eye.add(look.scale(weapon == Weapon.BOMBS ? 900 : 400));
 		BlockHitResult hit = mc.level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, mc.player));

@@ -101,7 +101,7 @@ public final class Trigger {
 		} else if (held.getItem() instanceof RocketLauncherItem && pressed) {
 			ClientPlayNetworking.send(new Payloads.Fire());
 		} else if (held.getItem() instanceof dev.rubymod.item.LockOnLauncherItem && pressed) {
-			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.getId() : -1));
+			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.id() : -1));
 		}
 	}
 }

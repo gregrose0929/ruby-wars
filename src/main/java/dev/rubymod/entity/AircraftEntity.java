@@ -380,6 +380,18 @@ public class AircraftEntity extends Mob {
 			}
 			throttle = Math.max(0.0F, throttle - 0.025F);
 		}
+		if (autopilot && airborne && !kind.rotorcraft()) {
+			// Autothrottle: never let the plane bleed down toward a stall while you aim, so
+			// switching the autopilot off hands you a plane that's still flying. It adds just
+			// enough power to cruise at a safe speed (full power if already near a stall).
+			double cruise = kind.rotateSpeed() * 1.3;
+			float cruiseThrottle = (float) Math.min(1.0, kind.drag() * cruise * cruise / kind.thrust() * 1.1);
+			if (speed < kind.rotateSpeed()) {
+				throttle = Math.min(1.0F, throttle + 0.05F);
+			} else if (speed < cruise && throttle < cruiseThrottle) {
+				throttle = Math.min(cruiseThrottle, throttle + 0.03F);
+			}
+		}
 
 		// Speed: thrust minus drag, gravity along the flight path, rolling resistance and brakes on the ground.
 		double drag = kind.drag() * (gearDown() ? 1.0 : 0.85);

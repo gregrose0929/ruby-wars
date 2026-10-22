@@ -60,13 +60,14 @@ public class LockOnLauncherItem extends Item {
 			return false;
 		}
 		if (kind == Kind.ANTI_AIR) {
-			return e instanceof AircraftEntity a && !a.onGround();
+			// Like the aircraft heat-seekers: aircraft in flight and anything else airborne (drones, phantoms).
+			return e instanceof AircraftEntity a ? !a.onGround() : e instanceof LivingEntity l && !l.onGround() && !(e instanceof Player);
 		}
 		return e instanceof VehicleEntity || (e instanceof AircraftEntity a && a.onGround()) || (e instanceof LivingEntity l && l.onGround());
 	}
 
 	public static double range(Kind kind) {
-		return kind == Kind.ANTI_AIR ? 400 : 250;
+		return kind == Kind.ANTI_AIR ? 800 : 400;
 	}
 
 	public Item ammo() {

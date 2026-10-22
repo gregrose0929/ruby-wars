@@ -45,13 +45,13 @@ public record AircraftType(String id, String name, double maxSpeed, double thrus
 	}
 
 	/** Fast and agile. Cannon, heat-seeking air-to-air missiles, lots of flares. */
-	public static final AircraftType FIGHTER = new AircraftType("fighter_jet", "Fighter", 3.5, 0.0125, 2.2, 1.6, 6.0F,
+	public static final AircraftType FIGHTER = new AircraftType("fighter_jet", "Fighter", 2.8, 0.0125, 1.76, 1.28, 6.0F,
 			100.0F, 2.0F, 4.5F, 1, 450, 4, Weapon.AAM, 0, 8, 0.75, 2.1, 0.0, 0, false);
 	/** Slow and tough. Heavy cannon, guided ground-attack missiles, a few bombs. */
-	public static final AircraftType ATTACK = new AircraftType("attack_jet", "Attack Jet", 3.0, 0.0105, 1.9, 1.4, 4.5F,
+	public static final AircraftType ATTACK = new AircraftType("attack_jet", "Attack Jet", 2.4, 0.0105, 1.52, 1.12, 4.5F,
 			220.0F, 2.0F, 7.0F, 2, 500, 6, Weapon.AGM, 4, 6, 0.7, 2.9, 0.0, 0, false);
 	/** Huge bomb load; needs a long runway (~400 blocks) to get off the ground. */
-	public static final AircraftType BOMBER = new AircraftType("bomber", "Bomber", 2.6, 0.0082, 1.8, 1.35, 2.5F,
+	public static final AircraftType BOMBER = new AircraftType("bomber", "Bomber", 2.08, 0.0082, 1.44, 1.08, 2.5F,
 			320.0F, 2.4F, 0.0F, 0, 0, 0, Weapon.AGM, 16, 10, 1.4, 5.7, 0.0, 0, false);
 	/**
 	 * Takes off and lands anywhere. W/S climb and descend, look to turn, look down to fly forward,

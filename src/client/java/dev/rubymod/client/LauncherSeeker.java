@@ -16,15 +16,17 @@ import net.minecraft.world.phys.Vec3;
 /**
  * The seeker of a shoulder-fired lock-on launcher (Skyhammer, Lancer): while
  * aiming (right-click held), the target nearest the crosshair inside the seeker
- * circle builds a lock, with a rising tone, then a steady tone once locked.
- * Also draws the launcher's sight.
+ * circle builds a lock, with a rising tone, then a fast tone once locked, the same
+ * way the aircraft missiles lock. Also draws the launcher's sight.
  */
 public class LauncherSeeker implements HudElement {
-	private static final double CONE = 8.0;
-	private static final int LOCK_TICKS = 25;
+	private static final double CONE = 12.0;
+	/** Ticks a target may sit just outside the circle before the lock starts over. */
+	private static final int GRACE = 6;
 
-	public static Entity candidate;
+	public static Contacts.Target candidate;
 	public static int lockTicks;
+	private static int lostFor;
 
 	public static LockOnLauncherItem.Kind held(Minecraft mc) {
 		if (mc.player == null || mc.player.getVehicle() != null) {
@@ -34,44 +36,88 @@ public class LauncherSeeker implements HudElement {
 	}
 
 	public static boolean locked() {
-		return candidate != null && lockTicks >= LOCK_TICKS;
+		return candidate != null && lockTicks >= lockTime(held(Minecraft.getInstance()));
 	}
 
+	/** Same lock times as the aircraft seekers: quick for heat-seekers, a little longer for ground targets. */
+	public static int lockTime(LockOnLauncherItem.Kind kind) {
+		return kind == LockOnLauncherItem.Kind.ANTI_TANK ? 20 : 15;
+	}
+
+	/**
+	 * Works like the jets' fire-control computer: the target nearest the middle of a
+	 * 12-degree circle, including radar contacts beyond render distance, locks after it
+	 * stays there briefly. A target that slips just outside the circle for a moment
+	 * keeps its lock progress instead of starting over.
+	 */
 	public static void tick(Minecraft mc) {
 		LockOnLauncherItem.Kind kind = held(mc);
 		boolean aiming = kind != null && mc.player.isUsingItem();
 		if (!aiming) {
 			candidate = null;
 			lockTicks = 0;
+			lostFor = 0;
 			return;
 		}
 		Vec3 eye = mc.player.getEyePosition();
 		Vec3 look = mc.player.getLookAngle();
-		Entity best = null;
-		double bestAngle = CONE;
+		java.util.List<Contacts.Target> options = new java.util.ArrayList<>();
 		for (Entity e : mc.level.entitiesForRendering()) {
-			if (!LockOnLauncherItem.canLock(kind, e, mc.player) || e.distanceTo(mc.player) > LockOnLauncherItem.range(kind)) {
-				continue;
-			}
-			Vec3 to = e.getBoundingBox().getCenter().subtract(eye);
-			double angle = Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, to.normalize().dot(look)))));
-			if (angle < bestAngle) {
-				bestAngle = angle;
-				best = e;
+			if (LockOnLauncherItem.canLock(kind, e, mc.player)) {
+				options.add(Contacts.of(e));
 			}
 		}
-		if (best != null && best == candidate) {
+		for (Contacts.Target t : Contacts.remote(mc)) {
+			if (t.airborne() == (kind == LockOnLauncherItem.Kind.ANTI_AIR)) {
+				options.add(t);
+			}
+		}
+		Contacts.Target best = null;
+		double bestAngle = CONE;
+		double range = LockOnLauncherItem.range(kind);
+		for (Contacts.Target t : options) {
+			Vec3 to = t.pos().subtract(eye);
+			if (to.length() > range) {
+				continue;
+			}
+			double angle = angle(to, look);
+			// Stick with the current target unless another is clearly nearer the middle.
+			if (candidate != null && t.id() == candidate.id()) {
+				angle -= 2.0;
+			}
+			if (angle < bestAngle) {
+				bestAngle = angle;
+				best = t;
+			}
+		}
+		if (best != null && candidate != null && best.id() == candidate.id()) {
+			candidate = best;
 			lockTicks++;
+			lostFor = 0;
+		} else if (best == null && candidate != null && ++lostFor <= GRACE) {
+			// Briefly outside the circle: hold on to it (moving with the latest contact position).
+			candidate = Contacts.refresh(mc, candidate);
 		} else {
 			candidate = best;
 			lockTicks = 0;
+			lostFor = 0;
 		}
-		// Lock tone: beeps that speed up, then a steady high tone.
-		if (candidate != null) {
-			int period = locked() ? 2 : Math.max(3, 10 - lockTicks / 3);
-			if (mc.player.tickCount % period == 0) {
-				mc.player.playSound(SoundEvents.NOTE_BLOCK_BIT.value(), 0.35F, locked() ? 2.0F : 1.0F + lockTicks / 50.0F);
-			}
+		lockTone(mc, candidate != null, lockTicks, lockTime(kind));
+	}
+
+	private static double angle(Vec3 to, Vec3 look) {
+		return Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, to.normalize().dot(look)))));
+	}
+
+	/** The lock tone, shared with the aircraft seekers: beeps that speed up as the lock builds, then a fast high tone. */
+	public static void lockTone(Minecraft mc, boolean tracking, int ticks, int lockTime) {
+		if (!tracking) {
+			return;
+		}
+		boolean locked = ticks >= lockTime;
+		int period = locked ? 2 : Math.max(3, 10 - ticks * 7 / Math.max(1, lockTime));
+		if (mc.player.tickCount % period == 0) {
+			mc.player.playSound(SoundEvents.NOTE_BLOCK_BIT.value(), 0.35F, locked ? 2.0F : 1.0F + ticks / (float) lockTime * 0.5F);
 		}
 	}
 
@@ -136,7 +182,11 @@ public class LauncherSeeker implements HudElement {
 			g.text(font, s, w / 2 - font.width(s) / 2, h / 2 + r + 6, 0xA050FF70, false);
 			return;
 		}
-		Vec3 rel = candidate.getBoundingBox().getCenter().subtract(camera.position());
+		Contacts.Target target = Contacts.refresh(mc, candidate);
+		if (target == null) {
+			return;
+		}
+		Vec3 rel = target.pos().subtract(camera.position());
 		var f = camera.forwardVector();
 		var u = camera.upVector();
 		var l = camera.leftVector();
@@ -146,11 +196,11 @@ public class LauncherSeeker implements HudElement {
 		}
 		int x = (int) (w / 2.0 - (rel.x * l.x() + rel.y * l.y() + rel.z * l.z()) / z * scale);
 		int y = (int) (h / 2.0 - (rel.x * u.x() + rel.y * u.y() + rel.z * u.z()) / z * scale);
-		float progress = Math.min(1.0F, lockTicks / (float) LOCK_TICKS);
+		float progress = Math.min(1.0F, lockTicks / (float) lockTime(kind));
 		int size = locked() ? 8 : (int) (20 - 12 * progress);
 		int col = locked() ? 0xFFFF4040 : 0xFFFFC040;
 		g.outline(x - size, y - size, size * 2, size * 2, col);
-		String d = Math.round(candidate.distanceTo(mc.player)) + "m";
+		String d = Math.round(target.pos().distanceTo(mc.player.getEyePosition())) + "m" + (target.visible() ? "" : "  RADAR");
 		g.text(font, (locked() ? "LOCKED " : "LOCKING ") + d, x + size + 3, y - 4, col, false);
 	}
 }

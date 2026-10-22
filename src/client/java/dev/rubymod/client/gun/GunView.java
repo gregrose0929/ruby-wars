@@ -315,8 +315,8 @@ public final class GunView {
 		// so the launcher itself gets out of the way instead of filling the screen.
 		boolean seekerView = stack.getItem() instanceof LockOnLauncherItem && ads > 0.55F;
 
-		// Gun
-		if (!seekerView) {
+		// Gun (not while looking through the sniper scope: the scope overlay is the view then)
+		if (!seekerView && !player.isScoping()) {
 			pose.pushPose();
 			pose.mulPose(gun);
 			model.submit(gp, pose, collector, light, OverlayTexture.NO_OVERLAY, 0);

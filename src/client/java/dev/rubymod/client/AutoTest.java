@@ -186,6 +186,58 @@ public final class AutoTest {
 				then(5, mc -> command(mc, "execute as @p at @e[type=rubymod:tank,limit=1,sort=nearest] run tp @s ~3 ~2.5 ~-11 0 8"));
 				then(25, mc -> shot(mc, "turret-side-up"));
 			}
+			case "scope" -> {
+				then(5, mc -> {
+					command(mc, "clear @p");
+					command(mc, "give @p rubymod:longshot_sniper");
+					command(mc, "give @p rubymod:skyhammer");
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+					command(mc, "execute at @p run summon rubymod:target_dummy ~ ~ ~20");
+				});
+				then(10, mc -> mc.player.getInventory().setSelectedSlot(0));
+				then(10, mc -> aim(mc, true));
+				then(25, mc -> shot(mc, "scope-sniper"));
+				then(2, mc -> aim(mc, false));
+				then(10, mc -> mc.player.getInventory().setSelectedSlot(1));
+				then(10, mc -> aim(mc, true));
+				then(25, mc -> shot(mc, "scope-skyhammer"));
+				then(2, mc -> aim(mc, false));
+			}
+			case "apoff" -> {
+				then(5, mc -> {
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 180 0");
+					command(mc, "execute at @p run summon rubymod:fighter_jet ~ ~60 ~ {Rotation:[180f,0f]}");
+				});
+				then(5, mc -> command(mc, "ride @p mount @e[type=rubymod:fighter_jet,limit=1,sort=nearest]"));
+				then(5, mc -> {
+					var a = aircraft(mc);
+					a.launch(2.4);
+					mc.player.setYRot(180);
+					mc.player.setXRot(0);
+					mc.options.keyUp.setDown(true);
+				});
+				then(40, mc -> {
+					mc.options.keyUp.setDown(false);
+					Vehicles.toggleAutopilot(mc);
+					Vehicles.freePitch = 70; // looking down to aim
+					mc.options.keyDown.setDown(true); // throttle back
+				});
+				then(30, mc -> mc.options.keyDown.setDown(false));
+				for (int i = 0; i < 6; i++) {
+					then(20, mc -> {
+						var a = aircraft(mc);
+						if (a == null) { log("autopilot: not flying, vehicle {} pos {}", mc.player.getVehicle(), mc.player.blockPosition()); return; }
+						log("autopilot: y {} speed {} pitch {} throttle {}", Math.round(a.getY()), String.format("%.2f", a.speed()), Math.round(a.getXRot()), String.format("%.2f", a.throttle()));
+					});
+				}
+				then(1, mc -> Vehicles.toggleAutopilot(mc));
+				for (int i = 0; i < 8; i++) {
+					then(10, mc -> {
+						var a = aircraft(mc);
+						log("after off: y {} speed {} pitch {} player pitch {}", Math.round(a.getY()), String.format("%.2f", a.speed()), Math.round(a.getXRot()), Math.round(mc.player.getXRot()));
+					});
+				}
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));
@@ -1604,10 +1656,10 @@ public final class AutoTest {
 			aim(mc, true);
 		});
 		then(40, mc -> {
-			log("skyhammer: candidate {}, lock ticks {}, locked {}", LauncherSeeker.candidate == null ? "none" : LauncherSeeker.candidate.getName().getString(),
+			log("skyhammer: candidate {}, lock ticks {}, locked {}", LauncherSeeker.candidate == null ? "none" : LauncherSeeker.candidate.name(),
 					LauncherSeeker.lockTicks, LauncherSeeker.locked());
 			shot(mc, "launcher-skyhammer-lock");
-			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.getId() : -1));
+			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.id() : -1));
 		});
 		then(8, mc -> shot(mc, "launcher-skyhammer-fired"));
 		then(70, mc -> {
@@ -1631,10 +1683,10 @@ public final class AutoTest {
 			aim(mc, true);
 		});
 		then(40, mc -> {
-			log("lancer: candidate {}, locked {}", LauncherSeeker.candidate == null ? "none" : LauncherSeeker.candidate.getName().getString(),
+			log("lancer: candidate {}, locked {}", LauncherSeeker.candidate == null ? "none" : LauncherSeeker.candidate.name(),
 					LauncherSeeker.locked());
 			shot(mc, "launcher-lancer-lock");
-			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.getId() : -1));
+			ClientPlayNetworking.send(new Payloads.LauncherFire(LauncherSeeker.locked() ? LauncherSeeker.candidate.id() : -1));
 		});
 		then(25, mc -> {
 			track = null; // stop following so the camera can watch the dive
