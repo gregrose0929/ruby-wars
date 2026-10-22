@@ -21,6 +21,7 @@
 #   OP=<name>          make this player an operator on first start
 #   BRANCH=main        which branch of the repo to build
 #   JAR=/path/x.jar    use this mod jar instead of building from source
+#   ALLOW_USER=<login> let that user run the rubywars commands without a sudo password
 #   e.g.  sudo MEMORY=6G OP=YourName bash setup-server.sh
 #
 # Your own extra server mods: drop them in /opt/rubywars/extra-mods/ and run "rubywars update".
@@ -226,9 +227,29 @@ Persistent=false
 WantedBy=timers.target
 EOF
 
-SCRIPT_COPY="$BASE/setup-server.sh"
-if [[ "$(realpath "$0")" != "$SCRIPT_COPY" ]]; then
-	cp "$0" "$SCRIPT_COPY"
+# "rubywars update" runs a root-owned copy of this script (so the minecraft account can't change what
+# runs as root), refreshed from the repo each time so updates also pick up changes to this script.
+SCRIPT_COPY=/usr/local/sbin/rubywars-setup
+if [[ -f "$SRC/tools/setup-server.sh" ]]; then
+	install -m 755 -o root -g root "$SRC/tools/setup-server.sh" "$SCRIPT_COPY"
+elif [[ "$(realpath "$0")" != "$SCRIPT_COPY" ]]; then
+	install -m 755 -o root -g root "$0" "$SCRIPT_COPY"
+fi
+rm -f "$BASE/setup-server.sh"
+
+# ALLOW_USER=<login>: that user may run the rubywars commands (update, restart, console, cmd) without a
+# sudo password, and nothing else. Stays in place on later updates.
+if [[ -n "${ALLOW_USER:-}" ]]; then
+	id "$ALLOW_USER" >/dev/null 2>&1 || die "ALLOW_USER=$ALLOW_USER isn't a user on this machine."
+	cat > /etc/sudoers.d/rubywars.new <<EOF
+# Ruby Wars server commands for $ALLOW_USER, without a password (written by setup-server.sh).
+$ALLOW_USER ALL=(root) NOPASSWD: $SCRIPT_COPY, /usr/bin/systemctl start rubywars, /usr/bin/systemctl stop rubywars, /usr/bin/systemctl restart rubywars
+$ALLOW_USER ALL=($USER_NAME) NOPASSWD: /usr/bin/screen
+EOF
+	chmod 440 /etc/sudoers.d/rubywars.new
+	visudo -cf /etc/sudoers.d/rubywars.new >/dev/null || die "the sudo rule didn't check out; nothing was changed."
+	mv /etc/sudoers.d/rubywars.new /etc/sudoers.d/rubywars
+	say "$ALLOW_USER can now run rubywars commands without a sudo password"
 fi
 cat > /usr/local/bin/rubywars <<EOF
 #!/usr/bin/env bash
@@ -239,7 +260,7 @@ case "\${1:-}" in
 	logs)    exec tail -n 100 -f $SERVER/logs/latest.log ;;
 	status)  systemctl status rubywars --no-pager ;;
 	start|stop|restart) exec sudo systemctl "\$1" rubywars ;;
-	update)  sudo bash $SCRIPT_COPY ;;
+	update)  sudo $SCRIPT_COPY ;;
 	*) echo "usage: rubywars console | cmd \"<command>\" | logs | status | start | stop | restart | update" ;;
 esac
 EOF
