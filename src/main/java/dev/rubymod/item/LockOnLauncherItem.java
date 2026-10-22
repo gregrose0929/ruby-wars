@@ -33,8 +33,8 @@ import net.minecraft.world.phys.Vec3;
  * locked). Left-click fires; the missile homes on the locked target by itself.
  *
  * Skyhammer (anti-air): locks aircraft in flight, fast, leads its target, can
- * be flared. Lancer (anti-tank): locks vehicles and anything on the ground,
- * flies a top-attack profile (climbs, then dives onto the thin roof armor).
+ * be flared. Lancer (anti-tank): locks vehicles and anything on the ground and
+ * chases them the same way, a little slower, with a bigger warhead.
  */
 public class LockOnLauncherItem extends Item {
 	public enum Kind {
@@ -111,10 +111,9 @@ public class LockOnLauncherItem extends Item {
 		if (kind == Kind.ANTI_AIR) {
 			missile = RocketEntity.missile(level, player, player, from, look.scale(4.5), 3.0F, 9.0, target, null).withAntiArmor(100.0F);
 		} else {
-			// Lancer: soft launch upward, then the top-attack climb and dive.
-			Vec3 launch = look.add(0, 0.35, 0).normalize().scale(2.0);
-			missile = RocketEntity.missile(level, player, player, from, launch, 3.5F, 7.0, target, target == null ? aimPoint(player) : null)
-					.withAntiArmor(64.0F).topAttack();
+			// Lancer: chases its target like the Skyhammer, a little slower, with a bigger warhead.
+			missile = RocketEntity.missile(level, player, player, from, look.scale(3.6), 5.5F, 9.0, target, target == null ? aimPoint(player) : null)
+					.withAntiArmor(80.0F);
 		}
 		level.addFreshEntity(missile);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), dev.rubymod.registry.ModSounds.ROCKET_LAUNCH, SoundSource.PLAYERS, 1.5F, 1.0F);
@@ -146,7 +145,7 @@ public class LockOnLauncherItem extends Item {
 		builder.accept(Component.literal("Hold right-click to lock on, left-click to fire").withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal(kind == Kind.ANTI_AIR
 				? "Locks aircraft in flight. Leads and intercepts; flares can fool it."
-				: "Locks vehicles and targets on the ground. Top attack: dives onto the roof.").withStyle(ChatFormatting.DARK_GRAY));
+				: "Locks vehicles and targets on the ground. Heavy warhead.").withStyle(ChatFormatting.DARK_GRAY));
 		builder.accept(Component.literal("Ammo: " + Component.translatable(ammo().getDescriptionId()).getString()).withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

@@ -39,9 +39,9 @@ public class LauncherSeeker implements HudElement {
 		return candidate != null && lockTicks >= lockTime(held(Minecraft.getInstance()));
 	}
 
-	/** Same lock times as the aircraft seekers: quick for heat-seekers, a little longer for ground targets. */
+	/** Same lock time as the aircraft seekers. */
 	public static int lockTime(LockOnLauncherItem.Kind kind) {
-		return kind == LockOnLauncherItem.Kind.ANTI_TANK ? 20 : 15;
+		return 15;
 	}
 
 	/**
@@ -175,7 +175,7 @@ public class LauncherSeeker implements HudElement {
 			int y = h / 2 + (int) Math.round(Math.sin(a) * r);
 			g.fill(x, y, x + 1, y + 1, 0xA050FF70);
 		}
-		String title = kind == LockOnLauncherItem.Kind.ANTI_AIR ? "SKYHAMMER  AA" : "LANCER  AT - TOP ATTACK";
+		String title = kind == LockOnLauncherItem.Kind.ANTI_AIR ? "SKYHAMMER  AA" : "LANCER  AT";
 		g.text(font, title, w / 2 - font.width(title) / 2, h / 2 - r - 14, green, false);
 		if (candidate == null) {
 			String s = kind == LockOnLauncherItem.Kind.ANTI_AIR ? "Put an aircraft in the circle" : "Put a vehicle or target in the circle";

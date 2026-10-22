@@ -350,6 +350,32 @@ public final class AutoTest {
 				});
 				then(5, mc -> command(mc, "ride @p dismount"));
 				then(5, mc -> log("zoom after getting out: {}x", Vehicles.zoom));
+				// Handheld: aim the Lancer and zoom.
+				then(5, mc -> {
+					command(mc, "give @p rubymod:lancer");
+					mc.player.getInventory().setSelectedSlot(0);
+				});
+				then(10, mc -> {
+					mc.player.getInventory().setSelectedSlot(java.util.stream.IntStream.range(0, 9)
+							.filter(i -> mc.player.getInventory().getItem(i).getItem() instanceof dev.rubymod.item.LockOnLauncherItem).findFirst().orElse(0));
+				});
+				then(5, mc -> aim(mc, true));
+				then(15, mc -> {
+					int slot = mc.player.getInventory().getSelectedSlot();
+					mc.mouseHandler.onScroll(mc.getWindow().handle(), 0, 1);
+					mc.mouseHandler.onScroll(mc.getWindow().handle(), 0, 1);
+					log("lancer zoom: {}x, slot unchanged {}", Vehicles.zoom, slot == mc.player.getInventory().getSelectedSlot());
+				});
+				then(15, mc -> shot(mc, "zoom-lancer"));
+				then(2, mc -> aim(mc, false));
+				then(3, mc -> log("lancer lowered: zoom {}x", Vehicles.zoom));
+				// Tank: drive and zoom.
+				then(5, mc -> command(mc, "ride @p mount @e[type=rubymod:tank,limit=1,sort=nearest]"));
+				then(10, mc -> {
+					mc.mouseHandler.onScroll(mc.getWindow().handle(), 0, 1);
+					log("tank zoom: {}x, riding {}", Vehicles.zoom, mc.player.getVehicle() != null);
+				});
+				then(15, mc -> shot(mc, "zoom-tank"));
 			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));

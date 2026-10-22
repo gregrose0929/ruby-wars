@@ -213,6 +213,7 @@ public class RubyModClient implements ClientModInitializer {
 
 		HudElementRegistry.addLast(RubyMod.id("markers"), new dev.rubymod.client.map.Markers());
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
+		HudElementRegistry.addLast(RubyMod.id("zoom"), new ZoomHud());
 		HudElementRegistry.addLast(RubyMod.id("minimap"), new dev.rubymod.client.map.Minimap());
 		HudElementRegistry.addLast(RubyMod.id("look"), new dev.rubymod.client.map.LookPanel());
 		HudElementRegistry.addLast(RubyMod.id("pilot_hud"), new PilotHud());

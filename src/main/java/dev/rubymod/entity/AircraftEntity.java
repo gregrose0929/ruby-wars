@@ -734,10 +734,11 @@ public class AircraftEntity extends Mob {
 		leftWing = !leftWing;
 		Vec3 from = position().add(side).add(forward.scale(2.0)).add(0, 0.6, 0);
 		boolean aam = weapon == Weapon.AAM;
-		Vec3 velocity = forward.scale(Math.max(aam ? 3.0 : 2.4, speedOnServer() + 1.0));
+		// Guided (ground-attack) missiles chase like the air-to-air ones, a little slower, with a bigger blast.
+		Vec3 velocity = forward.scale(aam ? Math.max(3.0, speedOnServer() + 1.0) : Math.max(2.5, speedOnServer() + 0.6));
 		Vec3 aimPoint = target == null ? point : null;
-		RocketEntity missile = RocketEntity.missile(level(), pilot, this, from, velocity, aam ? 3.5F : 4.5F, aam ? 7.0 : 4.0, target, aimPoint)
-				.withAntiArmor(aam ? 110.0F : 75.0F);
+		RocketEntity missile = RocketEntity.missile(level(), pilot, this, from, velocity, aam ? 3.5F : 6.0F, 7.0, target, aimPoint)
+				.withAntiArmor(aam ? 110.0F : 80.0F);
 		level().addFreshEntity(missile);
 		level().playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 3.0F, 0.7F);
 	}

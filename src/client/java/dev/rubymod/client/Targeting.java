@@ -26,7 +26,7 @@ import net.minecraft.world.phys.Vec3;
 public final class Targeting {
 	private static final double SEEKER_CONE = 12.0;
 	private static final int AAM_LOCK_TICKS = 15;
-	private static final int AGM_LOCK_TICKS = 20;
+	private static final int AGM_LOCK_TICKS = 15;
 
 	public static Contacts.Target candidate;
 	public static int lockTicks;

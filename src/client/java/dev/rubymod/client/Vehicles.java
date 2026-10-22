@@ -19,7 +19,7 @@ public final class Vehicles {
 	public static boolean autopilot;
 	public static double autopilotAltitude;
 	public static float autopilotHeading;
-	/** Aircraft view zoom (scroll wheel while flying): 1, 2, 4 or 8 times. */
+	/** Scroll-wheel zoom (aircraft, tank and gun sights, lock-on launchers): 1, 2, 4 or 8 times. */
 	public static int zoom = 1;
 
 	private Vehicles() {
@@ -81,9 +81,27 @@ public final class Vehicles {
 		freePitch = net.minecraft.util.Mth.clamp(freePitch + (float) dy * 0.15F, -80.0F, autopilot ? 89.0F : 80.0F);
 	}
 
-	/** Scroll wheel while piloting: zoom the view in (up) or out (down). Returns true when it used the scroll. */
+	/**
+	 * Can the scroll wheel zoom right now? Flying an aircraft, driving a tank or manning a
+	 * Heavy AA Gun / Railgun, or aiming a lock-on launcher (right-click held).
+	 */
+	public static boolean zoomable(Minecraft mc) {
+		if (mc.player == null) {
+			return false;
+		}
+		if (Targeting.piloting(mc) != null) {
+			return true;
+		}
+		Entity v = mc.player.getVehicle();
+		if ((v instanceof VehicleEntity || v instanceof dev.rubymod.entity.HeavyAAGunEntity) && v.getControllingPassenger() == mc.player) {
+			return true;
+		}
+		return mc.player.isUsingItem() && mc.player.getUseItem().getItem() instanceof dev.rubymod.item.LockOnLauncherItem;
+	}
+
+	/** Scroll wheel: zoom the view in (up) or out (down) where {@link #zoomable} allows. Returns true when it used the scroll. */
 	public static boolean scrollZoom(Minecraft mc, double amount) {
-		if (Targeting.piloting(mc) == null || amount == 0) {
+		if (!zoomable(mc) || amount == 0) {
 			return false;
 		}
 		int before = zoom;
@@ -101,8 +119,8 @@ public final class Vehicles {
 		if (autopilot && (aircraft == null || aircraft.onGround())) {
 			autopilot = false;
 		}
-		if (aircraft == null) {
-			zoom = 1; // Leaving the aircraft resets the zoom.
+		if (!zoomable(mc)) {
+			zoom = 1; // Getting out (or lowering a launcher) resets the zoom.
 		}
 		if (!freeLooking(mc)) {
 			freeYaw *= 0.5F;

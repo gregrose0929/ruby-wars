@@ -173,11 +173,11 @@ splash does a little. Weapons made for it hit vehicles hard. Against a tank
 | --- | --- | --- |
 | Rocket Launcher | 48 | Laser-guided: keep aiming at the target |
 | Tank shell | 56 | |
-| **Lancer** (anti-tank launcher) | 64, x1.5 top attack = 96 | Hold right-click to lock a vehicle or anything on the ground, left-click to fire. Climbs, then dives onto the roof |
+| **Lancer** (anti-tank launcher) | 80, big blast | Hold right-click to lock a vehicle or anything on the ground, left-click to fire. Chases its target like the Skyhammer, a little slower |
 | **Skyhammer** (anti-air launcher) | 100 | Locks aircraft in flight; fast, leads its target. Flares can fool it |
 | **Sticky C4** | 110 | Throw it onto a vehicle; sneak + right-click with C4 to detonate |
 | Landmine / **Anti-Tank Mine** | 80 / 130 | The AT mine ignores people and fires under driven vehicles |
-| Guided missile (aircraft) / bomb | 75 / 90 | |
+| Guided missile (aircraft) / bomb | 80, big blast / 90 | |
 | Cruise missile | 250 | |
 
 Damaged vehicles smoke below half armor and burn below a quarter; destroyed ones

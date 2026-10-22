@@ -5,38 +5,43 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import dev.rubymod.client.Vehicles;
 import dev.rubymod.gun.GunItem;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 
-/** Zoom in a little while aiming a gun. (The sniper uses the full scope view instead, see PlayerMixin.) */
+/**
+ * Zoom: a little while aiming a gun (the sniper uses the full scope view instead, see
+ * PlayerMixin), the tank / AA gun sights while right-click is held, lock-on launchers
+ * while aiming, and on top of all that the scroll-wheel zoom (1x to 8x).
+ */
 @Mixin(AbstractClientPlayer.class)
 public abstract class AbstractClientPlayerMixin {
 	@Inject(method = "getFieldOfViewModifier", at = @At("RETURN"), cancellable = true)
 	private void rubymod$aimZoom(boolean firstPerson, float effectScale, CallbackInfoReturnable<Float> cir) {
 		AbstractClientPlayer self = (AbstractClientPlayer) (Object) this;
-		if (self == net.minecraft.client.Minecraft.getInstance().player && dev.rubymod.client.Vehicles.zoom > 1) {
-			cir.setReturnValue(cir.getReturnValueF() / dev.rubymod.client.Vehicles.zoom); // Aircraft zoom (scroll wheel).
+		Minecraft mc = Minecraft.getInstance();
+		if (self != mc.player) {
 			return;
 		}
-		if (firstPerson && self == net.minecraft.client.Minecraft.getInstance().player
-				&& dev.rubymod.client.VehicleHud.zoomed(net.minecraft.client.Minecraft.getInstance())) {
-			cir.setReturnValue(cir.getReturnValueF() * 0.3F); // Tank gunner sight.
-			return;
+		float value = cir.getReturnValueF();
+		if (dev.rubymod.client.VehicleHud.zoomed(mc)) {
+			value *= 0.3F; // Tank / AA gun sight.
+		} else if (self.isUsingItem() && self.getUseItem().getItem() instanceof dev.rubymod.item.LockOnLauncherItem) {
+			value *= 0.7F;
+		} else if (firstPerson && GunItem.isAiming(self) && self.getUseItem().getItem() instanceof GunItem gun) {
+			float zoom = gun.stats(self.getUseItem()).zoom();
+			if (!self.isScoping()) {
+				value *= zoom;
+			} else if (zoom > 0.25F) {
+				// Vanilla scoping zooms to 0.1 (spyglass). Lighter scopes like the rifle's zoom less.
+				value = zoom;
+			}
 		}
-		if (firstPerson && self.isUsingItem() && self.getUseItem().getItem() instanceof dev.rubymod.item.LockOnLauncherItem) {
-			cir.setReturnValue(cir.getReturnValueF() * 0.7F);
-			return;
+		if (Vehicles.zoom > 1) {
+			value /= Vehicles.zoom; // Scroll-wheel zoom.
 		}
-		if (!firstPerson || !GunItem.isAiming(self) || !(self.getUseItem().getItem() instanceof GunItem gun)) {
-			return;
-		}
-		float zoom = gun.stats(self.getUseItem()).zoom();
-		if (!self.isScoping()) {
-			cir.setReturnValue(cir.getReturnValueF() * zoom);
-		} else if (zoom > 0.25F) {
-			// Vanilla scoping zooms to 0.1 (spyglass). Lighter scopes like the rifle's zoom less.
-			cir.setReturnValue(zoom);
-		}
+		cir.setReturnValue(value);
 	}
 }
