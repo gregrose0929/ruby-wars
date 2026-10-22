@@ -23,7 +23,7 @@ import net.minecraft.world.phys.Vec3;
  * - T designates what's under the crosshair (a vehicle, aircraft, player or a
  *   ground point, up to 1500 blocks); missiles and bombs go for it;
  * - the cannon's lead-computing sight;
- * - the weapon camera (V): ride along with your last missile or bomb.
+ * - the weapon camera (C): ride along with your last missile or bomb.
  */
 public final class Designation {
 	private static final double RANGE = 1500;

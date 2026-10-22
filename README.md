@@ -49,7 +49,7 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Taxi an aircraft | W/S throttle (S at idle throttle brakes), A/D steer the nose wheel |
 | Take off | Line up on a runway, full throttle, and when the HUD says ROTATE, look up |
 | Fly | Look where you want to go. Climbing costs speed, diving gains it; too slow and you stall |
-| Aircraft weapons | Left-click fires, R switches weapon, Space drops flares, T designates a target, C weapon camera, G landing gear, Sneak ejects (parachute) |
+| Aircraft weapons | Left-click fires, R switches weapon, Space drops flares, T designates a target, Z autopilot, C weapon camera, G landing gear, Sneak ejects (parachute) |
 | Helicopter | W/S climb and descend, look to turn, look down to fly forward (up to go back), A/D strafe |
 | Ping / spot | B: mark the spot you're looking at for your squad, or spot the enemy under your crosshair (10 s) |
 | Map | K: the full map (scroll to zoom, drag to pan). The minimap is always top right |
@@ -150,8 +150,9 @@ vehicles).
 
 ## Heavy AA Gun and Railgun
 
-A manned twin autocannon for your base. Right-click to man it; the mount turns to
-where you look, left-click fires (alternating barrels), hold right-click for the
+A manned twin autocannon for your base. Right-click to man it; the mount swings
+smoothly to follow your view and the shells go exactly where your crosshair is.
+Left-click fires (alternating barrels), hold right-click for the
 gun sight. Shells are proximity-fused flak: they burst near aircraft out to about
 300 blocks. The sight boxes every aircraft in range and shows a lead marker: put
 the reticle on it (it turns red: FIRE). The 40-round magazine reloads from 4 Heavy
@@ -223,9 +224,16 @@ TOUCHDOWN marker shows where you'll land, plus glide-slope and sink-rate cues.
   under your crosshair (amber diamond).
 - **Cannon**: rounds take time to arrive and drop slightly. On a target, a lead
   circle shows where to put the pipper (it turns red: SHOOT).
-- **Bombs**: the red CCIP pipper shows where an unguided bomb would land.
+- **Bombs**: just look at the target. A diamond marks the aim point with its
+  range, and the line under it says when to let go: **IN REACH - RELEASE** (with the
+  fall time), HOLD while it's still ahead, or OUT OF REACH once you've passed it.
+  Released bombs glide onto the aimed point (or the designated target). The red
+  CCIP pipper still shows where an unguided drop would land.
+- **Z: autopilot** holds your heading and altitude and frees your view, so you can
+  look around (even straight down) to aim missiles and bombs while the plane flies
+  itself. Z again (or landing) hands control back.
 - **C: weapon camera**: ride along with your last missile or bomb to impact (your
-  aircraft holds its course meanwhile). V again to come back.
+  aircraft holds its course meanwhile). C again to come back.
 
 ## Long range
 

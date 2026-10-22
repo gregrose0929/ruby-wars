@@ -24,7 +24,7 @@ public class ManualScreen extends Screen {
 					"Left-click fire, hold right-click to aim, R reload.",
 					"B: ping a spot for your squad, or spot the enemy under your crosshair.",
 					"K: map.  U: hide/show the minimap.  J: research.  O: squad.  Y: this manual.  V: voice chat (Simple Voice Chat).",
-					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, T designate, C weapon cam, G gear."),
+					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, T designate, Z autopilot, C weapon cam, G gear. Bombs: look at the target, release on IN REACH."),
 			new Page("Economy",
 					"Generators and solar panels fill your power grid. Ruby Drills dig ore; the Ore Refinery doubles it; the Trade Depot sells it into your bank.",
 					"The Vault holds rubies and pays interest. Shop purchases come out of your bank automatically.",
