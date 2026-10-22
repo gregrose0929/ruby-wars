@@ -75,6 +75,37 @@ public class LauncherSeeker implements HudElement {
 		}
 	}
 
+	/** The seeker's optic: a clear round view with soft dark edges, range ticks and a fine crosshair. */
+	private static void drawSightFrame(GuiGraphicsExtractor g, int w, int h, int r, int green) {
+		int radius = Math.min(w, h) * 9 / 20;
+		int cx = w / 2;
+		int cy = h / 2;
+		// Darken everything outside the lens, row by row (a circle cut from black bars).
+		for (int y = 0; y < h; y++) {
+			int dy = y - cy;
+			if (Math.abs(dy) >= radius) {
+				g.fill(0, y, w, y + 1, 0xE0000000);
+				continue;
+			}
+			int half = (int) Math.sqrt((double) radius * radius - (double) dy * dy);
+			g.fill(0, y, cx - half, y + 1, 0xE0000000);
+			g.fill(cx + half, y, w, y + 1, 0xE0000000);
+			// A thin soft rim inside the lens.
+			g.fill(cx - half, y, cx - half + 3, y + 1, 0x60000000);
+			g.fill(cx + half - 3, y, cx + half, y + 1, 0x60000000);
+		}
+		int fine = 0x9050FF70;
+		g.fill(cx - radius + 6, cy, cx - r - 4, cy + 1, fine);
+		g.fill(cx + r + 4, cy, cx + radius - 6, cy + 1, fine);
+		g.fill(cx, cy + r + 4, cx + 1, cy + radius - 6, fine);
+		for (int i = 1; i <= 4; i++) {
+			int ty = cy + r + 4 + i * (radius - r - 10) / 5;
+			g.fill(cx - 3, ty, cx + 4, ty + 1, fine);
+		}
+		g.fill(cx - 1, cy, cx + 2, cy + 1, green);
+		g.fill(cx, cy - 1, cx + 1, cy + 2, green);
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker deltaTracker) {
 		Minecraft mc = Minecraft.getInstance();
@@ -89,6 +120,9 @@ public class LauncherSeeker implements HudElement {
 		int green = 0xFF50FF70;
 		double scale = (h / 2.0) / Math.tan(Math.toRadians(camera.getFov() / 2.0));
 		int r = (int) (scale * Math.tan(Math.toRadians(CONE)));
+		if (dev.rubymod.client.gun.GunView.adsProgress() > 0.55F) {
+			drawSightFrame(g, w, h, r, green);
+		}
 		for (int i = 0; i < 48; i++) {
 			double a = i * Math.PI * 2 / 48;
 			int x = w / 2 + (int) Math.round(Math.cos(a) * r);

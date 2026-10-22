@@ -311,14 +311,20 @@ public final class GunView {
 			spawnCasing(model, player, gun);
 		}
 
+		// Lock-on launchers: once raised to the eye you look through the seeker (LauncherSeeker draws the sight),
+		// so the launcher itself gets out of the way instead of filling the screen.
+		boolean seekerView = stack.getItem() instanceof LockOnLauncherItem && ads > 0.55F;
+
 		// Gun
-		pose.pushPose();
-		pose.mulPose(gun);
-		model.submit(gp, pose, collector, light, OverlayTexture.NO_OVERLAY, 0);
-		pose.popPose();
+		if (!seekerView) {
+			pose.pushPose();
+			pose.mulPose(gun);
+			model.submit(gp, pose, collector, light, OverlayTexture.NO_OVERLAY, 0);
+			pose.popPose();
+		}
 
 		// Arms
-		if (!player.isScoping()) {
+		if (!player.isScoping() && !seekerView) {
 			Vector3f handR = at(gun, model.anchor("hand_r"), 0);
 			Vector3f handL;
 			if (leftOnMag) {
