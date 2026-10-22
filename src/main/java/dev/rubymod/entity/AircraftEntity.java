@@ -793,6 +793,21 @@ public class AircraftEntity extends Mob {
 	public void die(DamageSource source) {
 		super.die(source);
 		if (level() instanceof ServerLevel level) {
+			// Nobody walks away from an aircraft that blows up with them inside (eject first!).
+			// The kill goes to whoever brought it down.
+			Entity killer = source.getEntity();
+			DamageSource crewDeath = killer != null && !hasPassenger(killer)
+					? ModDamage.source(level, ModDamage.ANTI_ARMOR, this, killer) : crashSource(level); // not scaled by difficulty
+			for (Entity passenger : List.copyOf(getPassengers())) {
+				if (passenger instanceof LivingEntity crew) {
+					crew.stopRiding();
+					crew.setInvulnerableTime(0);
+					// A crash always kills; being shot down by a player follows the PvP rules (no PvP, no kill).
+					DamageSource death = killer == null && !dev.rubymod.game.Rules.canHurt(crewDeath.getEntity(), crew)
+							? level.damageSources().flyIntoWall() : crewDeath;
+					crew.hurtServer(level, death, Float.MAX_VALUE);
+				}
+			}
 			ejectPassengers();
 			Explosions.explode(level, this, getX(), getY() + 0.5, getZ(), 4.0F, false);
 			level.addFreshEntity(WreckEntity.of(level, this));

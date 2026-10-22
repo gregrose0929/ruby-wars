@@ -76,7 +76,8 @@ public class GameHud implements HudElement {
 		if (hit == null || System.currentTimeMillis() - ClientState.hitConfirmAt > 2500) {
 			return;
 		}
-		String text = hit.destroyed() ? "DESTROYED - " + hit.target() : "HIT - " + hit.target() + "  " + hit.percentLeft() + "%";
+		String text = hit.destroyed() ? (hit.percentLeft() < 0 ? "KILLED - " : "DESTROYED - ") + hit.target()
+				: "HIT - " + hit.target() + "  " + hit.percentLeft() + "%";
 		int col = hit.destroyed() ? GOLD : RED;
 		int width = font.width(text) + 10;
 		panel(g, w / 2 - width / 2, h / 2 + 50, w / 2 + width / 2, h / 2 + 63);

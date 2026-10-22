@@ -39,9 +39,9 @@ public class LauncherSeeker implements HudElement {
 		return candidate != null && lockTicks >= lockTime(held(Minecraft.getInstance()));
 	}
 
-	/** Same lock time as the aircraft seekers. */
+	/** Half a second: hold the target in the circle and it's yours. */
 	public static int lockTime(LockOnLauncherItem.Kind kind) {
-		return 15;
+		return 10;
 	}
 
 	/**

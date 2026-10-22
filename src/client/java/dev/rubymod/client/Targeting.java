@@ -25,8 +25,11 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class Targeting {
 	private static final double SEEKER_CONE = 12.0;
-	private static final int AAM_LOCK_TICKS = 15;
-	private static final int AGM_LOCK_TICKS = 15;
+	private static final int AAM_LOCK_TICKS = 6;
+	private static final int AGM_LOCK_TICKS = 6;
+	/** Ticks a target may slip outside the seeker circle before the lock starts over. */
+	private static final int GRACE = 10;
+	private static int lostFor;
 
 	public static Contacts.Target candidate;
 	public static int lockTicks;
@@ -97,9 +100,14 @@ public final class Targeting {
 		if (best != null && candidate != null && best.id() == candidate.id()) {
 			candidate = best;
 			lockTicks++;
+			lostFor = 0;
+		} else if (best == null && candidate != null && ++lostFor <= GRACE) {
+			// Briefly outside the circle (fast jets swing past): keep the lock and track it.
+			candidate = Contacts.refresh(mc, candidate);
 		} else {
 			candidate = best;
 			lockTicks = 0;
+			lostFor = 0;
 		}
 
 		if (weapon == Weapon.AAM || weapon == Weapon.AGM) {

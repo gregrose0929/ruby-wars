@@ -45,6 +45,20 @@ public final class GameEvents {
 	private GameEvents() {
 	}
 
+	/**
+	 * Tell the shooter they hit (or killed) a player or creature with any weapon: the X marker and
+	 * "HIT - Zombie 40%" / "KILLED - Zombie" under the crosshair. Vehicles and aircraft get theirs
+	 * from {@link Armor#hit}; percentLeft -1 means killed.
+	 */
+	private static void confirmHit(net.minecraft.world.entity.LivingEntity victim, net.minecraft.world.damagesource.DamageSource source, boolean killed) {
+		if (!(source.getEntity() instanceof ServerPlayer shooter) || shooter == victim || Armor.isArmored(victim) || victim.hasPassenger(shooter)) {
+			return;
+		}
+		int left = killed ? -1 : Math.max(1, Math.round(victim.getHealth() / victim.getMaxHealth() * 100));
+		Net.send(shooter, new Payloads.HitConfirm(victim.getName().getString(), left, killed));
+		Net.send(shooter, new Payloads.HitMarker(false, killed));
+	}
+
 	public static void register() {
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			GameConfig.load();
@@ -204,6 +218,9 @@ public final class GameEvents {
 			if (entity instanceof ServerPlayer player && damageTaken > 0 && source.getSourcePosition() != null) {
 				Net.send(player, new Payloads.DamageFrom(source.getSourcePosition().x, source.getSourcePosition().z));
 			}
+			if (damageTaken > 0) {
+				confirmHit(entity, source, false);
+			}
 		});
 		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
 			if (entity instanceof ServerPlayer player) {
@@ -219,6 +236,7 @@ public final class GameEvents {
 			if (entity instanceof ServerPlayer player) {
 				BattleDirector.onDeath(player, source);
 			}
+			confirmHit(entity, source, true);
 		});
 		ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((level, killer, victim, source) -> {
 			if (killer instanceof ServerPlayer player) {

@@ -377,6 +377,114 @@ public final class AutoTest {
 				});
 				then(15, mc -> shot(mc, "zoom-tank"));
 			}
+			case "crew" -> {
+				// 1. A crash with nobody to blame: the pilot dies with the aircraft.
+				then(5, mc -> {
+					command(mc, "rubywars phase war");
+					command(mc, "gamemode survival @p");
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 180 0");
+					command(mc, "execute at @p run summon rubymod:fighter_jet ~ ~40 ~ {Rotation:[180f,0f]}");
+				});
+				then(5, mc -> command(mc, "ride @p mount @e[type=rubymod:fighter_jet,limit=1,sort=nearest]"));
+				then(5, mc -> aircraft(mc).launch(2.2));
+				then(20, mc -> {
+					IntegratedServer server = mc.getSingleplayerServer();
+					server.execute(() -> {
+						var p = server.getPlayerList().getPlayers().get(0);
+						if (p.getVehicle() instanceof dev.rubymod.entity.AircraftEntity a) {
+							a.hurtServer((net.minecraft.server.level.ServerLevel) p.level(), p.level().damageSources().generic(), 10000.0F);
+						}
+						log("crew: after the aircraft blew up (no attacker): pilot dead {}, health {}", p.isDeadOrDying(), p.getHealth());
+					});
+				});
+				then(20, mc -> {
+					if (mc.player.isDeadOrDying() || mc.gui.screen() instanceof net.minecraft.client.gui.screens.DeathScreen) {
+						mc.player.respawn();
+					}
+				});
+				then(10, mc -> {
+					// Dying on Battle Day without a Heart eliminates you; bring the test player back.
+					command(mc, "rubywars revive " + mc.player.getName().getString());
+					command(mc, "gamemode survival @p");
+				});
+				// 2. Shot down by another player in war: the pilot dies and the shooter gets the kill.
+				then(40, mc -> {
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 180 0");
+					command(mc, "execute at @p run summon rubymod:fighter_jet ~ ~40 ~ {Rotation:[180f,0f]}");
+				});
+				then(5, mc -> command(mc, "ride @p mount @e[type=rubymod:fighter_jet,limit=1,sort=nearest]"));
+				then(5, mc -> aircraft(mc).launch(2.2));
+				then(20, mc -> {
+					IntegratedServer server = mc.getSingleplayerServer();
+					server.execute(() -> {
+						var p = server.getPlayerList().getPlayers().get(0);
+						var shooter = net.fabricmc.fabric.api.entity.FakePlayer.get((net.minecraft.server.level.ServerLevel) p.level(),
+								new com.mojang.authlib.GameProfile(java.util.UUID.fromString("00000000-0000-0000-0000-0000000051b2"), "Gunner"));
+						dev.rubymod.game.SeasonData.get().player(shooter.getUUID(), "Gunner");
+						log("crew: before shot down: riding {}, canHurt {}", p.getVehicle(), dev.rubymod.game.Rules.canHurt(shooter, p));
+						if (p.getVehicle() instanceof dev.rubymod.entity.AircraftEntity a) {
+							dev.rubymod.game.SpawnShield.clear(p);
+							dev.rubymod.game.Armor.hit((net.minecraft.server.level.ServerLevel) p.level(), a, null, shooter, 10000.0F);
+						}
+						log("crew: shot down by Gunner: riding {}, pilot dead {}, killer {}", p.getVehicle(), p.isDeadOrDying(),
+								p.getLastDamageSource() == null ? "none" : p.getLastDamageSource().getEntity() == null ? "none" : p.getLastDamageSource().getEntity().getName().getString());
+					});
+				});
+				then(20, mc -> {
+					if (mc.player.isDeadOrDying() || mc.gui.screen() instanceof net.minecraft.client.gui.screens.DeathScreen) {
+						mc.player.respawn();
+					}
+				});
+				then(10, mc -> {
+					// Dying on Battle Day without a Heart eliminates you; bring the test player back.
+					command(mc, "rubywars revive " + mc.player.getName().getString());
+					command(mc, "gamemode survival @p");
+				});
+				// 3. Hit confirmation on an animal: a rifle hit, then a rocket kill.
+				then(40, mc -> {
+					command(mc, "clear @p");
+					command(mc, "give @p rubymod:arr_rifle");
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+					command(mc, "execute at @p run summon minecraft:cow ~ ~ ~8 {NoAI:1b}");
+				});
+				then(10, mc -> {
+					mc.player.getInventory().setSelectedSlot(0);
+					ClientState.hitConfirm = null;
+				});
+				then(5, mc -> {
+					for (var e : mc.level.entitiesForRendering()) {
+						if (e instanceof net.minecraft.world.entity.animal.cow.Cow) {
+							Vec3 to = e.getBoundingBox().getCenter().subtract(mc.player.getEyePosition());
+							mc.player.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+							mc.player.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.hypot(to.x, to.z))));
+						}
+					}
+				});
+				then(20, mc -> ClientPlayNetworking.send(new Payloads.Fire()));
+				then(4, mc -> {
+					var h = ClientState.hitConfirm;
+					log("crew: rifle ammo {} (30 before), hit marker {} ms ago", mc.player.getMainHandItem().get(dev.rubymod.registry.ModComponents.AMMO),
+							System.currentTimeMillis() - ClientState.hitMarkerAt);
+					log("crew: rifle on a cow -> {}", h == null ? "no confirmation" : (h.destroyed() ? "KILLED " : "HIT ") + h.target() + " " + h.percentLeft() + "%");
+					shot(mc, "crew-hit-cow");
+				});
+				then(5, mc -> {
+					IntegratedServer server = mc.getSingleplayerServer();
+					server.execute(() -> {
+						var p = server.getPlayerList().getPlayers().get(0);
+						var level = (net.minecraft.server.level.ServerLevel) p.level();
+						for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.animal.cow.Cow.class, p.getBoundingBox().inflate(20))) {
+							Vec3 from = p.getEyePosition();
+							level.addFreshEntity(dev.rubymod.entity.RocketEntity.shell(level, p, from, e.getBoundingBox().getCenter().subtract(from).normalize().scale(2.0), 3.0F));
+						}
+					});
+				});
+				then(15, mc -> {
+					var h = ClientState.hitConfirm;
+					log("crew: rocket on the cow -> {}", h == null ? "no confirmation" : (h.destroyed() ? (h.percentLeft() < 0 ? "KILLED " : "DESTROYED ") : "HIT ") + h.target());
+					shot(mc, "crew-kill-cow");
+				});
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));
