@@ -15,6 +15,10 @@ public abstract class AbstractClientPlayerMixin {
 	@Inject(method = "getFieldOfViewModifier", at = @At("RETURN"), cancellable = true)
 	private void rubymod$aimZoom(boolean firstPerson, float effectScale, CallbackInfoReturnable<Float> cir) {
 		AbstractClientPlayer self = (AbstractClientPlayer) (Object) this;
+		if (self == net.minecraft.client.Minecraft.getInstance().player && dev.rubymod.client.Vehicles.zoom > 1) {
+			cir.setReturnValue(cir.getReturnValueF() / dev.rubymod.client.Vehicles.zoom); // Aircraft zoom (scroll wheel).
+			return;
+		}
 		if (firstPerson && self == net.minecraft.client.Minecraft.getInstance().player
 				&& dev.rubymod.client.VehicleHud.zoomed(net.minecraft.client.Minecraft.getInstance())) {
 			cir.setReturnValue(cir.getReturnValueF() * 0.3F); // Tank gunner sight.

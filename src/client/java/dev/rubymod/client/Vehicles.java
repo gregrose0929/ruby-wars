@@ -19,6 +19,8 @@ public final class Vehicles {
 	public static boolean autopilot;
 	public static double autopilotAltitude;
 	public static float autopilotHeading;
+	/** Aircraft view zoom (scroll wheel while flying): 1, 2, 4 or 8 times. */
+	public static int zoom = 1;
 
 	private Vehicles() {
 	}
@@ -79,12 +81,28 @@ public final class Vehicles {
 		freePitch = net.minecraft.util.Mth.clamp(freePitch + (float) dy * 0.15F, -80.0F, autopilot ? 89.0F : 80.0F);
 	}
 
+	/** Scroll wheel while piloting: zoom the view in (up) or out (down). Returns true when it used the scroll. */
+	public static boolean scrollZoom(Minecraft mc, double amount) {
+		if (Targeting.piloting(mc) == null || amount == 0) {
+			return false;
+		}
+		int before = zoom;
+		zoom = amount > 0 ? Math.min(8, zoom * 2) : Math.max(1, zoom / 2);
+		if (zoom != before) {
+			mc.player.playSound(net.minecraft.sounds.SoundEvents.SPYGLASS_USE, 0.4F, 0.9F + zoom * 0.08F);
+		}
+		return true;
+	}
+
 	/** Called every client tick: ease the view back forward once Alt is released. */
 	public static void tick(Minecraft mc, boolean held) {
 		freeLookHeld = held;
 		AircraftEntity aircraft = Targeting.piloting(mc);
 		if (autopilot && (aircraft == null || aircraft.onGround())) {
 			autopilot = false;
+		}
+		if (aircraft == null) {
+			zoom = 1; // Leaving the aircraft resets the zoom.
 		}
 		if (!freeLooking(mc)) {
 			freeYaw *= 0.5F;

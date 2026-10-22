@@ -317,6 +317,40 @@ public final class AutoTest {
 				then(5, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
 				then(15, mc -> shot(mc, "heli-third"));
 			}
+			case "zoom" -> {
+				then(5, mc -> {
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+					command(mc, "execute at @p run summon rubymod:attack_heli ~ ~ ~3 {Rotation:[0f,0f]}");
+					command(mc, "execute at @p run summon rubymod:tank ~ ~ ~90 {Rotation:[180f,0f]}");
+				});
+				then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:attack_heli,limit=1,sort=nearest]"));
+				then(10, mc -> {
+					mc.player.setYRot(0);
+					mc.player.setXRot(8);
+					mc.options.keyJump.setDown(true);
+				});
+				then(25, mc -> mc.options.keyJump.setDown(false));
+				then(30, mc -> shot(mc, "zoom-1x"));
+				then(2, mc -> {
+					for (int i = 0; i < 3; i++) {
+						mc.mouseHandler.onScroll(mc.getWindow().handle(), 0, 1);
+					}
+					log("zoom after 3 scrolls up: {}x, hotbar slot {}", Vehicles.zoom, mc.player.getInventory().getSelectedSlot());
+				});
+				then(20, mc -> {
+					log("zoomed fov {}", Math.round(mc.gameRenderer.mainCamera().getFov()));
+					shot(mc, "zoom-8x");
+					float before = mc.player.getYRot();
+					mc.player.turn(100, 0);
+					log("mouse turn at 8x: {} degrees (unzoomed would be 15)", String.format("%.2f", mc.player.getYRot() - before));
+				});
+				then(2, mc -> {
+					mc.mouseHandler.onScroll(mc.getWindow().handle(), 0, -1);
+					log("zoom after 1 scroll down: {}x", Vehicles.zoom);
+				});
+				then(5, mc -> command(mc, "ride @p dismount"));
+				then(5, mc -> log("zoom after getting out: {}x", Vehicles.zoom));
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));

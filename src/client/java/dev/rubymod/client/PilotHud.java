@@ -63,6 +63,8 @@ public class PilotHud implements HudElement {
 		drawDesignation(g, font, camera, aircraft, w, h);
 		drawWarnings(g, font, mc, aircraft, kind, w, h);
 		drawAutopilot(g, font, aircraft, w, h);
+		String zoom = Vehicles.zoom > 1 ? "ZOOM " + Vehicles.zoom + "x  [scroll]" : "scroll: zoom";
+		g.text(font, zoom, w - 96, h - 46, Vehicles.zoom > 1 ? GREEN : DIM, false);
 	}
 
 	/** "AUTOPILOT" banner with the held heading and altitude, and how to get out of it. */

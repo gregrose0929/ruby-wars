@@ -25,7 +25,7 @@ public class ManualScreen extends Screen {
 					"B: ping a spot for your squad, or spot the enemy under your crosshair.",
 					"/duel guns|vehicles|planes <player>: a 1v1 test duel in the arena, first to 10 kills. You get your own gear back after.",
 					"K: map.  U: hide/show the minimap.  J: research.  O: squad.  Y: this manual.  V: voice chat (Simple Voice Chat).",
-					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, T designate, X flares, Z autopilot, C weapon cam, G gear. Bombs: look at the target, release on IN REACH. Helicopter: WASD fly, Space/Ctrl up/down, the mouse aims."),
+					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, scroll zoom, T designate, X flares, Z autopilot, C weapon cam, G gear. Bombs: look at the target, release on IN REACH. Helicopter: WASD fly, Space/Ctrl up/down, the mouse aims."),
 			new Page("Economy",
 					"Generators and solar panels fill your power grid. Ruby Drills dig ore; the Ore Refinery doubles it; the Trade Depot sells it into your bank.",
 					"The Vault holds rubies and pays interest. Shop purchases come out of your bank automatically.",
