@@ -153,6 +153,39 @@ public final class AutoTest {
 				then(10, mc -> command(mc, "execute as @p at @e[type=rubymod:tank,limit=1,sort=nearest] run tp @s ~-9 ~1 ~-2 -100 0"));
 				then(15, mc -> shot(mc, "tankfire-side"));
 			}
+			case "turret" -> {
+				then(5, mc -> command(mc, "execute at @p run summon rubymod:tank ~ ~ ~8 {Rotation:[0f,0f]}"));
+				then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:tank,limit=1,sort=nearest]"));
+				then(5, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
+				// Turn the view the way a mouse would, and see whether the turret follows.
+				for (int deg : new int[] {0, 60, 120, -90}) {
+					then(5, mc -> {
+						float yaw = mc.player.getVehicle().getYRot() + deg;
+						mc.player.setYRot(yaw);
+						mc.player.setYHeadRot(yaw);
+						mc.player.setXRot(-10);
+					});
+					then(40, mc -> {
+						var t = (dev.rubymod.entity.VehicleEntity) mc.player.getVehicle();
+						log("turret test: look {} hull {} turret {} (rel {}) pitch {}", Math.round(mc.player.getYRot()), Math.round(t.getYRot()),
+								Math.round(t.turretYaw()), Math.round(net.minecraft.util.Mth.wrapDegrees(t.turretYaw() - t.getYRot())), Math.round(t.barrelPitch()));
+						shot(mc, "turret-" + (deg < 0 ? "m" + -deg : deg));
+					});
+				}
+				// Barrel elevation from the side: aim 90 right and up, then look across it.
+				then(5, mc -> {
+					float yaw = mc.player.getVehicle().getYRot() - 90;
+					mc.player.setYRot(yaw);
+					mc.player.setYHeadRot(yaw);
+					mc.player.setXRot(-20);
+				});
+				then(40, mc -> {
+					mc.options.setCameraType(CameraType.FIRST_PERSON);
+					command(mc, "ride @p dismount");
+				});
+				then(5, mc -> command(mc, "execute as @p at @e[type=rubymod:tank,limit=1,sort=nearest] run tp @s ~3 ~2.5 ~-11 0 8"));
+				then(25, mc -> shot(mc, "turret-side-up"));
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));
