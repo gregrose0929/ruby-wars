@@ -17,7 +17,7 @@
 #      start | stop | restart | update.
 #
 # Settings (environment variables):
-#   MEMORY=6G          Java heap; leave ~2 GB of the VM's RAM for Linux
+#   MEMORY=6G          Java heap (default: the VM's RAM minus ~2 GB, 2G to 6G)
 #   OP=<name>          make this player an operator on first start
 #   BRANCH=main        which branch of the repo to build
 #   JAR=/path/x.jar    use this mod jar instead of building from source
@@ -29,7 +29,14 @@ set -euo pipefail
 
 REPO="https://github.com/gregrose0929/ruby-wars.git"
 BRANCH="${BRANCH:-main}"
-MEMORY="${MEMORY:-6G}"
+# Default heap: the VM's RAM minus ~2 GB for Linux, between 2G and 6G.
+if [[ -z "${MEMORY:-}" ]]; then
+	ram_mb="$(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo 2>/dev/null || echo 8192)"
+	heap=$(( (ram_mb - 1800) / 1024 ))
+	(( heap < 2 )) && heap=2
+	(( heap > 6 )) && heap=6
+	MEMORY="${heap}G"
+fi
 OP="${OP:-}"
 JAR="${JAR:-}"
 MC_VERSION="26.3"
