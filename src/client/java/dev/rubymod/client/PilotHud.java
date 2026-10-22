@@ -62,6 +62,23 @@ public class PilotHud implements HudElement {
 		drawLandingAid(g, font, camera, mc, aircraft, kind, w, h);
 		drawDesignation(g, font, camera, aircraft, w, h);
 		drawWarnings(g, font, mc, aircraft, kind, w, h);
+		drawAutopilot(g, font, aircraft, w, h);
+	}
+
+	/** "AUTOPILOT" banner with the held heading and altitude, and how to get out of it. */
+	private void drawAutopilot(GuiGraphicsExtractor g, Font font, AircraftEntity aircraft, int w, int h) {
+		String key = RubyModClient.autopilotKey == null ? "Z" : RubyModClient.autopilotKey.getTranslatedKeyMessage().getString();
+		if (!Vehicles.autopilot) {
+			g.text(font, key + ": autopilot", w - 96, h - 58, DIM, false);
+			return;
+		}
+		int heading = Math.floorMod(Math.round(Vehicles.autopilotHeading + 180.0F), 360);
+		String text = "AUTOPILOT  HDG " + String.format("%03d", heading) + "  ALT " + Math.round(Vehicles.autopilotAltitude);
+		int tw = font.width(text) + 12;
+		g.fill(w / 2 - tw / 2, 58, w / 2 + tw / 2, 71, 0xA0000000);
+		g.outline(w / 2 - tw / 2, 58, tw, 13, GREEN);
+		center(g, font, text, w / 2, 61, GREEN);
+		center(g, font, "look anywhere to aim  -  " + key + " to take the stick", w / 2, 74, DIM);
 	}
 
 	// ----- Projection -----
@@ -295,7 +312,7 @@ public class PilotHud implements HudElement {
 				}
 			}
 			case AAM, AGM -> drawSeeker(g, font, camera, weapon, w, h);
-			case BOMBS -> drawCcip(g, font, camera, aircraft, w, h);
+			case BOMBS -> drawBombTarget(g, font, camera, aircraft, w, h);
 		}
 	}
 
@@ -330,6 +347,51 @@ public class PilotHud implements HudElement {
 				g.text(font, "IMPACT " + d, (int) p[0] + 9, (int) p[1] - 4, AMBER, false);
 			}
 		}
+	}
+
+	/**
+	 * Bomb targeting: put the crosshair on what you want to hit. The diamond marks that spot; the bombs
+	 * glide to it if it's within their reach from the current release point (green IN REACH), otherwise
+	 * it says which way to fly. The CCIP pipper still shows where an unguided bomb would land.
+	 */
+	private void drawBombTarget(GuiGraphicsExtractor g, Font font, Camera camera, AircraftEntity aircraft, int w, int h) {
+		Vec3 target = Designation.point != null ? Designation.point : Targeting.aimPoint;
+		Vec3 impact = Targeting.bombImpact;
+		if (target == null) {
+			center(g, font, "BOMBS: look at a spot on the ground  (" + (RubyModClient.autopilotKey == null ? "Z"
+					: RubyModClient.autopilotKey.getTranslatedKeyMessage().getString()) + ": autopilot, then look down)", w / 2, h / 2 + 30, AMBER);
+			return;
+		}
+		double alt = Math.max(1.0, aircraft.getY() - target.y);
+		double fallTicks = Math.sqrt(2.0 * alt / 0.08);
+		double reach = 0.5 * dev.rubymod.entity.BombEntity.MAX_STEER * fallTicks * fallTicks * 0.55 + 4.0;
+		double miss = impact == null ? Double.MAX_VALUE : Math.hypot(impact.x - target.x, impact.z - target.z);
+		boolean inReach = miss <= reach;
+		int col = inReach ? GREEN : AMBER;
+		float[] p = project(camera, target, w, h);
+		if (p != null) {
+			int x = (int) p[0];
+			int y = (int) p[1];
+			for (int i = 0; i <= 6; i++) {
+				g.fill(x - i, y - 6 + i, x - i + 1, y - 5 + i, col);
+				g.fill(x + i, y - 6 + i, x + i + 1, y - 5 + i, col);
+				g.fill(x - i, y + 6 - i, x - i + 1, y + 7 - i, col);
+				g.fill(x + i, y + 6 - i, x + i + 1, y + 7 - i, col);
+			}
+			g.text(font, "TGT " + Math.round(target.distanceTo(aircraft.position())) + "m", x + 10, y - 10, col, false);
+		}
+		String status;
+		if (inReach) {
+			status = "IN REACH - RELEASE  (" + Math.round(fallTicks / 20.0) + "s fall)";
+		} else {
+			// Is the target ahead of where the bombs would land, or behind / off to the side?
+			Vec3 vel = aircraft.getDeltaMovement();
+			Vec3 toTarget = impact == null ? Vec3.ZERO : new Vec3(target.x - impact.x, 0, target.z - impact.z);
+			double along = vel.horizontalDistanceSqr() < 1.0E-4 ? 0 : toTarget.dot(new Vec3(vel.x, 0, vel.z).normalize());
+			status = along > 0 ? "HOLD - target ahead, " + Math.round(miss - reach) + "m to go" : "OUT OF REACH - turn back and line up";
+		}
+		center(g, font, status, w / 2, h / 2 + 42, col);
+		drawCcip(g, font, camera, aircraft, w, h);
 	}
 
 	private void drawCcip(GuiGraphicsExtractor g, Font font, Camera camera, AircraftEntity aircraft, int w, int h) {

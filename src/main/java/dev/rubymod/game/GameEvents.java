@@ -168,6 +168,11 @@ public final class GameEvents {
 				vehicle.popSmoke(context.player());
 			}
 		});
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Autopilot.TYPE, (payload, context) -> {
+			if (context.player().getVehicle() instanceof dev.rubymod.entity.AircraftEntity aircraft) {
+				aircraft.setAutopilot(context.player(), payload.on(), payload.heading(), payload.altitude());
+			}
+		});
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.AircraftGear.TYPE, (payload, context) -> {
 			if (context.player().getVehicle() instanceof AircraftEntity aircraft) {
 				aircraft.toggleGear(context.player());

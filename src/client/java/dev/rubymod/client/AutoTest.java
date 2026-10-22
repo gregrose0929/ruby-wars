@@ -124,6 +124,7 @@ public final class AutoTest {
 			case "gear" -> gearScript();
 			case "impact" -> impactScript();
 			case "follow" -> followScript();
+			case "bombrun" -> bombRunScript();
 			case "tankfire" -> {
 				then(5, mc -> command(mc, "execute at @p run summon rubymod:tank ~ ~ ~8 {Rotation:[0f,0f]}"));
 				then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:tank,limit=1,sort=nearest]"));
@@ -600,6 +601,78 @@ public final class AutoTest {
 		}
 		then(5, mc -> shot(mc, "follow"));
 	}
+
+	/** Autopilot bombing run: level the bomber, look down at a tank, release when IN REACH, check the hit. */
+	private static void bombRunScript() {
+		then(5, mc -> {
+			command(mc, "rubywars phase war");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+			command(mc, "execute at @p run summon rubymod:tank ~ ~ ~70 {Rotation:[0f,0f]}");
+			command(mc, "execute at @p run summon rubymod:bomber ~ ~50 ~-60 {Rotation:[0f,0f]}");
+		});
+		then(5, mc -> command(mc, "ride @p mount @e[type=rubymod:bomber,limit=1,sort=nearest]"));
+		then(5, mc -> {
+			var a = aircraft(mc);
+			if (a == null) {
+				log("FAIL: could not board the bomber");
+				return;
+			}
+			a.launch(2.4);
+			mc.options.keyUp.setDown(true);
+			mc.player.setYRot(0);
+			mc.player.setXRot(0);
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof dev.rubymod.entity.VehicleEntity v) {
+					track = v;
+				}
+			}
+		});
+		then(4, mc -> {
+			Vehicles.toggleAutopilot(mc);
+			log("autopilot {} at altitude {}", Vehicles.autopilot, Math.round(Vehicles.autopilotAltitude));
+		});
+		// Every few ticks: look at the tank; drop when the HUD says it's in reach.
+		for (int i = 0; i < 60; i++) {
+			int n = i;
+			then(3, mc -> {
+				var a = aircraft(mc);
+				if (a == null || track == null) {
+					return;
+				}
+				Vec3 rel = track.position().subtract(mc.player.getEyePosition());
+				float yaw = (float) Math.toDegrees(Math.atan2(-rel.x, rel.z));
+				float pitch = (float) -Math.toDegrees(Math.atan2(rel.y, Math.hypot(rel.x, rel.z)));
+				Vehicles.freeYaw = net.minecraft.util.Mth.wrapDegrees(yaw - mc.player.getYRot());
+				Vehicles.freePitch = Math.min(89.0F, pitch - mc.player.getXRot());
+				Vec3 t = Targeting.aimPoint;
+				Vec3 impact = Targeting.bombImpact;
+				if (t != null && impact != null) {
+					double alt = Math.max(1.0, a.getY() - t.y);
+					double fall = Math.sqrt(2.0 * alt / 0.08);
+					double reach = 0.5 * dev.rubymod.entity.BombEntity.MAX_STEER * fall * fall * 0.55 + 4.0;
+					double miss = Math.hypot(impact.x - t.x, impact.z - t.z);
+					if (n % 5 == 0) {
+						log("t{} alt {} miss {} reach {} pitch {} plane pitch {} speed {} y {} ap {}", n, Math.round(alt), Math.round(miss), Math.round(reach),
+								Math.round(mc.player.getXRot()), Math.round(a.getXRot()), Math.round(a.speed() * 72), Math.round(a.getY()), Vehicles.autopilot);
+					}
+					if (miss <= reach && a.ammo(dev.rubymod.entity.AircraftType.Weapon.BOMBS) > 0 && n % 2 == 0 && dropped < 3) {
+						if (dropped == 0) {
+							shot(mc, "bombrun-release");
+						}
+						dropped++;
+						Trigger.fireAircraft(dev.rubymod.entity.AircraftType.Weapon.BOMBS);
+					}
+				}
+			});
+		}
+		then(60, mc -> {
+			log("bomb run: dropped {}, tank {}", dropped, track == null ? "none" : track.isAlive()
+					? "alive, hp " + ((net.minecraft.world.entity.LivingEntity) track).getHealth() : "destroyed");
+			mc.options.keyUp.setDown(false);
+		});
+	}
+
+	private static int dropped;
 
 	private static void tourScript() {
 		then(5, mc -> {

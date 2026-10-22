@@ -246,6 +246,7 @@ LANG = {
     "key.rubymod.minimap": "Toggle Minimap",
     "key.rubymod.manual": "Field Manual",
     "key.rubymod.squad": "Squad",
+    "key.rubymod.autopilot": "Autopilot (aircraft)",
     "block.rubymod.war_grave": "War Grave",
     "item.rubymod.field_pack": "Field Pack",
     "item.rubymod.field_radio": "Field Radio",

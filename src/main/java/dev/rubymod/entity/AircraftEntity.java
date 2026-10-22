@@ -80,6 +80,23 @@ public class AircraftEntity extends Mob {
 	// Designated target (T): every weapon goes for it.
 	private Entity designatedEntity;
 	private Vec3 designatedPoint;
+	/** Autopilot (server): when on, fly this heading and altitude instead of following the pilot's view. */
+	private boolean autopilot;
+	private float autopilotHeading;
+	private double autopilotAltitude;
+
+	public void setAutopilot(Player pilot, boolean on, float heading, double altitude) {
+		if (pilot == getControllingPassenger()) {
+			// Set on both sides: the pilot's client flies the aircraft, the server keeps it for anyone else watching.
+			autopilot = on && (isAirborne() || !onGround());
+			autopilotHeading = heading;
+			autopilotAltitude = altitude;
+		}
+	}
+
+	public boolean autopilotOn() {
+		return autopilot;
+	}
 	/** The last player who damaged us, and when (a crash soon after is their kill). */
 	private ServerPlayer lastAttacker;
 	private long lastAttackedAt;
@@ -306,6 +323,7 @@ public class AircraftEntity extends Mob {
 	@Override
 	protected void removePassenger(Entity passenger) {
 		super.removePassenger(passenger);
+		autopilot = false;
 		if (!level().isClientSide()) {
 			speed = serverVelocity.length(); // Keep gliding instead of stopping dead.
 		}
@@ -340,6 +358,9 @@ public class AircraftEntity extends Mob {
 
 	private void fly(LivingEntity pilot, Vec3 input) {
 		boolean airborne = isAirborne();
+		if (!airborne) {
+			autopilot = false;
+		}
 
 		// Throttle and brakes.
 		boolean braking = false;
@@ -384,8 +405,15 @@ public class AircraftEntity extends Mob {
 			float authority = (float) Mth.clamp((speed - kind.stallSpeed() * 0.6) / kind.rotateSpeed(), 0.15, 1.0);
 			float yawRate = kind.turnRate() * authority;
 			float pitchRate = kind.turnRate() * 0.6F * authority;
-			float yawDelta = Mth.clamp(Mth.wrapDegrees(pilot.getYRot() - yaw), -yawRate, yawRate);
-			float pitchDelta = Mth.clamp(pilot.getXRot() - pitch, -pitchRate, pitchRate);
+			float wantYaw = pilot.getYRot();
+			float wantPitch = pilot.getXRot();
+			if (autopilot) {
+				// Hold the heading; pitch gently toward the held altitude (negative pitch climbs).
+				wantYaw = autopilotHeading;
+				wantPitch = (float) Mth.clamp(-(autopilotAltitude - getY()) * 1.5, -12.0, 12.0);
+			}
+			float yawDelta = Mth.clamp(Mth.wrapDegrees(wantYaw - yaw), -yawRate, yawRate);
+			float pitchDelta = Mth.clamp(wantPitch - pitch, -pitchRate, pitchRate);
 			yaw += yawDelta;
 			pitch = Mth.clamp(pitch + pitchDelta, -70.0F, 75.0F);
 			roll = Mth.lerp(0.2F, roll(), Mth.clamp(yawDelta * 10.0F, -60.0F, 60.0F));
@@ -454,10 +482,10 @@ public class AircraftEntity extends Mob {
 	private void flyRotor(LivingEntity pilot, Vec3 input) {
 		boolean airborne = isAirborne();
 		float yaw = getYRot();
-		float yawDelta = Mth.clamp(Mth.wrapDegrees(pilot.getYRot() - yaw), -kind.turnRate(), kind.turnRate());
+		float yawDelta = Mth.clamp(Mth.wrapDegrees((autopilot ? autopilotHeading : pilot.getYRot()) - yaw), -kind.turnRate(), kind.turnRate());
 		yaw += yawDelta;
-		// Rotor tilt follows the pilot's look, limited to +-25 degrees.
-		float tilt = airborne ? Mth.clamp(pilot.getXRot() - 10.0F, -20.0F, 25.0F) : 0.0F;
+		// Rotor tilt follows the pilot's look, limited to +-25 degrees. On autopilot the helicopter hovers level.
+		float tilt = airborne && !autopilot ? Mth.clamp(pilot.getXRot() - 10.0F, -20.0F, 25.0F) : 0.0F;
 		float pitch = Mth.lerp(0.15F, getXRot(), tilt);
 		throttle = (float) Mth.clamp(throttle + (input.z > 0 ? 0.04 : input.z < 0 ? -0.04 : (0.5 - throttle) * 0.1), 0.0, 1.0);
 
@@ -568,7 +596,7 @@ public class AircraftEntity extends Mob {
 				}
 				fireMissile(pilot, weapon, aim, aim == null && designatedPoint != null ? designatedPoint : point);
 			}
-			case BOMBS -> dropBomb(pilot);
+			case BOMBS -> dropBomb(pilot, validTarget(target), point);
 			case ROCKETS -> fireRockets(pilot);
 		}
 	}
@@ -652,7 +680,8 @@ public class AircraftEntity extends Mob {
 		level().playSound(null, getX(), getY(), getZ(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 3.0F, 0.7F);
 	}
 
-	private void dropBomb(ServerPlayer pilot) {
+	/** Drop a guided bomb: it glides to the locked target, else the designated one, else the point the pilot aimed at. */
+	private void dropBomb(ServerPlayer pilot, Entity target, Vec3 point) {
 		if (kind.rotorcraft()) {
 			return;
 		}
@@ -663,7 +692,8 @@ public class AircraftEntity extends Mob {
 		entityData.set(BOMBS, ammo(Weapon.BOMBS) - 1);
 		BombEntity bomb = BombEntity.drop(level(), pilot, position().add(0, -1.2, 0));
 		bomb.setDeltaMovement(serverVelocity.add(0, -0.1, 0));
-		bomb.guide(designated(), designated() == null ? designatedPoint : null);
+		Entity aim = target != null ? target : designated();
+		bomb.guide(aim, aim != null ? null : designatedPoint != null ? designatedPoint : point);
 		level().addFreshEntity(bomb);
 		level().playSound(null, getX(), getY(), getZ(), SoundEvents.DISPENSER_LAUNCH, SoundSource.PLAYERS, 2.0F, 0.6F);
 	}

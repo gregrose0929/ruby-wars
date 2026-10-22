@@ -36,6 +36,9 @@ public class BombEntity extends ModProjectile {
 		return 0.08;
 	}
 
+	/** Guidance authority (blocks/tick of sideways correction per tick). The HUD uses this to judge reach. */
+	public static final double MAX_STEER = 0.12;
+
 	// Guided bomb (JDAM-style): steers its fall toward a designated target or point.
 	private Entity guideEntity;
 	private Vec3 guidePoint;
@@ -74,7 +77,7 @@ public class BombEntity extends ModProjectile {
 		Vec3 need = new Vec3((target.x - getX()) / t, 0, (target.z - getZ()) / t);
 		Vec3 have = new Vec3(v.x, 0, v.z);
 		Vec3 correction = need.subtract(have);
-		double max = 0.05;
+		double max = MAX_STEER;
 		if (correction.length() > max) {
 			correction = correction.normalize().scale(max);
 		}

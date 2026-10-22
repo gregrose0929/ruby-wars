@@ -29,6 +29,7 @@ public class RubyModClient implements ClientModInitializer {
 
 	/** T in the cockpit: designate a target (shares its default key with chat; see MinecraftMixin). */
 	public static KeyMapping designateKey;
+	public static KeyMapping autopilotKey;
 
 	@Override
 	public void onInitializeClient() {
@@ -48,6 +49,7 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping minimapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.minimap", InputConstants.KEY_U, CATEGORY));
 		KeyMapping manualKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.manual", InputConstants.KEY_Y, CATEGORY));
 		KeyMapping squadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.squad", InputConstants.KEY_O, CATEGORY));
+		autopilotKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.autopilot", InputConstants.KEY_Z, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -77,6 +79,9 @@ public class RubyModClient implements ClientModInitializer {
 				if (client.player != null && client.gui.screen() == null) {
 					client.gui.setScreen(new SquadScreen());
 				}
+			}
+			while (autopilotKey.consumeClick()) {
+				Vehicles.toggleAutopilot(client);
 			}
 			while (researchKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {

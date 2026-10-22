@@ -184,7 +184,20 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Client -> server: autopilot on (holding this heading and altitude) or off. */
+	public record Autopilot(boolean on, float heading, float altitude) implements CustomPacketPayload {
+		public static final Type<Autopilot> TYPE = new Type<>(RubyMod.id("autopilot"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Autopilot> CODEC = StreamCodec.composite(
+				ByteBufCodecs.BOOL, Autopilot::on, ByteBufCodecs.FLOAT, Autopilot::heading, ByteBufCodecs.FLOAT, Autopilot::altitude, Autopilot::new);
+
+		@Override
+		public Type<Autopilot> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.serverboundPlay().register(Autopilot.TYPE, Autopilot.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BountySync.TYPE, BountySync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaidStatus.TYPE, RaidStatus.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(CombatTagged.TYPE, CombatTagged.CODEC);

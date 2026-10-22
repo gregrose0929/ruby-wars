@@ -63,7 +63,8 @@ public final class Targeting {
 		}
 		Weapon weapon = aircraft.selectedWeapon();
 		Vec3 eye = mc.player.getEyePosition();
-		Vec3 look = mc.player.getLookAngle();
+		// Seek and aim along the camera, so on autopilot (or free look) you aim where you look, not where you fly.
+		Vec3 look = Vehicles.viewLook(mc);
 
 		// Seeker: visible targets, plus long-range contacts the server reports.
 		Contacts.Target best = null;
@@ -102,7 +103,7 @@ public final class Targeting {
 		}
 
 		// Laser point where the pilot is looking (guided missiles fly here without a lock).
-		Vec3 end = eye.add(look.scale(400));
+		Vec3 end = eye.add(look.scale(weapon == Weapon.BOMBS ? 900 : 400));
 		BlockHitResult hit = mc.level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.ANY, mc.player));
 		aimPoint = hit.getType() == HitResult.Type.BLOCK ? hit.getLocation() : null;
 
