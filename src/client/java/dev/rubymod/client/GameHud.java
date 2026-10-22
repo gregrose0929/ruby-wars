@@ -84,7 +84,9 @@ public class GameHud implements HudElement {
 	}
 
 	private void drawPhaseBanner(GuiGraphicsExtractor g, Font font, int w) {
-		if (ClientState.hud == null) {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		// In a duel the score bar sits up there instead.
+		if (ClientState.hud == null || mc.level != null && mc.level.dimension() == dev.rubymod.game.Duels.ARENA) {
 			return;
 		}
 		Phase phase = ClientState.phase();

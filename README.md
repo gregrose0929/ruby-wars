@@ -413,11 +413,71 @@ the tree (squadmates share unlocks). Basic guns, the Heart, base blocks, basic
 industry and basic defenses never need research. Locked Armory items say what
 unlocks them; supply drops can still hand you locked gear. Turn it off with `"research": false`.
 
+## 1v1 test duels
+
+Try every weapon against a real person without touching the season:
+
+    /duel guns <player>        every gun, rocket launcher, Lancer, Skyhammer, grenades, C4, air strike flare, recon drone
+    /duel vehicles <player>    you start in a tank; jeep, railgun, Lancer, rocket launcher, C4 and AT mines in your bag
+    /duel planes <player>      you start in a fighter on your runway; attack jet, bomber, attack helicopter,
+                               Skyhammer AA launcher and a Heavy AA Gun in your bag
+    /duel guns <player> 5      first to 5 instead of 10
+
+They get a chat message with a clickable **[ACCEPT]** (or they type `/duel accept`).
+Both of you go to the **Duel Arena**, a separate flat dimension, so nothing in the
+season world gets blown up. Each mode has its own arena: a walled 60x60 yard with
+cover and two watchtowers for guns, a 240x240 walled field with hills, ruins and
+trees for vehicles, and two runways pointing at each other for planes.
+
+- You spawn at opposite ends, with 4 seconds of spawn protection (it ends if you shoot).
+- When you die you watch for 3 seconds, then respawn with a fresh kit (and a fresh
+  tank or jet). Every death is a point for the other player, crashes included.
+- The bar at the top shows the score. **First to 10 wins.**
+- Afterwards you both go back exactly where you were, with your own inventory.
+  `/duel leave` quits early (the other player wins). If someone disconnects or the
+  server stops mid-duel, they get their things back the next time they join.
+- Duels don't count toward season kills, bounties, graves or combat tags, and PvP
+  in the arena works in every phase except Sudden Death and the Final Circle
+  (no duels then). `/duel list` shows who's duelling.
+
+## Playing together (LAN or your own server)
+
+Everyone needs the same version of the mod. The easiest way is the modpack:
+`dist/ruby-wars-1.0.0.mrpack`. Each player installs the free
+[Modrinth App](https://modrinth.com/app) (or Prism Launcher), clicks
+*Add instance -> Import*, picks the .mrpack, and plays that instance. Send them a
+new .mrpack whenever the mod changes.
+
+**Same house, quickest (LAN):** one person opens a world (the training world works
+well), presses Esc -> *Open to LAN* -> *Start LAN World*. Everyone else on the same
+Wi-Fi opens *Multiplayer*; the world shows up under "Scanning for games on your local
+network" (or *Direct Connect* to the host's IP and the port shown in chat). The world
+only runs while the host plays.
+
+**Always-on server (on a Windows PC):**
+
+1. Install Java 25 (Temurin 25 from adoptium.net).
+2. Make an empty folder, download the Fabric *server* launcher for Minecraft 26.3 from
+   https://fabricmc.net/use/server/ into it, and double-click it (or run
+   `java -Xmx6G -jar fabric-server-launch.jar nogui`). It stops once to ask you to
+   accept the EULA: set `eula=true` in `eula.txt` and start it again.
+3. Copy `rubymod-1.0.0.jar`, Fabric API (for 26.3) and, for voice chat, Simple Voice
+   Chat into the server's `mods/` folder. Restart.
+4. In the server console: `op <yourname>`. Players on your home network join with
+   *Multiplayer -> Add Server* and the PC's local IP (`ipconfig` shows it, like
+   192.168.1.20). Allow Java through Windows Firewall when it asks.
+5. Friends outside your house need port 25565 (TCP) forwarded on your router (and UDP
+   24454 for voice chat), or a tunnel such as playit.gg.
+
+Then `/duel guns <sibling>` from anywhere on the server. Duels work in the lobby,
+so you don't need to start a season to test weapons.
+
 ## Commands
 
 Everyone: `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
-base, once a day), `/squad ...`, `/sc <message>`, `/waypoint ...`.
+base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),
+`/squad ...`, `/sc <message>`, `/waypoint ...`.
 
 Admins: `start`, `phase <lobby|build|lockdown|war|sudden_death|final_circle|ended>`,
 `timer <minutes>`, `pause`, `resume`, `reload` (config), `backup`, `revive <player>`,

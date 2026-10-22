@@ -102,6 +102,10 @@ public final class Rules {
 		if (v instanceof net.minecraft.server.level.ServerPlayer sv && SpawnShield.isShielded(sv)) {
 			return false;
 		}
+		Boolean duel = Duels.canHurt(a, v);
+		if (duel != null) {
+			return duel;
+		}
 		if (!GameConfig.get().friendlyFire && Squads.same(a.getUUID(), v.getUUID())) {
 			return false;
 		}

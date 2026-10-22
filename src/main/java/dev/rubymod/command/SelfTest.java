@@ -420,6 +420,9 @@ public final class SelfTest {
 			return dev.rubymod.game.CombatTag.tagged(alpha.getUUID()) && dev.rubymod.game.CombatTag.tagged(bravo.getUUID());
 		}));
 
+		// ----- Duels -----
+		duelChecks(level, alpha, bravo, surface(level, base.offset(-40, 0, 40)));
+
 		// ----- Ore -----
 		int ore = 0;
 		for (BlockPos p : BlockPos.betweenClosed(spawn.getX() - 24, -60, spawn.getZ() - 24, spawn.getX() + 24, 0, spawn.getZ() + 24)) {
@@ -434,6 +437,86 @@ public final class SelfTest {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
 		}
 		Explosions.clearHits();
+	}
+
+	private void duelChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo, BlockPos home) {
+		var arena = level.getServer().getLevel(dev.rubymod.game.Duels.ARENA);
+		check("duels: the arena dimension exists", arena != null);
+		if (arena == null) {
+			return;
+		}
+		Phase before = SeasonData.get().phase;
+		SeasonData.get().phase = Phase.BUILD;
+		SeasonData.get().player(bravo.getUUID()).eliminated = false; // the elimination checks above knocked Bravo out
+		try {
+			alpha.teleportTo(level, home.getX() + 0.5, home.getY(), home.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
+			bravo.teleportTo(level, home.getX() + 3.5, home.getY(), home.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
+			alpha.getInventory().clearContent();
+			bravo.getInventory().clearContent();
+			alpha.getInventory().add(new ItemStack(ModItems.RUBY, 5));
+			bravo.getInventory().add(new ItemStack(net.minecraft.world.item.Items.BREAD, 3));
+			alpha.setHealth(alpha.getMaxHealth());
+			bravo.setHealth(bravo.getMaxHealth());
+
+			dev.rubymod.game.Duels.startForTest(alpha, bravo, dev.rubymod.game.Duels.Mode.GUNS, 3);
+			check("duels: both players go to the arena", alpha.level() == arena && bravo.level() == arena);
+			check("duels: gun kit replaces your inventory", alpha.getInventory().countItem(ModItems.ARR_RIFLE) == 1
+					&& alpha.getInventory().countItem(ModItems.RUBY) == 0 && bravo.getInventory().countItem(ModItems.LONGSHOT_SNIPER) == 1);
+			BlockPos wall = new BlockPos(alpha.getBlockX() + 31, dev.rubymod.game.Duels.GROUND + 2, 0);
+			check("duels: the gun arena is built (wall at " + wall.toShortString() + ")", arena.getBlockState(wall).is(Blocks.STONE_BRICKS));
+			check("duels: players spawn at opposite ends", Math.abs(alpha.getZ() - bravo.getZ()) > 40);
+			dev.rubymod.game.SpawnShield.clear(alpha);
+			dev.rubymod.game.SpawnShield.clear(bravo);
+			check("duels: duellists can hurt each other even in the build phase", Rules.canHurt(alpha, bravo) && Rules.canHurt(bravo, alpha));
+
+			dev.rubymod.game.Duels.onDeath(bravo, alpha.damageSources().playerAttack(alpha));
+			check("duels: a kill scores and the victim waits to respawn [" + dev.rubymod.game.Duels.score(alpha) + ", alive " + bravo.isAlive() + "]",
+					"1-0".equals(dev.rubymod.game.Duels.score(alpha)) && bravo.isAlive() && bravo.isSpectator());
+			for (int i = 0; i < 61; i++) {
+				dev.rubymod.game.Duels.tick(level.getServer());
+			}
+			check("duels: respawn after 3 seconds with a fresh kit", !bravo.isSpectator() && bravo.getHealth() == bravo.getMaxHealth()
+					&& bravo.getInventory().countItem(ModItems.ARR_RIFLE) == 1);
+			for (int k = 0; k < 2; k++) {
+				dev.rubymod.game.SpawnShield.clear(bravo);
+				dev.rubymod.game.Duels.onDeath(bravo, alpha.damageSources().playerAttack(alpha));
+				for (int i = 0; i < 61; i++) {
+					dev.rubymod.game.Duels.tick(level.getServer());
+				}
+			}
+			check("duels: first to the kill target wins [" + dev.rubymod.game.Duels.score(alpha) + "]",
+					"3-0 over".equals(dev.rubymod.game.Duels.score(alpha)));
+			for (int i = 0; i < 100; i++) {
+				dev.rubymod.game.Duels.tick(level.getServer());
+			}
+			check("duels: afterwards both go back where they were", dev.rubymod.game.Duels.score(alpha) == null && alpha.level() == level
+					&& alpha.blockPosition().closerThan(home, 2) && bravo.level() == level);
+			check("duels: and get their own inventory back", alpha.getInventory().countItem(ModItems.RUBY) == 5
+					&& alpha.getInventory().countItem(ModItems.ARR_RIFLE) == 0 && bravo.getInventory().countItem(net.minecraft.world.item.Items.BREAD) == 3);
+			check("duels: no PvP outside the duel in the build phase again", !Rules.canHurt(alpha, bravo));
+
+			dev.rubymod.game.Duels.startForTest(alpha, bravo, dev.rubymod.game.Duels.Mode.VEHICLES, 10);
+			// (Fake players can't ride, so check the tanks are waiting at the spawns; the client test rides one.)
+			int tanks = arena.getEntitiesOfClass(dev.rubymod.entity.VehicleEntity.class, alpha.getBoundingBox().inflate(250),
+					t -> t.entityTags().contains("duel_0") || t.entityTags().contains("duel_1")).size();
+			check("duels: vehicle duel gives each side a tank (" + tanks + ") and the AT kit", tanks == 2 && alpha.getInventory().countItem(ModItems.LANCER) == 1);
+			dev.rubymod.game.Duels.leave(bravo);
+			check("duels: /duel leave ends it and sends both home", alpha.level() == level && bravo.level() == level
+					&& alpha.getVehicle() == null && alpha.getInventory().countItem(ModItems.RUBY) == 5);
+
+			dev.rubymod.game.Duels.startForTest(alpha, bravo, dev.rubymod.game.Duels.Mode.PLANES, 10);
+			check("duels: air duel gives you the AA launcher and AA gun", alpha.getInventory().countItem(ModItems.SKYHAMMER) == 1 && alpha.getInventory().countItem(ModItems.HEAVY_AA_GUN) == 1);
+			int jets = arena.getEntitiesOfClass(dev.rubymod.entity.AircraftEntity.class, alpha.getBoundingBox().inflate(600)).size();
+			dev.rubymod.game.Duels.leave(alpha);
+			int left = arena.getEntitiesOfClass(dev.rubymod.entity.AircraftEntity.class, new net.minecraft.world.phys.AABB(BlockPos.ZERO).inflate(1500)).size();
+			check("duels: the arena is cleared afterwards (" + jets + " jets, " + left + " left)", jets == 2 && left == 0
+					&& alpha.getInventory().countItem(ModItems.RUBY) == 5);
+		} finally {
+			SeasonData.get().phase = before;
+			dev.rubymod.game.Duels.endTest();
+			alpha.getInventory().clearContent();
+			bravo.getInventory().clearContent();
+		}
 	}
 
 	/** Place a machine owned by {@code owner} and return its block entity. */

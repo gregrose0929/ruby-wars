@@ -51,6 +51,7 @@ public final class GameEvents {
 			SeasonData.load(server);
 			dev.rubymod.industry.Grid.load(server);
 			Explosions.clearHits();
+			Duels.reset();
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			SeasonData.save();
@@ -67,6 +68,7 @@ public final class GameEvents {
 			Explosions.tick(server);
 			Countermeasures.tick();
 			Range.tick(server);
+			Duels.tick(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
@@ -97,8 +99,12 @@ public final class GameEvents {
 			}
 		});
 
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> BattleDirector.onJoin(handler.getPlayer()));
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			BattleDirector.onJoin(handler.getPlayer());
+			Duels.onJoin(handler.getPlayer());
+		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			Duels.onLeave(server, handler.getPlayer());
 			CombatTag.onLeave(server, handler.getPlayer());
 			BattleDirector.onLeave(server, handler.getPlayer());
 		});
@@ -201,6 +207,10 @@ public final class GameEvents {
 		});
 		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
 			if (entity instanceof ServerPlayer player) {
+				// Duel deaths respawn you in the arena instead (no grave, no stats).
+				if (Duels.onDeath(player, source)) {
+					return false;
+				}
 				dev.rubymod.block.GraveBlock.bury(player);
 			}
 			return true;
@@ -215,7 +225,11 @@ public final class GameEvents {
 				Bounties.onKill(player, victim);
 			}
 		});
-		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> BattleDirector.onRespawn(newPlayer));
+		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+			if (!Duels.onRespawn(newPlayer)) {
+				BattleDirector.onRespawn(newPlayer);
+			}
+		});
 
 		// --- Claim protection ---
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {

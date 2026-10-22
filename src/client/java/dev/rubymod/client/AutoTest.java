@@ -125,6 +125,7 @@ public final class AutoTest {
 			case "impact" -> impactScript();
 			case "follow" -> followScript();
 			case "bombrun" -> bombRunScript();
+			case "duel" -> duelScript();
 			case "tankfire" -> {
 				then(5, mc -> command(mc, "execute at @p run summon rubymod:tank ~ ~ ~8 {Rotation:[0f,0f]}"));
 				then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:tank,limit=1,sort=nearest]"));
@@ -670,6 +671,103 @@ public final class AutoTest {
 					? "alive, hp " + ((net.minecraft.world.entity.LivingEntity) track).getHealth() : "destroyed");
 			mc.options.keyUp.setDown(false);
 		});
+	}
+
+	private static net.fabricmc.fabric.api.entity.FakePlayer opponent;
+
+	/** Fake opponent "Sibling" on the server, created once. */
+	private static void startDuel(Minecraft mc, dev.rubymod.game.Duels.Mode mode, int kills) {
+		IntegratedServer server = mc.getSingleplayerServer();
+		server.execute(() -> {
+			var p = server.getPlayerList().getPlayers().get(0);
+			if (opponent == null) {
+				opponent = net.fabricmc.fabric.api.entity.FakePlayer.get(p.level(),
+						new com.mojang.authlib.GameProfile(java.util.UUID.fromString("00000000-0000-0000-0000-0000000051b1"), "Sibling"));
+			}
+			dev.rubymod.game.Duels.startForTest(p, opponent, mode, kills);
+		});
+	}
+
+	private static void killOpponent(Minecraft mc) {
+		IntegratedServer server = mc.getSingleplayerServer();
+		server.execute(() -> {
+			var p = server.getPlayerList().getPlayers().get(0);
+			dev.rubymod.game.Duels.onDeath(opponent, p.damageSources().playerAttack(p));
+		});
+	}
+
+	private static void overview(Minecraft mc, int height, int back) {
+		IntegratedServer server = mc.getSingleplayerServer();
+		server.execute(() -> {
+			var p = server.getPlayerList().getPlayers().get(0);
+			p.stopRiding();
+			p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+			double cx = Math.round(p.getX() / 5000.0) * 5000.0;
+			p.teleportTo((net.minecraft.server.level.ServerLevel) p.level(), cx, 65 + height, -back, java.util.Set.of(), 0, 35, true);
+		});
+	}
+
+	private static void duelScript() {
+		then(5, mc -> {
+			command(mc, "give @p rubymod:ruby 7");
+			startDuel(mc, dev.rubymod.game.Duels.Mode.GUNS, 2);
+		});
+		then(60, mc -> {
+			log("duel guns: dim {} gamemode {} rifle {} ruby {} y {}", mc.player.level().dimension().identifier(), mc.gameMode.getPlayerMode(),
+					mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.ARR_RIFLE), mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.RUBY),
+					Math.round(mc.player.getY()));
+			shot(mc, "duel-guns-spawn");
+		});
+		then(5, mc -> killOpponent(mc));
+		then(10, mc -> shot(mc, "duel-guns-plus1"));
+		then(40, mc -> command(mc, "kill @p"));
+		then(10, mc -> {
+			log("duel after real death: gamemode {} alive {} health {}", mc.gameMode.getPlayerMode(), mc.player.isAlive(), mc.player.getHealth());
+			shot(mc, "duel-guns-killed");
+		});
+		then(70, mc -> log("duel respawned: gamemode {} rifle {} pos {}", mc.gameMode.getPlayerMode(),
+				mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.ARR_RIFLE), mc.player.blockPosition()));
+		then(5, mc -> overview(mc, 22, 44));
+		then(40, mc -> shot(mc, "duel-guns-overview"));
+		then(5, mc -> killOpponent(mc));
+		then(10, mc -> shot(mc, "duel-guns-victory"));
+		then(110, mc -> log("duel over: dim {} gamemode {} ruby {} rifle {}", mc.player.level().dimension().identifier(), mc.gameMode.getPlayerMode(),
+				mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.RUBY), mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.ARR_RIFLE)));
+
+		then(10, mc -> startDuel(mc, dev.rubymod.game.Duels.Mode.VEHICLES, 10));
+		then(80, mc -> {
+			log("duel vehicles: riding {}", mc.player.getVehicle());
+			shot(mc, "duel-vehicles-spawn");
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(15, mc -> shot(mc, "duel-vehicles-third"));
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			overview(mc, 45, 160);
+		});
+		then(60, mc -> shot(mc, "duel-vehicles-overview"));
+		then(5, mc -> command(mc, "execute as @p run duel leave"));
+		then(20, mc -> log("duel left: dim {} ruby {}", mc.player.level().dimension().identifier(), mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.RUBY)));
+
+		then(10, mc -> startDuel(mc, dev.rubymod.game.Duels.Mode.PLANES, 10));
+		then(80, mc -> {
+			log("duel planes: riding {}", mc.player.getVehicle());
+			shot(mc, "duel-planes-spawn");
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(15, mc -> shot(mc, "duel-planes-third"));
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			overview(mc, 30, 330);
+		});
+		then(60, mc -> shot(mc, "duel-planes-overview"));
+		then(5, mc -> command(mc, "execute as @p run duel leave"));
+		then(20, mc -> {
+			log("duel left planes: dim {} ruby {} gamemode {}", mc.player.level().dimension().identifier(),
+					mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.RUBY), mc.gameMode.getPlayerMode());
+			command(mc, "execute as @p run duel");
+		});
+		then(20, mc -> shot(mc, "duel-help"));
 	}
 
 	private static int dropped;

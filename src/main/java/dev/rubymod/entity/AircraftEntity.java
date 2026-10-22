@@ -321,6 +321,14 @@ public class AircraftEntity extends Mob {
 	}
 
 	@Override
+	protected void addPassenger(Entity passenger) {
+		super.addPassenger(passenger);
+		// A freshly spawned aircraft hasn't been told it's on the ground yet on the pilot's
+		// client, so its first ticks look like a hard landing: don't count them.
+		crashCooldown = 20;
+	}
+
+	@Override
 	protected void removePassenger(Entity passenger) {
 		super.removePassenger(passenger);
 		autopilot = false;

@@ -23,6 +23,7 @@ public class ManualScreen extends Screen {
 			new Page("Controls",
 					"Left-click fire, hold right-click to aim, R reload.",
 					"B: ping a spot for your squad, or spot the enemy under your crosshair.",
+					"/duel guns|vehicles|planes <player>: a 1v1 test duel in the arena, first to 10 kills. You get your own gear back after.",
 					"K: map.  U: hide/show the minimap.  J: research.  O: squad.  Y: this manual.  V: voice chat (Simple Voice Chat).",
 					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, T designate, Z autopilot, C weapon cam, G gear. Bombs: look at the target, release on IN REACH."),
 			new Page("Economy",

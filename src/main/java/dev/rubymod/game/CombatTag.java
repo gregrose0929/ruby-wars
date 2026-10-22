@@ -24,7 +24,7 @@ public final class CombatTag {
 	}
 
 	public static void tag(ServerPlayer a, ServerPlayer b) {
-		if (a == b || !Rules.phase().pvp() || a.isCreative() || b.isCreative()) {
+		if (a == b || !Rules.phase().pvp() || a.isCreative() || b.isCreative() || Duels.inDuel(a) || Duels.inDuel(b)) {
 			return;
 		}
 		long until = System.currentTimeMillis() + GameConfig.get().combatTagSeconds * 1000L;
