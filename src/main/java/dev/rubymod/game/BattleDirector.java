@@ -122,13 +122,22 @@ public final class BattleDirector {
 		SeasonData.save();
 	}
 
+	/** The border at the start of a season: the island's size on the Ruby Wars map, the config's elsewhere. */
+	public static int startBorder(MinecraftServer server) {
+		return onWarzoneMap(server) ? dev.rubymod.world.WarzoneTerrain.BORDER : GameConfig.get().borderStartSize;
+	}
+
+	public static boolean onWarzoneMap(MinecraftServer server) {
+		return server.overworld().getChunkSource().getGenerator() instanceof dev.rubymod.world.WarzoneGenerator;
+	}
+
 	/** /rubywars start: begins the season from the lobby. */
 	public static void startSeason(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
 		GameConfig config = GameConfig.get();
 		WorldBorder border = server.overworld().getWorldBorder();
 		border.setCenter(config.borderCenterX, config.borderCenterZ);
-		border.setSize(config.borderStartSize);
+		border.setSize(startBorder(server));
 		data.winner = "";
 		enterPhase(server, Phase.BUILD);
 	}

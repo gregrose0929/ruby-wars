@@ -342,7 +342,7 @@ public final class RubyWarsCommand {
 		GameConfig config = GameConfig.get();
 		var border = c.getSource().getServer().overworld().getWorldBorder();
 		border.setCenter(config.borderCenterX, config.borderCenterZ);
-		border.setSize(config.borderStartSize);
+		border.setSize(dev.rubymod.game.BattleDirector.startBorder(c.getSource().getServer()));
 		for (ServerPlayer player : c.getSource().getServer().getPlayerList().getPlayers()) {
 			if (player.isSpectator()) {
 				player.setGameMode(GameType.SURVIVAL);

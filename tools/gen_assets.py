@@ -245,6 +245,7 @@ def gen_blocks(client_jar):
 LANG = {
     "itemGroup.rubymod.ruby_wars": "Ruby Wars",
     "key.category.rubymod.ruby_wars": "Ruby Wars",
+    "generator.rubymod.ruby_wars": "Ruby Wars Map",
     "key.rubymod.reload": "Reload Gun / Next Aircraft Weapon",
     "key.rubymod.ping": "Ping (mark a spot for your squad)",
     "key.rubymod.map": "Open Map",

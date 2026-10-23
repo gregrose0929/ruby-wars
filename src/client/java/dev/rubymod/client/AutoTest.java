@@ -81,6 +81,35 @@ public final class AutoTest {
 		}
 	}
 
+	/** A camera tour of the Ruby Wars map (run on a world made with the Ruby Wars Map type). */
+	private static void mapTourScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "weather clear");
+			command(mc, "gamemode spectator @a");
+		});
+		String[][] stops = {
+				{"crater", "0 100 -175 0 25"},
+				{"crater-floor", "20 70 20 135 5"},
+				{"mountains", "160 105 160 -135 10"},
+				{"pass", "300 90 300 -135 15"},
+				{"home-green", "250 90 250 45 15"},
+				{"home-pine", "-250 90 250 135 15"},
+				{"home-desert", "-250 90 -250 -135 15"},
+				{"home-snow", "250 90 -250 -45 15"},
+				{"river", "420 75 -30 -90 15"},
+				{"coast", "0 95 650 0 15"},
+				{"high", "300 220 300 -135 40"},
+		};
+		for (String[] stop : stops) {
+			then(10, mc -> command(mc, "tp @p " + stop[1]));
+			then(160, mc -> {
+				log("at {}: {}", stop[0], mc.level.getChunkSource().gatherStats());
+				shot(mc, "map-" + stop[0]);
+			});
+		}
+	}
+
 	// ----- Scripts -----
 
 	private static void buildScript(String mode) {
@@ -89,6 +118,14 @@ public final class AutoTest {
 			command(mc, "gamerule send_command_feedback false");
 			command(mc, "gamerule sendCommandFeedback false");
 		});
+		if (mode.equals("maptour")) {
+			mapTourScript();
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("training") || mode.equals("yard")) {
 			if (mode.equals("training")) {
 				trainingScript();

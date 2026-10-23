@@ -51,6 +51,8 @@ public class RubyMod implements ModInitializer {
 		ModTabs.initialize();
 		Payloads.register();
 		dev.rubymod.net.MorePayloads.register();
+		net.minecraft.core.Registry.register(net.minecraft.core.registries.BuiltInRegistries.CHUNK_GENERATOR, id("warzone"), dev.rubymod.world.WarzoneGenerator.CODEC);
+		net.minecraft.core.Registry.register(net.minecraft.core.registries.BuiltInRegistries.BIOME_SOURCE, id("warzone"), dev.rubymod.world.WarzoneBiomeSource.CODEC);
 		GameConfig.load();
 		GameEvents.register();
 		CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {

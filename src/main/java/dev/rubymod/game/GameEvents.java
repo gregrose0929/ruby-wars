@@ -73,6 +73,11 @@ public final class GameEvents {
 			dev.rubymod.industry.Grid.load(server);
 			Explosions.clearHits();
 			Duels.reset();
+			// The Ruby Wars map is an island: keep everyone on it, even before the season starts.
+			if (BattleDirector.onWarzoneMap(server) && server.overworld().getWorldBorder().getSize() > dev.rubymod.world.WarzoneTerrain.BORDER) {
+				server.overworld().getWorldBorder().setCenter(0, 0);
+				server.overworld().getWorldBorder().setSize(dev.rubymod.world.WarzoneTerrain.BORDER);
+			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			SeasonData.save();

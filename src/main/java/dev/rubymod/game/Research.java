@@ -124,7 +124,7 @@ public final class Research {
 			return "Research " + NODES.get(node.requires()).title() + " first.";
 		}
 		if (r.researchPoints < node.cost()) {
-			return "You need " + node.cost() + " research points (you have " + r.researchPoints + ").";
+			return "You need " + node.cost() + " stars (you have " + r.researchPoints + "). Finish goals to earn more.";
 		}
 		r.researchPoints -= node.cost();
 		r.research.add(id);
@@ -138,18 +138,6 @@ public final class Research {
 		}
 		sync(player);
 		return null;
-	}
-
-	/** Once per build day you play: +1 point. */
-	public static void onDayLogin(ServerPlayer player, int day) {
-		SeasonData.PlayerRecord r = SeasonData.get().player(player.getUUID(), player.getName().getString());
-		if (r.researchDay != day) {
-			r.researchDay = day;
-			r.researchPoints++;
-			SeasonData.markDirty();
-			player.sendSystemMessage(Component.literal("+1 research point for showing up today (" + r.researchPoints
-					+ " to spend: press J).").withStyle(ChatFormatting.AQUA));
-		}
 	}
 
 	public static void sync(ServerPlayer player) {

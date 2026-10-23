@@ -14,7 +14,10 @@
 #   6. Installs a systemd service (starts on boot, stops cleanly) and a 5 AM daily restart.
 #   7. Opens ports 25565/tcp and 24454/udp if ufw is on, then starts the server.
 #   8. Installs the "rubywars" command: rubywars console | cmd "<command>" | logs | status |
-#      start | stop | restart | update.
+#      start | stop | restart | update | newmap.
+#
+# New installs start on the Ruby Wars Map (a fixed island). "rubywars newmap" (or --newmap) switches an
+# existing server to it: the old world moves to /opt/rubywars/old-worlds, then the island is pregenerated.
 #
 # Settings (environment variables):
 #   MEMORY=6G          Java heap (default: the VM's RAM minus ~2 GB, 2G to 6G)
@@ -46,6 +49,10 @@ SERVER_MODS=(fabric-api lithium ferrite-core simple-voice-chat appleskin chunky)
 # --test DIR: build and download into DIR as the current user, skipping packages, users,
 # systemd and the firewall (for trying the script out). Needs java 25 on PATH.
 TEST_DIR=""
+NEW_MAP=""
+if [[ "${1:-}" == "--newmap" ]]; then
+	NEW_MAP=1
+fi
 if [[ "${1:-}" == "--test" ]]; then
 	TEST_DIR="$(realpath -m "${2:?usage: setup-server.sh --test DIR}")"
 fi
@@ -163,7 +170,9 @@ if [[ ! -f "$SERVER/server.properties" ]]; then
 	allow-flight=true
 	enable-command-block=false
 	sync-chunk-writes=false
+	level-type=rubymod\:ruby_wars
 	EOF
+	NEW_MAP=1
 fi
 cat > "$SERVER/start.sh" <<EOF
 #!/usr/bin/env bash
@@ -267,7 +276,8 @@ case "\${1:-}" in
 	status)  systemctl status rubywars --no-pager ;;
 	start|stop|restart) exec sudo systemctl "\$1" rubywars ;;
 	update)  sudo $SCRIPT_COPY ;;
-	*) echo "usage: rubywars console | cmd \"<command>\" | logs | status | start | stop | restart | update" ;;
+	newmap)  sudo $SCRIPT_COPY --newmap ;;
+	*) echo "usage: rubywars console | cmd \"<command>\" | logs | status | start | stop | restart | update | newmap" ;;
 esac
 EOF
 chmod +x /usr/local/bin/rubywars
@@ -277,6 +287,21 @@ if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
 	say "Opening ports in ufw"
 	ufw allow 25565/tcp >/dev/null
 	ufw allow 24454/udp >/dev/null
+fi
+
+# --newmap: put the old world aside and make the Ruby Wars Map on the next start.
+if [[ -n "$NEW_MAP" && -z "$TEST_DIR" ]]; then
+	if [[ -d "$SERVER/world" ]]; then
+		say "Moving the old world to $BASE/old-worlds (nothing is deleted)"
+		systemctl stop rubywars || true
+		mkdir -p "$BASE/old-worlds"
+		mv "$SERVER/world" "$BASE/old-worlds/world-$(date +%Y%m%d-%H%M)"
+	fi
+	if grep -q '^level-type=' "$SERVER/server.properties"; then
+		sed -i 's/^level-type=.*/level-type=rubymod\\:ruby_wars/' "$SERVER/server.properties"
+	else
+		echo 'level-type=rubymod\:ruby_wars' >> "$SERVER/server.properties"
+	fi
 fi
 
 systemctl daemon-reload
@@ -302,6 +327,13 @@ done
 echo
 if [[ -f "$BASE/pending-op" ]]; then
 	/usr/local/bin/rubywars cmd "op $(cat "$BASE/pending-op")" >/dev/null && rm -f "$BASE/pending-op"
+fi
+if [[ -n "$NEW_MAP" && -z "$TEST_DIR" ]]; then
+	# Generate the whole island now (a few minutes, in the background) so nobody waits on new chunks.
+	for c in "chunky world minecraft:overworld" "chunky center 0 0" "chunky shape square" "chunky radius 880" "chunky start"; do
+		/usr/local/bin/rubywars cmd "$c" >/dev/null
+	done
+	say "New map made. The island is being pregenerated in the background (see: rubywars logs)."
 fi
 
 IP="$(hostname -I | awk '{print $1}')"

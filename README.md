@@ -20,13 +20,35 @@ Design doc: https://claude.ai/code/artifact/7412ee76-bb2f-47f6-8045-6372edb0be5d
      While your Heart stands you respawn at it; once it's gone, your next death
      eliminates you. Supply drops land every 15 minutes.
    - **Sudden Death (20 min):** every Heart shatters, no more respawns, and the
-     world border shrinks from 3000 to 200 blocks.
+     world border shrinks to 200 blocks (from 1700 on the Ruby Wars map, 3000 elsewhere).
    - **Final Circle:** everyone glows and artillery shells random spots every
      15 seconds, so nobody can hide in a bunker. Last one alive wins.
 
-During the build phase everyone also gets three **daily bounties** (kill monsters,
-land gun hits, mine stone or ores) that pay rubies. See them with `/rubywars bounties`.
+During the build phase everyone also gets three **daily bounties** (land gun hits,
+travel, mine stone or ores) that pay rubies. See them with `/rubywars bounties`.
 Fire and lava can't spread into claims until Battle Day.
+
+There are no hostile mobs and no hunger (`"hostileMobs"` and `"hunger"` in the
+config turn them back on): the game is building and staying alive.
+
+## The Ruby Wars map
+
+A dedicated island, the same every season (it doesn't depend on the world seed), so
+everyone can learn it. About 1,500 blocks across, with the world border just past the beaches:
+
+- **The Ruby Crater** in the middle: a rim and a bowl with ruby ore a few blocks under the
+  floor. World spawn. Worth fighting over.
+- **A ring of mountains** around it, with a pass on each diagonal toward a corner.
+- **Four home corners**, each with a flat meadow ~470 blocks from the middle: Green Hills,
+  Pine Woods, Red Desert and Snow Plateau. Every corner is the same land turned 90°, so
+  nobody gets a better start.
+- **Four rivers** wind from the crater to the sea between the corners, shallow enough to
+  wade, with fords. Beaches and ocean all round.
+
+Pick it when creating a world (*World Type: Ruby Wars Map*), or on a server set
+`level-type=rubymod\:ruby_wars` in `server.properties` before the world is first made
+(`rubywars newmap` on the server does this for you, keeping a backup of the old world).
+Other world types still work; the border then uses `borderStartSize`.
 
 All timings, prices, and sizes are in `config/rubywars.json`.
 
@@ -53,7 +75,7 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Helicopter | W/S fly forward and back, A/D strafe, Space climbs, Ctrl descends, the mouse turns and aims (the chin gun and rockets hit what's under the crosshair); no keys = hover |
 | Ping / spot | B: mark the spot you're looking at for your squad, or spot the enemy under your crosshair (10 s) |
 | Map | K: the full map (scroll to zoom, drag to pan). The minimap is always top right |
-| Research | J: the research tree |
+| Goals & upgrades | J: goals that earn stars, and upgrades to spend them on |
 | Squad | O: your squad, members and one-click invites |
 | Minimap | U: hide or show it |
 | Field Manual | Y: short in-game guide pages on everything here |
@@ -66,10 +88,11 @@ hotbar and hearts make way for the vehicle's HUD.
 Guns: Service Pistol, AR-R Rifle, Combat Shotgun, Longshot Sniper, and the Ruby
 Blaster. Throwables: frag and smoke grenades. Raid gear: Rocket
 Launcher, Rangefinder, Breaching Charge, Mortar, Missile Silo, Cruise Missile.
-Defenses: Sandbags, Concrete Wall (takes 4 blasts), Reinforced Concrete (ignores
+Defenses: Holo Camo (looks like any block you give it; your squad walks through), Sandbags, Concrete Wall (takes 4 blasts), Reinforced Concrete (ignores
 grenades), Blast Door (only you can open it), Sentry Turret, Missile Interceptor,
 Radar Station, Alarm Block, Claymore, Landmine, Barbed Wire. Tools: Builder's
-Wand, Excavator Pickaxe, and Heart upgrades (bigger claim, more HP).
+Wand, Excavator Pickaxe, and Heart upgrades (bigger claim, more HP). Gear: the
+Jetpack (wear it in the chest slot; hold Space in the air to fly, refuels on the ground).
 
 Ammo can also be crafted (copper, iron, and gunpowder; check the recipe book).
 Killing 5 players in a row earns an Air Strike Flare.
@@ -399,19 +422,27 @@ On build days 3, 6, 9 and 12 (`raidDays`), once you or a squadmate is online,
 scouts warn you and a few minutes later a squad of AI raiders (4, 6 or 8 by Heart
 tier) lands outside your claim and marches on your Heart. Every raider standing
 at the Heart loots your bank each second (up to 20%). Kill them all within 6
-minutes for a bonus (15 rubies and 2 research points); each kill pays 3 rubies,
+minutes for a bonus (15 rubies, and the "Repel a raid" goal); each kill pays 3 rubies,
 to you or to whoever's guard made it. Turrets fire on raiders even before Battle
 Day. You can also call one on yourself once a day with `/rubywars raid`.
 
-## Research
+## Goals and upgrades
 
-Advanced Armory gear starts locked. Press J to open the tree: four branches
-(Arms, Vehicles, Defense, Support), 16 unlocks costing 2 to 5 points. You earn 1
-point for each build day you log in, 1 for clearing all three daily bounties,
-and 2 for each raid you repel, which isn't enough for everything, so squads split
-the tree (squadmates share unlocks). Basic guns, the Heart, base blocks, basic
-industry and basic defenses never need research. Locked Armory items say what
-unlocks them; supply drops can still hand you locked gear. Turn it off with `"research": false`.
+Advanced Armory gear starts locked. Upgrades come from **doing things**, never from
+how long or how often you play. Press J:
+
+- **GOALS** lists 18 things to do, each worth 1 or 2 stars, once per season: place
+  your Heart, mine 10 and 50 Ruby Ore, build a generator, a Ruby Drill and a Trade
+  Depot, get a machine to Mk III, bank 500 and 2,000 rubies, upgrade your Heart, buy
+  from the Armory, place a base defense, join a squad, finish 3 bounties, repel a
+  raid, win a duel (the practice bot counts), drive 300 blocks, fly 1,000 blocks.
+- **UPGRADES** is where you spend stars: four branches (Arms, Vehicles, Defense,
+  Support), 16 unlocks costing 2 to 5 stars. There are fewer stars than the whole tree
+  costs, so squads split it (squadmates share unlocks).
+
+Basic guns, the Heart, base blocks, basic industry and basic defenses never need
+upgrades. Locked Armory items say what unlocks them; supply drops can still hand you
+locked gear. Turn it off with `"research": false`.
 
 ## 1v1 test duels
 
@@ -497,7 +528,7 @@ Admins: `start`, `phase <lobby|build|lockdown|war|sudden_death|final_circle|ende
 `reset confirm` (new season), `kit` (every gun, ammo, raid gear, attachments,
 vehicles, aircraft, and ruby armor, for testing), `training` (build the training
 ground here), `rearm` (refill your aircraft), `raidnow <player>` (launch a raid),
-`research <player> <points>` (give research points), `selftest` (rule checks; use on a test world).
+`research <player> <points>` (give stars), `selftest` (rule checks; use on a test world).
 
 ## Running the server (Linux)
 
