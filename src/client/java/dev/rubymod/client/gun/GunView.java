@@ -358,6 +358,7 @@ public final class GunView {
 
 	private static View view(String gun) {
 		return switch (gun) {
+			case "arr_rifle" -> new View(new Vector3f(0.26F, -0.27F, -0.55F), 6.8F, 6.8F, -2.0F);
 			case "service_pistol" -> new View(new Vector3f(0.20F, -0.22F, -0.50F), 11.0F, 11.0F, -3.0F);
 			case "combat_shotgun" -> new View(new Vector3f(0.26F, -0.27F, -0.55F), 4.6F, 6.6F, -2.0F);
 			case "longshot_sniper" -> new View(new Vector3f(0.26F, -0.27F, -0.52F), 3.0F, 3.0F, -2.0F);

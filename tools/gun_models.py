@@ -143,6 +143,7 @@ def arr_rifle():
         B(-1.0, 4.25, -4.6, 1.0, 4.65, -4.2, "black_metal"),
     ]
     body += picatinny(-2.8, 5.4, 4.6) + picatinny(5.8, 13.2, 5.0)
+    body += red_dot(0.2, 5.1)                                                   # built-in red dot sight
     grip = R("grip", pivot=(0, 0.2, -0.4), rot=(-20, 0, 0), boxes=[
         B(-0.95, -5.0, -1.3, 0.95, 0.0, 0.4, "polymer", stipple=True),
         B(-1.0, -5.4, -1.5, 1.0, -5.0, 0.6, "polymer"),
@@ -164,27 +165,18 @@ def arr_rifle():
     mag = P("mag", pivot=(0, 0.5, 2.8), children=[mag_std, mag_ext])
     bolt = P("bolt", boxes=[B(-1.15, 3.2, 0.6, -1.0, 3.9, 3.0, "steel_bright")])
     trigger = R("trigger", pivot=(0, 0, 0.9), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.35, "steel")])
-    irons = P("irons", boxes=[
-        B(-0.7, 5.1, -2.6, 0.7, 5.45, -1.8, "black_metal"),                    # rear sight base
-        *ring(0, 6.0, -2.5, -2.2, 0.55, 0.16, "black_metal"),                  # aperture
-        B(-0.18, 6.55, -2.5, 0.18, 6.75, -2.2, "black_metal"),                 # ring top guard
-        B(-0.5, 5.6, 12.0, 0.5, 5.75, 12.8, "black_metal"),                    # front sight base
-        B(-0.5, 5.75, 12.2, -0.35, 6.35, 12.6, "black_metal"),                 # protective ears
-        B(0.35, 5.75, 12.2, 0.5, 6.35, 12.6, "black_metal"),
-        B(-0.08, 5.75, 12.3, 0.08, 6.0, 12.5, "black_metal"),                  # post
-        B(-0.05, 5.92, 12.28, 0.05, 6.0, 12.3, "glow_green"),                  # tritium dot
-    ])
+    irons = P("irons")  # none: the AR-R comes with its red dot
     muzzle_device = P("muzzle_device", boxes=[
         B(-0.75, bore - 0.75, 18.2, 0.75, bore + 0.75, 20.4, "black_metal", ports=True),
         B(-0.4, bore - 0.4, 20.4, 0.4, bore + 0.4, 20.45, "black_metal", bore=True)])
     att = [
-        P("att_red_dot", boxes=red_dot(0.2, 5.1)),
+        P("att_red_dot"),  # already built in
         P("att_suppressor", boxes=suppressor(18.2, bore, 1.0, 6.8)),
         P("att_grip", boxes=vertical_grip(9.0, 1.9)),
     ]
     root = P("root", children=[P("body", body), grip, mag, bolt, trigger, irons, muzzle_device] + att)
     return Gun(root, {
-        "sight": (0, 6.0, -2.5), "red_dot_sight": (0, 5.1 + 1.5, 0.3), "muzzle": (0, bore, 20.6), "eject": (-1.2, 3.6, 1.8),
+        "sight": (0, 5.1 + 1.5, 0.3), "red_dot_sight": (0, 5.1 + 1.5, 0.3), "muzzle": (0, bore, 20.6), "eject": (-1.2, 3.6, 1.8),
         "hand_r": (0, -1.6, -1.0), "hand_l": (0, 1.6, 9.5), "mag_hand": (0, -4.0, 3.0), "grip_hand_l": (0, -1.0, 9.6),
     })
 
@@ -258,8 +250,9 @@ def combat_shotgun():
         B(-0.55, 1.65, 15.2, 0.55, 2.85, 15.6, "black_metal"),                  # mag cap
         B(-0.5, 2.85, 15.6, 0.5, 3.55, 16.2, "black_metal"),                    # barrel clamp
         B(-0.5, 4.6, -2.0, 0.5, 4.75, 3.8, "black_metal"),                     # receiver rib
-        *ring(0, 5.25, -1.9, -1.6, 0.5, 0.14, "black_metal"),                   # ghost ring
-        B(-0.5, 4.6, -1.9, 0.5, 4.75, -1.4, "black_metal"),
+        B(-0.7, 4.75, -1.9, -0.32, 5.35, -1.65, "black_metal"),                 # rear notch: two thin posts,
+        B(0.32, 4.75, -1.9, 0.7, 5.35, -1.65, "black_metal"),                   # the front post shows in the gap
+        B(-0.7, 4.6, -1.9, 0.7, 4.75, -1.4, "black_metal"),
         B(-0.3, bore + 0.85, 16.8, 0.3, bore + 1.05, 17.4, "black_metal"),      # front sight ramp
         B(-0.08, bore + 1.05, 17.0, 0.08, 5.25, 17.3, "black_metal"),
         B(-0.06, 5.15, 16.98, 0.06, 5.25, 17.0, "glow_red"),
@@ -379,13 +372,14 @@ def ruby_blaster():
         B(-1.4, bore - 1.4, 11.6, 1.4, bore + 1.4, 12.2, "ruby_metal"),
         B(-1.2, bore - 1.2, 13.0, 1.2, bore + 1.2, 13.4, "ruby_metal"),
         B(-0.5, bore - 0.5, 13.4, 0.5, bore + 0.5, 13.5, "glow_ruby"),               # emitter tip
-        *ring(0, 6.2, -2.0, -1.7, 0.5, 0.15, "graphite"),                           # rear sight ring
+        B(-0.7, 5.6, -2.0, -0.32, 6.3, -1.75, "graphite"),                          # rear notch posts
+        B(0.32, 5.6, -2.0, 0.7, 6.3, -1.75, "graphite"),
         B(-0.12, 5.6, 7.6, 0.12, 6.2, 8.0, "graphite"),
         B(-0.06, 6.1, 7.98, 0.06, 6.2, 8.02, "glow_ruby"),
     ]
-    core = R("core", pivot=(0, 5.6, 1.0), boxes=[                                    # exposed ruby core on top
-        B(-0.8, 0.0, -0.8, 0.8, 1.2, 1.6, "ruby"),
-        B(-0.5, 1.2, -0.4, 0.5, 1.6, 1.2, "glow_ruby"),
+    core = R("core", pivot=(0, 5.6, 1.0), boxes=[                                    # exposed ruby core on top (low, under the sights)
+        B(-0.8, 0.0, -0.8, 0.8, 0.4, 1.6, "ruby"),
+        B(-0.5, 0.4, -0.4, 0.5, 0.52, 1.2, "glow_ruby"),
     ])
     grip = R("grip", pivot=(0, 0.6, -0.6), rot=(-20, 0, 0), boxes=[B(-0.95, -4.6, -1.3, 0.95, 0.4, 0.5, "graphite", stipple=True)])
     cell = P("mag", pivot=(0, 1.0, 3.2), children=[P("mag_std", rel=True, boxes=[
