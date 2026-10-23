@@ -11,6 +11,8 @@
 	"key.rubymod.flares": "Flares (aircraft)",
 	"block.rubymod.war_grave": "War Grave",
 	"item.rubymod.field_pack": "Field Pack",
+	"item.rubymod.jetpack": "Jetpack",
+	"block.rubymod.holo_camo": "Holo Camouflage",
 	"item.rubymod.field_radio": "Field Radio",
 	"item.rubymod.guard_contract": "Guard Contract: Rifleman",
 	"item.rubymod.at_guard_contract": "Guard Contract: AT Gunner",

@@ -27,6 +27,11 @@ public class ModBlockEntities {
 			RubyMod.id("war_grave"),
 			new BlockEntityType<>(dev.rubymod.block.GraveBlockEntity::new, Set.of(ModBlocks.WAR_GRAVE)));
 
+	public static final BlockEntityType<dev.rubymod.block.HoloBlockEntity> HOLO = Registry.register(
+			BuiltInRegistries.BLOCK_ENTITY_TYPE,
+			RubyMod.id("holo_camo"),
+			new BlockEntityType<>(dev.rubymod.block.HoloBlockEntity::new, Set.of(ModBlocks.HOLO_CAMO)));
+
 	public static void initialize() {
 	}
 }

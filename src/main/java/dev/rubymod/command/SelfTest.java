@@ -62,12 +62,15 @@ public final class SelfTest {
 	public static int run(CommandSourceStack source) {
 		SelfTest test = new SelfTest();
 		String saved = SeasonData.snapshot();
+		boolean mobs = dev.rubymod.game.GameConfig.get().hostileMobs;
+		dev.rubymod.game.GameConfig.get().hostileMobs = true; // some checks need zombies
 		try {
 			test.runAll(source.getLevel());
 		} catch (Throwable t) {
 			test.fail("crashed: " + t);
 			RubyMod.LOGGER.error("Self-test crashed", t);
 		} finally {
+			dev.rubymod.game.GameConfig.get().hostileMobs = mobs;
 			SeasonData.restore(saved);
 			SeasonData.save();
 		}
@@ -220,14 +223,14 @@ public final class SelfTest {
 		var bounties = Bounties.today(alpha);
 		check("bounties: three handed out on day 1", bounties.size() == 3);
 		Bounties.Bounty kills = new Bounties.Bounty();
-		kills.type = Bounties.Type.KILL_MONSTERS;
+		kills.type = Bounties.Type.GUN_HITS;
 		kills.target = 2;
 		kills.reward = 3;
 		bounties.set(0, kills);
 		int rubiesBefore = Shop.countRubies(alpha);
 		Zombie victim = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
-		Bounties.onKill(alpha, victim);
-		Bounties.onKill(alpha, victim);
+		Bounties.onGunHit(alpha, victim, false);
+		Bounties.onGunHit(alpha, victim, false);
 		check("bounties: finishing one pays rubies", kills.done && Shop.countRubies(alpha) == rubiesBefore + 3);
 
 		// ----- Guns -----

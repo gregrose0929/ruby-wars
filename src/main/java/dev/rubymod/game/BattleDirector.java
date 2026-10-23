@@ -197,9 +197,6 @@ public final class BattleDirector {
 		}
 		if (data.phase == Phase.BUILD) {
 			Bounties.today(player);
-			if (data.phase == Phase.BUILD) {
-				Research.onDayLogin(player, SeasonTicker.currentDay());
-			}
 		}
 		Research.sync(player);
 		player.sendSystemMessage(Component.literal("Ruby Wars: press Y for the Field Manual.").withStyle(ChatFormatting.GRAY));

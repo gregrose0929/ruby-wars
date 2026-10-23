@@ -88,6 +88,15 @@ public class MachineBlock extends BaseEntityBlock {
 	public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity by, ItemStack stack) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MachineBlockEntity be && by instanceof Player player) {
 			be.setOwner(player.getUUID());
+			String goal = switch (kind) {
+				case RUBY_DRILL -> "drill";
+				case TRADE_DEPOT -> "depot";
+				case COMBUSTION_GENERATOR, SOLAR_PANEL -> "power";
+				default -> null;
+			};
+			if (goal != null) {
+				dev.rubymod.game.Goals.add(level.getServer(), player.getUUID(), goal, 1);
+			}
 			if (kind == MachineKind.RUBY_DRILL) {
 				Grid.account(player.getUUID()).drills++;
 			}

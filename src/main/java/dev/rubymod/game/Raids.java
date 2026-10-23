@@ -264,8 +264,8 @@ public final class Raids {
 		Waypoints.clearGlobal(raid.heart);
 		int bonus = GameConfig.get().raidVictoryBonus;
 		Grid.deposit(raid.owner, bonus * 1000L);
-		Research.addPoints(raid.owner, 2);
-		tellSide(server, raid.owner, Component.literal("Raid repelled! " + raid.killed + " raiders down. +" + bonus + " rubies and 2 research points"
+		Goals.add(server, raid.owner, "raid", 1);
+		tellSide(server, raid.owner, Component.literal("Raid repelled! " + raid.killed + " raiders down. +" + bonus + " rubies"
 				+ (raid.looted > 0 ? " (they got " + raid.looted / 1000 + " rubies)" : "") + ".").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
 		for (ServerPlayer p : sidePlayers(server, raid.owner)) {
 			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.8F, 1.0F);

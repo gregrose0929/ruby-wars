@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"disguised=false": {
+			"model": "rubymod:block/holo_camo"
+		},
+		"disguised=true": {
+			"model": "rubymod:block/holo_camo"
+		}
+	}
+}

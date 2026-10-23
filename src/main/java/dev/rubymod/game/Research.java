@@ -16,9 +16,9 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
 /**
- * The research tree: advanced Armory gear starts locked. Research points come
- * from playing the build phase (1 per day you log in, 1 for clearing all three
- * daily bounties, 2 per repelled raid); spend them on unlocks in four branches.
+ * The research tree: advanced Armory gear starts locked. Research points (shown
+ * as stars) come from finishing Goals (place your Heart, mine ruby, repel a raid,
+ * win a duel...), never from time played; spend them on unlocks in four branches.
  * You can't unlock everything in one season, so squads split the tree.
  *
  * Basic guns, the Heart, base blocks, basic industry and basic defenses never
@@ -160,6 +160,6 @@ public final class Research {
 				unlocked.add(id);
 			}
 		}
-		Net.send(player, new MorePayloads.ResearchSync(r == null ? 0 : r.researchPoints, unlocked));
+		Net.send(player, new MorePayloads.ResearchSync(r == null ? 0 : r.researchPoints, unlocked, Goals.describe(player.getUUID())));
 	}
 }

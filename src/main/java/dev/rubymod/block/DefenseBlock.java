@@ -80,6 +80,9 @@ public class DefenseBlock extends BaseEntityBlock {
 
 	@Override
 	public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity by, ItemStack itemStack) {
+		if (!level.isClientSide() && by instanceof ServerPlayer player && SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ()) != null) {
+			dev.rubymod.game.Goals.add(player.level().getServer(), player.getUUID(), "defense", 1);
+		}
 		if (!level.isClientSide() && by instanceof ServerPlayer player
 				&& SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ()) == null) {
 			player.sendSystemMessage(Component.literal("Defenses only work inside a claim. Place your Ruby Heart first!")

@@ -108,6 +108,9 @@ public class SeasonData {
 		public int researchPoints;
 		public int researchDay = -1;
 		public Set<String> research = new HashSet<>();
+		/** Goal progress (counts or reached values) and finished goals; see Goals. */
+		public Map<String, Integer> goalProgress = new java.util.HashMap<>();
+		public Set<String> goalsDone = new HashSet<>();
 	}
 
 	public static SeasonData get() {

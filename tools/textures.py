@@ -87,6 +87,24 @@ def shade(img, rows):
 
 
 ITEMS = {
+    "jetpack": [
+        "................",
+        "...kkk....kkk...",
+        "..kdlgk..kdlgk..",
+        "..klggkkkkllgk..",
+        "..klggoOOoklgk..",
+        "..klggoGGoklgk..",
+        "..klggoOOoklgk..",
+        "..klggoGGoklgk..",
+        "..klggoOOoklgk..",
+        "..kdggkkkkdggk..",
+        "...kddk..kddk...",
+        "...kkkk..kkkk...",
+        "....ff....ff....",
+        "...fyf....fyf...",
+        "....f......f....",
+        "................",
+    ],
     "ruby": [
         "................",
         "................",
@@ -1057,6 +1075,15 @@ def blocks():
                 img[y][x] = rnd.choice([(78, 92, 48, 255), (96, 110, 58, 255), (70, 60, 38, 255), (54, 70, 36, 255)])
     b["camo_net"] = img
 
+    # Holo Camouflage (undisguised): a dark emitter panel with a cyan projection grid.
+    img = noise_tile((40, 46, 54), 4, 91)
+    for i in range(16):
+        for j in range(16):
+            if i % 4 == 0 or j % 4 == 0:
+                img[j][i] = (60, 170, 200, 255) if (i + j) % 8 else (120, 230, 255, 255)
+    outline(img, (24, 28, 34))
+    b["holo_camo"] = img
+
     # Reinforced glass: tinted pane with a steel frame and wire mesh.
     img = [[(150, 210, 230, 90)] * 16 for _ in range(16)]
     for i in range(16):
@@ -1182,8 +1209,33 @@ def bullet_hole():
     return img
 
 
+def jetpack_texture():
+    """64x32 skin for the jetpack model on players' backs (UV layout in client/Jetpack.java)."""
+    import random as _r
+    rnd = _r.Random(5)
+    img = [[(0, 0, 0, 0)] * 64 for _ in range(32)]
+
+    def fill(x0, y0, x1, y1, base, spread):
+        for y in range(y0, y1):
+            for x in range(x0, x1):
+                d = rnd.randint(-spread, spread)
+                img[y][x] = (max(0, min(255, base[0] + d)), max(0, min(255, base[1] + d)), max(0, min(255, base[2] + d)), 255)
+
+    fill(0, 0, 18, 10, (82, 92, 58), 6)        # harness plate (olive)
+    fill(22, 0, 30, 9, (48, 54, 34), 4)        # straps
+    fill(0, 12, 28, 24, (150, 154, 160), 8)    # tanks (steel)
+    for y in range(12, 24):                    # a ruby band around each tank
+        if y in (15, 16):
+            for x in range(0, 28):
+                img[y][x] = (170, 30, 50, 255)
+    fill(28, 12, 36, 20, (52, 54, 60), 4)      # valve caps
+    fill(40, 12, 48, 22, (40, 40, 44), 4)      # nozzles
+    return img
+
+
 def main(root):
     write_png(os.path.join(root, "textures/misc", "bullet_hole.png"), bullet_hole())
+    write_png(os.path.join(root, "textures/entity", "jetpack.png"), jetpack_texture())
     write_png(os.path.join(root, "textures/item", "gun_parts.png"), parts_atlas(40))
     write_png(os.path.join(root, "textures/block", "vehicle_parts.png"), parts_atlas(41))
     for name, rows in ITEMS.items():

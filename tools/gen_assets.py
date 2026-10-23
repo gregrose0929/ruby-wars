@@ -30,7 +30,7 @@ def write(path, obj):
 # ---------------------------------------------------------------- items
 SIMPLE_ITEMS = ["extended_mag", "red_dot_sight", "vertical_grip", "suppressor", "ruby", "light_ammo", "heavy_ammo", "shotgun_shell", "sniper_round", "ruby_cell", "frag_grenade", "smoke_grenade",
                 "air_strike_flare", "rocket", "mortar_shell", "cruise_missile", "rangefinder", "breaching_charge", "aa_missile", "at_missile", "c4", "blueprint",
-                "field_pack", "heavy_rucksack", "field_radio",
+                "field_pack", "heavy_rucksack", "field_radio", "jetpack",
                 "guard_contract", "at_guard_contract", "recon_drone", "paint_kit"]
 HANDHELD_ITEMS = ["builders_wand", "excavator", "ruby_sword", "ruby_pickaxe", "architect_wand", "remodeler"]
 ARMOR_ITEMS = ["ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"]
@@ -164,6 +164,11 @@ def gen_blocks(client_jar):
     cube_all("elevator")
     write(f"{ASSETS}/models/block/camo_net.json", {"parent": "minecraft:block/cube_all", "textures": {"all": f"{NS}:block/camo_net"}})
     simple_state("camo_net")
+    # Holo Camouflage: its own look until disguised (then the block entity draws the copied block).
+    write(f"{ASSETS}/models/block/holo_camo.json", {"parent": "minecraft:block/cube_all", "textures": {"all": f"{NS}:block/holo_camo"}})
+    write(f"{ASSETS}/blockstates/holo_camo.json", {"variants": {
+        "disguised=false": {"model": f"{NS}:block/holo_camo"}, "disguised=true": {"model": f"{NS}:block/holo_camo"}}})
+    client_item("holo_camo", f"{NS}:block/holo_camo")
     write(f"{ASSETS}/models/block/reinforced_glass.json", {"parent": "minecraft:block/cube_all",
           "textures": {"all": {"force_translucent": True, "sprite": f"{NS}:block/reinforced_glass"}}})
     simple_state("reinforced_glass")
@@ -247,8 +252,11 @@ LANG = {
     "key.rubymod.manual": "Field Manual",
     "key.rubymod.squad": "Squad",
     "key.rubymod.autopilot": "Autopilot (aircraft)",
+    "key.rubymod.flares": "Flares (aircraft)",
     "block.rubymod.war_grave": "War Grave",
     "item.rubymod.field_pack": "Field Pack",
+    "item.rubymod.jetpack": "Jetpack",
+    "block.rubymod.holo_camo": "Holo Camouflage",
     "item.rubymod.field_radio": "Field Radio",
     "item.rubymod.guard_contract": "Guard Contract: Rifleman",
     "item.rubymod.at_guard_contract": "Guard Contract: AT Gunner",
@@ -439,7 +447,7 @@ def gen_loot():
 
     for name in ["ruby_block", "ruby_heart", "armory", "sandbags", "concrete_wall", "reinforced_concrete", "sentry_turret",
                  "missile_interceptor", "radar_station", "alarm_block", "claymore", "landmine", "barbed_wire", "mortar", "missile_silo",
-                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor", "reinforced_glass", "floodlight", "conveyor", "tesla_coil", "elevator", "camo_net"]:
+                 "at_mine", "flak_cannon", "sam_site", "airfield_pad", "combustion_generator", "solar_panel", "battery", "ruby_drill", "ore_refinery", "ammo_factory", "trade_depot", "vault", "shield_generator", "point_defense", "constructor", "reinforced_glass", "floodlight", "conveyor", "tesla_coil", "elevator", "camo_net", "holo_camo"]:
         drop_self(name)
 
     def ore(name):

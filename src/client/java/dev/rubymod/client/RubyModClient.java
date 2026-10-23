@@ -71,6 +71,7 @@ public class RubyModClient implements ClientModInitializer {
 			}
 			Vehicles.tick(client, freeLookKey.isDown());
 			Killcam.tick(client);
+			Jetpack.tick(client);
 			dev.rubymod.client.map.MapCache.tick(client);
 			EngineSounds.tick(client);
 			dev.rubymod.client.map.LookPanel.tick(client);
@@ -222,6 +223,16 @@ public class RubyModClient implements ClientModInitializer {
 		HudElementRegistry.addLast(RubyMod.id("markers"), new dev.rubymod.client.map.Markers());
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
 		HudElementRegistry.addLast(RubyMod.id("zoom"), new ZoomHud());
+		HudElementRegistry.addLast(RubyMod.id("jetpack"), new Jetpack.Hud());
+		net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry.registerModelLayer(Jetpack.LAYER, Jetpack::layer);
+		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
+			if (renderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatar) {
+				@SuppressWarnings("unchecked")
+				var parent = (net.minecraft.client.renderer.entity.RenderLayerParent<net.minecraft.client.renderer.entity.state.AvatarRenderState,
+						net.minecraft.client.model.player.PlayerModel>) (Object) avatar;
+				helper.register(new Jetpack.Layer(parent, context.bakeLayer(Jetpack.LAYER)));
+			}
+		});
 		HudElementRegistry.addLast(RubyMod.id("minimap"), new dev.rubymod.client.map.Minimap());
 		HudElementRegistry.addLast(RubyMod.id("look"), new dev.rubymod.client.map.LookPanel());
 		HudElementRegistry.addLast(RubyMod.id("pilot_hud"), new PilotHud());
@@ -257,6 +268,7 @@ public class RubyModClient implements ClientModInitializer {
 		AircraftRenderer.registerLayers();
 		VehicleRenderer.registerLayers();
 		net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry.register(dev.rubymod.registry.ModBlockEntities.DEFENSE, SentryRenderer::new);
+		net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry.register(dev.rubymod.registry.ModBlockEntities.HOLO, HoloRenderer::new);
 		DroneRenderer.registerLayer();
 		EntityRendererRegistry.register(ModEntities.SOLDIER, SoldierRenderer::new);
 		EntityRendererRegistry.register(ModEntities.RECON_DRONE, DroneRenderer::new);

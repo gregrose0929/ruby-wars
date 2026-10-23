@@ -76,6 +76,11 @@ public class ModItems {
 	public static final Item RECON_DRONE = register("recon_drone", dev.rubymod.item.ReconDroneItem::new, new Item.Properties().stacksTo(4));
 	public static final Item PAINT_KIT = register("paint_kit", dev.rubymod.item.PaintKitItem::new, new Item.Properties().stacksTo(1));
 	public static final Item FIELD_RADIO = register("field_radio", dev.rubymod.item.FieldRadioItem::new, new Item.Properties().stacksTo(1));
+	/** Worn in the chest slot: hold Space in the air to fly. */
+	public static final Item JETPACK = register("jetpack", dev.rubymod.item.JetpackItem::new, new Item.Properties().stacksTo(1)
+			.component(net.minecraft.core.component.DataComponents.EQUIPPABLE,
+					net.minecraft.world.item.equipment.Equippable.builder(net.minecraft.world.entity.EquipmentSlot.CHEST)
+							.setEquipSound(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON).build()));
 	public static final Item FIELD_PACK = register("field_pack", p -> new dev.rubymod.item.BackpackItem(3, p), new Item.Properties().stacksTo(1));
 	public static final Item HEAVY_RUCKSACK = register("heavy_rucksack", p -> new dev.rubymod.item.BackpackItem(6, p),
 			new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON));

@@ -60,6 +60,13 @@ public final class GameEvents {
 	}
 
 	public static void register() {
+		// No hostile mobs (config: hostileMobs); raid soldiers, guards and animals are unaffected.
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+			if (!GameConfig.get().hostileMobs && entity instanceof net.minecraft.world.entity.monster.Enemy
+					&& entity.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) {
+				entity.discard();
+			}
+		});
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			GameConfig.load();
 			SeasonData.load(server);
@@ -83,6 +90,7 @@ public final class GameEvents {
 			Countermeasures.tick();
 			Range.tick(server);
 			Duels.tick(server);
+			Jetpacks.tick(server);
 			VersionCheck.tick(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
@@ -101,9 +109,10 @@ public final class GameEvents {
 						Bounties.sync(player);
 					}
 				}
-				if (SeasonData.get().phase == Phase.BUILD) {
+				Goals.tickSecond(server);
+				if (!GameConfig.get().hunger) {
 					for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-						Research.onDayLogin(player, SeasonTicker.currentDay());
+						player.getFoodData().setFoodLevel(20);
 					}
 				}
 			}
@@ -122,10 +131,13 @@ public final class GameEvents {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			Duels.onLeave(server, handler.getPlayer());
 			VersionCheck.onLeave(handler.getPlayer());
+			Jetpacks.forget(handler.getPlayer().getUUID());
 			CombatTag.onLeave(server, handler.getPlayer());
 			BattleDirector.onLeave(server, handler.getPlayer());
 		});
 
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.JetpackThrust.TYPE, (payload, context) ->
+				Jetpacks.setThrusting(context.player(), payload.on()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Hello.TYPE, (payload, context) ->
 				VersionCheck.onHello(context.player(), payload.build()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Ping.TYPE, (payload, context) ->
@@ -275,6 +287,10 @@ public final class GameEvents {
 		PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
 			if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
 				Bounties.onBlockBroken(serverPlayer, state);
+				if (state.is(dev.rubymod.registry.ModBlocks.RUBY_ORE) || state.is(dev.rubymod.registry.ModBlocks.DEEPSLATE_RUBY_ORE)) {
+					Goals.add(serverPlayer.level().getServer(), serverPlayer.getUUID(), "ruby10", 1);
+					Goals.add(serverPlayer.level().getServer(), serverPlayer.getUUID(), "ruby50", 1);
+				}
 				ExcavatorItem.afterBreak(serverLevel, serverPlayer, pos, state);
 			}
 		});

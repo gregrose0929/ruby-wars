@@ -109,11 +109,13 @@ public final class MorePayloads {
 	}
 
 	/** Server -> client: research points to spend and what's unlocked. */
-	public record ResearchSync(int points, List<String> unlocked) implements CustomPacketPayload {
+	/** Stars to spend, unlocked nodes, and goals as "id|title|progress|target|stars|done". */
+	public record ResearchSync(int points, List<String> unlocked, List<String> goals) implements CustomPacketPayload {
 		public static final Type<ResearchSync> TYPE = new Type<>(RubyMod.id("research_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, ResearchSync> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, ResearchSync::points,
 				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), ResearchSync::unlocked,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), ResearchSync::goals,
 				ResearchSync::new);
 
 		@Override
@@ -196,6 +198,17 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Client to server: the jetpack started or stopped firing. */
+	public record JetpackThrust(boolean on) implements CustomPacketPayload {
+		public static final Type<JetpackThrust> TYPE = new Type<>(RubyMod.id("jetpack_thrust"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, JetpackThrust> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, JetpackThrust::on, JetpackThrust::new);
+
+		@Override
+		public Type<JetpackThrust> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client to server on join: which build of the mod this player has. */
 	public record Hello(String build) implements CustomPacketPayload {
 		public static final Type<Hello> TYPE = new Type<>(RubyMod.id("hello"));
@@ -222,6 +235,7 @@ public final class MorePayloads {
 
 	public static void register() {
 		PayloadTypeRegistry.serverboundPlay().register(Hello.TYPE, Hello.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(JetpackThrust.TYPE, JetpackThrust.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DeathInfo.TYPE, DeathInfo.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Autopilot.TYPE, Autopilot.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BountySync.TYPE, BountySync.CODEC);

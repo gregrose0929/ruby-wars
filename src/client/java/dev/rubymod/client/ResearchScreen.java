@@ -27,6 +27,10 @@ public class ResearchScreen extends Screen {
 	private static final int NODE_H = 30;
 	private int nodeW = 118;
 	private final Map<Research.Node, int[]> boxes = new LinkedHashMap<>();
+	/** Which tab is showing: the goals checklist (how you earn stars) or the upgrade tree (how you spend them). */
+	private static boolean goalsTab = true;
+	private int[] goalsTabBox = new int[4];
+	private int[] treeTabBox = new int[4];
 
 	public ResearchScreen() {
 		super(Component.literal("Research"));
@@ -67,11 +71,16 @@ public class ResearchScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
-		layout();
 		int points = ClientState.research == null ? 0 : ClientState.research.points();
-		g.centeredText(font, "RESEARCH", width / 2, 10, 0xFF55D8FF);
-		g.centeredText(font, points + " point" + (points == 1 ? "" : "s") + " to spend", width / 2, 22, 0xFFFFC040);
-		g.centeredText(font, "1 a day, 1 for all bounties, 2 per raid repelled", width / 2, 33, 0xFF8A949E);
+		g.centeredText(font, "UPGRADES", width / 2, 8, 0xFF55D8FF);
+		g.centeredText(font, "\u2605 " + points + " star" + (points == 1 ? "" : "s") + " to spend", width / 2, 20, 0xFFFFC040);
+		goalsTabBox = tab(g, "GOALS: earn stars", width / 2 - 124, 31, goalsTab, mouseX, mouseY);
+		treeTabBox = tab(g, "UPGRADES: spend stars", width / 2 + 4, 31, !goalsTab, mouseX, mouseY);
+		if (goalsTab) {
+			drawGoals(g, mouseX, mouseY);
+			return;
+		}
+		layout();
 		String lastBranch = "";
 		Research.Node hovered = null;
 		for (Map.Entry<Research.Node, int[]> e : boxes.entrySet()) {
@@ -99,7 +108,7 @@ public class ResearchScreen extends Screen {
 			g.item(new ItemStack(item), x + 6, y + 9);
 			String title = font.plainSubstrByWidth(n.title(), nodeW - 30);
 			g.text(font, title, x + 26, y + 5, done ? 0xFF7CF59A : 0xFFFFFFFF, false);
-			g.text(font, done ? "Researched" : n.cost() + " points", x + 26, y + 17, done ? 0xFF5BE37D : affordable ? 0xFFFFC040 : 0xFF8A949E, false);
+			g.text(font, done ? "Unlocked" : n.cost() + " stars", x + 26, y + 17, done ? 0xFF5BE37D : affordable ? 0xFFFFC040 : 0xFF8A949E, false);
 			if (hover) {
 				hovered = n;
 			}
@@ -115,8 +124,66 @@ public class ResearchScreen extends Screen {
 		}
 	}
 
+	private static boolean inside(MouseButtonEvent event, int[] box) {
+		return event.x() >= box[0] && event.x() < box[0] + box[2] && event.y() >= box[1] && event.y() < box[1] + box[3];
+	}
+
+	private int[] tab(GuiGraphicsExtractor g, String label, int x, int y, boolean active, int mouseX, int mouseY) {
+		int w = 120;
+		int h = 13;
+		boolean hover = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
+		g.fill(x, y, x + w, y + h, active ? 0xF02A3A48 : hover ? 0xE0202830 : 0xC0141A20);
+		g.outline(x, y, w, h, active ? 0xFF55D8FF : 0xFF3A4048);
+		g.centeredText(font, label, x + w / 2, y + 3, active ? 0xFFFFFFFF : 0xFF9AA4AE);
+		return new int[] {x, y, w, h};
+	}
+
+	/** The goals checklist: what to do next, with progress and the stars each one gives. */
+	private void drawGoals(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+		List<String> goals = ClientState.research == null ? List.of() : ClientState.research.goals();
+		int cols = width >= 380 ? 2 : 1;
+		int colW = Math.min(250, (width - 24) / cols);
+		int x0 = (width - cols * colW - (cols - 1) * 8) / 2;
+		int rowH = 15;
+		int rows = (goals.size() + cols - 1) / cols;
+		for (int i = 0; i < goals.size(); i++) {
+			String[] f = goals.get(i).split("\\|");
+			if (f.length < 6) {
+				continue;
+			}
+			int progress = Integer.parseInt(f[2]);
+			int target = Integer.parseInt(f[3]);
+			int stars = Integer.parseInt(f[4]);
+			boolean done = Boolean.parseBoolean(f[5]);
+			int x = x0 + (i / rows) * (colW + 8);
+			int y = 52 + (i % rows) * rowH;
+			g.fill(x, y, x + colW, y + rowH - 2, done ? 0xC0153020 : 0xC0181D22);
+			g.text(font, done ? "\u2714" : "\u2610", x + 4, y + 3, done ? 0xFF5BE37D : 0xFF8A949E, false);
+			String right = (done ? "" : (target > 1 ? progress + "/" + target + "  " : "")) + "\u2605".repeat(stars);
+			String title = font.plainSubstrByWidth(f[1], colW - 26 - font.width(right));
+			g.text(font, title, x + 16, y + 3, done ? 0xFF7CF59A : 0xFFFFFFFF, false);
+			g.text(font, right, x + colW - 4 - font.width(right), y + 3, done ? 0xFF5BE37D : 0xFFFFC040, false);
+			if (!done && target > 1) {
+				g.fill(x + 16, y + rowH - 4, x + 16 + (int) ((colW - 20) * Math.min(1.0, progress / (double) target)), y + rowH - 3, 0xFFFFC040);
+			}
+		}
+		g.centeredText(font, "Each goal counts once. Squadmates share unlocks.",
+				width / 2, 56 + rows * rowH, 0xFF8A949E);
+	}
+
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+		if (inside(event, goalsTabBox)) {
+			goalsTab = true;
+			return true;
+		}
+		if (inside(event, treeTabBox)) {
+			goalsTab = false;
+			return true;
+		}
+		if (goalsTab) {
+			return super.mouseClicked(event, doubled);
+		}
 		for (Map.Entry<Research.Node, int[]> e : boxes.entrySet()) {
 			int x = e.getValue()[0];
 			int y = e.getValue()[1];

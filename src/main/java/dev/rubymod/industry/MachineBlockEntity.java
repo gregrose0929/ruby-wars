@@ -647,6 +647,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, worldPosition.getX() + 0.5, worldPosition.getY() + 1, worldPosition.getZ() + 0.5,
 					20, 0.4, 0.4, 0.4, 0.1);
 		}
+		dev.rubymod.game.Goals.reach(player.level().getServer(), player.getUUID(), "mk3", tier);
 		return kind().title + " upgraded to " + MachineKind.TIER_NAMES[tier - 1] + "!";
 	}
 

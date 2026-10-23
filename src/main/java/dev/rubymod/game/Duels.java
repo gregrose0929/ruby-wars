@@ -473,6 +473,9 @@ public final class Duels {
 
 	private static void win(MinecraftServer server, Duel duel, int winner) {
 		duel.endIn = 100;
+		if (!(duel.bot && winner == 1)) {
+			Goals.add(server, duel.players[winner], "duel", 1);
+		}
 		String result = duel.names[winner] + " wins " + duel.score[winner] + " - " + duel.score[1 - winner];
 		for (int i = 0; i < 2; i++) {
 			ServerPlayer p = online(server, duel.players[i]);

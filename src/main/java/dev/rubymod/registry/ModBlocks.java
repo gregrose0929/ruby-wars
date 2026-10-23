@@ -153,6 +153,10 @@ public class ModBlocks {
 	public static final Block CAMO_NET = register("camo_net", p -> new dev.rubymod.block.ShapedBlock(Shapes.block(), p),
 			props().mapColor(MapColor.COLOR_GREEN).strength(0.3F).sound(SoundType.WOOL).noOcclusion().noCollision());
 
+	/** Holo Camouflage: looks like any block you show it; solid to enemies, walk-through for your side. */
+	public static final Block HOLO_CAMO = register("holo_camo", dev.rubymod.block.HoloBlock::new,
+			props().mapColor(MapColor.GRASS).strength(1.5F, 3.0F).sound(SoundType.METAL).noOcclusion());
+
 	private static Block machine(String name, dev.rubymod.industry.MachineKind kind, net.minecraft.world.phys.shapes.VoxelShape shape) {
 		float strength = kind == dev.rubymod.industry.MachineKind.VAULT ? 25.0F : 5.0F;
 		Block block = register(name, p -> new dev.rubymod.industry.MachineBlock(kind, shape, p),

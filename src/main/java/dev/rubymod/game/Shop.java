@@ -162,12 +162,14 @@ public final class Shop {
 			item(34, ModBlocks.ELEVATOR, 2, 2);
 			item(35, ModBlocks.CAMO_NET, 16, 1);
 			item(20, ModBlocks.TESLA_COIL, 1, 35);
+			item(21, ModBlocks.HOLO_CAMO, 8, 4);
 
 			page = 3;
 			// Row 1: carrying
 			item(0, ModItems.FIELD_PACK, 1, 8);
 			item(1, ModItems.HEAVY_RUCKSACK, 1, 20);
 			item(2, ModItems.FIELD_RADIO, 1, 4);
+			item(3, ModItems.JETPACK, 1, 30);
 			// Row 2: support
 			item(9, ModItems.GUARD_CONTRACT, 1, 25);
 			item(10, ModItems.AT_GUARD_CONTRACT, 1, 40);
@@ -319,6 +321,7 @@ public final class Shop {
 					player.drop(bought, false, net.minecraft.util.Prediction.SERVER_ONLY);
 				}
 				player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.8F, 1.0F);
+				Goals.add(player.level().getServer(), player.getUUID(), "armory", 1);
 			}
 			fill(container, player, page);
 			return;

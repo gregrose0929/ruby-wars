@@ -25,9 +25,11 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class Bounties {
 	public enum Type {
+		/** Retired (no hostile mobs any more); kept so old saves still load. Never handed out. */
 		KILL_MONSTERS("Kill %d monsters", 15, 30, 3),
-		GUN_HITS("Land %d gun hits on monsters", 25, 50, 3),
-		HEADSHOTS("Score %d headshots on monsters", 5, 10, 4),
+		GUN_HITS("Land %d gun hits on targets (dummies, drones, raiders)", 25, 50, 3),
+		HEADSHOTS("Score %d headshots on targets", 5, 10, 4),
+		TRAVEL("Travel %d blocks in a vehicle or aircraft", 400, 900, 3),
 		MINE_STONE("Mine %d stone or deepslate", 128, 256, 2),
 		MINE_ORE("Mine %d ores of any kind", 12, 24, 3);
 
@@ -81,7 +83,7 @@ public final class Bounties {
 	public static List<Bounty> today(ServerPlayer player) {
 		SeasonData.PlayerRecord record = SeasonData.get().player(player.getUUID(), player.getName().getString());
 		int day = SeasonTicker.currentDay();
-		if (day > 0 && record.bountyDay != day) {
+		if (day > 0 && (record.bountyDay != day || record.bounties.stream().anyMatch(b -> b.type == null || b.type == Type.KILL_MONSTERS))) {
 			record.bountyDay = day;
 			record.bounties = roll(player.getRandom());
 			SeasonData.markDirty();
@@ -92,6 +94,7 @@ public final class Bounties {
 
 	private static List<Bounty> roll(RandomSource random) {
 		List<Type> types = new ArrayList<>(List.of(Type.values()));
+		types.remove(Type.KILL_MONSTERS);
 		List<Bounty> picked = new ArrayList<>();
 		for (int i = 0; i < 3 && !types.isEmpty(); i++) {
 			Type type = types.remove(random.nextInt(types.size()));
@@ -123,12 +126,7 @@ public final class Bounties {
 				player.sendSystemMessage(Component.literal("Bounty complete: " + String.format(type.text, bounty.target) + "! +"
 						+ bounty.reward + " rubies").withStyle(ChatFormatting.GOLD));
 				Alerts.ping(player, 1.5F);
-				SeasonData.PlayerRecord record = SeasonData.get().player(player.getUUID(), player.getName().getString());
-				if (allDone(record)) {
-					Research.addPoints(player.getUUID(), 1);
-					Research.sync(player);
-					player.sendSystemMessage(Component.literal("All of today's bounties done: +1 research point.").withStyle(ChatFormatting.AQUA));
-				}
+				Goals.add(player.level().getServer(), player.getUUID(), "bounties", 1);
 			}
 		}
 	}
@@ -139,8 +137,12 @@ public final class Bounties {
 		}
 	}
 
+	public static void onTravel(ServerPlayer player, int blocks) {
+		progress(player, Type.TRAVEL, blocks);
+	}
+
 	public static void onGunHit(ServerPlayer shooter, Entity target, boolean headshot) {
-		if (target instanceof Enemy) {
+		if (target instanceof net.minecraft.world.entity.LivingEntity && !(target instanceof net.minecraft.world.entity.player.Player)) {
 			progress(shooter, Type.GUN_HITS, 1);
 			if (headshot) {
 				progress(shooter, Type.HEADSHOTS, 1);

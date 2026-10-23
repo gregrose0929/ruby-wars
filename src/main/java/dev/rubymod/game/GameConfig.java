@@ -27,6 +27,10 @@ public class GameConfig {
 
 	// Season timing (minutes). 20160 minutes = 14 days.
 	public int buildPhaseMinutes = 20160;
+	/** Hostile mobs (zombies, creepers...) spawn at all. Off: Ruby Wars is about building and each other. */
+	public boolean hostileMobs = false;
+	/** Hunger drains. Off: the food bar stays full (health still regenerates slowly). */
+	public boolean hunger = false;
 	public int lockdownMinutes = 15;
 	public int warMinutes = 60;
 	public int suddenDeathMinutes = 20;

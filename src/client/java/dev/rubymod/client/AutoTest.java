@@ -573,6 +573,95 @@ public final class AutoTest {
 					then(12, mc -> shot(mc, "third-" + name));
 				}
 			}
+			case "newstuff" -> {
+				// --- No mobs, no hunger
+				then(5, mc -> {
+					command(mc, "gamemode survival @p");
+					command(mc, "difficulty normal");
+					command(mc, "execute at @p run summon minecraft:zombie ~3 ~ ~3");
+					command(mc, "execute at @p run summon minecraft:cow ~-3 ~ ~3");
+					mc.getSingleplayerServer().execute(() -> mc.getSingleplayerServer().getPlayerList().getPlayers().get(0).getFoodData().setFoodLevel(4));
+				});
+				then(40, mc -> {
+					long zombies = mc.level.getEntitiesOfClass(net.minecraft.world.entity.monster.zombie.Zombie.class, mc.player.getBoundingBox().inflate(20)).size();
+					long cows = mc.level.getEntitiesOfClass(net.minecraft.world.entity.animal.cow.Cow.class, mc.player.getBoundingBox().inflate(20)).size();
+					log("no mobs: zombies {} cows {}, food {}", zombies, cows, mc.player.getFoodData().getFoodLevel());
+				});
+				// --- Goals
+				then(5, mc -> {
+					IntegratedServer server = mc.getSingleplayerServer();
+					server.execute(() -> {
+						var p = server.getPlayerList().getPlayers().get(0);
+						dev.rubymod.game.Goals.add(server, p.getUUID(), "heart", 1);
+						dev.rubymod.game.Goals.add(server, p.getUUID(), "ruby10", 4);
+					});
+				});
+				then(20, mc -> {
+					log("goals: stars {}, first goals {}", ClientState.research == null ? -1 : ClientState.research.points(),
+							ClientState.research == null ? "none" : ClientState.research.goals().subList(0, 2));
+					shot(mc, "goal-complete");
+					mc.gui.setScreen(new ResearchScreen());
+				});
+				then(10, mc -> shot(mc, "goals-tab"));
+				then(2, mc -> mc.gui.setScreen(null));
+				// --- Jetpack
+				then(5, mc -> {
+					command(mc, "item replace entity @p armor.chest with rubymod:jetpack");
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+				});
+				then(10, mc -> {
+					heliY = mc.player.getY();
+					mc.options.keyJump.setDown(true);
+				});
+				for (int i = 0; i < 6; i++) {
+					then(10, mc -> log("jetpack: height +{} fuel bar shown {}", String.format("%.1f", mc.player.getY() - heliY), Jetpack.wearing(mc.player)));
+				}
+				then(1, mc -> {
+					shot(mc, "jetpack-hud");
+					mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+				});
+				then(6, mc -> shot(mc, "jetpack-back"));
+				then(2, mc -> {
+					mc.options.keyJump.setDown(false);
+					mc.options.setCameraType(CameraType.FIRST_PERSON);
+					command(mc, "execute as @p at @s run tp @s ~ -60 ~ 0 0");
+				});
+				then(30, mc -> log("jetpack: back on the ground, health {}", mc.player.getHealth()));
+				// --- Holo Camouflage: a 3-wide wall disguised as grass, 4 blocks ahead
+				then(5, mc -> {
+					IntegratedServer server = mc.getSingleplayerServer();
+					server.execute(() -> {
+						var p = server.getPlayerList().getPlayers().get(0);
+						var level = (net.minecraft.server.level.ServerLevel) p.level();
+						p.teleportTo(level, Math.floor(p.getX()) + 0.5, Math.floor(p.getY()), Math.floor(p.getZ()) + 0.5, java.util.Set.of(), 0, 0, true);
+						var base = p.blockPosition().south(4);
+						for (int dx = -1; dx <= 1; dx++) {
+							for (int dy = 0; dy <= 2; dy++) {
+								var pos = base.offset(dx, dy, 0);
+								level.setBlockAndUpdate(pos, dev.rubymod.registry.ModBlocks.HOLO_CAMO.defaultBlockState().setValue(dev.rubymod.block.HoloBlock.DISGUISED, true));
+								if (level.getBlockEntity(pos) instanceof dev.rubymod.block.HoloBlockEntity holo) {
+									holo.setOwner(p.getUUID());
+									holo.setDisguise(net.minecraft.world.level.block.Blocks.MOSSY_STONE_BRICKS.defaultBlockState());
+								}
+							}
+						}
+						var stranger = net.fabricmc.fabric.api.entity.FakePlayer.get(level,
+								new com.mojang.authlib.GameProfile(java.util.UUID.fromString("00000000-0000-0000-0000-0000000051b3"), "Stranger"));
+						var shape = level.getBlockState(base).getCollisionShape(level, base, net.minecraft.world.phys.shapes.CollisionContext.of(stranger));
+						var mine = level.getBlockState(base).getCollisionShape(level, base, net.minecraft.world.phys.shapes.CollisionContext.of(p));
+						log("holo: solid for a stranger {}, solid for its owner {}", !shape.isEmpty(), !mine.isEmpty());
+					});
+				});
+				then(20, mc -> shot(mc, "holo-wall"));
+				then(2, mc -> {
+					heliY = mc.player.getZ();
+					mc.options.keyUp.setDown(true);
+				});
+				then(40, mc -> {
+					mc.options.keyUp.setDown(false);
+					log("holo: owner walked from z {} to {} (wall at +4)", String.format("%.1f", heliY), String.format("%.1f", mc.player.getZ()));
+				});
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));

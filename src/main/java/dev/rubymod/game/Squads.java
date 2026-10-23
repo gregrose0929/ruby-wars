@@ -84,6 +84,7 @@ public final class Squads {
 		squad.members.add(player.getUUID().toString());
 		all().put(name.toLowerCase(), squad);
 		SeasonData.markDirty();
+		Goals.add(player.level().getServer(), player.getUUID(), "squad", 1);
 		return null;
 	}
 
@@ -125,6 +126,7 @@ public final class Squads {
 		squad.members.add(player.getUUID().toString());
 		SeasonData.markDirty();
 		tell(player.level().getServer(), squad, player.getName().getString() + " joined the squad.");
+		Goals.add(player.level().getServer(), player.getUUID(), "squad", 1);
 		return null;
 	}
 

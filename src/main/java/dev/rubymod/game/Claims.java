@@ -65,6 +65,7 @@ public final class Claims {
 	}
 
 	public static void onHeartPlaced(ServerLevel level, ServerPlayer player, BlockPos pos) {
+		Goals.add(level.getServer(), player.getUUID(), "heart", 1);
 		SeasonData data = SeasonData.get();
 		SeasonData.Claim claim = new SeasonData.Claim();
 		claim.owner = player.getUUID().toString();
@@ -175,6 +176,7 @@ public final class Claims {
 		claim.tier++;
 		claim.hp = claim.maxHp();
 		SeasonData.markDirty();
+		Goals.add(player.level().getServer(), player.getUUID(), "heart2", 1);
 		return "Heart upgraded to tier " + claim.tier + "! Claim radius is now " + claim.radius() + ", HP " + claim.maxHp() + ".";
 	}
 }
