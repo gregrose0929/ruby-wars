@@ -83,6 +83,7 @@ public final class GameEvents {
 			Countermeasures.tick();
 			Range.tick(server);
 			Duels.tick(server);
+			VersionCheck.tick(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
@@ -115,14 +116,18 @@ public final class GameEvents {
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			BattleDirector.onJoin(handler.getPlayer());
+			VersionCheck.onJoin(handler.getPlayer());
 			Duels.onJoin(handler.getPlayer());
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			Duels.onLeave(server, handler.getPlayer());
+			VersionCheck.onLeave(handler.getPlayer());
 			CombatTag.onLeave(server, handler.getPlayer());
 			BattleDirector.onLeave(server, handler.getPlayer());
 		});
 
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Hello.TYPE, (payload, context) ->
+				VersionCheck.onHello(context.player(), payload.build()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Ping.TYPE, (payload, context) ->
 				Waypoints.ping(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.LookQuery.TYPE, (payload, context) ->
@@ -220,6 +225,7 @@ public final class GameEvents {
 			}
 			if (damageTaken > 0) {
 				confirmHit(entity, source, false);
+				Duels.onHit(entity, source, damageTaken);
 			}
 		});
 		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
@@ -235,6 +241,9 @@ public final class GameEvents {
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity instanceof ServerPlayer player) {
 				BattleDirector.onDeath(player, source);
+				BattleDirector.sendDeathInfo(player, source);
+			} else {
+				Duels.onEntityDeath(entity, source);
 			}
 			confirmHit(entity, source, true);
 		});

@@ -77,6 +77,7 @@ public final class Gunfire {
 		boolean aiming = GunItem.isAiming(player);
 		float spread = aiming ? stats.aimSpread() : stats.hipSpread();
 		Vec3 eye = player.getEyePosition();
+		dev.rubymod.game.Duels.onShot(player, stats.pellets());
 		for (int i = 0; i < stats.pellets(); i++) {
 			Vec3 dir = withSpread(player.getLookAngle(), spread, player.getRandom());
 			trace(level, player, stats, eye, dir, stats.range(), stats.special() == GunStats.Special.BOUNCE ? 1 : 0);

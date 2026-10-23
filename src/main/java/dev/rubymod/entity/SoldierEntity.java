@@ -73,6 +73,8 @@ public class SoldierEntity extends PathfinderMob {
 	private int cooldown;
 	private int burst;
 	private int raidId = -1;
+	/** Duel practice bot: the player it hunts down (null for guards and raiders). */
+	private UUID prey;
 
 	public SoldierEntity(EntityType<? extends SoldierEntity> type, Level level) {
 		super(type, level);
@@ -131,6 +133,30 @@ public class SoldierEntity extends PathfinderMob {
 		s.equip();
 		s.setCustomName(Component.literal(role == AT_GUNNER ? "Raider AT Gunner" : "Raider").withStyle(ChatFormatting.RED));
 		return s;
+	}
+
+	/** The duel practice bot: a rifleman that hunts {@code prey} across the arena. */
+	public static SoldierEntity duelBot(ServerLevel level, BlockPos at, ServerPlayer prey) {
+		SoldierEntity s = dev.rubymod.registry.ModEntities.SOLDIER.create(level, EntitySpawnReason.EVENT);
+		if (s == null) {
+			return null;
+		}
+		s.entityData.set(RAIDER, true);
+		s.entityData.set(ROLE, RIFLEMAN);
+		s.prey = prey == null ? null : prey.getUUID();
+		s.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 180, 0);
+		s.equip();
+		s.setCustomName(Component.literal("Practice Bot").withStyle(ChatFormatting.RED));
+		return s;
+	}
+
+	/** The practice bot fights its player even in Peaceful (where vanilla stops mobs targeting players). */
+	@Override
+	public boolean canAttack(LivingEntity target) {
+		if (prey != null && target.getUUID().equals(prey)) {
+			return target.canBeSeenAsEnemy();
+		}
+		return super.canAttack(target);
 	}
 
 	private void equip() {
@@ -225,11 +251,24 @@ public class SoldierEntity extends PathfinderMob {
 		if (target != null) {
 			getLookControl().setLookAt(target, 30.0F, 30.0F);
 			double dist = distanceTo(target);
-			if (dist > (role() == AT_GUNNER ? 30 : 20)) {
+			if (dist > (role() == AT_GUNNER ? 30 : 20) || !hasLineOfSight(target)) {
+				// Too far, or behind cover: close in / find an angle instead of shooting the wall.
 				getNavigation().moveTo(target, 1.0);
 			} else {
 				getNavigation().stop();
 				fireAt(level, target);
+			}
+			return;
+		}
+		if (prey != null) {
+			// Practice bot: go find the player.
+			ServerPlayer hunted = level.getServer().getPlayerList().getPlayer(prey);
+			if (hunted != null && hunted.level() == level && tickCount % 20 == 0) {
+				if (hasLineOfSight(hunted) && distanceTo(hunted) < 40 && isHostileTo(hunted)) {
+					setTarget(hunted);
+				} else {
+					getNavigation().moveTo(hunted, 1.1);
+				}
 			}
 			return;
 		}
@@ -274,6 +313,10 @@ public class SoldierEntity extends PathfinderMob {
 		}
 		Vec3 from = getEyePosition().add(getLookAngle().scale(0.6));
 		Vec3 aim = target.position().add(0, target.getBbHeight() * 0.6, 0);
+		if (level.clip(new ClipContext(from, aim, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this)).getType() != HitResult.Type.MISS) {
+			// Body behind cover: aim for whatever sticks out (the head).
+			aim = target.getEyePosition();
+		}
 		if (role() == AT_GUNNER) {
 			if (!Armor.isArmored(target) && distanceTo(target) < 6) {
 				return; // too close for a rocket
@@ -296,7 +339,11 @@ public class SoldierEntity extends PathfinderMob {
 			if (Armor.isArmored(target)) {
 				Armor.hit(level, target, this, attackerOwner != null ? attackerOwner : this, 1.0F);
 			} else {
-				target.hurtServer(level, source, isRaider() ? GameConfig.get().raiderDamage : GameConfig.get().guardDamage);
+				// The practice bot hits as hard as your own AR-R rifle (raid soldiers are weaker on purpose).
+				float damage = prey != null ? ((dev.rubymod.gun.GunItem) ModItems.ARR_RIFLE).stats().damage()
+						: isRaider() ? GameConfig.get().raiderDamage : GameConfig.get().guardDamage;
+				target.setInvulnerableTime(0);
+				target.hurtServer(level, source, damage);
 			}
 		}
 		Vec3 step = stop.subtract(from);
@@ -386,6 +433,9 @@ public class SoldierEntity extends PathfinderMob {
 		if (objective != null) {
 			output.putLong("objective", objective.asLong());
 		}
+		if (prey != null) {
+			output.putString("prey", prey.toString());
+		}
 	}
 
 	@Override
@@ -401,8 +451,9 @@ public class SoldierEntity extends PathfinderMob {
 		if (!following() && !isRaider()) {
 			setHomeTo(post, 10);
 		}
-		if (isRaider()) {
-			// Raids don't survive a restart.
+		prey = input.getString("prey").map(UUID::fromString).orElse(null);
+		if (isRaider() && prey == null) {
+			// Raids don't survive a restart (a duel's practice bot does: its chunk can be saved mid-duel).
 			discard();
 		}
 	}

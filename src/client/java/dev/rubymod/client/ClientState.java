@@ -29,6 +29,9 @@ public final class ClientState {
 	/** The kill feed entry where you were the victim (for the death screen). */
 	public static dev.rubymod.net.Payloads.KillFeed lastDeath;
 	public static long lastDeathAt;
+	/** Who got you last (death card); deathInfoAt is when. */
+	public static dev.rubymod.net.MorePayloads.DeathInfo deathInfo;
+	public static long deathInfoAt;
 	/** Research points and unlocks. */
 	public static dev.rubymod.net.MorePayloads.ResearchSync research;
 

@@ -114,6 +114,33 @@ public final class Duels {
 	private record Challenge(UUID from, Mode mode, int kills, long expires) {
 	}
 
+	/** One side's numbers for the end-of-match scoreboard. */
+	private static final class Stats {
+		int kills;
+		int deaths;
+		int shots;
+		int hits;
+		float damage;
+		int longest;
+		int streak;
+		int bestStreak;
+		final Map<String, Integer> weapons = new HashMap<>();
+
+		void kill(String weapon, int distance) {
+			kills++;
+			streak++;
+			bestStreak = Math.max(bestStreak, streak);
+			longest = Math.max(longest, distance);
+			if (!weapon.isEmpty()) {
+				weapons.merge(weapon, 1, Integer::sum);
+			}
+		}
+
+		String favorite() {
+			return weapons.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("-");
+		}
+	}
+
 	private static final class Duel {
 		final Mode mode;
 		final UUID[] players;
@@ -127,13 +154,21 @@ public final class Duels {
 		final int[] mountIn = new int[2];
 		final UUID[] mount = new UUID[2];
 		final List<UUID> spawned = new ArrayList<>();
+		/** Side 1 is the practice bot (an AI soldier) instead of a player; players[1] is its current entity. */
+		final boolean bot;
+		final Stats[] stats = {new Stats(), new Stats()};
 		int endIn = -1;
 		int outside;
 
 		Duel(Mode mode, ServerPlayer a, ServerPlayer b, int target, int slot) {
+			this(mode, a, b.getUUID(), b.getName().getString(), false, target, slot);
+		}
+
+		Duel(Mode mode, ServerPlayer a, UUID b, String bName, boolean bot, int target, int slot) {
 			this.mode = mode;
-			this.players = new UUID[] {a.getUUID(), b.getUUID()};
-			this.names = new String[] {a.getName().getString(), b.getName().getString()};
+			this.players = new UUID[] {a.getUUID(), b};
+			this.names = new String[] {a.getName().getString(), bName};
+			this.bot = bot;
 			this.target = target;
 			this.slot = slot;
 			this.bar = new ServerBossEvent(UUID.randomUUID(), Component.literal(mode.title), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);
@@ -415,6 +450,12 @@ public final class Duels {
 		duel.score[1 - side]++;
 		ServerPlayer killer = online(server, duel.players[1 - side]);
 		boolean byOpponent = source.getEntity() != null && source.getEntity().getUUID().equals(duel.players[1 - side]);
+		duel.stats[side].deaths++;
+		duel.stats[side].streak = 0;
+		if (byOpponent) {
+			duel.stats[1 - side].kill(BattleDirector.weaponName(source.getEntity(), source), Math.round(source.getEntity().distanceTo(victim)));
+		}
+		BattleDirector.sendDeathInfo(victim, source);
 		String how = byOpponent ? duel.names[1 - side] + " got you" : "You died";
 		String score = duel.score[side] + " - " + duel.score[1 - side];
 		Alerts.title(victim, "KILLED", how + "  (" + score + ")  respawning...", ChatFormatting.RED);
@@ -442,6 +483,135 @@ public final class Duels {
 			}
 		}
 		Alerts.broadcast(server, Component.literal(duel.mode.title + ": " + result + ".").withStyle(ChatFormatting.GOLD));
+		for (int i = 0; i < 2; i++) {
+			ServerPlayer p = online(server, duel.players[i]);
+			if (p != null) {
+				for (Component line : scoreboard(duel, winner)) {
+					p.sendSystemMessage(line);
+				}
+			}
+		}
+	}
+
+	/** The end-of-match scoreboard: kills, deaths, accuracy, damage, longest kill, best streak, favorite weapon. */
+	private static List<Component> scoreboard(Duel duel, int winner) {
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.literal("====== " + duel.mode.title.toUpperCase() + " RESULTS ======").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		for (int i : new int[] {winner, 1 - winner}) {
+			Stats s = duel.stats[i];
+			String accuracy = s.shots > 0 ? Math.min(100, Math.round(s.hits * 100.0F / s.shots)) + "%" : "-";
+			lines.add(Component.literal((i == winner ? "\u2605 " : "  ") + duel.names[i] + "  " + duel.score[i] + " pts").withStyle(
+					i == winner ? ChatFormatting.YELLOW : ChatFormatting.WHITE, ChatFormatting.BOLD));
+			lines.add(Component.literal("    " + s.kills + (s.kills == 1 ? " kill, " : " kills, ") + s.deaths + (s.deaths == 1 ? " death" : " deaths")
+					+ ", accuracy " + accuracy + ", " + Math.round(s.damage) + " damage")
+					.withStyle(ChatFormatting.GRAY));
+			lines.add(Component.literal("    longest kill " + (s.longest > 0 ? s.longest + "m" : "-") + ", best streak " + s.bestStreak + ", favorite: "
+					+ s.favorite()).withStyle(ChatFormatting.GRAY));
+		}
+		return lines;
+	}
+
+	/** Gunfire: a duellist fired (pellets = shots, so a shotgun blast counts each pellet). */
+	public static void onShot(ServerPlayer shooter, int pellets) {
+		Duel duel = duelOf(shooter.getUUID());
+		if (duel != null && duel.endIn < 0) {
+			duel.stats[duel.side(shooter.getUUID())].shots += pellets;
+		}
+	}
+
+	/** Any damage: count the duellist's hits and damage on their opponent. */
+	public static void onHit(net.minecraft.world.entity.LivingEntity victim, DamageSource source, float amount) {
+		if (source.getEntity() == null || DUELS.isEmpty()) {
+			return;
+		}
+		Duel duel = duelOf(source.getEntity().getUUID());
+		if (duel == null || duel.endIn >= 0) {
+			return;
+		}
+		int side = duel.side(source.getEntity().getUUID());
+		if (!victim.getUUID().equals(duel.players[1 - side])) {
+			return;
+		}
+		duel.stats[side].damage += amount;
+		if (source.is(dev.rubymod.registry.ModDamage.BULLET) || source.is(dev.rubymod.registry.ModDamage.HEADSHOT)) {
+			duel.stats[side].hits++;
+		}
+	}
+
+	// ----- The practice bot -----
+
+	/** /duel guns bot: you against an AI soldier, same rules (first to N, respawns, scoreboard). */
+	public static String startBot(ServerPlayer player, Mode mode, int kills) {
+		if (mode != Mode.GUNS) {
+			return "The practice bot only does gun duels (it can't drive or fly yet). Try /duel guns bot";
+		}
+		String error = canJoin(player, "You");
+		if (error != null) {
+			return error;
+		}
+		MinecraftServer server = player.level().getServer();
+		ServerLevel arena = server.getLevel(ARENA);
+		if (arena == null) {
+			return "The duel arena dimension is missing.";
+		}
+		int slot = 0;
+		while (slotTaken(slot)) {
+			slot++;
+		}
+		Duel duel = new Duel(mode, player, UUID.randomUUID(), "Practice Bot", true, kills, slot);
+		saveSnapshot(player);
+		DUELS.add(duel);
+		clearEntities(arena, duel);
+		ArenaBuilder.build(arena, mode, duel.center());
+		player.stopRiding();
+		CHALLENGES.remove(player.getUUID());
+		duel.bar.addPlayer(player);
+		respawn(arena, duel, player);
+		spawnBot(arena, duel);
+		player.sendSystemMessage(Component.literal(mode.title + " vs the Practice Bot: first to " + kills
+				+ " kills wins. It hunts you down, so keep moving! /duel leave to quit.").withStyle(ChatFormatting.GOLD));
+		updateBar(duel);
+		return null;
+	}
+
+	private static void spawnBot(ServerLevel arena, Duel duel) {
+		Entity old = arena.getEntity(duel.players[1]);
+		if (old != null) {
+			old.discard();
+		}
+		BlockPos c = duel.center();
+		BlockPos at = new BlockPos(c.getX(), c.getY(), c.getZ() + duel.mode.spawnZ);
+		ServerPlayer prey = online(arena.getServer(), duel.players[0]);
+		var bot = dev.rubymod.entity.SoldierEntity.duelBot(arena, at, prey);
+		if (bot != null) {
+			arena.addFreshEntity(bot);
+			duel.players[1] = bot.getUUID();
+		}
+	}
+
+	/** A non-player died: if it's a duel's practice bot, that's a point for the player. */
+	public static void onEntityDeath(net.minecraft.world.entity.LivingEntity entity, DamageSource source) {
+		for (Duel duel : DUELS) {
+			if (!duel.bot || !entity.getUUID().equals(duel.players[1]) || duel.endIn >= 0 || duel.respawnIn[1] > 0) {
+				continue;
+			}
+			MinecraftServer server = entity.level().getServer();
+			duel.score[0]++;
+			duel.respawnIn[1] = RESPAWN_TICKS;
+			duel.stats[1].deaths++;
+			duel.stats[1].streak = 0;
+			ServerPlayer player = online(server, duel.players[0]);
+			if (source.getEntity() == player && player != null) {
+				duel.stats[0].kill(BattleDirector.weaponName(player, source), Math.round(player.distanceTo(entity)));
+				Alerts.title(player, "+1", "You got the bot  (" + duel.score[0] + " - " + duel.score[1] + ")", ChatFormatting.GREEN);
+				player.level().playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.2F);
+			}
+			updateBar(duel);
+			if (duel.score[0] >= duel.target) {
+				win(server, duel, 0);
+			}
+			return;
+		}
 	}
 
 	/** After a real death somehow got through (it shouldn't), put a duellist back in the arena. */
@@ -521,6 +691,9 @@ public final class Duels {
 					finish(server, duel);
 				}
 				continue;
+			}
+			if (duel.bot && duel.respawnIn[1] > 0 && --duel.respawnIn[1] == 0 && arena != null) {
+				spawnBot(arena, duel);
 			}
 			for (int i = 0; i < 2; i++) {
 				ServerPlayer p = online(server, duel.players[i]);

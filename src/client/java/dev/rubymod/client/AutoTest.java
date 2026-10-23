@@ -485,6 +485,77 @@ public final class AutoTest {
 					shot(mc, "crew-kill-cow");
 				});
 			}
+			case "bot" -> {
+				then(5, mc -> command(mc, "execute as @p run duel guns bot 2"));
+				then(60, mc -> {
+					log("bot duel: dim {}, score {}", mc.player.level().dimension().identifier(), botScore(mc));
+					IntegratedServer server = mc.getSingleplayerServer();
+					server.execute(() -> {
+						var p = server.getPlayerList().getPlayers().get(0);
+						var bots = p.level().getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, p.getBoundingBox().inflate(200));
+						log("bot duel server: {} soldiers near, player at {}, first {}", bots.size(), p.blockPosition(), bots.isEmpty() ? "-" : bots.get(0).blockPosition()
+								+ " target " + bots.get(0).getTarget() + " removed " + bots.get(0).isRemoved());
+					});
+					shot(mc, "bot-start");
+				});
+				// Fight: auto-aim at the bot (the AutoTest tick aims at `track`) and shoot.
+				for (int i = 0; i < 480; i++) {
+					int n = i;
+					then(4, mc -> {
+						if (track == null || !track.isAlive()) {
+							track = null;
+							for (var e : mc.level.entitiesForRendering()) {
+								if (e instanceof dev.rubymod.entity.SoldierEntity) {
+									track = e;
+								}
+							}
+						}
+						if (ClientState.deathInfo != null && System.currentTimeMillis() - ClientState.deathInfoAt < 400 && !botShotKillcam) {
+							botShotKillcam = true;
+							shot(mc, "bot-killcam");
+							log("bot death card: {} (killcam {})", GameHud.deathLine(ClientState.deathInfo), Killcam.active());
+						}
+						if (mc.player.isSpectator() || track == null) {
+							return;
+						}
+						Integer ammo = mc.player.getMainHandItem().get(dev.rubymod.registry.ModComponents.AMMO);
+						if (ammo != null && ammo == 0) {
+							ClientPlayNetworking.send(new Payloads.Reload());
+						} else if (botShotKillcam && mc.player.hasLineOfSight(track) && n % 3 == 0) { // hold fire until the bot gets a kill
+							ClientPlayNetworking.send(new Payloads.Fire());
+						}
+						if (n % 25 == 0) {
+							IntegratedServer server = mc.getSingleplayerServer();
+							int botId = track.getId();
+							server.execute(() -> {
+								var p = server.getPlayerList().getPlayers().get(0);
+								if (p.level().getEntity(botId) instanceof dev.rubymod.entity.SoldierEntity b) {
+									log("bot server: target {}, hostile to me {}, sees me {}, my mode {}", b.getTarget() == null ? "none" : b.getTarget().getName().getString(),
+											b.isHostileTo(p), b.hasLineOfSight(p), p.gameMode.getGameModeForPlayer());
+								}
+							});
+							log("bot duel t{}: score {}, bot hp {} at {} (dist {}), my hp {}, bot target {}", n, botScore(mc), ((net.minecraft.world.entity.LivingEntity) track).getHealth(),
+									track.blockPosition(), Math.round(track.distanceTo(mc.player)), mc.player.getHealth(),
+									((net.minecraft.world.entity.Mob) track).getTarget());
+						}
+					});
+				}
+				then(5, mc -> {
+					log("bot duel end: score {}, dim {}", botScore(mc), mc.player.level().dimension().identifier());
+					shot(mc, "bot-scoreboard");
+					track = null;
+				});
+				// Update notice: pretend this client has an old modpack.
+				then(120, mc -> {
+					IntegratedServer server = mc.getSingleplayerServer();
+					server.execute(() -> {
+						var p = server.getPlayerList().getPlayers().get(0);
+						dev.rubymod.game.VersionCheck.onHello(p, "oldbuild");
+						dev.rubymod.game.VersionCheck.onJoin(p);
+					});
+				});
+				then(110, mc -> shot(mc, "version-notice"));
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));
@@ -1103,6 +1174,13 @@ public final class AutoTest {
 	}
 
 	private static int dropped;
+	private static boolean botShotKillcam;
+
+	private static String botScore(Minecraft mc) {
+		IntegratedServer server = mc.getSingleplayerServer();
+		var p = server.getPlayerList().getPlayers().get(0);
+		return String.valueOf(dev.rubymod.game.Duels.score(p));
+	}
 	private static double heliY;
 	private static float heliHp;
 

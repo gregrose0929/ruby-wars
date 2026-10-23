@@ -384,16 +384,40 @@ public final class BattleDirector {
 		SeasonData.save();
 	}
 
-	private static void broadcastKill(MinecraftServer server, ServerPlayer killer, ServerPlayer victim, DamageSource source) {
-		String weapon;
+	/** What a kill was made with, for the kill feed, the death card and duel stats. */
+	public static String weaponName(net.minecraft.world.entity.Entity killer, DamageSource source) {
 		if (source.is(ModDamage.TURRET)) {
-			weapon = "Sentry Turret";
-		} else if (source.getDirectEntity() instanceof Projectile projectile) {
-			weapon = projectile.getName().getString();
-		} else {
-			ItemStack held = killer.getMainHandItem();
-			weapon = held.isEmpty() ? "Fists" : held.getHoverName().getString();
+			return "Sentry Turret";
 		}
+		if (source.getDirectEntity() instanceof Projectile projectile) {
+			return projectile.getName().getString();
+		}
+		if (source.getDirectEntity() instanceof dev.rubymod.entity.AircraftEntity aircraft && source.getDirectEntity() != killer) {
+			return "the " + aircraft.getName().getString() + " exploding";
+		}
+		if (killer instanceof net.minecraft.world.entity.LivingEntity living) {
+			if (living.getVehicle() != null && (source.getDirectEntity() == null || source.getDirectEntity() == killer)) {
+				return living.getVehicle().getName().getString();
+			}
+			ItemStack held = living.getMainHandItem();
+			return held.isEmpty() ? "Fists" : held.getHoverName().getString();
+		}
+		return killer == null ? "" : killer.getName().getString();
+	}
+
+	/** Tell a player who just died who got them (the death card and killcam). */
+	public static void sendDeathInfo(ServerPlayer victim, DamageSource source) {
+		net.minecraft.world.entity.Entity killer = source.getEntity();
+		if (killer == null || killer == victim) {
+			Net.send(victim, new dev.rubymod.net.MorePayloads.DeathInfo("", source.getLocalizedDeathMessage(victim).getString(), 0, -1, false));
+			return;
+		}
+		Net.send(victim, new dev.rubymod.net.MorePayloads.DeathInfo(killer.getDisplayName().getString(), weaponName(killer, source),
+				Math.round(killer.distanceTo(victim)), killer.level() == victim.level() ? killer.getId() : -1, source.is(ModDamage.HEADSHOT)));
+	}
+
+	private static void broadcastKill(MinecraftServer server, ServerPlayer killer, ServerPlayer victim, DamageSource source) {
+		String weapon = weaponName(killer, source);
 		boolean headshot = source.is(ModDamage.HEADSHOT);
 		Payloads.KillFeed payload = new Payloads.KillFeed(killer.getName().getString(), victim.getName().getString(), weapon, headshot);
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {

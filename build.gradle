@@ -47,6 +47,36 @@ processResources {
 	}
 }
 
+// Build ID: a fingerprint of the code and data (line endings ignored, so a Windows build and the server's
+// Linux build of the same commit match). The server tells players whose mod doesn't match to update.
+def buildIdDir = layout.buildDirectory.dir("generated/buildid")
+def buildIdSources = fileTree("src") { include "**/*.java", "**/*.json" }
+def buildIdRoot = projectDir
+def buildIdTask = tasks.register("buildId") {
+	inputs.files(buildIdSources).withPathSensitivity(PathSensitivity.RELATIVE)
+	outputs.dir(buildIdDir)
+	doLast {
+		def digest = java.security.MessageDigest.getInstance("SHA-256")
+		def root = buildIdRoot.toPath()
+		def files = buildIdSources.files.collect { [root.relativize(it.toPath()).toString().replace('\\', '/'), it] }.sort { it[0] }
+		for (pair in files) {
+			digest.update((pair[0] as String).getBytes("UTF-8"))
+			byte[] bytes = (pair[1] as File).bytes
+			def text = new ByteArrayOutputStream(bytes.length)
+			for (byte b : bytes) {
+				if (b != 13) {
+					text.write(b)
+				}
+			}
+			digest.update(text.toByteArray())
+		}
+		def out = buildIdDir.get().file("rubymod_build.txt").asFile
+		out.parentFile.mkdirs()
+		out.text = digest.digest().encodeHex().toString().substring(0, 12)
+	}
+}
+sourceSets.main.resources.srcDir(buildIdTask)
+
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 25
 }

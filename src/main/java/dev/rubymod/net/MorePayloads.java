@@ -196,7 +196,33 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Client to server on join: which build of the mod this player has. */
+	public record Hello(String build) implements CustomPacketPayload {
+		public static final Type<Hello> TYPE = new Type<>(RubyMod.id("hello"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Hello> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, Hello::build, Hello::new);
+
+		@Override
+		public Type<Hello> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server to a player who just died: who got them, with what, from how far (killerId for the killcam, -1 if none). */
+	public record DeathInfo(String killer, String weapon, int distance, int killerId, boolean headshot) implements CustomPacketPayload {
+		public static final Type<DeathInfo> TYPE = new Type<>(RubyMod.id("death_info"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DeathInfo> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, DeathInfo::killer, ByteBufCodecs.STRING_UTF8, DeathInfo::weapon, ByteBufCodecs.VAR_INT, DeathInfo::distance,
+				ByteBufCodecs.VAR_INT, DeathInfo::killerId, ByteBufCodecs.BOOL, DeathInfo::headshot, DeathInfo::new);
+
+		@Override
+		public Type<DeathInfo> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.serverboundPlay().register(Hello.TYPE, Hello.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DeathInfo.TYPE, DeathInfo.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Autopilot.TYPE, Autopilot.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BountySync.TYPE, BountySync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaidStatus.TYPE, RaidStatus.CODEC);

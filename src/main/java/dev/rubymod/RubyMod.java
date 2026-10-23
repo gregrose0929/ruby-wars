@@ -28,6 +28,16 @@ import org.slf4j.LoggerFactory;
 public class RubyMod implements ModInitializer {
 	public static final String MOD_ID = "rubymod";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+	/** Fingerprint of this build's code (see build.gradle); the server and client compare it on join. */
+	public static final String BUILD_ID = readBuildId();
+
+	private static String readBuildId() {
+		try (var in = RubyMod.class.getResourceAsStream("/rubymod_build.txt")) {
+			return in == null ? "dev" : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+		} catch (java.io.IOException e) {
+			return "dev";
+		}
+	}
 
 	@Override
 	public void onInitialize() {

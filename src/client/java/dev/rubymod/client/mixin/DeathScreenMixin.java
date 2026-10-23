@@ -21,8 +21,15 @@ public abstract class DeathScreenMixin {
 		var font = mc.font;
 		int w = g.guiWidth();
 		int y = 20;
+		var info = ClientState.deathInfo;
 		var kill = ClientState.lastDeath;
-		if (kill != null && System.currentTimeMillis() - ClientState.lastDeathAt < 15000) {
+		if (info != null && System.currentTimeMillis() - ClientState.deathInfoAt < 15000) {
+			String line = dev.rubymod.client.GameHud.deathLine(info);
+			int tw = font.width(line) + 16;
+			g.fill(w / 2 - tw / 2, y - 3, w / 2 + tw / 2, y + 10, 0xA0000000);
+			g.centeredText(font, line, w / 2, y, 0xFFFF7A7A);
+			y += 13;
+		} else if (kill != null && System.currentTimeMillis() - ClientState.lastDeathAt < 15000) {
 			String line = "Killed by " + kill.killer() + " with " + kill.weapon() + (kill.headshot() ? " (headshot)" : "");
 			int tw = font.width(line) + 16;
 			g.fill(w / 2 - tw / 2, y - 3, w / 2 + tw / 2, y + 10, 0xA0000000);

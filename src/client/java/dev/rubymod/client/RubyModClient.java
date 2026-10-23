@@ -70,6 +70,7 @@ public class RubyModClient implements ClientModInitializer {
 				}
 			}
 			Vehicles.tick(client, freeLookKey.isDown());
+			Killcam.tick(client);
 			dev.rubymod.client.map.MapCache.tick(client);
 			EngineSounds.tick(client);
 			dev.rubymod.client.map.LookPanel.tick(client);
@@ -205,6 +206,13 @@ public class RubyModClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(Payloads.Shake.TYPE, (payload, context) -> {
 			ClientState.shake = Math.max(ClientState.shake, payload.strength());
 			ClientState.shakeTicks = Math.max(ClientState.shakeTicks, payload.ticks());
+		});
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
+				ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.Hello(RubyMod.BUILD_ID)));
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.DeathInfo.TYPE, (payload, context) -> {
+			ClientState.deathInfo = payload;
+			ClientState.deathInfoAt = System.currentTimeMillis();
+			Killcam.start(context.client(), payload.killerId());
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			dev.rubymod.client.map.MapCache.save();

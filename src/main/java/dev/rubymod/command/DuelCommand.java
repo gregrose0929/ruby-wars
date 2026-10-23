@@ -27,6 +27,11 @@ public final class DuelCommand {
 		LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("duel").executes(DuelCommand::help);
 		for (Duels.Mode mode : Duels.Mode.values()) {
 			root.then(Commands.literal(mode.id)
+					.then(Commands.literal("bot")
+							.executes(c -> result(c, Duels.startBot(c.getSource().getPlayerOrException(), mode, 10), null))
+							.then(Commands.argument("kills", IntegerArgumentType.integer(1, 100))
+									.executes(c -> result(c, Duels.startBot(c.getSource().getPlayerOrException(), mode,
+											IntegerArgumentType.getInteger(c, "kills")), null))))
 					.then(Commands.argument("player", EntityArgument.player())
 							.executes(c -> challenge(c, mode, 10))
 							.then(Commands.argument("kills", IntegerArgumentType.integer(1, 100))
@@ -73,6 +78,8 @@ public final class DuelCommand {
 			source.sendSystemMessage(Component.literal("/duel " + mode.id + " <player> [kills]").withStyle(ChatFormatting.YELLOW)
 					.append(Component.literal(": " + Duels.kitSummary(mode)).withStyle(ChatFormatting.GRAY)));
 		}
+		source.sendSystemMessage(Component.literal("/duel guns bot [kills]").withStyle(ChatFormatting.YELLOW)
+				.append(Component.literal(": practice against an AI soldier").withStyle(ChatFormatting.GRAY)));
 		source.sendSystemMessage(Component.literal("/duel accept, /duel decline, /duel leave, /duel list").withStyle(ChatFormatting.YELLOW));
 		return 1;
 	}

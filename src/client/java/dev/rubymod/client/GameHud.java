@@ -48,6 +48,7 @@ public class GameHud implements HudElement {
 		drawRadar(g, font, w);
 		drawKillFeed(g, font, w);
 		drawHitConfirm(g, font, w, h);
+		drawDeathCard(g, font, w, h);
 		var raid = ClientState.raid;
 		if (raid != null && raid.raiders() > 0 && System.currentTimeMillis() - ClientState.raidAt < 2500) {
 			String text = "RAID  " + raid.raiders() + " raider" + (raid.raiders() == 1 ? "" : "s") + " left  " + formatTime(raid.seconds())
@@ -67,6 +68,31 @@ public class GameHud implements HudElement {
 
 		if (ClientState.hud != null && ClientState.hud.eliminated()) {
 			g.centeredText(font, Component.literal("ELIMINATED - spectating"), w / 2, h - 60, RED);
+		}
+	}
+
+	/** "Killed by Sam with the AR-R Rifle from 34m" (or what got you, if nobody did). */
+	public static String deathLine(dev.rubymod.net.MorePayloads.DeathInfo info) {
+		if (info.killer().isEmpty()) {
+			return info.weapon();
+		}
+		return "Killed by " + info.killer() + (info.weapon().isEmpty() ? "" : " with " + info.weapon())
+				+ (info.distance() > 0 ? " from " + info.distance() + "m" : "") + (info.headshot() ? " (headshot)" : "");
+	}
+
+	/** The death card when there's no death screen (duels respawn you without one). */
+	private void drawDeathCard(GuiGraphicsExtractor g, Font font, int w, int h) {
+		var info = ClientState.deathInfo;
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (info == null || mc.gui.screen() != null || System.currentTimeMillis() - ClientState.deathInfoAt > 3500) {
+			return;
+		}
+		String line = deathLine(info);
+		int width = font.width(line) + 16;
+		panel(g, w / 2 - width / 2, 34, w / 2 + width / 2, 49);
+		g.centeredText(font, line, w / 2, 38, RED);
+		if (Killcam.active()) {
+			g.centeredText(font, "KILLCAM", w / 2, 52, GOLD);
 		}
 	}
 
