@@ -9,7 +9,7 @@
 #   2. Creates a "minecraft" user and /opt/rubywars.
 #   3. Downloads the Ruby Wars source from GitHub and builds the mod jar.
 #   4. Downloads the Fabric server launcher (Minecraft 26.3) and the server-side mods
-#      from Modrinth: Fabric API, Lithium, FerriteCore, Simple Voice Chat, AppleSkin.
+#      from Modrinth: Fabric API, Lithium, FerriteCore, Simple Voice Chat, AppleSkin, Chunky (world pregeneration).
 #   5. Writes eula.txt, a starter server.properties (only if there isn't one), and start.sh.
 #   6. Installs a systemd service (starts on boot, stops cleanly) and a 5 AM daily restart.
 #   7. Opens ports 25565/tcp and 24454/udp if ufw is on, then starts the server.
@@ -41,7 +41,7 @@ fi
 OP="${OP:-}"
 JAR="${JAR:-}"
 MC_VERSION="26.3"
-SERVER_MODS=(fabric-api lithium ferrite-core simple-voice-chat appleskin)
+SERVER_MODS=(fabric-api lithium ferrite-core simple-voice-chat appleskin chunky)
 
 # --test DIR: build and download into DIR as the current user, skipping packages, users,
 # systemd and the firewall (for trying the script out). Needs java 25 on PATH.
