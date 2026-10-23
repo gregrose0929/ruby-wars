@@ -108,7 +108,7 @@ public final class Bounties {
 	}
 
 	private static void progress(ServerPlayer player, Type type, int amount) {
-		if (SeasonData.get().phase != Phase.BUILD) {
+		if (SeasonData.get().phase != Phase.BUILD || !Hub.inRubyWarsWorld(player)) {
 			return;
 		}
 		for (Bounty bounty : today(player)) {

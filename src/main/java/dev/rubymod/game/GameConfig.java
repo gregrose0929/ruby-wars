@@ -31,6 +31,8 @@ public class GameConfig {
 	public boolean hostileMobs = false;
 	/** Hunger drains. Off: the food bar stays full (health still regenerates slowly). */
 	public boolean hunger = false;
+	/** Send players to the hub (pick a game: Ruby Wars or Co-op Horde) when they join a dedicated server. */
+	public boolean hub = true;
 	public int lockdownMinutes = 15;
 	public int warMinutes = 60;
 	public int suddenDeathMinutes = 20;

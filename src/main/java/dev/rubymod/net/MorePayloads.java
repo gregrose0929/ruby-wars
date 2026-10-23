@@ -136,6 +136,32 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Client -> server: switch game ("rubywars", "horde", "hub"), or "" just to ask for the game picker's info. */
+	public record ModeSelect(String mode) implements CustomPacketPayload {
+		public static final Type<ModeSelect> TYPE = new Type<>(RubyMod.id("mode_select"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ModeSelect> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ModeSelect::mode, ModeSelect::new);
+
+		@Override
+		public Type<ModeSelect> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: where you are (Hub.Where) and one "id|title|status" line per game, for the game picker. */
+	public record ModeInfo(String where, List<String> modes) implements CustomPacketPayload {
+		public static final Type<ModeInfo> TYPE = new Type<>(RubyMod.id("mode_info"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ModeInfo> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ModeInfo::where,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), ModeInfo::modes,
+				ModeInfo::new);
+
+		@Override
+		public Type<ModeInfo> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: a bullet hole at this point on a block face (size: 0 small, 1 normal, 2 large). */
 	public record BulletHole(float x, float y, float z, byte face, byte size) implements CustomPacketPayload {
 		public static final Type<BulletHole> TYPE = new Type<>(RubyMod.id("bullet_hole"));
@@ -248,5 +274,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(MapSync.TYPE, MapSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(LookInfo.TYPE, LookInfo.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ResearchSync.TYPE, ResearchSync.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ModeSelect.TYPE, ModeSelect.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(ModeInfo.TYPE, ModeInfo.CODEC);
 	}
 }

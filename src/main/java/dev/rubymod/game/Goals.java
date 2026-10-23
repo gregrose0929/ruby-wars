@@ -48,6 +48,7 @@ public final class Goals {
 			new Goal("bounties", "Finish 3 bounties", 3, 1),
 			new Goal("raid", "Repel a raid", 1, 2),
 			new Goal("duel", "Win a duel (bot counts)", 1, 1),
+			new Goal("horde5", "Reach wave 5 in Co-op Horde", 1, 1),
 			new Goal("drive", "Drive 300 blocks", 300, 1),
 			new Goal("fly", "Fly 1,000 blocks", 1000, 2));
 
@@ -151,7 +152,7 @@ public final class Goals {
 			var vehicle = p.getVehicle();
 			boolean driving = vehicle instanceof VehicleEntity v && v.getControllingPassenger() == p;
 			boolean flying = vehicle instanceof AircraftEntity a && a.getControllingPassenger() == p && !a.onGround();
-			if (!driving && !flying || Duels.inDuel(p)) {
+			if (!driving && !flying || !Hub.inRubyWarsWorld(p)) {
 				LAST_RIDE_POS.remove(id);
 				continue;
 			}

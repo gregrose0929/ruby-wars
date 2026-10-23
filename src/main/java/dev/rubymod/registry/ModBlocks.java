@@ -170,6 +170,19 @@ public class ModBlocks {
 		return MACHINES;
 	}
 
+	// --- Hub portals (no item: they only exist in the hub) ---
+	public static final Block RUBY_PORTAL = registerNoItem("ruby_portal", p -> new dev.rubymod.block.ModePortalBlock(0xFF3030, p),
+			props().mapColor(MapColor.FIRE).strength(-1.0F, 3_600_000.0F).noCollision().noOcclusion().noLootTable().lightLevel(s -> 11)
+					.sound(SoundType.GLASS).pushReaction(PushReaction.IMMOVEABLE));
+	public static final Block HORDE_PORTAL = registerNoItem("horde_portal", p -> new dev.rubymod.block.ModePortalBlock(0x40FF60, p),
+			props().mapColor(MapColor.EMERALD).strength(-1.0F, 3_600_000.0F).noCollision().noOcclusion().noLootTable().lightLevel(s -> 11)
+					.sound(SoundType.GLASS).pushReaction(PushReaction.IMMOVEABLE));
+
+	private static Block registerNoItem(String name, Function<BlockBehaviour.Properties, Block> factory, BlockBehaviour.Properties properties) {
+		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, RubyMod.id(name));
+		return Registry.register(BuiltInRegistries.BLOCK, key, factory.apply(properties.setId(key)));
+	}
+
 	private static Block registerModelOnly(String name) {
 		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, RubyMod.id(name));
 		return Registry.register(BuiltInRegistries.BLOCK, key, new Block(props().noOcclusion().noLootTable().setId(key)));

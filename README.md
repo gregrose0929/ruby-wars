@@ -31,6 +31,39 @@ Fire and lava can't spread into claims until Battle Day.
 There are no hostile mobs and no hunger (`"hostileMobs"` and `"hunger"` in the
 config turn them back on): the game is building and staying alive.
 
+## The hub and game modes
+
+On the server, everyone arrives in **the hub**: a floating plaza with a portal for each
+game. Walk into one, press **H** anywhere for the game picker, or type `/hub` and
+`/play rubywars|horde`.
+
+- **Ruby Wars** (red portal) is the main game: the season.
+- **Co-op Horde** (green portal) is a team game you can play any time (see below).
+
+Leaving Ruby Wars saves where you were and everything you carry (in
+`world/rubywars/hub/`); going back puts it all back, so the hub and Horde never touch
+your Ruby Wars things. Raids only come when someone from the base is actually in Ruby
+Wars. On Battle Day, everyone still in the season is called back into Ruby Wars and
+can't leave until it's over (eliminated players can go anywhere). Singleplayer worlds
+skip the hub when you load them (H still works). Turn the hub off with `"hub": false`.
+
+## Co-op Horde
+
+Everyone in Horde fights together in a walled outpost: waves of zombies, husks,
+spiders, skeletons and enemy soldiers pour in through four gates, with a Brute (a
+ravager) every 5th wave. Each wave is bigger and tougher, and grows with the team.
+
+- Start with a rifle, a pistol, a ruby sword, grenades and iron armor.
+- Clear a wave and everyone gets a reward, a refill and full health, then 15 seconds to
+  get ready: Combat Shotgun, sandbags (build cover!), Longshot Sniper, ruby armor,
+  Rocket Launcher, concrete walls, Ruby Blaster, a Jetpack, the Lancer, then rockets and
+  grenades.
+- If you go down, you watch until the next wave starts. If the whole team is down,
+  it's game over, and everyone goes back to the hub. Join mid-game any time; you get
+  everything already earned.
+- The best wave ever (and who reached it) shows on the hub sign. Reaching wave 5
+  completes the "Reach wave 5 in Co-op Horde" goal (a star for Ruby Wars).
+
 ## The Ruby Wars map
 
 A dedicated island, the same every season (it doesn't depend on the world seed), so
@@ -79,6 +112,7 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Squad | O: your squad, members and one-click invites |
 | Minimap | U: hide or show it |
 | Field Manual | Y: short in-game guide pages on everything here |
+| Choose a game | H: Ruby Wars, Co-op Horde, or back to the hub |
 
 In any vehicle the view is truly first person: no hands, no held item, and the
 hotbar and hearts make way for the vehicle's HUD.
@@ -431,11 +465,12 @@ Day. You can also call one on yourself once a day with `/rubywars raid`.
 Advanced Armory gear starts locked. Upgrades come from **doing things**, never from
 how long or how often you play. Press J:
 
-- **GOALS** lists 18 things to do, each worth 1 or 2 stars, once per season: place
+- **GOALS** lists 19 things to do, each worth 1 or 2 stars, once per season: place
   your Heart, mine 10 and 50 Ruby Ore, build a generator, a Ruby Drill and a Trade
   Depot, get a machine to Mk III, bank 500 and 2,000 rubies, upgrade your Heart, buy
   from the Armory, place a base defense, join a squad, finish 3 bounties, repel a
-  raid, win a duel (the practice bot counts), drive 300 blocks, fly 1,000 blocks.
+  raid, win a duel (the practice bot counts), reach wave 5 in Co-op Horde, drive 300
+  blocks, fly 1,000 blocks.
 - **UPGRADES** is where you spend stars: four branches (Arms, Vehicles, Defense,
   Support), 16 unlocks costing 2 to 5 stars. There are fewer stars than the whole tree
   costs, so squads split it (squadmates share unlocks).
@@ -518,7 +553,7 @@ so you don't need to start a season to test weapons.
 
 ## Commands
 
-Everyone: `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
+Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
 base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),
 `/squad ...`, `/sc <message>`, `/waypoint ...`.

@@ -14,6 +14,16 @@ public class ManualScreen extends Screen {
 	}
 
 	private static final List<Page> PAGES = List.of(
+			new Page("The Hub",
+					"Joining the server puts you in the hub. Walk into a portal to play: Ruby Wars (red) or Co-op Horde (green).",
+					"Press H any time to switch games, or use /hub and /play rubywars|horde.",
+					"Leaving Ruby Wars saves where you were and everything you carry; going back puts it all back.",
+					"On Battle Day everyone still in the season is called back into Ruby Wars."),
+			new Page("Co-op Horde",
+					"Team up in a walled outpost against waves of zombies, skeletons, spiders and soldiers. A Brute comes every 5th wave.",
+					"Clear a wave: everyone gets a reward (shotgun, sandbags, sniper, ruby armor, rockets...), ammo and full health.",
+					"Go down and you watch until the next wave starts. If the whole team is down, it's game over.",
+					"Nothing from Horde comes back to Ruby Wars, but reaching wave 5 counts as a goal (a star)."),
 			new Page("The Season",
 					"Build for 14 days, then survive one Battle Day. Last squad (or player) standing wins.",
 					"Place your Ruby Heart to claim land: nobody else can build there, and PvP is off until Battle Day.",
@@ -30,7 +40,7 @@ public class ManualScreen extends Screen {
 					"Left-click fire, hold right-click to aim, R reload.",
 					"B: ping a spot for your squad, or spot the enemy under your crosshair.",
 					"/duel guns|vehicles|planes <player>: a 1v1 test duel in the arena, first to 10 kills. You get your own gear back after.",
-					"K: map.  U: hide/show the minimap.  J: goals & upgrades.  O: squad.  Y: this manual.  V: voice chat (Simple Voice Chat).",
+					"H: choose a game.  K: map.  U: hide/show the minimap.  J: goals & upgrades.  O: squad.  Y: this manual.  V: voice chat (Simple Voice Chat).",
 					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, scroll zoom, T designate, X flares, Z autopilot, C weapon cam, G gear. Bombs: look at the target, release on IN REACH. Helicopter: WASD fly, Space/Ctrl up/down, the mouse aims."),
 			new Page("Economy",
 					"Generators and solar panels fill your power grid. Ruby Drills dig ore; the Ore Refinery doubles it; the Trade Depot sells it into your bank.",

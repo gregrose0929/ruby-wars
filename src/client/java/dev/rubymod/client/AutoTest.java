@@ -81,6 +81,108 @@ public final class AutoTest {
 		}
 	}
 
+	private static String inventorySummary(Minecraft mc) {
+		int stacks = 0;
+		int items = 0;
+		var inv = mc.player.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			if (!inv.getItem(i).isEmpty()) {
+				stacks++;
+				items += inv.getItem(i).getCount();
+			}
+		}
+		return stacks + " stacks / " + items + " items, at " + mc.player.blockPosition().toShortString() + " in "
+				+ mc.player.level().dimension().identifier() + ", " + mc.gameMode.getPlayerMode();
+	}
+
+	/** Stand in the Horde outpost (unkillable) and watch the enemies come: where they are, what they are. */
+	private static void hordeFightScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "difficulty normal");
+			command(mc, "gamemode survival @a");
+		});
+		then(20, mc -> command(mc, "execute as @p run play horde"));
+		then(40, mc -> {
+			command(mc, "effect give @a minecraft:resistance infinite 255 true");
+			command(mc, "effect give @a minecraft:regeneration infinite 5 true");
+			command(mc, "execute as @p at @s run tp @s -20000.5 66 -4.5 180 5");
+		});
+		for (int i = 0; i < 8; i++) {
+			int n = i;
+			then(100, mc -> {
+				var c = new net.minecraft.world.phys.Vec3(-20000.5, 65, 0.5);
+				var mobs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, new net.minecraft.world.phys.AABB(c, c).inflate(70));
+				java.util.Map<String, Integer> kinds = new java.util.TreeMap<>();
+				double near = 999;
+				for (var m : mobs) {
+					kinds.merge(m.getType().getDescriptionId().replace("entity.minecraft.", "").replace("entity.rubymod.", ""), 1, Integer::sum);
+					near = Math.min(near, m.position().distanceTo(mc.player.position()));
+				}
+				log("t={}s health {} mobs {} closest {}m", (n + 1) * 5, mc.player.getHealth(), kinds, Math.round(near));
+				shot(mc, "fight-" + n);
+			});
+		}
+	}
+
+	/** The hub, the game picker, a few waves of Co-op Horde, going down, and back to Ruby Wars with your things. */
+	private static void hubScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "weather clear");
+			command(mc, "give @p minecraft:diamond 5");
+			log("difficulty {}", mc.level.getDifficulty());
+		});
+		then(20, mc -> log("before: {}", inventorySummary(mc)));
+		then(5, mc -> command(mc, "execute as @p run hub"));
+		then(80, mc -> {
+			log("in hub: {}", inventorySummary(mc));
+			shot(mc, "hub-arrive");
+		});
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s 0.5 101 4.5 180 -8"));
+		then(60, mc -> shot(mc, "hub-wide"));
+		then(5, mc -> mc.gui.setScreen(new ModeScreen()));
+		then(30, mc -> shot(mc, "hub-picker"));
+		then(5, mc -> mc.gui.setScreen(null));
+		// Walk into the Horde portal.
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s 7.5 101 -13.5 180 0"));
+		then(60, mc -> {
+			log("horde: {}", inventorySummary(mc));
+			shot(mc, "horde-arrive");
+		});
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 10"));
+		then(200, mc -> shot(mc, "horde-wave1"));
+		then(60, mc -> {
+			log("wave mobs: {}", mc.level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class, mc.player.getBoundingBox().inflate(80)).size());
+			shot(mc, "horde-wave1b");
+		});
+		then(5, mc -> command(mc, "kill @e[tag=rubymod_horde]"));
+		then(60, mc -> command(mc, "kill @e[tag=rubymod_horde]"));
+		then(60, mc -> command(mc, "kill @e[tag=rubymod_horde]"));
+		then(60, mc -> command(mc, "kill @e[tag=rubymod_horde]"));
+		then(40, mc -> {
+			log("after wave 1: {}", inventorySummary(mc));
+			shot(mc, "horde-cleared");
+		});
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -20000.5 75 -20 0 30"));
+		then(340, mc -> shot(mc, "horde-wave2"));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -20000.5 66 0 0 0"));
+		then(5, mc -> command(mc, "kill @p"));
+		then(40, mc -> {
+			log("down: {}", inventorySummary(mc));
+			shot(mc, "horde-gameover");
+		});
+		then(240, mc -> {
+			log("after game over: {}", inventorySummary(mc));
+			shot(mc, "hub-back");
+		});
+		then(5, mc -> command(mc, "execute as @p run play rubywars"));
+		then(80, mc -> {
+			log("back in Ruby Wars: {}", inventorySummary(mc));
+			shot(mc, "rubywars-back");
+		});
+	}
+
 	/** A camera tour of the Ruby Wars map (run on a world made with the Ruby Wars Map type). */
 	private static void mapTourScript() {
 		then(0, mc -> {
@@ -118,6 +220,40 @@ public final class AutoTest {
 			command(mc, "gamerule send_command_feedback false");
 			command(mc, "gamerule sendCommandFeedback false");
 		});
+		if (mode.equals("joinflow")) {
+			// Joined a real (dedicated) server: should land in the hub, then switch games by command.
+			then(60, mc -> {
+				log("joined: {}", inventorySummary(mc));
+				shot(mc, "join-hub");
+			});
+			then(5, mc -> mc.player.connection.sendCommand("play rubywars"));
+			then(80, mc -> { log("ruby wars: {} screen {}", inventorySummary(mc), mc.gui.screen()); shot(mc, "join-rubywars"); });
+			then(5, mc -> mc.player.connection.sendCommand("play horde"));
+			then(80, mc -> { log("horde: {} screen {}", inventorySummary(mc), mc.gui.screen()); shot(mc, "join-horde"); });
+			then(5, mc -> mc.player.connection.sendCommand("hub"));
+			then(80, mc -> { log("hub again: {} screen {}", inventorySummary(mc), mc.gui.screen()); shot(mc, "join-hub2"); });
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("hordefight")) {
+			hordeFightScript();
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("hub")) {
+			hubScript();
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("maptour")) {
 			mapTourScript();
 			then(20, mc -> {
@@ -2290,7 +2426,7 @@ public final class AutoTest {
 	// ----- Runner -----
 
 	private static void tick(Minecraft mc) {
-		if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null) {
+		if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null && !"joinflow".equals(System.getenv("RUBYMOD_AUTOTEST"))) {
 			// Still on a menu: report which one, so a stuck launch can be diagnosed.
 			if (++waiting % 100 == 0) {
 				String screen = mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getName();

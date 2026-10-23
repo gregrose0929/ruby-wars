@@ -173,6 +173,14 @@ def gen_blocks(client_jar):
           "textures": {"all": {"force_translucent": True, "sprite": f"{NS}:block/reinforced_glass"}}})
     simple_state("reinforced_glass")
     column("armory")
+    # Hub portals: a thin glowing curtain (no item).
+    for name in ("ruby_portal", "horde_portal"):
+        sprite = {"force_translucent": True, "sprite": f"{NS}:block/{name}"}
+        write(f"{ASSETS}/models/block/{name}.json", {"parent": "minecraft:block/block", "ambientocclusion": False,
+              "textures": {"particle": f"{NS}:block/{name}", "portal": sprite},
+              "elements": [{"from": [0, 0, 7], "to": [16, 16, 9], "light_emission": 12,
+                            "faces": {"north": {"texture": "#portal"}, "south": {"texture": "#portal"}}}]})
+        simple_state(name)
 
     # Defenses and launchers are 3D models built from boxes (tools/models3d_blocks.py).
     for name in models3d_blocks.BLOCKS:
@@ -251,6 +259,9 @@ LANG = {
     "key.rubymod.map": "Open Map",
     "key.rubymod.minimap": "Toggle Minimap",
     "key.rubymod.manual": "Field Manual",
+    "key.rubymod.modes": "Choose a Game (Hub, Ruby Wars, Horde)",
+    "block.rubymod.ruby_portal": "Ruby Wars Portal",
+    "block.rubymod.horde_portal": "Horde Portal",
     "key.rubymod.squad": "Squad",
     "key.rubymod.autopilot": "Autopilot (aircraft)",
     "key.rubymod.flares": "Flares (aircraft)",

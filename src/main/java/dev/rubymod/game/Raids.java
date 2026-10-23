@@ -173,16 +173,22 @@ public final class Raids {
 		}
 	}
 
+	/** Raids only come when someone from the base is actually in Ruby Wars (not off in the hub or Horde). */
 	private static boolean defenderOnline(MinecraftServer server, UUID owner) {
-		if (server.getPlayerList().getPlayer(owner) != null) {
+		if (inRubyWars(server, owner)) {
 			return true;
 		}
 		for (UUID mate : Squads.mates(owner)) {
-			if (server.getPlayerList().getPlayer(mate) != null) {
+			if (inRubyWars(server, mate)) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	private static boolean inRubyWars(MinecraftServer server, UUID id) {
+		ServerPlayer player = server.getPlayerList().getPlayer(id);
+		return player != null && Hub.where(player) == Hub.Where.RUBY_WARS;
 	}
 
 	private static void start(MinecraftServer server, SeasonData.Claim claim, int warningSeconds) {

@@ -279,6 +279,9 @@ public final class Duels {
 		if (duelOf(player.getUUID()) != null) {
 			return you ? "You're already in a duel. /duel leave to quit it." : who + " is already in a duel.";
 		}
+		if (Horde.playing(player)) {
+			return you ? "Leave Horde first (H)." : who + " is playing Horde.";
+		}
 		if (Rules.isEliminated(player.getUUID()) || player.isSpectator()) {
 			return you ? "Spectators can't duel." : who + " is spectating.";
 		}

@@ -1054,6 +1054,21 @@ def blocks():
             belt.append(row)
     b["conveyor_belt"] = belt
 
+    # Hub portals: a slow swirl of light, 8 frames (red for Ruby Wars, green for Horde).
+    import math
+    for name, (r, g, bl) in (("ruby_portal", (230, 40, 50)), ("horde_portal", (60, 220, 90))):
+        strip = []
+        for k in range(8):
+            for y in range(16):
+                row = []
+                for x in range(16):
+                    dx, dy = x - 7.5, y - 7.5
+                    v = math.sin(math.atan2(dy, dx) * 2 + math.hypot(dx, dy) * 0.7 - k * math.pi / 4) * 0.5 + 0.5
+                    v = 0.45 + 0.55 * v
+                    row.append((min(255, int(r * v + 40 * v * v)), min(255, int(g * v + 40 * v * v)), min(255, int(bl * v + 40 * v * v)), int(120 + 90 * v)))
+                strip.append(row)
+        b[name] = strip
+
     # Elevator: a steel plate with up and down chevrons.
     img = noise_tile((96, 100, 108), 5, 33)
     outline(img, (52, 56, 62))
@@ -1245,6 +1260,9 @@ def main(root):
         write_png(os.path.join(root, "textures/block", name + ".png"), img)
     with open(os.path.join(root, "textures/block", "conveyor_belt.png.mcmeta"), "w") as f:
         f.write('{"animation": {"frametime": 2}}' + chr(10))
+    for name in ("ruby_portal", "horde_portal"):
+        with open(os.path.join(root, "textures/block", name + ".png.mcmeta"), "w") as f:
+            f.write('{"animation": {"frametime": 3, "interpolate": true}}' + chr(10))
     door = [row[:] for row in blocks()["blast_door_top"][:8]] + [row[:] for row in blocks()["blast_door_bottom"][8:]]
     write_png(os.path.join(root, "textures/item", "blast_door.png"), door)
     icon = [[PAL[ITEMS["ruby"][y // 8][x // 8]] for x in range(128)] for y in range(128)]

@@ -182,7 +182,8 @@ public final class BattleDirector {
 	public static void giveHeartIfNeeded(ServerPlayer player) {
 		SeasonData data = SeasonData.get();
 		SeasonData.PlayerRecord record = data.player(player.getUUID(), player.getName().getString());
-		if (!record.heartGiven && !data.phase.isBattle() && data.phase != Phase.ENDED) {
+		// Off in the hub or Horde: you get it when you go into Ruby Wars.
+		if (!record.heartGiven && !data.phase.isBattle() && data.phase != Phase.ENDED && Hub.inRubyWarsWorld(player)) {
 			record.heartGiven = true;
 			SeasonData.markDirty();
 			ItemStack heart = Claims.heartItem();

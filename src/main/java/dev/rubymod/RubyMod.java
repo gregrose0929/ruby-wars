@@ -59,6 +59,7 @@ public class RubyMod implements ModInitializer {
 			RubyWarsCommand.register(dispatcher);
 			dev.rubymod.command.SquadCommand.register(dispatcher);
 			dev.rubymod.command.DuelCommand.register(dispatcher);
+			dev.rubymod.command.HubCommand.register(dispatcher);
 		});
 
 		BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.UNDERGROUND_ORES,

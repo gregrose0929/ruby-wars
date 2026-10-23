@@ -102,6 +102,10 @@ public final class Rules {
 		if (v instanceof net.minecraft.server.level.ServerPlayer sv && SpawnShield.isShielded(sv)) {
 			return false;
 		}
+		Boolean horde = Horde.canHurt(a, v);
+		if (horde != null) {
+			return horde;
+		}
 		Boolean duel = Duels.canHurt(a, v);
 		if (duel != null) {
 			return duel;

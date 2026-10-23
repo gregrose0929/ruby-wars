@@ -62,7 +62,7 @@ public final class GameEvents {
 	public static void register() {
 		// No hostile mobs (config: hostileMobs); raid soldiers, guards and animals are unaffected.
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-			if (!GameConfig.get().hostileMobs && entity instanceof net.minecraft.world.entity.monster.Enemy
+			if (!GameConfig.get().hostileMobs && entity instanceof net.minecraft.world.entity.monster.Enemy && !entity.entityTags().contains("rubymod_horde")
 					&& entity.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) {
 				entity.discard();
 			}
@@ -73,6 +73,12 @@ public final class GameEvents {
 			dev.rubymod.industry.Grid.load(server);
 			Explosions.clearHits();
 			Duels.reset();
+			Horde.reset();
+			Horde.load(server);
+			Hub.reset();
+			if (server.getLevel(Hub.HUB) != null) {
+				Hub.ensureBuilt(server.getLevel(Hub.HUB));
+			}
 			// The Ruby Wars map is an island: keep everyone on it, even before the season starts.
 			if (BattleDirector.onWarzoneMap(server) && server.overworld().getWorldBorder().getSize() > dev.rubymod.world.WarzoneTerrain.BORDER) {
 				server.overworld().getWorldBorder().setCenter(0, 0);
@@ -95,6 +101,8 @@ public final class GameEvents {
 			Countermeasures.tick();
 			Range.tick(server);
 			Duels.tick(server);
+			Horde.tick(server);
+			Hub.tick(server);
 			Jetpacks.tick(server);
 			VersionCheck.tick(server);
 			if (server.getTickCount() % 20 == 0) {
@@ -115,6 +123,7 @@ public final class GameEvents {
 					}
 				}
 				Goals.tickSecond(server);
+				Hub.tickSecond(server);
 				if (!GameConfig.get().hunger) {
 					for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 						player.getFoodData().setFoodLevel(20);
@@ -131,10 +140,13 @@ public final class GameEvents {
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			BattleDirector.onJoin(handler.getPlayer());
 			VersionCheck.onJoin(handler.getPlayer());
-			Duels.onJoin(handler.getPlayer());
+			// Moving a player to another dimension while they're still being added to the world
+			// breaks them, so duel restores and hub routing wait a few ticks.
+			Hub.queueJoin(handler.getPlayer());
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			Duels.onLeave(server, handler.getPlayer());
+			Horde.onLeave(server, handler.getPlayer());
 			VersionCheck.onLeave(handler.getPlayer());
 			Jetpacks.forget(handler.getPlayer().getUUID());
 			CombatTag.onLeave(server, handler.getPlayer());
@@ -149,6 +161,16 @@ public final class GameEvents {
 				Waypoints.ping(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.LookQuery.TYPE, (payload, context) ->
 				LookInfo.answer(context.player(), payload));
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ModeSelect.TYPE, (payload, context) -> {
+			ServerPlayer player = context.player();
+			if (!payload.mode().isEmpty()) {
+				String error = Hub.go(player, payload.mode());
+				if (error != null) {
+					player.sendSystemMessage(Component.literal(error).withStyle(ChatFormatting.RED));
+				}
+			}
+			Net.send(player, new dev.rubymod.net.MorePayloads.ModeInfo(Hub.where(player).name(), Hub.modeLines(player.level().getServer())));
+		});
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ResearchUnlock.TYPE, (payload, context) -> {
 			String error = Research.unlock(context.player(), payload.node());
 			if (error != null) {
@@ -232,7 +254,9 @@ public final class GameEvents {
 		});
 
 		// --- Combat ---
-		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> Rules.canHurt(source.getEntity(), entity));
+		// Nothing gets hurt in the hub.
+		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> entity.level().dimension() != Hub.HUB
+				&& Rules.canHurt(source.getEntity(), entity));
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamage, damageTaken, blocked) -> {
 			if (entity instanceof ServerPlayer victim && damageTaken > 0 && source.getEntity() instanceof ServerPlayer attacker) {
 				CombatTag.tag(attacker, victim);
@@ -247,8 +271,8 @@ public final class GameEvents {
 		});
 		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
 			if (entity instanceof ServerPlayer player) {
-				// Duel deaths respawn you in the arena instead (no grave, no stats).
-				if (Duels.onDeath(player, source)) {
+				// Duel and Horde deaths respawn you in the arena instead (no grave, no stats).
+				if (Horde.onDeath(player, source) || Duels.onDeath(player, source)) {
 					return false;
 				}
 				dev.rubymod.block.GraveBlock.bury(player);
@@ -261,6 +285,7 @@ public final class GameEvents {
 				BattleDirector.sendDeathInfo(player, source);
 			} else {
 				Duels.onEntityDeath(entity, source);
+				Horde.onEntityDeath(entity, source);
 			}
 			confirmHit(entity, source, true);
 		});

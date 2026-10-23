@@ -150,10 +150,23 @@ public class SoldierEntity extends PathfinderMob {
 		return s;
 	}
 
-	/** The practice bot fights its player even in Peaceful (where vanilla stops mobs targeting players). */
+	/** A Co-op Horde enemy: a raider that heads for the nearest player (Horde moves its objective) and loots nobody. */
+	public static SoldierEntity horde(ServerLevel level, BlockPos objective, int role) {
+		SoldierEntity s = raider(level, objective, objective, role, dev.rubymod.game.Horde.SOLDIER_RAID_ID);
+		if (s != null) {
+			s.setCustomName(Component.literal(role == AT_GUNNER ? "Enemy AT Gunner" : "Enemy Soldier").withStyle(ChatFormatting.RED));
+		}
+		return s;
+	}
+
+	public void setObjective(BlockPos objective) {
+		this.objective = objective;
+	}
+
+	/** The practice bot and Horde soldiers fight players even in Peaceful (where vanilla stops mobs targeting players). */
 	@Override
 	public boolean canAttack(LivingEntity target) {
-		if (prey != null && target.getUUID().equals(prey)) {
+		if (prey != null && target.getUUID().equals(prey) || raidId == dev.rubymod.game.Horde.SOLDIER_RAID_ID && target instanceof Player) {
 			return target.canBeSeenAsEnemy();
 		}
 		return super.canAttack(target);
