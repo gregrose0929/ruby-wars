@@ -28,14 +28,6 @@ public abstract class HudMixin {
 	private void rubymod$adsCrosshair(GuiGraphicsExtractor graphics, net.minecraft.client.DeltaTracker delta, CallbackInfo ci) {
 		if (ScopeOverlay.hideCrosshair()) {
 			ci.cancel();
-			var player = Minecraft.getInstance().player;
-			if (player != null && dev.rubymod.client.gun.GunView.ironSights(player)) {
-				// Iron sights sit just under the aim point; this dot is where the bullet goes.
-				int cx = graphics.guiWidth() / 2;
-				int cy = graphics.guiHeight() / 2;
-				graphics.fill(cx - 2, cy - 2, cx + 2, cy + 2, 0xB0000000);
-				graphics.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFFFF3030);
-			}
 		}
 	}
 }

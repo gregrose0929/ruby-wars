@@ -84,19 +84,6 @@ public final class GunView {
 		}
 	}
 
-	/** How far below the aim point iron sights sit when aimed (tangent of the angle, about 9.5 degrees). */
-	private static final float IRON_DROP = 0.17F;
-
-	/** Aiming down plain iron sights right now (the HUD draws an aim dot then)? */
-	public static boolean ironSights(net.minecraft.world.entity.player.Player player) {
-		var stack = player.getMainHandItem();
-		if (!(stack.getItem() instanceof dev.rubymod.gun.GunItem) || player.isScoping() || adsProgress() < 0.5F) {
-			return false;
-		}
-		var attachments = stack.get(dev.rubymod.registry.ModComponents.ATTACHMENTS);
-		return attachments == null || !attachments.contains("RED_DOT");
-	}
-
 	private GunView() {
 	}
 
@@ -287,11 +274,6 @@ public final class GunView {
 		View view = view(model.name);
 		float eye = (dot ? view.dotEye : view.eye) * SCALE;
 		Vector3f adsPos = new Vector3f(SCALE * sight[0], -SCALE * sight[1], -eye + SCALE * sight[2]);
-		if (!dot && !isLauncher(model)) {
-			// Iron sights: sit the sights just under the aim point (a center dot marks it), so the
-			// target stays in clear view above them instead of hidden behind the rear sight.
-			adsPos.y -= eye * IRON_DROP;
-		}
 		Vector3f pos = new Vector3f(view.hip).lerp(adsPos, smooth(ads));
 		float bob = 1.0F - 0.8F * ads;
 		pos.x += Mth.sin(bobPhase) * 0.012F * bobAmount * bob + swayX * -0.004F;
