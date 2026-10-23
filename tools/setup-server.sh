@@ -330,6 +330,8 @@ if [[ -f "$BASE/pending-op" ]]; then
 fi
 if [[ -n "$NEW_MAP" && -z "$TEST_DIR" ]]; then
 	# Generate the whole island now (a few minutes, in the background) so nobody waits on new chunks.
+	# Chunky's commands fail for a few seconds after "Done", so give it a moment first.
+	sleep 15
 	for c in "chunky world minecraft:overworld" "chunky center 0 0" "chunky shape square" "chunky radius 880" "chunky start"; do
 		/usr/local/bin/rubywars cmd "$c" >/dev/null
 	done
