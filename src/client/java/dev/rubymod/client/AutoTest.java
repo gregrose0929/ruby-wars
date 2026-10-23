@@ -556,6 +556,23 @@ public final class AutoTest {
 				});
 				then(110, mc -> shot(mc, "version-notice"));
 			}
+			case "thirdguns" -> {
+				String[] guns = {"arr_rifle", "service_pistol", "combat_shotgun", "longshot_sniper", "ruby_blaster", "rocket_launcher"};
+				then(5, mc -> {
+					command(mc, "clear @p");
+					for (String gun : guns) {
+						command(mc, "give @p rubymod:" + gun);
+					}
+					command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+					mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+				});
+				for (int i = 0; i < guns.length; i++) {
+					int slot = i;
+					String name = guns[i];
+					then(10, mc -> mc.player.getInventory().setSelectedSlot(slot));
+					then(12, mc -> shot(mc, "third-" + name));
+				}
+			}
 			case "attach" -> {
 				then(5, mc -> command(mc, "give @a rubymod:arr_rifle[rubymod:attachments=[\"RED_DOT\",\"SUPPRESSOR\",\"GRIP\",\"EXTENDED_MAG\"]]"));
 				then(15, mc -> mc.player.getInventory().setSelectedSlot(0));

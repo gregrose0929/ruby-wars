@@ -99,7 +99,7 @@ def red_dot(z0, y):
         B(-1.0, y + 2.6, z0 + 0.2, 1.0, y + 2.85, z0 + 3.0, "black_metal"),    # hood top
         B(-0.8, y + 0.6, z0 + 2.7, 0.8, y + 2.6, z0 + 2.8, "lens"),            # front window
         B(-0.8, y + 0.6, z0 + 0.3, 0.8, y + 2.6, z0 + 0.35, "lens_clear"),     # rear window
-        B(-0.1, y + 1.4, z0 + 2.6, 0.1, y + 1.6, z0 + 2.7, "glow_red"),        # the dot
+        B(-0.1, y + 1.4, z0 + 2.6, 0.1, y + 1.6, z0 + 2.7, "red_paint"),        # the dot
         B(0.9, y + 0.8, z0 + 1.0, 1.15, y + 1.6, z0 + 2.2, "black_metal", knurl=True),  # brightness knob
     ]
 
@@ -125,7 +125,7 @@ def red_dot_round(z0, y):
         *round_ring(0, c, z0 + 2.95, z0 + 3.2, 1.25, 0.15, "black_metal"),      # front lip
         B(-0.85, c - 0.85, z0 + 2.9, 0.85, c + 0.85, z0 + 2.95, "lens"),         # front lens
         B(-0.85, c - 0.85, z0 + 0.1, 0.85, c + 0.85, z0 + 0.15, "lens_clear"),   # rear lens
-        B(-0.1, c - 0.1, z0 + 2.8, 0.1, c + 0.1, z0 + 2.88, "glow_red"),         # the dot
+        B(-0.1, c - 0.1, z0 + 2.8, 0.1, c + 0.1, z0 + 2.88, "red_paint"),         # the dot
         B(1.05, c - 0.4, z0 + 1.0, 1.35, c + 0.4, z0 + 2.2, "black_metal", knurl=True),  # brightness knob
     ]
 
@@ -169,7 +169,6 @@ def arr_rifle():
         B(-1.0, 4.25, -4.6, 1.0, 4.65, -4.2, "black_metal"),
     ]
     body += picatinny(-2.8, 5.4, 4.6) + picatinny(5.8, 13.2, 5.0)
-    body += red_dot_round(0.2, 5.1)                                             # built-in red dot sight (round tube)
     grip = R("grip", pivot=(0, 0.2, -0.4), rot=(-20, 0, 0), boxes=[
         B(-0.95, -5.0, -1.3, 0.95, 0.0, 0.4, "polymer", stipple=True),
         B(-1.0, -5.4, -1.5, 1.0, -5.0, 0.6, "polymer"),
@@ -191,18 +190,24 @@ def arr_rifle():
     mag = P("mag", pivot=(0, 0.5, 2.8), children=[mag_std, mag_ext])
     bolt = P("bolt", boxes=[B(-1.15, 3.2, 0.6, -1.0, 3.9, 3.0, "steel_bright")])
     trigger = R("trigger", pivot=(0, 0, 0.9), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.35, "steel")])
-    irons = P("irons")  # none: the AR-R comes with its red dot
+    irons = P("irons", boxes=[
+        B(-0.7, 4.6, -2.6, 0.7, 5.0, -1.8, "black_metal"),                     # rear sight base on the rail
+        B(-0.7, 5.0, -2.6, -0.3, 5.95, -2.2, "black_metal"),                   # rear notch: two thin posts
+        B(0.3, 5.0, -2.6, 0.7, 5.95, -2.2, "black_metal"),
+        B(-0.5, 5.6, 12.0, 0.5, 5.75, 12.8, "black_metal"),                    # front sight base
+        B(-0.1, 5.75, 12.3, 0.1, 5.8, 12.5, "black_metal"),                    # front post (its top is the aim point)
+    ])
     muzzle_device = P("muzzle_device", boxes=[
         B(-0.75, bore - 0.75, 18.2, 0.75, bore + 0.75, 20.4, "black_metal", ports=True),
         B(-0.4, bore - 0.4, 20.4, 0.4, bore + 0.4, 20.45, "black_metal", bore=True)])
     att = [
-        P("att_red_dot"),  # already built in
+        P("att_red_dot", boxes=red_dot(0.2, 5.1)),
         P("att_suppressor", boxes=suppressor(18.2, bore, 1.0, 6.8)),
         P("att_grip", boxes=vertical_grip(9.0, 1.9)),
     ]
     root = P("root", children=[P("body", body), grip, mag, bolt, trigger, irons, muzzle_device] + att)
     return Gun(root, {
-        "sight": (0, 5.1 + 1.6, 0.3), "red_dot_sight": (0, 5.1 + 1.6, 0.3), "muzzle": (0, bore, 20.6), "eject": (-1.2, 3.6, 1.8),
+        "sight": (0, 5.8, -2.4), "red_dot_sight": (0, 5.1 + 1.5, 0.3), "muzzle": (0, bore, 20.6), "eject": (-1.2, 3.6, 1.8),
         "hand_r": (0, -1.6, -1.0), "hand_l": (0, 1.6, 9.5), "mag_hand": (0, -4.0, 3.0), "grip_hand_l": (0, -1.0, 9.6),
     })
 
@@ -235,10 +240,10 @@ def service_pistol():
         B(-0.5, 3.65, -1.2, 0.5, 3.8, -0.6, "black_metal"),                     # rear sight base
         B(-0.5, 3.8, -1.2, -0.19, 4.3, -0.6, "black_metal"),                    # rear notch: two posts
         B(0.19, 3.8, -1.2, 0.5, 4.3, -0.6, "black_metal"),
-        B(-0.38, 4.0, -1.22, -0.26, 4.12, -1.18, "glow_green"),                 # rear dots (facing you)
-        B(0.26, 4.0, -1.22, 0.38, 4.12, -1.18, "glow_green"),
+        B(-0.38, 4.0, -1.22, -0.26, 4.12, -1.18, "sight_paint"),                 # rear dots (facing you)
+        B(0.26, 4.0, -1.22, 0.38, 4.12, -1.18, "sight_paint"),
         B(-0.1, 3.65, 6.0, 0.1, 4.2, 6.4, "black_metal"),                       # front post
-        B(-0.06, 4.0, 5.98, 0.06, 4.12, 6.0, "glow_green"),                      # front dot
+        B(-0.06, 4.0, 5.98, 0.06, 4.12, 6.0, "sight_paint"),                      # front dot
         B(-0.35, 2.35, 6.8, 0.35, 3.05, 6.85, "black_metal", bore=True),
     ])
     mag = P("mag", pivot=(0, 0.0, 0.0), rot=(-15, 0, 0), children=[
@@ -254,11 +259,11 @@ def service_pistol():
             B(-0.65, 0.35, 0.0, -0.45, 1.5, 1.8, "black_metal"), B(0.45, 0.35, 0.0, 0.65, 1.5, 1.8, "black_metal"),
             B(-0.65, 1.5, 0.0, 0.65, 1.7, 1.8, "black_metal"),
             B(-0.45, 0.35, 1.55, 0.45, 1.5, 1.6, "lens"),
-            B(-0.08, 0.86, 1.45, 0.08, 1.02, 1.55, "glow_red"),
+            B(-0.08, 0.86, 1.45, 0.08, 1.02, 1.55, "red_paint"),
         ]),
         P("att_suppressor", boxes=suppressor(6.85, bore, 0.75, 4.5)),
         P("att_grip", boxes=[B(-0.5, -0.6, 4.7, 0.5, 0.35, 5.9, "black_metal"), B(-0.45, -0.5, 5.9, 0.45, 0.25, 6.0, "lens_clear"),
-                             B(-0.3, -0.35, 6.0, 0.3, 0.1, 6.05, "glow_white")]),           # pistols get a weapon light
+                             B(-0.3, -0.35, 6.0, 0.3, 0.1, 6.05, "lamp")]),           # pistols get a weapon light
     ]
     root = P("root", children=[P("body", body), grip, slide, mag, hammer, trigger] + att)
     return Gun(root, {
@@ -285,7 +290,7 @@ def combat_shotgun():
         B(-0.7, 4.6, -1.9, 0.7, 4.75, -1.4, "black_metal"),
         B(-0.3, bore + 0.85, 16.8, 0.3, bore + 1.05, 17.4, "black_metal"),      # front sight ramp
         B(-0.08, bore + 1.05, 17.0, 0.08, 5.25, 17.3, "black_metal"),
-        B(-0.06, 5.15, 16.98, 0.06, 5.25, 17.0, "glow_red"),
+        B(-0.06, 5.15, 16.98, 0.06, 5.25, 17.0, "red_paint"),
         B(-0.4, bore - 0.1, 17.6, 0.4, bore + 0.7, 17.65, "black_metal", bore=True),
     ]
     stock = P("stock", boxes=[
@@ -491,7 +496,7 @@ def skyhammer():
     ]
     grip = R("grip", pivot=(0, ty - 2.4, 0.0), rot=(-12, 0, 0), boxes=[B(-0.9, -4.0, -1.2, 0.9, 0.0, 0.6, "polymer", stipple=True)])
     trigger = R("trigger", pivot=(0, ty - 2.4, 1.2), boxes=[B(-0.15, -0.6, 0.0, 0.15, 0.0, 0.3, "steel")])
-    rocket = R("rocket", pivot=(0, ty, 16.8), boxes=[B(-0.6, -0.6, -0.2, 0.6, 0.6, 0.9, "seeker_glow")])  # seeker glows when loaded
+    rocket = R("rocket", pivot=(0, ty, 16.8), boxes=[B(-0.6, -0.6, -0.2, 0.6, 0.6, 0.9, "seeker")])  # seeker glows when loaded
     root = P("root", children=[P("body", body), grip, trigger, rocket])
     return Gun(root, {
         "sight": (0, ty + 3.0, -2.0), "red_dot_sight": (0, ty + 3.0, -2.0), "muzzle": (0, ty, 17.8), "eject": (0, ty, -12.8),
@@ -518,13 +523,13 @@ def lancer():
         B(-0.7, ty + 3.2, -5.05, 0.7, ty + 4.4, -5.0, "lens_clear"),
         B(-3.6, ty + 1.0, -1.4, -2.6, ty + 2.6, 1.4, "black_metal", knurl=True), # handles
         B(2.6, ty + 1.0, -1.4, 3.6, ty + 2.6, 1.4, "black_metal", knurl=True),
-        B(-2.8, ty + 4.6, -2.6, -2.6, ty + 5.0, -1.4, "glow_green"),             # status lights
-        B(-2.8, ty + 4.0, -2.6, -2.6, ty + 4.4, -1.4, "glow_red"),
+        B(-2.8, ty + 4.6, -2.6, -2.6, ty + 5.0, -1.4, "sight_paint"),             # status lights
+        B(-2.8, ty + 4.0, -2.6, -2.6, ty + 4.4, -1.4, "red_paint"),
         B(-1.4, ty + 1.6, -3.0, 1.4, ty + 2.0, 3.0, "black_metal"),
     ])
     grip = R("grip", pivot=(0, ty - 2.2, 0.0), rot=(-10, 0, 0), boxes=[B(-0.9, -4.2, -1.2, 0.9, 0.0, 0.6, "polymer", stipple=True)])
     trigger = R("trigger", pivot=(0, ty - 2.2, 1.2), boxes=[B(-0.15, -0.6, 0.0, 0.15, 0.0, 0.3, "steel")])
-    rocket = R("rocket", pivot=(0, ty, 16.0), boxes=[B(-1.0, -1.0, -0.4, 1.0, 1.0, 0.2, "seeker_glow")])
+    rocket = R("rocket", pivot=(0, ty, 16.0), boxes=[B(-1.0, -1.0, -0.4, 1.0, 1.0, 0.2, "seeker")])
     root = P("root", children=[P("body", body), clu, grip, trigger, rocket])
     return Gun(root, {
         "sight": (0, ty + 3.8, -5.2), "red_dot_sight": (0, ty + 3.8, -5.2), "muzzle": (0, ty, 16.4), "eject": (0, ty, -12.2),
@@ -601,6 +606,8 @@ MATERIALS = {
     "olive_paint": (82, 92, 58), "warning": (230, 186, 40), "battery": (70, 74, 60), "shell_red": (170, 34, 34),
     "rocket_head": (96, 102, 70), "seeker": (40, 30, 30), "lens": (60, 110, 160), "lens_clear": (40, 60, 80),
     "lens_thermal": (90, 40, 110),
+    # Painted (not glowing) sight marks, reticle and lights: only the Ruby Blaster glows.
+    "red_paint": (190, 36, 36), "sight_paint": (226, 226, 214), "lamp": (150, 150, 140),
 }
 GLOW = {"flash": (255, 230, 170), "glow_red": (255, 40, 40), "glow_green": (80, 255, 120), "glow_white": (255, 250, 230), "glow_ruby": (255, 50, 100),
         "glow_ruby_dim": (200, 30, 80), "seeker_glow": (255, 80, 60)}
