@@ -5,7 +5,7 @@
 param(
 	[string]$Server = "gregrose0929@192.168.0.115",
 	[string]$Dest = (Join-Path ([Environment]::GetFolderPath("MyDocuments")) "Ruby Wars backups"),
-	[int]$Keep = 14,
+	[int]$Keep = 7,
 	[switch]$Install
 )
 
