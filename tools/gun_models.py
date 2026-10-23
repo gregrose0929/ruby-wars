@@ -104,6 +104,32 @@ def red_dot(z0, y):
     ]
 
 
+def round_ring(x, y, z0, z1, r, t, mat, cell=0.15, **flags):
+    """A round ring around the axis (x, y), from z0 to z1, built from small cells (a pixel circle)."""
+    boxes = []
+    n = int(math.ceil(r / cell))
+    for i in range(-n, n):
+        for j in range(-n, n):
+            d = math.hypot((i + 0.5) * cell, (j + 0.5) * cell)
+            if r - t <= d <= r:
+                boxes.append(B(x + i * cell, y + j * cell, z0, x + (i + 1) * cell, y + (j + 1) * cell, z1, mat, **flags))
+    return boxes
+
+
+def red_dot_round(z0, y):
+    """Tube red dot (round housing) on a rail top at height y, from z0 to z0 + 3.2; the dot sits at y + 1.6."""
+    c = y + 1.6
+    return [
+        B(-0.6, y, z0 + 0.6, 0.6, y + 0.55, z0 + 2.6, "black_metal"),            # mount
+        *round_ring(0, c, z0, z0 + 3.2, 1.1, 0.22, "black_metal"),              # round tube
+        *round_ring(0, c, z0 + 2.95, z0 + 3.2, 1.25, 0.15, "black_metal"),      # front lip
+        B(-0.85, c - 0.85, z0 + 2.9, 0.85, c + 0.85, z0 + 2.95, "lens"),         # front lens
+        B(-0.85, c - 0.85, z0 + 0.1, 0.85, c + 0.85, z0 + 0.15, "lens_clear"),   # rear lens
+        B(-0.1, c - 0.1, z0 + 2.8, 0.1, c + 0.1, z0 + 2.88, "glow_red"),         # the dot
+        B(1.05, c - 0.4, z0 + 1.0, 1.35, c + 0.4, z0 + 2.2, "black_metal", knurl=True),  # brightness knob
+    ]
+
+
 def suppressor(z0, y, r=1.0, length=6.5):
     return tube(0, y, z0, z0 + length, r, "suppressor") + [B(-0.4, y - 0.4, z0 + length, 0.4, y + 0.4, z0 + length + 0.05, "black_metal", bore=True)]
 
@@ -143,7 +169,7 @@ def arr_rifle():
         B(-1.0, 4.25, -4.6, 1.0, 4.65, -4.2, "black_metal"),
     ]
     body += picatinny(-2.8, 5.4, 4.6) + picatinny(5.8, 13.2, 5.0)
-    body += red_dot(0.2, 5.1)                                                   # built-in red dot sight
+    body += red_dot_round(0.2, 5.1)                                             # built-in red dot sight (round tube)
     grip = R("grip", pivot=(0, 0.2, -0.4), rot=(-20, 0, 0), boxes=[
         B(-0.95, -5.0, -1.3, 0.95, 0.0, 0.4, "polymer", stipple=True),
         B(-1.0, -5.4, -1.5, 1.0, -5.0, 0.6, "polymer"),
@@ -176,7 +202,7 @@ def arr_rifle():
     ]
     root = P("root", children=[P("body", body), grip, mag, bolt, trigger, irons, muzzle_device] + att)
     return Gun(root, {
-        "sight": (0, 5.1 + 1.5, 0.3), "red_dot_sight": (0, 5.1 + 1.5, 0.3), "muzzle": (0, bore, 20.6), "eject": (-1.2, 3.6, 1.8),
+        "sight": (0, 5.1 + 1.6, 0.3), "red_dot_sight": (0, 5.1 + 1.6, 0.3), "muzzle": (0, bore, 20.6), "eject": (-1.2, 3.6, 1.8),
         "hand_r": (0, -1.6, -1.0), "hand_l": (0, 1.6, 9.5), "mag_hand": (0, -4.0, 3.0), "grip_hand_l": (0, -1.0, 9.6),
     })
 
@@ -206,9 +232,13 @@ def service_pistol():
         B(-0.85, 1.9, -1.4, 0.85, 3.5, 6.8, "black_metal", serrations=True, mark=True),
         B(-0.7, 3.5, -1.0, 0.7, 3.65, 6.4, "black_metal"),
         B(-0.95, 2.4, 1.6, -0.85, 3.3, 3.6, "steel_bright"),                   # ejection port / barrel hood
-        B(-0.4, 3.65, -1.2, 0.4, 4.15, -0.6, "black_metal", aperture=True),     # rear sight
-        B(-0.15, 3.65, 6.0, 0.15, 4.2, 6.4, "black_metal"),                     # front sight
-        B(-0.06, 3.95, 6.38, 0.06, 4.07, 6.42, "glow_green"),
+        B(-0.5, 3.65, -1.2, 0.5, 3.8, -0.6, "black_metal"),                     # rear sight base
+        B(-0.5, 3.8, -1.2, -0.19, 4.3, -0.6, "black_metal"),                    # rear notch: two posts
+        B(0.19, 3.8, -1.2, 0.5, 4.3, -0.6, "black_metal"),
+        B(-0.38, 4.0, -1.22, -0.26, 4.12, -1.18, "glow_green"),                 # rear dots (facing you)
+        B(0.26, 4.0, -1.22, 0.38, 4.12, -1.18, "glow_green"),
+        B(-0.1, 3.65, 6.0, 0.1, 4.2, 6.4, "black_metal"),                       # front post
+        B(-0.06, 4.0, 5.98, 0.06, 4.12, 6.0, "glow_green"),                      # front dot
         B(-0.35, 2.35, 6.8, 0.35, 3.05, 6.85, "black_metal", bore=True),
     ])
     mag = P("mag", pivot=(0, 0.0, 0.0), rot=(-15, 0, 0), children=[
@@ -232,7 +262,7 @@ def service_pistol():
     ]
     root = P("root", children=[P("body", body), grip, slide, mag, hammer, trigger] + att)
     return Gun(root, {
-        "sight": (0, 4.0, -1.1), "red_dot_sight": (0, 3.65 + 0.94, 0.8), "muzzle": (0, bore, 7.2), "eject": (-1.0, 3.0, 2.6),
+        "sight": (0, 4.2, -1.1), "red_dot_sight": (0, 3.65 + 0.94, 0.8), "muzzle": (0, bore, 7.2), "eject": (-1.0, 3.0, 2.6),
         "hand_r": (0, -1.5, -0.5), "hand_l": (0, -1.8, 0.2), "mag_hand": (0, -4.5, -0.3), "grip_hand_l": (0, -1.8, 0.2),
     })
 
@@ -282,7 +312,7 @@ def combat_shotgun():
     root = P("root", children=[P("body", body), stock, grip, pump, shells, trigger] + att)
     return Gun(root, {
         "sight": (0, 5.25, -1.9), "red_dot_sight": (0, 5.2 + 1.5, -0.1), "muzzle": (0, bore + 0.3, 17.8),
-        "eject": (-1.2, 2.8, 1.6), "hand_r": (0, -1.6, -2.0), "hand_l": (0, 1.6, 9.6), "mag_hand": (1.4, 2.4, -1.2),
+        "eject": (-1.2, 2.8, 1.6), "hand_r": (0, -1.6, -2.0), "hand_l": (0, 0.6, 9.6), "mag_hand": (1.4, 2.4, -1.2),
         "grip_hand_l": (0, -1.6, 9.6),
     })
 
@@ -377,10 +407,6 @@ def ruby_blaster():
         B(-0.12, 5.6, 7.6, 0.12, 6.2, 8.0, "graphite"),
         B(-0.06, 6.1, 7.98, 0.06, 6.2, 8.02, "glow_ruby"),
     ]
-    core = R("core", pivot=(0, 5.6, 1.0), boxes=[                                    # exposed ruby core on top (low, under the sights)
-        B(-0.8, 0.0, -0.8, 0.8, 0.4, 1.6, "ruby"),
-        B(-0.5, 0.4, -0.4, 0.5, 0.52, 1.2, "glow_ruby"),
-    ])
     grip = R("grip", pivot=(0, 0.6, -0.6), rot=(-20, 0, 0), boxes=[B(-0.95, -4.6, -1.3, 0.95, 0.4, 0.5, "graphite", stipple=True)])
     cell = P("mag", pivot=(0, 1.0, 3.2), children=[P("mag_std", rel=True, boxes=[
         B(-0.8, -2.8, -1.0, 0.8, 0.0, 1.0, "white_poly"),
@@ -395,7 +421,7 @@ def ruby_blaster():
         P("att_suppressor", boxes=tube(0, bore, 13.4, 17.6, 1.0, "graphite") + [B(-0.5, bore - 0.5, 17.6, 0.5, bore + 0.5, 17.65, "glow_ruby")]),
         P("att_grip", boxes=vertical_grip(7.0, 1.4)),
     ]
-    root = P("root", children=[P("body", body), core, grip, cell, trigger] + att)
+    root = P("root", children=[P("body", body), grip, cell, trigger] + att)
     return Gun(root, {
         "sight": (0, 6.2, -2.0), "red_dot_sight": (0, 5.6 + 1.5, 2.5), "muzzle": (0, bore, 13.8), "eject": (-1.4, 4.0, 1.0),
         "hand_r": (0, -1.6, -1.2), "hand_l": (0, 1.2, 7.6), "mag_hand": (0, -1.8, 3.2), "grip_hand_l": (0, -1.6, 7.6),
