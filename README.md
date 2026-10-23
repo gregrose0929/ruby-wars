@@ -422,6 +422,7 @@ Try every weapon against a real person without touching the season:
     /duel planes <player>      you start in a fighter on your runway; attack jet, bomber, attack helicopter,
                                Skyhammer AA launcher and a Heavy AA Gun in your bag
     /duel guns <player> 5      first to 5 instead of 10
+    /duel guns bot [kills]     practice against an AI soldier that hunts you down (gun duels only)
 
 They get a chat message with a clickable **[ACCEPT]** (or they type `/duel accept`).
 Both of you go to the **Duel Arena**, a separate flat dimension, so nothing in the
@@ -432,7 +433,10 @@ trees for vehicles, and two runways pointing at each other for planes.
 - You spawn at opposite ends, with 4 seconds of spawn protection (it ends if you shoot).
 - When you die you watch for 3 seconds, then respawn with a fresh kit (and a fresh
   tank or jet). Every death is a point for the other player, crashes included.
-- The bar at the top shows the score. **First to 10 wins.**
+- The bar at the top shows the score. **First to 10 wins.** At the end everyone gets a
+  scoreboard: kills, deaths, accuracy, damage, longest kill, best streak and favorite weapon.
+- Every death (in duels or anywhere else) shows who got you, with what and from how far, and
+  the camera watches through your killer's eyes for two seconds.
 - Afterwards you both go back exactly where you were, with your own inventory.
   `/duel leave` quits early (the other player wins). If someone disconnects or the
   server stops mid-duel, they get their things back the next time they join.
@@ -468,6 +472,15 @@ only runs while the host plays.
    192.168.1.20). Allow Java through Windows Firewall when it asks.
 5. Friends outside your house need port 25565 (TCP) forwarded on your router (and UDP
    24454 for voice chat), or a tunnel such as playit.gg.
+
+Players whose modpack doesn't match the server get a chat message with a clickable link to the
+newest one when they join (each build carries a fingerprint of its code, so a stale modpack is
+spotted automatically).
+
+Backups: the server zips the world into `/opt/rubywars/server/backups` every 24 hours and keeps
+7. `tools/pull-backups.ps1 -Install` (on the PC set up with `tools/vm-trust-this-pc.ps1`) copies
+them to `Documents\Ruby Wars backups` daily, so a dead VM disk doesn't take the world with it.
+The server also runs Chunky: `rubywars cmd "chunky start"` pregenerates terrain (see `chunky help`).
 
 Then `/duel guns <sibling>` from anywhere on the server. Duels work in the lobby,
 so you don't need to start a season to test weapons.

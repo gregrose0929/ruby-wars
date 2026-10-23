@@ -109,6 +109,12 @@ else
 	else
 		as_mc git clone -q --branch "$BRANCH" "$REPO" "$SRC"
 	fi
+	# If this script itself changed upstream, run the new version (same settings) so the change applies now.
+	if [[ -z "${RUBYWARS_REEXEC:-}" && -f "$SRC/tools/setup-server.sh" ]] && ! cmp -s "$SRC/tools/setup-server.sh" "$0"; then
+		say "The setup script was updated; running the new version"
+		export RUBYWARS_REEXEC=1 MEMORY OP BRANCH JAR ALLOW_USER
+		exec bash "$SRC/tools/setup-server.sh" "$@"
+	fi
 	(cd "$SRC" && as_mc bash ./gradlew build --no-daemon -q -x test) || die "the mod didn't build."
 	MOD_JAR="$(ls -t "$SRC"/build/libs/rubymod-*.jar | grep -v -- '-sources' | head -1)"
 fi
