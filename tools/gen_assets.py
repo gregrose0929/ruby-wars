@@ -260,6 +260,7 @@ LANG = {
     "key.rubymod.minimap": "Toggle Minimap",
     "key.rubymod.manual": "Field Manual",
     "key.rubymod.modes": "Choose a Game (Hub, Ruby Wars, Horde)",
+    "key.rubymod.profile": "Profile, Stats & Cosmetics",
     "block.rubymod.ruby_portal": "Ruby Wars Portal",
     "block.rubymod.horde_portal": "Horde Portal",
     "block.rubymod.party_portal": "Party Games Portal",

@@ -36,7 +36,10 @@ public class GunGame extends PartyGame {
 	private static final Item[] LADDER = {ModItems.SERVICE_PISTOL, ModItems.COMBAT_SHOTGUN, ModItems.ARR_RIFLE, ModItems.LONGSHOT_SNIPER,
 			ModItems.RUBY_BLASTER, ModItems.ROCKET_LAUNCHER, ModItems.RUBY_SWORD};
 	private static final int ROUND_TICKS = 6 * 60 * 20;
+	/** Bots coming back: {tick, index, level}. */
 	private final List<int[]> botRespawns = new ArrayList<>();
+	/** Each bot's ladder level and letter. */
+	private final Map<UUID, int[]> bots = new java.util.HashMap<>();
 
 	public GunGame() {
 		super("gungame", "Gun Game", "Every kill gives you the next weapon. First to win with the sword!", "rubymod:arr_rifle",
@@ -50,18 +53,13 @@ public class GunGame extends PartyGame {
 
 	@Override
 	protected void build(ServerLevel level) {
-		Duels.ArenaBuilder.build(level, Duels.Mode.GUNS, center());
+		later(() -> Duels.ArenaBuilder.build(level, Duels.Mode.GUNS, center()));
 	}
 
 	private static String weaponName(int level) {
 		return new ItemStack(LADDER[Math.min(level, LADDER.length - 1)]).getHoverName().getString();
 	}
 
-	@Override
-	protected String roundStatus() {
-		var top = players.values().stream().max(Comparator.comparingInt(p -> p.level)).orElse(null);
-		return top == null ? activeCount() + " playing" : "Leader: " + top.name + " (" + weaponName(top.level) + ", " + (top.level + 1) + "/" + LADDER.length + ")";
-	}
 
 	@Override
 	protected float barProgress() {
@@ -72,20 +70,25 @@ public class GunGame extends PartyGame {
 	@Override
 	protected void startRound() {
 		botRespawns.clear();
+		bots.clear();
 		for (ServerPlayer p : online()) {
 			spawn(p, players.get(p.getUUID()));
 		}
 		int wanted = Math.max(0, 3 - activeCount());
 		for (int i = 0; i < wanted; i++) {
-			spawnGunBot(i);
+			spawnGunBot(i, 0);
 		}
 		titleAll("GUN GAME", "Every kill: a new weapon. Win with the sword!", ChatFormatting.GOLD);
 	}
 
-	private void spawnGunBot(int i) {
+	private void spawnGunBot(int i, int level) {
 		List<ServerPlayer> humans = online();
 		ServerPlayer prey = humans.isEmpty() ? null : humans.get(i % humans.size());
-		spawnBot(randomSpawn(level().getRandom()), prey, "Bot " + (char) ('A' + i));
+		SoldierEntity bot = spawnBot(randomSpawn(level().getRandom()), prey, "Bot " + (char) ('A' + i));
+		if (bot != null) {
+			bot.setWeapon(LADDER[level]);
+			bots.put(bot.getUUID(), new int[] {level, i});
+		}
 	}
 
 	/** A random open spot in the arena. */
@@ -149,7 +152,7 @@ public class GunGame extends PartyGame {
 			return;
 		}
 		if (part.level >= LADDER.length - 1) {
-			endRound(part.name + " WINS!", part.name + " got a kill with the sword. Kills: " + kills(), ChatFormatting.GOLD);
+			endRound(part.name + " WINS!", part.name + " got a kill with the sword. Kills: " + kills(), ChatFormatting.GOLD, one(killer.getUUID()));
 			return;
 		}
 		part.level++;
@@ -162,6 +165,19 @@ public class GunGame extends PartyGame {
 		}
 	}
 
+	@Override
+	protected String roundStatus() {
+		var top = players.values().stream().max(Comparator.comparingInt(p -> p.level)).orElse(null);
+		int botTop = bots.values().stream().mapToInt(b -> b[0]).max().orElse(-1);
+		if (top == null) {
+			return activeCount() + " playing";
+		}
+		if (botTop > top.level) {
+			return "Leader: a bot (" + weaponName(botTop) + ", " + (botTop + 1) + "/" + LADDER.length + ")";
+		}
+		return "Leader: " + top.name + " (" + weaponName(top.level) + ", " + (top.level + 1) + "/" + LADDER.length + ")";
+	}
+
 	private String kills() {
 		StringBuilder b = new StringBuilder();
 		players.values().stream().sorted(Comparator.comparingInt((Part p) -> p.kills).reversed())
@@ -172,6 +188,20 @@ public class GunGame extends PartyGame {
 	@Override
 	protected void onDowned(ServerPlayer victim, Part part, Entity killer) {
 		part.respawnIn = 50;
+		int[] bot = killer == null ? null : bots.get(killer.getUUID());
+		if (bot != null && killer instanceof SoldierEntity soldier) {
+			// Bots climb the ladder too, and can win.
+			if (bot[0] >= LADDER.length - 1) {
+				endRound("BOT " + (char) ('A' + bot[1]) + " WINS!", "A bot got the sword kill. Try again! Kills: " + kills(), ChatFormatting.RED);
+				return;
+			}
+			bot[0]++;
+			soldier.setWeapon(LADDER[bot[0]]);
+			if (bot[0] == LADDER.length - 1) {
+				tell(Component.literal("Bot " + (char) ('A' + bot[1]) + " has the SWORD! Don't let it get you!").withStyle(ChatFormatting.RED));
+			}
+			return;
+		}
 		if (killer instanceof ServerPlayer k && k != victim && players.containsKey(k.getUUID())) {
 			if (k.getMainHandItem().is(ModItems.RUBY_SWORD) && part.level > 0) {
 				part.level--;
@@ -187,8 +217,9 @@ public class GunGame extends PartyGame {
 			players.get(k.getUUID()).kills++;
 			advance(k);
 		}
-		if (phase == Phase.PLAYING) {
-			botRespawns.add(new int[] {roundTicks + 60, botRespawns.size()});
+		int[] bot = bots.remove(entity.getUUID());
+		if (phase == Phase.PLAYING && bot != null) {
+			botRespawns.add(new int[] {roundTicks + 60, bot[1], bot[0]});
 		}
 	}
 
@@ -198,7 +229,7 @@ public class GunGame extends PartyGame {
 			int[] r = it.next();
 			if (roundTicks >= r[0]) {
 				it.remove();
-				spawnGunBot(r[1]);
+				spawnGunBot(r[1], r[2]);
 			}
 		}
 		// Bots go after whoever's closest.
@@ -214,7 +245,7 @@ public class GunGame extends PartyGame {
 		if (roundTicks >= ROUND_TICKS) {
 			Map.Entry<UUID, Part> top = players.entrySet().stream().max(Comparator.comparingInt(e -> e.getValue().level)).orElse(null);
 			endRound(top == null ? "TIME'S UP" : top.getValue().name + " WINS!", "Time's up: furthest up the ladder wins. Kills: " + kills(),
-					ChatFormatting.GOLD);
+					ChatFormatting.GOLD, top == null ? List.of() : one(top.getKey()));
 		}
 	}
 }

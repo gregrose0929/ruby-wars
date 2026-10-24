@@ -236,7 +236,7 @@ public class HideAndSeek extends PartyGame {
 		if (hiders == 0) {
 			Part best = players.values().stream().max(java.util.Comparator.comparingInt(p -> p.score)).orElse(null);
 			endRound("SEEKERS WIN", "Everyone was found!" + (best != null && best.score > 0 ? " Best seeker: " + best.name + " (" + best.score + ")" : ""),
-					ChatFormatting.RED);
+					ChatFormatting.RED, teamIds(SEEKER));
 			disguises.clear();
 		}
 	}
@@ -323,7 +323,7 @@ public class HideAndSeek extends PartyGame {
 			StringBuilder names = new StringBuilder();
 			players.values().stream().filter(p -> p.team == HIDER && !p.watching)
 					.forEach(p -> names.append(names.isEmpty() ? "" : ", ").append(p.name));
-			endRound("HIDERS WIN", "Still hidden: " + names, ChatFormatting.GREEN);
+			endRound("HIDERS WIN", "Still hidden: " + names, ChatFormatting.GREEN, teamIds(HIDER));
 			for (UUID id : new ArrayList<>(disguises.keySet())) {
 				undisguise(id);
 			}

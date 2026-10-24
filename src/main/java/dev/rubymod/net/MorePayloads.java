@@ -173,6 +173,43 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Client -> server: send me my profile. */
+	public record ProfileRequest() implements CustomPacketPayload {
+		public static final Type<ProfileRequest> TYPE = new Type<>(RubyMod.id("profile_request"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ProfileRequest> CODEC = StreamCodec.unit(new ProfileRequest());
+
+		@Override
+		public Type<ProfileRequest> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: profile stats ("label|value") and cosmetics ("id|kind|name|icon|how|unlocked|wearing"). */
+	public record ProfileSync(List<String> stats, List<String> cosmetics) implements CustomPacketPayload {
+		public static final Type<ProfileSync> TYPE = new Type<>(RubyMod.id("profile_sync"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ProfileSync> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), ProfileSync::stats,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), ProfileSync::cosmetics,
+				ProfileSync::new);
+
+		@Override
+		public Type<ProfileSync> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: wear a cosmetic ("none:HAT" etc. to take one off). */
+	public record CosmeticSelect(String id) implements CustomPacketPayload {
+		public static final Type<CosmeticSelect> TYPE = new Type<>(RubyMod.id("cosmetic_select"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, CosmeticSelect> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, CosmeticSelect::id, CosmeticSelect::new);
+
+		@Override
+		public Type<CosmeticSelect> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: the Horde reward picked. */
 	public record HordePick(String id) implements CustomPacketPayload {
 		public static final Type<HordePick> TYPE = new Type<>(RubyMod.id("horde_pick"));
@@ -315,6 +352,9 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(ModeInfo.TYPE, ModeInfo.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HordeOffer.TYPE, HordeOffer.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(OpenModes.TYPE, OpenModes.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ProfileRequest.TYPE, ProfileRequest.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(ProfileSync.TYPE, ProfileSync.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(CosmeticSelect.TYPE, CosmeticSelect.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HordePick.TYPE, HordePick.CODEC);
 	}
 }

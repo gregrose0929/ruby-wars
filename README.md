@@ -82,19 +82,51 @@ four gates. Some enemies hunt you; some go straight for the cache.
   the "Reach wave 5 in Co-op Horde" goal (a star for Ruby Wars). Nothing else from Horde
   carries over.
 
+## Profile, cosmetics and leaderboards
+
+Press **P** for your profile: lifetime stats across every mode (party game wins and
+kills, Horde best wave, Sky Race best time, duels and seasons won) and your cosmetics.
+Cosmetics never change how anything plays; they're earned by playing:
+
+- **Hats** (float above your head): Floating Ruby (win any party game), Cake Hat (play
+  10), Pumpkin Head (win Hide & Seek), Mini Tank (win Tank Battle), Diamond (win 10),
+  Ruby Heart (Horde wave 10), Golden Crown (win a Ruby Wars season).
+- **Trails** (when you move): Ruby Sparkles (everyone), Hearts (revive someone in Horde),
+  Snowflakes (Horde wave 5), Clouds (finish a Sky Race), Music Notes (win Build Battle),
+  Flames (25 party kills), Magic (win 3 duels).
+- **Kill effects**: Confetti (everyone), Heart Burst (50 party kills), Lightning (win Gun
+  Game), Ruby Explosion (win Ruby Rush).
+
+Click one on the profile to wear it, click again to take it off. They're hidden while
+you're hiding in Hide & Seek, invisible or watching. The hub has two leaderboards: Party
+Champions (most wins) and Records (Horde waves, Sky Race times, most party kills). Stats
+live in `world/rubywars/stats.json` and last across seasons.
+
+New players get a 20-second tour of the hub the first time they arrive (`/tour` shows it
+again, `/tour skip` skips it).
+
 ## Party games
 
 Nine quick, round-based games from the hub's purple portal or the H picker
 (`/play <id>`). Rounds loop: a 15-second lobby, the round, 8 seconds of results, then
-the next round, until everyone leaves. Each has its own arena, rebuilt between rounds;
-your own things stay saved in the hub's save.
+the next round, until everyone leaves. Each has its own arena, rebuilt between rounds
+a little at a time (so the server never freezes); every arena is also built in the
+background when the server starts. Your own things stay saved in the hub's save.
+Different people can play different games at the same time. If a game ever hits a bug,
+its players are sent back to the hub and the error is logged; the server keeps running.
+
+AI bots fill in where a game supports them. They strafe, duck into cover to patch up
+when they're hurt, and use the right weapon for the job: in Gun Game they climb the
+weapon ladder too (and can win), in Capture the Flag they join both teams (half attack
+and carry flags, half defend), in King of the Hill they fight for the zone, and in Ruby
+Rush they land 15 seconds in with a random gun.
 
 | Game | `/play` | Players | What it is |
 | --- | --- | --- | --- |
 | Gun Game | `gungame` | 1+ (bots fill in) | Every kill swaps your weapon for the next: pistol, shotgun, rifle, sniper, Ruby Blaster, rockets, sword. Win with a sword kill; get knifed and you drop a level. |
 | Holo Hide & Seek | `hideseek` | 2+ | Hiders right-click any block to turn into it, and lock in place by standing still for 2 seconds. Seekers wait 40 seconds, then one hit finds a hider (who then seeks too). Hiders chirp every 30 seconds. 3.5 minutes. |
 | Infection | `infection` | 2+ | One zombie (fast, strong) at the start; anyone caught becomes a zombie. Survivors have a pistol and shotgun and must last 4 minutes. Wild zombies wander in. |
-| Capture the Flag | `ctf` | 2+ (teams) | Red vs Blue. 20 seconds to build sandbag defenses, then grab their flag and bring it to yours. Dropped flags: your team walks over it to send it home. First to 3. |
+| Capture the Flag | `ctf` | 1+ (teams, bots fill in) | Red vs Blue. 20 seconds to build sandbag defenses, then grab their flag and bring it to yours. Dropped flags: your team walks over it to send it home. First to 3. |
 | King of the Hill | `koth` | 1+ (bots fill in) | Score a point a second while you're the only one in the gold zone; it moves every minute. First to 75. |
 | Tank Battle | `tanks` | 2+ (teams) | Red vs Blue in tanks on the vehicle arena; a fresh tank 5 seconds after you're knocked out. First team to 10. |
 | Sky Race | `skyrace` | 1+ | Jetpack through 12 rings in the sky, twice around. Land on the glowing pads to refuel. The record time is kept. |
@@ -149,7 +181,8 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Squad | O: your squad, members and one-click invites |
 | Minimap | U: hide or show it |
 | Field Manual | Y: short in-game guide pages on everything here |
-| Choose a game | H: Ruby Wars, Co-op Horde, or back to the hub |
+| Choose a game | H: Ruby Wars, Co-op Horde, party games, or back to the hub |
+| Profile | P: your stats and cosmetics |
 
 In any vehicle the view is truly first person: no hands, no held item, and the
 hotbar and hearts make way for the vehicle's HUD.
@@ -590,7 +623,7 @@ so you don't need to start a season to test weapons.
 
 ## Commands
 
-Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`,
+Everyone: `/hub`, `/tour`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`,
 `/play gungame|hideseek|infection|ctf|koth|tanks|skyrace|build|rush` (party games), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
 base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),

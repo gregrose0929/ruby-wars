@@ -45,10 +45,14 @@ public class CaptureTheFlag extends PartyGame {
 	private final UUID[] carrier = new UUID[2];
 	private final BlockPos[] dropped = new BlockPos[2];
 	private final int[] droppedAt = new int[2];
+	/** Bots: their team, and whether they attack (or defend). */
+	private final java.util.Map<UUID, int[]> bots = new java.util.HashMap<>();
+	/** Bots coming back: {tick, team, attacker}. */
+	private final java.util.List<int[]> botRespawns = new java.util.ArrayList<>();
 
 	public CaptureTheFlag() {
 		super("ctf", "Capture the Flag", "Red vs Blue: steal their flag and bring it home. First to 3!", "minecraft:red_wool",
-				2, false, true, true);
+				1, true, true, true);
 	}
 
 	@Override
@@ -147,6 +151,16 @@ public class CaptureTheFlag extends PartyGame {
 			dropped[t] = null;
 		}
 		midWall(true);
+		bots.clear();
+		botRespawns.clear();
+		// Fill both teams to at least two (and even) with bots: half attack, half defend.
+		int want = Math.max(2, Math.max(teamIds(0).size(), teamIds(1).size()));
+		for (int team = 0; team < 2; team++) {
+			int add = Math.min(3, want - teamIds(team).size());
+			for (int i = 0; i < add; i++) {
+				spawnCtfBot(team, i % 2 == 0);
+			}
+		}
 		for (ServerPlayer p : online()) {
 			Part part = players.get(p.getUUID());
 			spawn(p, part);
@@ -172,6 +186,22 @@ public class CaptureTheFlag extends PartyGame {
 		player.getInventory().setSelectedSlot(0);
 	}
 
+	private void spawnCtfBot(int team, boolean attacker) {
+		BlockPos c = center();
+		int z = baseZ(team) + (team == 0 ? -3 : 3);
+		var bot = dev.rubymod.entity.SoldierEntity.partyBot(level(), c.offset(level().getRandom().nextInt(7) - 3, 0, z), team);
+		if (bot == null) {
+			return;
+		}
+		bot.setWeapon(ModItems.ARR_RIFLE);
+		bot.setCustomName(Component.literal(teamName(team) + " Bot").withStyle(team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE));
+		bot.addTag(tag());
+		level().addFreshEntity(bot);
+		joinTeam(bot, team);
+		spawned.add(bot.getUUID());
+		bots.put(bot.getUUID(), new int[] {team, attacker ? 1 : 0});
+	}
+
 	private static ItemStack dyed(net.minecraft.world.item.Item item, int color) {
 		ItemStack stack = new ItemStack(item);
 		stack.set(DataComponents.DYED_COLOR, new DyedItemColor(color));
@@ -188,7 +218,7 @@ public class CaptureTheFlag extends PartyGame {
 		level().setBlock(pedestal(team).above(), flagBlock(team), 3);
 	}
 
-	private void take(ServerPlayer player, int flag) {
+	private void take(net.minecraft.world.entity.LivingEntity player, int flag) {
 		home[flag] = false;
 		carrier[flag] = player.getUUID();
 		if (dropped[flag] != null) {
@@ -203,7 +233,7 @@ public class CaptureTheFlag extends PartyGame {
 		level().playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.PLAYERS, 1.5F, 1.2F);
 	}
 
-	private void drop(ServerPlayer player, int flag, Vec3 at) {
+	private void drop(net.minecraft.world.entity.LivingEntity player, int flag, Vec3 at) {
 		carrier[flag] = null;
 		BlockPos pos = BlockPos.containing(at);
 		ServerLevel level = level();
@@ -233,6 +263,59 @@ public class CaptureTheFlag extends PartyGame {
 	}
 
 	@Override
+	protected void onEntityDied(net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.damagesource.DamageSource source) {
+		int[] bot = bots.remove(entity.getUUID());
+		if (bot == null) {
+			return;
+		}
+		for (int flag = 0; flag < 2; flag++) {
+			if (entity.getUUID().equals(carrier[flag])) {
+				drop(entity, flag, entity.position());
+			}
+		}
+		if (source.getEntity() instanceof ServerPlayer k && players.containsKey(k.getUUID())) {
+			players.get(k.getUUID()).kills++;
+		}
+		if (phase == Phase.PLAYING) {
+			botRespawns.add(new int[] {roundTicks + 120, bot[0], bot[1]});
+		}
+	}
+
+	/** Every half second: send each bot after a flag, home with one, or to defend. */
+	private void steerBots() {
+		ServerLevel level = level();
+		for (UUID id : bots.keySet()) {
+			if (!(level.getEntity(id) instanceof dev.rubymod.entity.SoldierEntity bot) || !bot.isAlive()) {
+				continue;
+			}
+			int[] b = bots.get(id);
+			int mine = b[0];
+			int theirs = 1 - mine;
+			BlockPos goal;
+			if (setup()) {
+				goal = pedestal(mine).offset(0, 0, mine == 0 ? 6 : -6);
+			} else if (id.equals(carrier[theirs])) {
+				goal = pedestal(mine);
+			} else if (b[1] == 1) {
+				// Attacker: their flag (or escort whoever has it).
+				Entity runner = carrier[theirs] == null ? null : findRunner(carrier[theirs]);
+				goal = dropped[theirs] != null ? dropped[theirs] : home[theirs] ? pedestal(theirs) : runner != null ? runner.blockPosition() : pedestal(theirs);
+			} else {
+				// Defender: get our flag back, or guard it.
+				Entity thief = carrier[mine] == null ? null : findRunner(carrier[mine]);
+				goal = dropped[mine] != null ? dropped[mine] : thief != null ? thief.blockPosition()
+						: pedestal(mine).offset(level.getRandom().nextInt(9) - 4, 0, (mine == 0 ? 1 : -1) * (3 + level.getRandom().nextInt(4)));
+			}
+			bot.setObjective(goal);
+		}
+	}
+
+	private Entity findRunner(UUID id) {
+		ServerPlayer p = PartyGames.player(server, id);
+		return p != null ? p : level().getEntity(id);
+	}
+
+	@Override
 	protected void onLeft(UUID id, Part part) {
 		for (int flag = 0; flag < 2; flag++) {
 			if (id.equals(carrier[flag])) {
@@ -248,13 +331,32 @@ public class CaptureTheFlag extends PartyGame {
 			titleAll("GO!", "Grab their flag and bring it home", ChatFormatting.GOLD);
 		}
 		ServerLevel level = level();
+		for (var it = botRespawns.iterator(); it.hasNext();) {
+			int[] r = it.next();
+			if (roundTicks >= r[0]) {
+				it.remove();
+				spawnCtfBot(r[1], r[2] == 1);
+			}
+		}
+		if (roundTicks % 10 == 0) {
+			steerBots();
+		}
 		if (roundTicks % 4 == 0 && !setup()) {
+			java.util.List<net.minecraft.world.entity.LivingEntity> runners = new java.util.ArrayList<>();
 			for (ServerPlayer p : online()) {
 				Part part = players.get(p.getUUID());
-				if (part.watching || p.isSpectator() || part.respawnIn > 0) {
-					continue;
+				if (!part.watching && !p.isSpectator() && part.respawnIn <= 0) {
+					runners.add(p);
 				}
-				int mine = part.team;
+			}
+			for (UUID id : bots.keySet()) {
+				if (level.getEntity(id) instanceof net.minecraft.world.entity.LivingEntity bot && bot.isAlive()) {
+					runners.add(bot);
+				}
+			}
+			for (net.minecraft.world.entity.LivingEntity p : runners) {
+				Part part = players.get(p.getUUID());
+				int mine = part != null ? part.team : bots.get(p.getUUID())[0];
 				int theirs = 1 - mine;
 				Vec3 pos = p.position();
 				// Grab their flag (from its pedestal, or where it was dropped).
@@ -270,9 +372,11 @@ public class CaptureTheFlag extends PartyGame {
 				// Capture: their flag to our pedestal, while ours is home.
 				if (p.getUUID().equals(carrier[theirs]) && home[mine] && pos.distanceTo(Vec3.atBottomCenterOf(pedestal(mine).above())) < 2.2) {
 					captures[mine]++;
-					part.score++;
+					if (part != null) {
+						part.score++;
+					}
 					p.removeEffect(MobEffects.GLOWING);
-					p.setItemSlot(EquipmentSlot.HEAD, dyed(Items.LEATHER_HELMET, mine == 0 ? 0xC03030 : 0x3050D0));
+					p.setItemSlot(EquipmentSlot.HEAD, part != null ? dyed(Items.LEATHER_HELMET, mine == 0 ? 0xC03030 : 0x3050D0) : ItemStack.EMPTY);
 					putFlagHome(theirs);
 					titleAll(teamName(mine).toUpperCase() + " SCORES!", p.getName().getString() + " captured the flag (" + captures[0] + " - " + captures[1] + ")",
 							mine == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
@@ -281,7 +385,7 @@ public class CaptureTheFlag extends PartyGame {
 					}
 					if (captures[mine] >= WIN) {
 						endRound(teamName(mine).toUpperCase() + " WINS!", "Captures: Red " + captures[0] + " - " + captures[1] + " Blue. "
-								+ "Flag runner: " + p.getName().getString(), mine == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
+								+ "Flag runner: " + p.getName().getString(), mine == 0 ? ChatFormatting.RED : ChatFormatting.BLUE, teamIds(mine));
 						return;
 					}
 				}
@@ -301,7 +405,8 @@ public class CaptureTheFlag extends PartyGame {
 		}
 		if (roundTicks >= ROUND_TICKS) {
 			String head = captures[0] == captures[1] ? "DRAW" : (captures[0] > captures[1] ? "RED" : "BLUE") + " WINS!";
-			endRound(head, "Time's up: Red " + captures[0] + " - " + captures[1] + " Blue", ChatFormatting.GOLD);
+			endRound(head, "Time's up: Red " + captures[0] + " - " + captures[1] + " Blue", ChatFormatting.GOLD,
+					captures[0] == captures[1] ? java.util.List.<UUID>of() : teamIds(captures[0] > captures[1] ? 0 : 1));
 		}
 	}
 

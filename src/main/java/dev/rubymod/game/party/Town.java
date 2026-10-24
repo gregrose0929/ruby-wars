@@ -77,6 +77,15 @@ final class Town {
 		// Crates and hay scattered about (lots to hide among).
 		BlockState[] clutter = {Blocks.BARREL.defaultBlockState(), Blocks.HAY_BLOCK.defaultBlockState(), Blocks.OAK_PLANKS.defaultBlockState(),
 				Blocks.CHISELED_BOOKSHELF.defaultBlockState(), Blocks.MOSSY_COBBLESTONE.defaultBlockState(), Blocks.PUMPKIN.defaultBlockState()};
+		g.later(() -> clutter(g, level, clutter));
+		// Lamp posts.
+		for (int[] p : new int[][] {{-3, -12}, {3, 12}, {-12, 3}, {12, -3}, {-3, 25}, {3, -25}, {25, 3}, {-25, -3}}) {
+			g.box(level, p[0], 1, p[1], p[0], 3, p[1], Blocks.DARK_OAK_FENCE.defaultBlockState());
+			g.set(level, p[0], 4, p[1], Blocks.LANTERN.defaultBlockState());
+		}
+	}
+
+	private static void clutter(PartyGame g, ServerLevel level, BlockState[] clutter) {
 		for (int i = 0; i < 70; i++) {
 			int x = (int) (WarzoneTerrain.hash3(i, 11, 5) * (HALF * 2 - 4)) - HALF + 2;
 			int z = (int) (WarzoneTerrain.hash3(i, 12, 9) * (HALF * 2 - 4)) - HALF + 2;
@@ -89,11 +98,6 @@ final class Town {
 					g.set(level, x, 2, z, clutter[(i + 1) % clutter.length]);
 				}
 			}
-		}
-		// Lamp posts.
-		for (int[] p : new int[][] {{-3, -12}, {3, 12}, {-12, 3}, {12, -3}, {-3, 25}, {3, -25}, {25, 3}, {-25, -3}}) {
-			g.box(level, p[0], 1, p[1], p[0], 3, p[1], Blocks.DARK_OAK_FENCE.defaultBlockState());
-			g.set(level, p[0], 4, p[1], Blocks.LANTERN.defaultBlockState());
 		}
 	}
 

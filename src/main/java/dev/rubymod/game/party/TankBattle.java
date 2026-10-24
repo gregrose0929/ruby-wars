@@ -51,7 +51,7 @@ public class TankBattle extends PartyGame {
 	protected void build(ServerLevel level) {
 		if (!built) {
 			built = true;
-			Duels.ArenaBuilder.build(level, Duels.Mode.VEHICLES, center());
+			later(() -> Duels.ArenaBuilder.build(level, Duels.Mode.VEHICLES, center()));
 		}
 	}
 
@@ -123,7 +123,8 @@ public class TankBattle extends PartyGame {
 		tell(Component.literal(part.name + " is knocked out (" + kills[0] + " - " + kills[1] + ")")
 				.withStyle(part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE));
 		if (kills[other] >= WIN) {
-			endRound(teamName(other).toUpperCase() + " WINS!", "Red " + kills[0] + " - " + kills[1] + " Blue", other == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
+			endRound(teamName(other).toUpperCase() + " WINS!", "Red " + kills[0] + " - " + kills[1] + " Blue", other == 0 ? ChatFormatting.RED : ChatFormatting.BLUE,
+					teamIds(other));
 		}
 	}
 
@@ -147,7 +148,8 @@ public class TankBattle extends PartyGame {
 		}
 		if (roundTicks >= ROUND_TICKS) {
 			String head = kills[0] == kills[1] ? "DRAW" : (kills[0] > kills[1] ? "RED" : "BLUE") + " WINS!";
-			endRound(head, "Time's up: Red " + kills[0] + " - " + kills[1] + " Blue", ChatFormatting.GOLD);
+			endRound(head, "Time's up: Red " + kills[0] + " - " + kills[1] + " Blue", ChatFormatting.GOLD,
+					kills[0] == kills[1] ? java.util.List.<UUID>of() : teamIds(kills[0] > kills[1] ? 0 : 1));
 		}
 	}
 

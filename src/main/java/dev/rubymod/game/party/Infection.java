@@ -157,7 +157,7 @@ public class Infection extends PartyGame {
 			if (count(SURVIVOR) == 0) {
 				Part best = players.values().stream().max(Comparator.comparingInt(p -> p.score)).orElse(null);
 				endRound("ZOMBIES WIN", "Everyone was infected!" + (best != null && best.score > 0 ? " Most bites: " + best.name + " (" + best.score + ")" : ""),
-						ChatFormatting.DARK_GREEN);
+						ChatFormatting.DARK_GREEN, teamIds(ZOMBIE));
 			}
 		} else {
 			part.respawnIn = 80;
@@ -175,7 +175,7 @@ public class Infection extends PartyGame {
 				dev.rubymod.game.Alerts.title(p, "YOU'RE THE ZOMBIE", "The zombie left: you're it now!", ChatFormatting.DARK_GREEN);
 			}
 		} else if (count(SURVIVOR) == 0) {
-			endRound("ZOMBIES WIN", "No survivors left.", ChatFormatting.DARK_GREEN);
+			endRound("ZOMBIES WIN", "No survivors left.", ChatFormatting.DARK_GREEN, teamIds(ZOMBIE));
 		}
 	}
 
@@ -220,7 +220,7 @@ public class Infection extends PartyGame {
 			StringBuilder names = new StringBuilder();
 			players.values().stream().filter(p -> p.team == SURVIVOR && !p.watching)
 					.forEach(p -> names.append(names.isEmpty() ? "" : ", ").append(p.name));
-			endRound("SURVIVORS WIN", "Made it out: " + names, ChatFormatting.GREEN);
+			endRound("SURVIVORS WIN", "Made it out: " + names, ChatFormatting.GREEN, teamIds(SURVIVOR));
 		}
 	}
 

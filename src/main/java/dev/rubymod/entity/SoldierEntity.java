@@ -77,6 +77,14 @@ public class SoldierEntity extends PathfinderMob {
 	private UUID prey;
 	/** Horde shield soldier: shots from the front mostly bounce off the shield. */
 	private boolean shielded;
+	/** Party games: which team this bot fights for (-1: not a party bot), and the weapon it uses (null: its role's). */
+	private int partyTeam = -1;
+	private net.minecraft.world.item.Item botWeapon;
+	/** Practice and party bots fight smarter: they strafe and duck into cover to heal. */
+	private boolean smart;
+	private int strafeIn;
+	private int coverTicks;
+	private int coverCooldown;
 
 	public SoldierEntity(EntityType<? extends SoldierEntity> type, Level level) {
 		super(type, level);
@@ -146,6 +154,7 @@ public class SoldierEntity extends PathfinderMob {
 		s.entityData.set(RAIDER, true);
 		s.entityData.set(ROLE, RIFLEMAN);
 		s.prey = prey == null ? null : prey.getUUID();
+		s.smart = true;
 		s.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 180, 0);
 		s.equip();
 		s.setCustomName(Component.literal("Practice Bot").withStyle(ChatFormatting.RED));
@@ -169,6 +178,31 @@ public class SoldierEntity extends PathfinderMob {
 		}
 	}
 
+	/** A party-game bot on a team (Capture the Flag): fights the other team's players and bots, goes where the game sends it. */
+	public static SoldierEntity partyBot(ServerLevel level, BlockPos at, int team) {
+		SoldierEntity s = raider(level, at, at, RIFLEMAN, -3);
+		if (s != null) {
+			s.partyTeam = team;
+			s.smart = true;
+		}
+		return s;
+	}
+
+	/** Give the bot a weapon to fight with (any gun, the rocket launcher or the ruby sword). */
+	public void setWeapon(net.minecraft.world.item.Item weapon) {
+		botWeapon = weapon;
+		setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(weapon));
+		setDropChance(EquipmentSlot.MAINHAND, 0.0F);
+	}
+
+	public void setSmart() {
+		smart = true;
+	}
+
+	public int partyTeam() {
+		return partyTeam;
+	}
+
 	public void setObjective(BlockPos objective) {
 		this.objective = objective;
 	}
@@ -184,7 +218,7 @@ public class SoldierEntity extends PathfinderMob {
 	/** The practice bot and Horde soldiers fight players even in Peaceful (where vanilla stops mobs targeting players). */
 	@Override
 	public boolean canAttack(LivingEntity target) {
-		if (prey != null && target.getUUID().equals(prey) || raidId == dev.rubymod.game.Horde.SOLDIER_RAID_ID && target instanceof Player) {
+		if (prey != null && target.getUUID().equals(prey) || (raidId == dev.rubymod.game.Horde.SOLDIER_RAID_ID || partyTeam >= 0) && target instanceof Player) {
 			return target.canBeSeenAsEnemy();
 		}
 		return super.canAttack(target);
@@ -232,6 +266,17 @@ public class SoldierEntity extends PathfinderMob {
 		if (e instanceof Player p && (p.isCreative() || p.isSpectator() || Rules.isEliminated(p.getUUID()) && dev.rubymod.game.Hub.inRubyWarsWorld(p))) {
 			return false;
 		}
+		if (partyTeam >= 0) {
+			// Party bots fight the other team (players and bots).
+			if (e instanceof SoldierEntity s) {
+				return s.partyTeam >= 0 && s.partyTeam != partyTeam;
+			}
+			if (e instanceof Player p) {
+				int team = dev.rubymod.game.party.PartyGames.teamOf(p);
+				return team >= 0 && team != partyTeam;
+			}
+			return false;
+		}
 		if (isRaider()) {
 			// Raiders fight players near their objective and anyone's guards.
 			return e instanceof Player || e instanceof SoldierEntity s && !s.isRaider();
@@ -275,27 +320,45 @@ public class SoldierEntity extends PathfinderMob {
 			heal(1.0F);
 		}
 		LivingEntity target = getTarget();
-		if (target != null && (!target.isAlive() || target.distanceTo(this) > 40 || !isHostileTo(target))) {
+		if (target != null && (!target.isAlive() || target.distanceTo(this) > Math.max(40, weaponRange() + 10) || !isHostileTo(target))) {
 			setTarget(null);
 			target = null;
+		}
+		if (coverCooldown > 0) {
+			coverCooldown--;
 		}
 		if (target != null) {
 			getLookControl().setLookAt(target, 30.0F, 30.0F);
 			double dist = distanceTo(target);
-			if (dist > (role() == AT_GUNNER ? 30 : 20) || !hasLineOfSight(target)) {
+			if (smart && takeCover(level, target)) {
+				return;
+			}
+			if (botWeapon == ModItems.RUBY_SWORD) {
+				// Sword: charge in.
+				getNavigation().moveTo(target, 1.25);
+				fireAt(level, target);
+			} else if (dist > weaponRange() || !hasLineOfSight(target)) {
 				// Too far, or behind cover: close in / find an angle instead of shooting the wall.
 				getNavigation().moveTo(target, 1.0);
 			} else {
-				getNavigation().stop();
+				if (smart) {
+					strafe(target);
+				} else {
+					getNavigation().stop();
+				}
 				fireAt(level, target);
 			}
 			return;
 		}
+		coverTicks = 0;
 		if (prey != null) {
 			// Practice bot: go find the player.
 			ServerPlayer hunted = level.getServer().getPlayerList().getPlayer(prey);
+			if (hunted == null) {
+				hunted = dev.rubymod.game.party.PartyGames.TEST_PLAYERS.get(prey);
+			}
 			if (hunted != null && hunted.level() == level && tickCount % 20 == 0) {
-				if (hasLineOfSight(hunted) && distanceTo(hunted) < 40 && isHostileTo(hunted)) {
+				if (hasLineOfSight(hunted) && distanceTo(hunted) < Math.max(40, weaponRange()) && isHostileTo(hunted)) {
 					setTarget(hunted);
 				} else {
 					getNavigation().moveTo(hunted, 1.1);
@@ -325,17 +388,101 @@ public class SoldierEntity extends PathfinderMob {
 		}
 	}
 
+	// ----- Smarter fighting (practice and party bots) -----
+
+	/** How far this soldier likes to shoot from. */
+	private double weaponRange() {
+		if (botWeapon == null) {
+			return role() == AT_GUNNER ? 30 : 20;
+		}
+		if (botWeapon == ModItems.LONGSHOT_SNIPER) {
+			return 60;
+		} else if (botWeapon == ModItems.COMBAT_SHOTGUN) {
+			return 10;
+		} else if (botWeapon == ModItems.ROCKET_LAUNCHER) {
+			return 30;
+		} else if (botWeapon == ModItems.RUBY_SWORD) {
+			return 2.5;
+		}
+		return 22;
+	}
+
+	/** Sidestep while shooting (harder to hit than standing still). */
+	private void strafe(LivingEntity target) {
+		if (--strafeIn > 0) {
+			return;
+		}
+		strafeIn = 20 + getRandom().nextInt(20);
+		Vec3 to = target.position().subtract(position()).multiply(1, 0, 1).normalize();
+		Vec3 side = new Vec3(-to.z, 0, to.x).scale((getRandom().nextBoolean() ? 1 : -1) * (3 + getRandom().nextInt(3)));
+		// Shotguns push in a little; snipers back off a little.
+		double push = botWeapon == ModItems.COMBAT_SHOTGUN ? 2 : botWeapon == ModItems.LONGSHOT_SNIPER ? -2 : 0;
+		Vec3 spot = position().add(side).add(to.scale(push));
+		getNavigation().moveTo(spot.x, spot.y, spot.z, 0.9);
+	}
+
+	/** Hurt badly: run somewhere the target can't see, patch up, then come back. True while hiding. */
+	private boolean takeCover(ServerLevel level, LivingEntity target) {
+		if (coverTicks > 0) {
+			coverTicks--;
+			if (tickCount % 10 == 0 && getHealth() < getMaxHealth() * 0.8F) {
+				heal(1.0F);
+			}
+			return coverTicks > 0 && getHealth() < getMaxHealth() * 0.8F;
+		}
+		if (coverCooldown > 0 || getHealth() >= getMaxHealth() * 0.4F) {
+			return false;
+		}
+		coverCooldown = 300;
+		BlockPos best = null;
+		double bestDist = Double.MAX_VALUE;
+		for (int i = 0; i < 16; i++) {
+			BlockPos spot = blockPosition().offset(getRandom().nextInt(21) - 10, 0, getRandom().nextInt(21) - 10);
+			if (!level.getBlockState(spot).isAir() || !level.getBlockState(spot.above()).isAir() || level.getBlockState(spot.below()).isAir()) {
+				continue;
+			}
+			Vec3 eye = target.getEyePosition();
+			Vec3 at = Vec3.atBottomCenterOf(spot).add(0, 1.5, 0);
+			if (level.clip(new ClipContext(eye, at, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, target)).getType() == HitResult.Type.MISS) {
+				continue; // they'd still see us there
+			}
+			double d = spot.distSqr(blockPosition());
+			if (d < bestDist) {
+				bestDist = d;
+				best = spot;
+			}
+		}
+		if (best == null) {
+			return false;
+		}
+		getNavigation().moveTo(best.getX() + 0.5, best.getY(), best.getZ() + 0.5, 1.3);
+		coverTicks = 100;
+		return true;
+	}
+
 	private void pickTarget(ServerLevel level) {
 		if (getTarget() != null && hasLineOfSight(getTarget())) {
 			return;
 		}
-		double range = role() == AT_GUNNER ? 40 : 28;
+		double range = Math.max(role() == AT_GUNNER ? 40 : 28, weaponRange());
 		List<LivingEntity> near = level.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(range), this::isHostileTo);
 		near.stream().filter(this::hasLineOfSight).min(Comparator.comparingDouble(e -> {
 			// AT gunners prefer vehicles and aircraft.
 			double d = e.distanceToSqr(this);
 			return role() == AT_GUNNER && Armor.isArmored(e) ? d * 0.1 : d;
 		})).ifPresent(this::setTarget);
+	}
+
+	/** How hard one of this soldier's shots hits. */
+	private float shotDamage() {
+		if (botWeapon instanceof dev.rubymod.gun.GunItem gun) {
+			return gun.stats().damage();
+		}
+		// The practice bot hits as hard as your own AR-R rifle (raid soldiers are weaker on purpose).
+		if (prey != null || partyTeam >= 0) {
+			return ((dev.rubymod.gun.GunItem) ModItems.ARR_RIFLE).stats().damage();
+		}
+		return isRaider() ? GameConfig.get().raiderDamage : GameConfig.get().guardDamage;
 	}
 
 	private void fireAt(ServerLevel level, LivingEntity target) {
@@ -348,19 +495,58 @@ public class SoldierEntity extends PathfinderMob {
 			// Body behind cover: aim for whatever sticks out (the head).
 			aim = target.getEyePosition();
 		}
-		if (role() == AT_GUNNER) {
+		boolean rockets = botWeapon == ModItems.ROCKET_LAUNCHER || botWeapon == null && role() == AT_GUNNER;
+		if (rockets) {
 			if (!Armor.isArmored(target) && distanceTo(target) < 6) {
 				return; // too close for a rocket
 			}
 			Vec3 dir = aim.subtract(from).normalize();
 			level.addFreshEntity(RocketEntity.shell(level, this, from.add(dir.scale(0.8)), dir.scale(2.0), 2.5F));
 			level.playSound(null, getX(), getY(), getZ(), dev.rubymod.registry.ModSounds.ROCKET_LAUNCH, SoundSource.HOSTILE, 1.2F, 1.05F);
-			cooldown = 100;
+			cooldown = botWeapon != null ? 70 : 100;
 			return;
 		}
-		// Rifle: 3-round bursts with some spread.
+		if (botWeapon == ModItems.RUBY_SWORD) {
+			if (distanceTo(target) < 2.6) {
+				target.setInvulnerableTime(0);
+				target.hurtServer(level, damageSources().mobAttack(this), 8.0F);
+				cooldown = 12;
+			}
+			return;
+		}
 		var random = getRandom();
-		Vec3 spread = new Vec3(random.nextGaussian(), random.nextGaussian(), random.nextGaussian()).scale(0.035 * aim.distanceTo(from) / 10.0);
+		if (botWeapon == ModItems.COMBAT_SHOTGUN) {
+			for (int i = 0; i < 6; i++) {
+				shoot(level, target, from, aim, 0.12, shotDamage());
+			}
+			level.playSound(null, getX(), getY(), getZ(), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.HOSTILE, 1.2F, 0.7F);
+			cooldown = 24;
+			return;
+		}
+		if (botWeapon == ModItems.LONGSHOT_SNIPER || botWeapon == ModItems.SERVICE_PISTOL) {
+			boolean sniper = botWeapon == ModItems.LONGSHOT_SNIPER;
+			shoot(level, target, from, aim, sniper ? 0.006 : 0.03, shotDamage());
+			level.playSound(null, getX(), getY(), getZ(), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.HOSTILE, sniper ? 1.6F : 0.9F,
+					sniper ? 0.6F : 1.2F);
+			cooldown = sniper ? 55 : 12;
+			return;
+		}
+		// Rifle (and Ruby Blaster): 3-round bursts with some spread.
+		shoot(level, target, from, aim, 0.035, shotDamage());
+		level.playSound(null, getX(), getY(), getZ(), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.HOSTILE, 1.0F, 0.95F + random.nextFloat() * 0.1F);
+		burst++;
+		if (burst >= 3) {
+			burst = 0;
+			cooldown = 26 + random.nextInt(10);
+		} else {
+			cooldown = 3;
+		}
+	}
+
+	/** One bullet (or pellet): spread grows with distance; blocked by walls; tracers drawn. */
+	private void shoot(ServerLevel level, LivingEntity target, Vec3 from, Vec3 aim, double spreadPer10, float damage) {
+		var random = getRandom();
+		Vec3 spread = new Vec3(random.nextGaussian(), random.nextGaussian(), random.nextGaussian()).scale(spreadPer10 * aim.distanceTo(from) / 10.0);
 		Vec3 end = aim.add(spread);
 		HitResult blocked = level.clip(new ClipContext(from, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
 		Vec3 stop = blocked.getType() == HitResult.Type.MISS ? end : blocked.getLocation();
@@ -370,9 +556,6 @@ public class SoldierEntity extends PathfinderMob {
 			if (Armor.isArmored(target)) {
 				Armor.hit(level, target, this, attackerOwner != null ? attackerOwner : this, 1.0F);
 			} else {
-				// The practice bot hits as hard as your own AR-R rifle (raid soldiers are weaker on purpose).
-				float damage = prey != null ? ((dev.rubymod.gun.GunItem) ModItems.ARR_RIFLE).stats().damage()
-						: isRaider() ? GameConfig.get().raiderDamage : GameConfig.get().guardDamage;
 				target.setInvulnerableTime(0);
 				target.hurtServer(level, source, damage);
 			}
@@ -385,14 +568,6 @@ public class SoldierEntity extends PathfinderMob {
 			level.sendParticles(ParticleTypes.CRIT, p.x, p.y, p.z, 1, 0, 0, 0, 0);
 		}
 		level.sendParticles(ParticleTypes.SMALL_FLAME, from.x, from.y, from.z, 2, 0.05, 0.05, 0.05, 0.01);
-		level.playSound(null, getX(), getY(), getZ(), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.HOSTILE, 1.0F, 0.95F + random.nextFloat() * 0.1F);
-		burst++;
-		if (burst >= 3) {
-			burst = 0;
-			cooldown = 26 + random.nextInt(10);
-		} else {
-			cooldown = 3;
-		}
 	}
 
 	@Override
@@ -430,7 +605,13 @@ public class SoldierEntity extends PathfinderMob {
 	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
 		// Squadmates and the owner can't hurt their own guards; raiders don't hurt each other.
 		Entity attacker = source.getEntity();
-		if (attacker instanceof SoldierEntity s && s.isRaider() == isRaider() && (isRaider() || Squads.same(s.owner, owner))) {
+		if (partyTeam >= 0) {
+			// Party bots: no friendly fire, from bots or players on the same team.
+			if (attacker instanceof SoldierEntity s && s.partyTeam == partyTeam
+					|| attacker instanceof Player p && dev.rubymod.game.party.PartyGames.teamOf(p) == partyTeam) {
+				return false;
+			}
+		} else if (attacker instanceof SoldierEntity s && s.isRaider() == isRaider() && (isRaider() || Squads.same(s.owner, owner))) {
 			return false;
 		}
 		if (!isRaider() && attacker instanceof Player p && (p.getUUID().equals(owner) || Squads.same(owner, p.getUUID())) && !p.isCreative()) {
@@ -476,6 +657,7 @@ public class SoldierEntity extends PathfinderMob {
 			output.putString("prey", prey.toString());
 		}
 		output.putBoolean("shielded", shielded);
+		output.putInt("party_team", partyTeam);
 	}
 
 	@Override
@@ -493,7 +675,8 @@ public class SoldierEntity extends PathfinderMob {
 		}
 		prey = input.getString("prey").map(UUID::fromString).orElse(null);
 		shielded = input.getBooleanOr("shielded", false);
-		if (isRaider() && prey == null) {
+		partyTeam = input.getIntOr("party_team", -1);
+		if (isRaider() && prey == null && partyTeam < 0) {
 			// Raids don't survive a restart (a duel's practice bot does: its chunk can be saved mid-duel).
 			discard();
 		}

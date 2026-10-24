@@ -62,6 +62,10 @@ public final class GameEvents {
 	public static void register() {
 		// No hostile mobs (config: hostileMobs); raid soldiers, guards and animals are unaffected.
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
+			if (Cosmetics.strayHat(entity)) {
+				entity.discard();
+				return;
+			}
 			if (!GameConfig.get().hostileMobs && entity instanceof net.minecraft.world.entity.monster.Enemy && !entity.entityTags().contains("rubymod_horde")
 					&& entity.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) {
 				entity.discard();
@@ -76,6 +80,9 @@ public final class GameEvents {
 			Horde.reset();
 			Horde.load(server);
 			dev.rubymod.game.party.PartyGames.reset(server);
+			dev.rubymod.game.party.PartyGames.prebuild(server);
+			Stats.load(server);
+			Cosmetics.reset();
 			Hub.reset();
 			if (server.getLevel(Hub.HUB) != null) {
 				Hub.ensureBuilt(server.getLevel(Hub.HUB));
@@ -89,6 +96,7 @@ public final class GameEvents {
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			SeasonData.save();
 			dev.rubymod.industry.Grid.saveIfDirty();
+			Stats.save();
 		});
 
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -102,9 +110,18 @@ public final class GameEvents {
 			Countermeasures.tick();
 			Range.tick(server);
 			Duels.tick(server);
-			Horde.tick(server);
+			try {
+				Horde.tick(server);
+			} catch (RuntimeException e) {
+				Horde.crashed(server, e);
+			}
 			dev.rubymod.game.party.PartyGames.tick(server);
-			Hub.tick(server);
+			try {
+				Hub.tick(server);
+				Cosmetics.tick(server);
+			} catch (RuntimeException e) {
+				dev.rubymod.RubyMod.LOGGER.error("Hub or cosmetics hit an error", e);
+			}
 			Jetpacks.tick(server);
 			VersionCheck.tick(server);
 			if (server.getTickCount() % 20 == 0) {
@@ -136,6 +153,7 @@ public final class GameEvents {
 			if (server.getTickCount() % 1200 == 0) {
 				dev.rubymod.industry.Grid.saveIfDirty();
 				SeasonData.saveIfDirty();
+				Stats.saveIfDirty();
 			}
 		});
 
@@ -173,6 +191,17 @@ public final class GameEvents {
 				}
 			}
 			Net.send(player, new dev.rubymod.net.MorePayloads.ModeInfo(Hub.whereLabel(player), Hub.modeLines(player.level().getServer())));
+		});
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ProfileRequest.TYPE, (payload, context) -> {
+			Cosmetics.checkUnlocks(context.player());
+			Net.send(context.player(), new dev.rubymod.net.MorePayloads.ProfileSync(Stats.profileLines(context.player()), Cosmetics.lines(context.player())));
+		});
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.CosmeticSelect.TYPE, (payload, context) -> {
+			String error = Cosmetics.select(context.player(), payload.id());
+			if (error != null) {
+				context.player().sendOverlayMessage(Component.literal(error).withStyle(ChatFormatting.RED));
+			}
+			Net.send(context.player(), new dev.rubymod.net.MorePayloads.ProfileSync(Stats.profileLines(context.player()), Cosmetics.lines(context.player())));
 		});
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordePick.TYPE, (payload, context) ->
 				Horde.pick(context.player(), payload.id()));
@@ -277,7 +306,17 @@ public final class GameEvents {
 		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
 			if (entity instanceof ServerPlayer player) {
 				// Duel and Horde deaths respawn you in the arena instead (no grave, no stats).
-				if (Horde.onDeath(player, source) || dev.rubymod.game.party.PartyGames.onDeath(player, source) || Duels.onDeath(player, source)) {
+				if (source.getEntity() instanceof ServerPlayer killer && killer != player) {
+					Cosmetics.onKill(killer, player.position());
+				}
+				boolean hordeDeath;
+				try {
+					hordeDeath = Horde.onDeath(player, source);
+				} catch (RuntimeException e) {
+					Horde.crashed(player.level().getServer(), e);
+					hordeDeath = true;
+				}
+				if (hordeDeath || dev.rubymod.game.party.PartyGames.onDeath(player, source) || Duels.onDeath(player, source)) {
 					return false;
 				}
 				dev.rubymod.block.GraveBlock.bury(player);
@@ -291,6 +330,9 @@ public final class GameEvents {
 			} else {
 				Duels.onEntityDeath(entity, source);
 				Horde.onEntityDeath(entity, source);
+				if (source.getEntity() instanceof ServerPlayer killer && entity instanceof net.minecraft.world.entity.Mob) {
+					Cosmetics.onKill(killer, entity.position());
+				}
 				dev.rubymod.game.party.PartyGames.onEntityDeath(entity, source);
 			}
 			confirmHit(entity, source, true);

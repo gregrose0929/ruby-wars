@@ -138,6 +138,7 @@ public class KingOfTheHill extends PartyGame {
 		}
 		bot.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
 		bot.setCustomName(Component.literal("Bot").withStyle(ChatFormatting.RED));
+		bot.setSmart();
 		bot.addTag(tag());
 		level().addFreshEntity(bot);
 		spawned.add(bot.getUUID());
@@ -242,12 +243,13 @@ public class KingOfTheHill extends PartyGame {
 		}
 		Part top = players.values().stream().max(java.util.Comparator.comparingInt(p -> p.score)).orElse(null);
 		if (top != null && top.score >= WIN) {
-			endRound(top.name + " WINS!", top.name + " held the hill for " + WIN + " seconds.", ChatFormatting.GOLD);
+			endRound(top.name + " WINS!", top.name + " held the hill for " + WIN + " seconds.", ChatFormatting.GOLD, one(idOf(top)));
 		} else if (botScore >= WIN) {
 			endRound("THE BOTS WIN", "The bots held the hill. Try again!", ChatFormatting.RED);
 		} else if (roundTicks >= ROUND_TICKS) {
 			String name = top == null || botScore > top.score ? "The bots" : top.name;
-			endRound(name.toUpperCase() + " WINS!", "Time's up: most time on the hill wins.", ChatFormatting.GOLD);
+			endRound(name.toUpperCase() + " WINS!", "Time's up: most time on the hill wins.", ChatFormatting.GOLD,
+					top == null || botScore > top.score ? List.of() : one(idOf(top)));
 		}
 	}
 

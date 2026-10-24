@@ -478,6 +478,9 @@ public final class Duels {
 		duel.endIn = 100;
 		if (!(duel.bot && winner == 1)) {
 			Goals.add(server, duel.players[winner], "duel", 1);
+			if (!TEST_PLAYERS.containsKey(duel.players[winner])) {
+				dev.rubymod.game.Stats.duelWon(duel.players[winner], duel.names[winner]);
+			}
 		}
 		String result = duel.names[winner] + " wins " + duel.score[winner] + " - " + duel.score[1 - winner];
 		for (int i = 0; i < 2; i++) {

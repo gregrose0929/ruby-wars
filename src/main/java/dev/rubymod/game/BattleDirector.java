@@ -379,6 +379,11 @@ public final class BattleDirector {
 			return;
 		}
 		data.pastChampions.add("Season " + data.season + ": " + data.winner);
+		for (Map.Entry<String, SeasonData.PlayerRecord> e : data.players.entrySet()) {
+			if (!e.getValue().eliminated) {
+				Stats.seasonWon(UUID.fromString(e.getKey()), e.getValue().name);
+			}
+		}
 		Alerts.broadcastTitle(server, data.winner.toUpperCase() + " WINS", "Champion of Season " + data.season, ChatFormatting.GOLD);
 		playToAll(server, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0F);
 		Alerts.broadcast(server, Component.literal("=== Season " + data.season + " results ===").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));

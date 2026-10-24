@@ -271,7 +271,7 @@ public class RubyRush extends PartyGame {
 		if (humans == 1) {
 			Part winner = players.values().stream().filter(p -> !p.watching).findFirst().get();
 			endRound(winner.name.toUpperCase() + " WINS!", "Last one standing with " + winner.kills + (winner.kills == 1 ? " kill" : " kills") + ".",
-					ChatFormatting.GOLD);
+					ChatFormatting.GOLD, one(idOf(winner)));
 		} else {
 			endRound("THE BOTS WIN", "A bot was the last one standing. Try again!", ChatFormatting.RED);
 		}
@@ -285,7 +285,11 @@ public class RubyRush extends PartyGame {
 			for (int i = 0; i < botsLeft; i++) {
 				BlockPos at = landSpot(level.getRandom(), 30, ISLAND - 20);
 				if (at != null) {
-					spawnBot(at, humans.isEmpty() ? null : humans.get(i % humans.size()), "Rusher " + (char) ('A' + i));
+					SoldierEntity bot = spawnBot(at, humans.isEmpty() ? null : humans.get(i % humans.size()), "Rusher " + (char) ('A' + i));
+					if (bot != null) {
+						net.minecraft.world.item.Item[] guns = {ModItems.ARR_RIFLE, ModItems.COMBAT_SHOTGUN, ModItems.SERVICE_PISTOL, ModItems.LONGSHOT_SNIPER};
+						bot.setWeapon(guns[level.getRandom().nextInt(guns.length)]);
+					}
 				}
 			}
 			tell(Component.literal(botsLeft + " AI rushers have landed!").withStyle(ChatFormatting.YELLOW));
@@ -349,7 +353,8 @@ public class RubyRush extends PartyGame {
 		}
 		if (roundTicks >= ROUND_TICKS) {
 			Part best = players.values().stream().filter(p -> !p.watching).max(Comparator.comparingInt(p -> p.kills)).orElse(null);
-			endRound(best == null ? "TIME'S UP" : best.name.toUpperCase() + " WINS!", "Time's up: the survivor with the most kills wins.", ChatFormatting.GOLD);
+			endRound(best == null ? "TIME'S UP" : best.name.toUpperCase() + " WINS!", "Time's up: the survivor with the most kills wins.", ChatFormatting.GOLD,
+					best == null ? List.of() : one(idOf(best)));
 		}
 	}
 

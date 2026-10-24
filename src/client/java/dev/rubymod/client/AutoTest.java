@@ -145,7 +145,105 @@ public final class AutoTest {
 		then(40, mc -> log("{} left: player in {}", id, mc.player.level().dimension().identifier()));
 	}
 
-	/** Every party game in turn (or just one: party:<id>). */
+	private static long maxTickMs(net.minecraft.server.MinecraftServer server) {
+		long max = 0;
+		for (long t : server.getTickTimesNanos()) {
+			max = Math.max(max, t);
+		}
+		return max / 1_000_000;
+	}
+
+	/** The hub tour, profile and cosmetics, leaderboards, bots in CTF and Gun Game, crash safety, tick times. */
+	private static void extrasScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "difficulty normal");
+			command(mc, "gamemode survival @a");
+		});
+		then(60, mc -> onServer(mc, server -> log("tick times after start (arenas building in the background): max {} ms, avg {} ms",
+				maxTickMs(server), server.getAverageTickTimeNanos() / 1_000_000)));
+		// First visit to the hub: the tour.
+		then(5, mc -> command(mc, "execute as @p run hub"));
+		then(80, mc -> shot(mc, "extras-tour-1"));
+		then(100, mc -> shot(mc, "extras-tour-2"));
+		then(330, mc -> {
+			shot(mc, "extras-tour-end");
+			onServer(mc, server -> log("toured: {}", dev.rubymod.game.Stats.get(me(server)).toured));
+		});
+		// Some wins: cosmetics unlock.
+		then(5, mc -> onServer(mc, server -> {
+			var me = me(server);
+			dev.rubymod.game.Stats.won(me.getUUID(), me.getName().getString(), "gungame");
+			dev.rubymod.game.Stats.won(me.getUUID(), me.getName().getString(), "tanks");
+			dev.rubymod.game.Stats.horde(me.getUUID(), me.getName().getString(), 6, 40, 2);
+			dev.rubymod.game.Stats.skyRace(me.getUUID(), me.getName().getString(), 1300);
+			log("unlocked: {}", dev.rubymod.game.Stats.get(me).unlocked);
+		}));
+		then(10, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.CosmeticSelect("hat_tank")));
+		then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.CosmeticSelect("trail_snow")));
+		then(5, mc -> mc.gui.setScreen(new ProfileScreen()));
+		then(30, mc -> shot(mc, "extras-profile"));
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+		});
+		then(40, mc -> {
+			shot(mc, "extras-hat");
+			onServer(mc, server -> {
+				var me = me(server);
+				var hats = ((net.minecraft.server.level.ServerLevel) me.level()).getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class,
+						me.getBoundingBox().inflate(5));
+				log("hat check: wearing '{}', displays near: {}", dev.rubymod.game.Stats.get(me).hat, hats.stream().map(h -> h.position().toString()).toList());
+			});
+			log("client sees item displays: {}", mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class,
+					mc.player.getBoundingBox().inflate(5)).size());
+		});
+		then(5, mc -> {
+			mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+			command(mc, "execute as @p at @s run tp @s 0.5 101 3.5 -90 5");
+		});
+		then(60, mc -> shot(mc, "extras-board-records"));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s 0.5 101 3.5 90 5"));
+		then(40, mc -> shot(mc, "extras-board-party"));
+		// Capture the Flag, solo against bots.
+		then(5, mc -> command(mc, "execute as @p run play ctf"));
+		then(20, mc -> onServer(mc, server -> pg("ctf").skipLobby()));
+		then(80, mc -> log("ctf with bots: {}", pg("ctf").debugState()));
+		then(5, mc -> onServer(mc, server -> pg("ctf").fastForward(20 * 20 - 1)));
+		then(5, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+		for (int i = 0; i < 4; i++) {
+			then(200, mc -> {
+				log("ctf: {} | tick max {} ms", pg("ctf").debugState(), "?");
+				var bots = mc.level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, mc.player.getBoundingBox().inflate(120));
+				StringBuilder where = new StringBuilder();
+				for (var b : bots) {
+					where.append(b.getName().getString()).append("@").append((int) b.getZ()).append(b.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty() ? "" : "(FLAG)").append(" ");
+				}
+				log("ctf bots: {}", where);
+			});
+		}
+		then(5, mc -> shot(mc, "extras-ctf"));
+		then(5, mc -> command(mc, "execute as @p run play gungame"));
+		then(20, mc -> onServer(mc, server -> pg("gungame").skipLobby()));
+		then(100, mc -> {
+			var bots = mc.level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, mc.player.getBoundingBox().inflate(80));
+			StringBuilder where = new StringBuilder();
+			for (var b : bots) {
+				where.append(b.getName().getString()).append(" holds ").append(b.getMainHandItem().getHoverName().getString()).append("; ");
+			}
+			log("gungame bots: {}", where);
+			shot(mc, "extras-gungame-bots");
+		});
+		then(200, mc -> log("gungame after 10s with bots: health {} {}", mc.player.getHealth(), pg("gungame").debugState()));
+		// Crash safety: a game that throws sends its players to the hub.
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.party.PartyGames.crashed(pg("gungame"), new RuntimeException("test crash"));
+			log("after the test crash: {} | player in {}", pg("gungame").debugState(), me(server).level().dimension().identifier());
+		}));
+		then(40, mc -> onServer(mc, server -> log("tick times overall: max {} ms, avg {} ms; toured {}", maxTickMs(server), server.getAverageTickTimeNanos() / 1_000_000, dev.rubymod.game.Stats.get(me(server)).toured)));
+	}
+
+	/** Every party game in turn (or just one: party:<id>). */	/** Every party game in turn (or just one: party:<id>). */
 	private static void partyScript(String only) {
 		then(0, mc -> {
 			command(mc, "time set noon");
@@ -553,6 +651,14 @@ public final class AutoTest {
 			command(mc, "gamerule send_command_feedback false");
 			command(mc, "gamerule sendCommandFeedback false");
 		});
+		if (mode.equals("extras")) {
+			extrasScript();
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.startsWith("party")) {
 			partyScript(mode.length() > 5 ? mode.substring(6) : "");
 			then(20, mc -> {

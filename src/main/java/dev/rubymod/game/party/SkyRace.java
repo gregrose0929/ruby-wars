@@ -73,6 +73,10 @@ public class SkyRace extends PartyGame {
 	@Override
 	protected void build(ServerLevel level) {
 		flatArena(level, 66, 50, 40, Blocks.GRASS_BLOCK.defaultBlockState(), true);
+		later(() -> course(level));
+	}
+
+	private void course(ServerLevel level) {
 		for (int i = 0; i < RINGS; i++) {
 			Vec3 c = ring(i);
 			Vec3 t = through(i);
@@ -226,6 +230,9 @@ public class SkyRace extends PartyGame {
 						int ticks = roundTicks - START_TICKS;
 						part.time = ticks;
 						finished.add(p.getUUID());
+						if (!PartyGames.TEST_PLAYERS.containsKey(p.getUUID())) {
+							dev.rubymod.game.Stats.skyRace(p.getUUID(), part.name, ticks);
+						}
 						if (firstFinish < 0) {
 							firstFinish = roundTicks;
 						}
@@ -256,7 +263,8 @@ public class SkyRace extends PartyGame {
 			players.values().stream().filter(x -> x.time > 0).sorted(Comparator.comparingLong(x -> x.time))
 					.forEach(x -> b.append(b.isEmpty() ? "" : ", ").append(x.name).append(" ").append(time((int) x.time)));
 			Part winner = players.values().stream().filter(x -> x.time > 0).min(Comparator.comparingLong(x -> x.time)).orElse(null);
-			endRound(winner == null ? "NOBODY FINISHED" : winner.name + " WINS!", b.isEmpty() ? "Try again!" : b.toString(), ChatFormatting.GOLD);
+			endRound(winner == null ? "NOBODY FINISHED" : winner.name + " WINS!", b.isEmpty() ? "Try again!" : b.toString(), ChatFormatting.GOLD,
+					winner == null ? List.of() : one(idOf(winner)));
 		}
 	}
 

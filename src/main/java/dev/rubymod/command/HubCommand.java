@@ -21,6 +21,24 @@ public final class HubCommand {
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 		dispatcher.register(Commands.literal("hub").executes(c -> go(c, "hub")));
+		dispatcher.register(Commands.literal("tour")
+				.executes(c -> {
+					var player = c.getSource().getPlayerOrException();
+					if (Hub.where(player) != Hub.Where.HUB) {
+						String error = Hub.go(player, "hub");
+						if (error != null) {
+							c.getSource().sendFailure(Component.literal(error));
+							return 0;
+						}
+					}
+					Hub.startTour(player);
+					return 1;
+				})
+				.then(Commands.literal("skip").executes(c -> {
+					Hub.endTour(c.getSource().getPlayerOrException());
+					c.getSource().sendSystemMessage(Component.literal("Tour skipped. /tour shows it again any time.").withStyle(ChatFormatting.GRAY));
+					return 1;
+				})));
 		var play = Commands.literal("play").executes(HubCommand::list);
 		for (dev.rubymod.game.party.PartyGame game : dev.rubymod.game.party.PartyGames.ALL) {
 			play.then(Commands.literal(game.id).executes(c -> go(c, "game:" + game.id)));

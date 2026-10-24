@@ -264,7 +264,47 @@ public abstract class PartyGame {
 		timer = 15 * 20;
 		lobbyNag = 0;
 		clearArea();
-		build(level());
+		queueBuild();
+	}
+
+	// ----- Building a little at a time (no server freezes) -----
+
+	/** Block changes still to make, done a few milliseconds' worth per tick. */
+	private final java.util.ArrayDeque<Runnable> work = new java.util.ArrayDeque<>();
+	private boolean queueing;
+	/** When this tick's building time runs out (shared by all the games). */
+	static long budgetEnd;
+
+	/** Queue up building the arena (it happens over the next few seconds). */
+	public void queueBuild() {
+		if (level() == null) {
+			return;
+		}
+		queueing = true;
+		try {
+			build(level());
+		} finally {
+			queueing = false;
+		}
+	}
+
+	/** Run something after the building queued so far (or now, outside a build). */
+	protected void later(Runnable task) {
+		if (queueing) {
+			work.add(task);
+		} else {
+			task.run();
+		}
+	}
+
+	protected boolean building() {
+		return !work.isEmpty();
+	}
+
+	private void runWork() {
+		while (!work.isEmpty() && System.nanoTime() < budgetEnd) {
+			work.poll().run();
+		}
 	}
 
 	private void stop() {
@@ -297,7 +337,11 @@ public abstract class PartyGame {
 	}
 
 	public void tick() {
-		if (phase == Phase.IDLE || server == null) {
+		if (server == null) {
+			return;
+		}
+		runWork();
+		if (phase == Phase.IDLE) {
 			return;
 		}
 		if (players.isEmpty()) {
@@ -344,6 +388,12 @@ public abstract class PartyGame {
 	}
 
 	private void tickLobby() {
+		if (building()) {
+			if (lobbyNag++ % 20 == 0) {
+				bar.setName(Component.literal(title + "   \u2022   Building the arena..."));
+			}
+			return;
+		}
 		boolean enough = players.size() >= minPlayers || bots;
 		if (!enough) {
 			timer = 15 * 20;
@@ -379,17 +429,37 @@ public abstract class PartyGame {
 			startRound();
 			for (ServerPlayer p : online()) {
 				p.level().playSound(null, p.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.PLAYERS, 0.6F, 1.2F);
+				Part part = players.get(p.getUUID());
+				if (!part.watching && !PartyGames.TEST_PLAYERS.containsKey(p.getUUID())) {
+					dev.rubymod.game.Stats.played(p.getUUID(), part.name, id);
+				}
 			}
 			updateBar();
 		}
 	}
 
-	/** The round is over: show the result, then the next round's lobby. */
+	/** The round is over (nobody in particular won). */
 	protected void endRound(String headline, String detail, ChatFormatting color) {
+		endRound(headline, detail, color, List.of());
+	}
+
+	/** The round is over: count it in everyone's stats, show the result, then the next round's lobby. */
+	protected void endRound(String headline, String detail, ChatFormatting color, java.util.Collection<UUID> winners) {
 		if (phase != Phase.PLAYING) {
 			return;
 		}
 		phase = Phase.ENDING;
+		for (Map.Entry<UUID, Part> e : players.entrySet()) {
+			if (!dev.rubymod.game.party.PartyGames.TEST_PLAYERS.containsKey(e.getKey())) {
+				dev.rubymod.game.Stats.partyKills(e.getKey(), e.getValue().name, e.getValue().kills);
+			}
+		}
+		dev.rubymod.game.Stats.forEachWinner(winners, id -> {
+			Part part = players.get(id);
+			if (part != null && !dev.rubymod.game.party.PartyGames.TEST_PLAYERS.containsKey(id)) {
+				dev.rubymod.game.Stats.won(id, part.name, this.id);
+			}
+		});
 		timer = 8 * 20;
 		for (UUID id : new ArrayList<>(spawned)) {
 			Entity e = level().getEntity(id);
@@ -560,6 +630,30 @@ public abstract class PartyGame {
 		return red <= blue ? 0 : 1;
 	}
 
+	/** Everyone on a team (not watching). */
+	protected List<UUID> teamIds(int team) {
+		List<UUID> ids = new ArrayList<>();
+		for (Map.Entry<UUID, Part> e : players.entrySet()) {
+			if (!e.getValue().watching && e.getValue().team == team) {
+				ids.add(e.getKey());
+			}
+		}
+		return ids;
+	}
+
+	protected UUID idOf(Part part) {
+		for (Map.Entry<UUID, Part> e : players.entrySet()) {
+			if (e.getValue() == part) {
+				return e.getKey();
+			}
+		}
+		return null;
+	}
+
+	protected static List<UUID> one(UUID id) {
+		return id == null ? List.of() : List.of(id);
+	}
+
 	protected Optional<Map.Entry<UUID, Part>> leader() {
 		return players.entrySet().stream().max(Comparator.comparingInt(e -> e.getValue().score));
 	}
@@ -599,6 +693,18 @@ public abstract class PartyGame {
 		scoreboard.addPlayerToTeam(player.getScoreboardName(), t);
 	}
 
+	/** A bot on a team: colored name and glow, like the players. */
+	protected void joinTeam(Entity entity, int team) {
+		var scoreboard = server.getScoreboard();
+		String name = scoreboardTeam(team);
+		PlayerTeam t = scoreboard.getPlayerTeam(name);
+		if (t == null) {
+			t = scoreboard.addPlayerTeam(name);
+			t.setColor(Optional.of(team == 0 ? TeamColor.RED : TeamColor.BLUE));
+		}
+		scoreboard.addPlayerToTeam(entity.getScoreboardName(), t);
+	}
+
 	protected boolean hideNames() {
 		return false;
 	}
@@ -630,6 +736,14 @@ public abstract class PartyGame {
 	/** Set a block relative to the arena middle (y relative to the ground surface). */
 	protected void set(ServerLevel level, int x, int y, int z, BlockState state) {
 		BlockPos pos = new BlockPos(center().getX() + x, GROUND + y, center().getZ() + z);
+		if (queueing) {
+			work.add(() -> setNow(level, pos, state));
+		} else {
+			setNow(level, pos, state);
+		}
+	}
+
+	private static void setNow(ServerLevel level, BlockPos pos, BlockState state) {
 		if (level.getBlockState(pos) != state) {
 			level.setBlock(pos, state, Block.UPDATE_CLIENTS);
 		}
@@ -650,7 +764,9 @@ public abstract class PartyGame {
 		BlockPos c = center();
 		for (int cx = (c.getX() - halfX - 4) >> 4; cx <= (c.getX() + halfX + 4) >> 4; cx++) {
 			for (int cz = (c.getZ() - halfZ - 4) >> 4; cz <= (c.getZ() + halfZ + 4) >> 4; cz++) {
-				level.getChunk(cx, cz);
+				int fcx = cx;
+				int fcz = cz;
+				later(() -> level.getChunk(fcx, fcz));
 			}
 		}
 		BlockState air = Blocks.AIR.defaultBlockState();
@@ -659,10 +775,15 @@ public abstract class PartyGame {
 		for (int x = -halfX - 2; x <= halfX + 2; x++) {
 			for (int z = -halfZ - 2; z <= halfZ + 2; z++) {
 				boolean edge = Math.abs(x) > halfX || Math.abs(z) > halfZ;
-				for (int y = -2; y <= height; y++) {
-					BlockState want = y < 0 ? dirt : y == 0 ? floor : walls && edge ? barrier : air;
-					set(level, x, y, z, want);
-				}
+				int fx = x;
+				int fz = z;
+				// One column per task.
+				later(() -> {
+					for (int y = -2; y <= height; y++) {
+						BlockState want = y < 0 ? dirt : y == 0 ? floor : walls && edge ? barrier : air;
+						setNow(level, new BlockPos(c.getX() + fx, GROUND + y, c.getZ() + fz), want);
+					}
+				});
 			}
 		}
 	}

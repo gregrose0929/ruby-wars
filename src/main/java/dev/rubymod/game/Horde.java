@@ -237,6 +237,26 @@ public final class Horde {
 	private Horde() {
 	}
 
+	/** For a crash: send everyone in Horde to the hub and stop the game. */
+	public static void crashed(MinecraftServer server, Throwable e) {
+		RubyMod.LOGGER.error("Co-op Horde hit an error; sending its players to the hub", e);
+		try {
+			for (ServerPlayer p : players(server)) {
+				p.sendSystemMessage(Component.literal("Oops, something went wrong in Co-op Horde. Sorry! Back to the hub.").withStyle(ChatFormatting.RED));
+				Net.send(p, new MorePayloads.HordeOffer(0, List.of()));
+				p.getInventory().clearContent();
+				p.removeAllEffects();
+				if (!TEST_PLAYERS.containsKey(p.getUUID())) {
+					Hub.enterHub(p);
+				}
+			}
+		} catch (RuntimeException again) {
+			RubyMod.LOGGER.error("Couldn't clean up after Horde", again);
+		}
+		FIGHTERS.clear();
+		stop(server.getLevel(Duels.ARENA));
+	}
+
 	public static void reset() {
 		state = State.IDLE;
 		FIGHTERS.clear();
@@ -483,6 +503,7 @@ public final class Horde {
 	}
 
 	public static void tick(MinecraftServer server) {
+		Outpost.runWork(5_000_000L);
 		if (state == State.IDLE) {
 			return;
 		}
@@ -499,6 +520,9 @@ public final class Horde {
 		}
 		switch (state) {
 			case COUNTDOWN, BREAK -> {
+				if (!Outpost.WORK.isEmpty()) {
+					break; // still building the outpost
+				}
 				timer--;
 				if (timer > 0 && timer % 20 == 0) {
 					int seconds = timer / 20;
@@ -677,6 +701,11 @@ public final class Horde {
 		gunship = null;
 		for (Fighter f : FIGHTERS.values()) {
 			removeMarker(arena, f);
+		}
+		for (Map.Entry<UUID, Fighter> e : FIGHTERS.entrySet()) {
+			if (!TEST_PLAYERS.containsKey(e.getKey())) {
+				Stats.horde(e.getKey(), e.getValue().name, survived, e.getValue().kills, e.getValue().revives);
+			}
 		}
 		StringBuilder kills = new StringBuilder();
 		FIGHTERS.values().stream().sorted(Comparator.comparingInt((Fighter f) -> f.kills).reversed())
@@ -1512,15 +1541,26 @@ public final class Horde {
 	 */
 	static final class Outpost {
 		private static final int FLAGS = Block.UPDATE_CLIENTS;
+		/** Building happens a few milliseconds a tick (no freezes), in order. */
+		static final java.util.ArrayDeque<Runnable> WORK = new java.util.ArrayDeque<>();
 
 		private Outpost() {
 		}
 
+		static void runWork(long nanos) {
+			long end = System.nanoTime() + nanos;
+			while (!WORK.isEmpty() && System.nanoTime() < end) {
+				WORK.poll().run();
+			}
+		}
+
 		private static void set(ServerLevel level, int x, int y, int z, BlockState state) {
 			BlockPos pos = new BlockPos(CX + x, GROUND + y, CZ + z);
-			if (level.getBlockState(pos) != state) {
-				level.setBlock(pos, state, FLAGS);
-			}
+			WORK.add(() -> {
+				if (level.getBlockState(pos) != state) {
+					level.setBlock(pos, state, FLAGS);
+				}
+			});
 		}
 
 		/** A box relative to the middle (y 0 = the ground's top block). */
@@ -1549,7 +1589,9 @@ public final class Horde {
 			int outer = HALF + 14;
 			for (int cx = (CX - outer) >> 4; cx <= (CX + outer) >> 4; cx++) {
 				for (int cz = (CZ - outer) >> 4; cz <= (CZ + outer) >> 4; cz++) {
-					level.getChunk(cx, cz);
+					int fcx = cx;
+					int fcz = cz;
+					WORK.add(() -> level.getChunk(fcx, fcz));
 				}
 			}
 			BlockState air = Blocks.AIR.defaultBlockState();
@@ -1633,7 +1675,11 @@ public final class Horde {
 				box(level, lamp[0], 1, lamp[1], lamp[0], 3, lamp[1], Blocks.DARK_OAK_FENCE.defaultBlockState());
 				box(level, lamp[0], 4, lamp[1], lamp[0], 4, lamp[1], Blocks.LANTERN.defaultBlockState());
 			}
-			// A floating label over the cache.
+			WORK.add(() -> label(level));
+		}
+
+		/** A floating label over the cache. */
+		private static void label(ServerLevel level) {
 			Display.TextDisplay sign = EntityTypes.TEXT_DISPLAY.create(level, EntitySpawnReason.EVENT);
 			if (sign != null) {
 				Vec3 c = cachePos();

@@ -300,7 +300,8 @@ public class BuildBattle extends PartyGame {
 		for (ServerPlayer p : online()) {
 			teleport(p, c.getX() + plotX(best[0]) + 0.5, c.getY() + 3, c.getZ() - PLOT_HALF - 6.5, 0);
 		}
-		endRound((winner == null ? "SOMEONE" : winner.name.toUpperCase()) + " WINS!", "\"" + theme + "\": " + b, ChatFormatting.AQUA);
+		endRound((winner == null ? "SOMEONE" : winner.name.toUpperCase()) + " WINS!", "\"" + theme + "\": " + b, ChatFormatting.AQUA,
+				best[1] > 0 ? one(plotOwners.get(best[0])) : List.of());
 	}
 
 	@Override

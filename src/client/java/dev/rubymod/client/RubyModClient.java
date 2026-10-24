@@ -58,6 +58,7 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping manualKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.manual", InputConstants.KEY_Y, CATEGORY));
 		KeyMapping squadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.squad", InputConstants.KEY_O, CATEGORY));
 		KeyMapping modesKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.modes", InputConstants.KEY_H, CATEGORY));
+		KeyMapping profileKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.profile", InputConstants.KEY_P, CATEGORY));
 		autopilotKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.autopilot", InputConstants.KEY_Z, CATEGORY));
 		flaresKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.flares", InputConstants.KEY_X, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
@@ -85,6 +86,11 @@ public class RubyModClient implements ClientModInitializer {
 			while (manualKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {
 					client.gui.setScreen(new ManualScreen());
+				}
+			}
+			while (profileKey.consumeClick()) {
+				if (client.player != null && client.gui.screen() == null) {
+					client.gui.setScreen(new ProfileScreen());
 				}
 			}
 			while (modesKey.consumeClick()) {
@@ -163,6 +169,7 @@ public class RubyModClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ResearchSync.TYPE, (payload, context) -> ClientState.research = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ModeInfo.TYPE, (payload, context) -> ModeScreen.info = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordeOffer.TYPE, (payload, context) -> HordeRewardScreen.show(payload));
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ProfileSync.TYPE, (payload, context) -> ProfileScreen.data = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.OpenModes.TYPE, (payload, context) -> {
 			if (context.client().gui.screen() == null) {
 				context.client().gui.setScreen(new ModeScreen());
