@@ -130,7 +130,7 @@ public final class GameEvents {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
 				for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-					var id = player.getUUID();
+					var id = Horde.playing(player) ? Horde.TEAM : player.getUUID();
 					Net.send(player, new Payloads.Economy(dev.rubymod.industry.Grid.rubies(id), dev.rubymod.industry.Grid.charge(id),
 							dev.rubymod.industry.Grid.capacity(id), dev.rubymod.industry.Grid.producedPerSecond(id),
 							dev.rubymod.industry.Grid.consumedPerSecond(id)));
@@ -205,8 +205,12 @@ public final class GameEvents {
 			}
 			Net.send(context.player(), new dev.rubymod.net.MorePayloads.ProfileSync(Stats.profileLines(context.player()), Cosmetics.lines(context.player())));
 		});
-		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordePick.TYPE, (payload, context) ->
-				Horde.pick(context.player(), payload.id()));
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordeBuy.TYPE, (payload, context) -> {
+			String error = HordeShop.buy(context.player(), payload.id());
+			if (error != null) {
+				context.player().sendOverlayMessage(Component.literal(error).withStyle(ChatFormatting.RED));
+			}
+		});
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ResearchUnlock.TYPE, (payload, context) -> {
 			String error = Research.unlock(context.player(), payload.node());
 			if (error != null) {
@@ -356,6 +360,10 @@ public final class GameEvents {
 				return true;
 			}
 			if (player instanceof ServerPlayer sp && !dev.rubymod.game.party.PartyGames.allowsBreak(sp, pos)) {
+				return false;
+			}
+			if (level instanceof ServerLevel serverLevel && Horde.protectedBlock(serverLevel, pos)) {
+				deny(player, "That's part of the battlefield.");
 				return false;
 			}
 			if (state.is(ModBlocks.RUBY_HEART)) {

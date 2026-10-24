@@ -87,21 +87,23 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Co-op Horde: everyone in it fights together in a walled outpost (in the arena
- * dimension) to protect the Supply Cache in the middle from waves of enemies pouring
- * in through four gates. Some enemies hunt players, some go for the cache.
+ * Co-op Horde: the whole team builds and defends one base, like a Ruby Wars base, on an
+ * open battlefield (in the arena dimension) against waves of monsters and enemy
+ * soldiers coming from different directions. In the middle is the Ruby Core: if the
+ * horde wrecks it, it's over.
  *
  * <ul>
- * <li>Waves scale with the team: a solo game is much smaller than a game for six, and
- * enemies get tougher per player as well as per wave. Easy / Normal / Hard on top.</li>
- * <li>Clear a wave: everyone picks 1 of 3 rewards, gets ammo and full health, and the
- * cache is patched up. A minute and a half to get ready (or everyone readies up to go now).</li>
- * <li>Go down and a teammate can crouch next to you for 3 seconds to bring you back;
- * otherwise you're back at the next wave. Everyone gets one Second Wind per game for
- * when the whole team is down. It's over when the team is down for good or the cache
- * is destroyed.</li>
- * <li>Every 5th wave brings Brutes, every 5th from wave 4 is a fog wave, and from wave
- * 7 every 5th is an air raid with an enemy gunship (everyone gets a Skyhammer).</li>
+ * <li>Kills and cleared waves put rubies in the team bank. Everyone spends it at the
+ * Armory by the Core on Ruby Wars gear that makes sense here: guns, sentry turrets,
+ * Tesla Coils, mines, barbed wire, walls, blast doors, flak, mortars, solar power,
+ * hired guards, vehicles. Better gear unlocks as the waves go on (see HordeShop).</li>
+ * <li>Monsters smash through walls in their way (sturdier walls hold longer), so the base
+ * the team builds matters. Power is one grid for the whole team.</li>
+ * <li>Two minutes to build before wave 1, a minute and a half between waves, or
+ * everyone readies up to go now.</li>
+ * <li>Waves scale with the team (and Easy / Normal / Hard). Go down and a teammate can
+ * crouch next to you to bring you back; one Second Wind each per game.</li>
+ * <li>Brutes every 5th wave, fog on waves 4, 9..., an enemy gunship on waves 7, 12...</li>
  * </ul>
  *
  * Your Ruby Wars things are safe in the hub's save the whole time; nothing from Horde
@@ -112,9 +114,15 @@ public final class Horde {
 	public static final int CX = -20000;
 	public static final int CZ = 0;
 	private static final int GROUND = Duels.GROUND;
-	/** Half the outpost's inside width. */
-	private static final int HALF = 34;
+	/** Half the battlefield's width. */
+	private static final int HALF = 64;
+	/** How far out the horde shows up. */
+	private static final int SPAWN_R = 58;
 	private static final int BREAK_TICKS = 90 * 20;
+	private static final int BUILD_TICKS = 120 * 20;
+	private static final int START_BANK = 200;
+	/** The team's shared account (bank and power grid). */
+	public static final UUID TEAM = UUID.nameUUIDFromBytes("rubywars-horde-team".getBytes(java.nio.charset.StandardCharsets.UTF_8));
 	private static final int REVIVE_TICKS = 60;
 	private static final String MOB_TAG = "rubymod_horde";
 	private static final String RAIDER_TAG = "rubymod_horde_raider";
@@ -150,41 +158,6 @@ public final class Horde {
 		}
 	}
 
-	/** What you can pick after a wave. Unique ones are offered until you have them. */
-	private enum Reward {
-		SHOTGUN("Combat Shotgun", "Huge damage up close", "rubymod:combat_shotgun", 1, true),
-		SNIPER("Longshot Sniper", "One shot, one kill, from far away", "rubymod:longshot_sniper", 2, true),
-		ARMOR("Ruby Armor", "A full set, tougher than iron", "rubymod:ruby_chestplate", 3, true),
-		ROCKETS("Rocket Launcher", "Blows up crowds and Brutes", "rubymod:rocket_launcher", 4, true),
-		BLASTER("Ruby Blaster", "Bouncing energy shots", "rubymod:ruby_blaster", 5, true),
-		JETPACK("Jetpack", "Wear it, hold Space in the air to fly", "rubymod:jetpack", 6, true),
-		LANCER("Lancer", "Guided missiles for big targets", "rubymod:lancer", 7, true),
-		SANDBAGS("24 Sandbags", "Build cover anywhere", "rubymod:sandbags", 1, false),
-		WALLS("16 Concrete Walls", "Strong walls: block a gate!", "rubymod:concrete_wall", 3, false),
-		TURRET("Sentry Turret", "Shoots enemies on its own (load it with Heavy Ammo)", "rubymod:sentry_turret", 4, false),
-		APPLES("3 Golden Apples", "Eat one to heal fast", "minecraft:golden_apple", 1, false),
-		GRENADES("5 Frag Grenades", "Throw them into a crowd", "rubymod:frag_grenade", 1, false),
-		AMMO("Ammo Crate", "Lots of ammo for every gun you have", "rubymod:heavy_ammo", 2, false);
-
-		final String title;
-		final String about;
-		final String icon;
-		final int fromWave;
-		final boolean unique;
-
-		Reward(String title, String about, String icon, int fromWave, boolean unique) {
-			this.title = title;
-			this.about = about;
-			this.icon = icon;
-			this.fromWave = fromWave;
-			this.unique = unique;
-		}
-	}
-
-	/** What a late joiner gets for each wave already cleared (and the usual first pick). */
-	private static final Reward[] STANDARD = {Reward.SHOTGUN, Reward.SANDBAGS, Reward.SNIPER, Reward.ARMOR, Reward.ROCKETS,
-			Reward.WALLS, Reward.BLASTER, Reward.JETPACK, Reward.LANCER};
-
 	private enum State { IDLE, COUNTDOWN, WAVE, BREAK, OVER }
 
 	private enum Kind { ZOMBIE, HUSK, SPIDER, RUNNER, SKELETON, SAPPER, RIFLEMAN, SHIELD, JUGGERNAUT, AT_GUNNER }
@@ -203,9 +176,6 @@ public final class Horde {
 		int windIn = -1;
 		/** Ready for the next wave (everyone ready: it starts in 5 seconds). */
 		boolean ready;
-		/** Rewards on offer right now (null: nothing to pick). */
-		List<Reward> offer;
-		final Set<Reward> owned = EnumSet.noneOf(Reward.class);
 
 		Fighter(String name) {
 			this.name = name;
@@ -231,7 +201,7 @@ public final class Horde {
 	private static final Set<UUID> MOBS = new java.util.HashSet<>();
 	private static final ServerBossEvent BAR = new ServerBossEvent(UUID.randomUUID(), Component.literal("Co-op Horde"),
 			BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.PROGRESS);
-	private static final ServerBossEvent CACHE_BAR = new ServerBossEvent(UUID.randomUUID(), Component.literal("Supply Cache"),
+	private static final ServerBossEvent CACHE_BAR = new ServerBossEvent(UUID.randomUUID(), Component.literal("Ruby Core"),
 			BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.NOTCHED_10);
 	private static int bestWave = -1;
 	private static String bestTeam = "";
@@ -245,7 +215,7 @@ public final class Horde {
 		try {
 			for (ServerPlayer p : players(server)) {
 				p.sendSystemMessage(Component.literal("Oops, something went wrong in Co-op Horde. Sorry! Back to the hub.").withStyle(ChatFormatting.RED));
-				Net.send(p, new MorePayloads.HordeOffer(0, List.of()));
+				Net.send(p, new MorePayloads.HordeShopSync(false, 0, 0, List.of()));
 				p.getInventory().clearContent();
 				p.removeAllEffects();
 				if (!TEST_PLAYERS.containsKey(p.getUUID())) {
@@ -292,7 +262,7 @@ public final class Horde {
 	}
 
 	/** Waves cleared so far this game. */
-	private static int cleared() {
+	public static int cleared() {
 		return state == State.WAVE ? wave - 1 : wave;
 	}
 
@@ -351,6 +321,10 @@ public final class Horde {
 
 	/** Into the outpost (from the hub). Starts a game (at this difficulty) if nobody's playing. */
 	public static void join(ServerPlayer player, Challenge difficulty) {
+		if (state == State.IDLE) {
+			player.sendSystemMessage(Component.literal("Co-op Horde: you have 2 minutes to build a base around the Ruby Core before the first wave. "
+					+ "Spend the team's rubies at the Armory next to it: ").withStyle(ChatFormatting.GOLD).append(shopButton()));
+		}
 		MinecraftServer server = player.level().getServer();
 		ServerLevel arena = server.getLevel(Duels.ARENA);
 		loadBest(server);
@@ -380,8 +354,8 @@ public final class Horde {
 		if (state == State.COUNTDOWN || state == State.BREAK) {
 			player.sendSystemMessage(Component.literal("Ready when you are: ").withStyle(ChatFormatting.GRAY).append(readyButton()));
 		}
-		player.sendSystemMessage(Component.literal("Co-op Horde (" + challenge.title + "): protect the Supply Cache in the middle and survive. "
-				+ "Clear a wave to pick a reward. If a teammate goes down, crouch next to them to bring them back. H or /hub to leave.")
+		player.sendSystemMessage(Component.literal("Co-op Horde (" + challenge.title + "): build a base, defend the Ruby Core. Kills and waves earn the team "
+				+ "rubies to spend at the Armory. If a teammate goes down, crouch next to them to bring them back. H or /hub to leave.")
 				.withStyle(ChatFormatting.GOLD));
 		if (starting && difficulty == null) {
 			player.sendSystemMessage(difficultyPicker());
@@ -437,7 +411,7 @@ public final class Horde {
 		Fighter fighter = FIGHTERS.remove(player.getUUID());
 		BAR.removePlayer(player);
 		CACHE_BAR.removePlayer(player);
-		Net.send(player, new MorePayloads.HordeOffer(0, List.of()));
+		Net.send(player, new MorePayloads.HordeShopSync(false, 0, 0, List.of()));
 		if (fighter == null || !server.isRunning()) {
 			return;
 		}
@@ -466,7 +440,7 @@ public final class Horde {
 	/** Build the outpost in the background when the server starts, so the first game starts right away. */
 	public static void prebuild(MinecraftServer server) {
 		ServerLevel arena = server.getLevel(Duels.ARENA);
-		if (arena != null && Outpost.WORK.isEmpty() && !Arenas.built("horde")) {
+		if (arena != null && Outpost.WORK.isEmpty() && !Arenas.built("horde2")) {
 			buildStartedAt = server.getTickCount();
 			Outpost.build(arena);
 		}
@@ -480,15 +454,256 @@ public final class Horde {
 		}
 		wave = 0;
 		state = State.COUNTDOWN;
-		timer = 15 * 20;
+		timer = BUILD_TICKS;
 		gunship = null;
 		MOBS.clear();
+		SIEGE.clear();
+		LAST_POS.clear();
 		resetCache();
+		resetBank();
+		chooseDirections(1);
 	}
 
 	private static void resetCache() {
-		cacheMax = (int) Math.round(300 * challenge.cache);
+		cacheMax = (int) Math.round(400 * challenge.cache);
 		cacheHp = cacheMax;
+		coreUpgrades = 0;
+	}
+
+	private static int coreUpgrades;
+
+	/** Armory: heal the Core. */
+	public static void repairCore(ServerPlayer player, double fraction) {
+		cacheHp = Math.min(cacheMax, cacheHp + (int) Math.round(cacheMax * fraction));
+		updateBars();
+	}
+
+	/** Armory: +100 Core health, for good. */
+	public static void reinforceCore(ServerPlayer player) {
+		coreUpgrades++;
+		cacheMax += 100;
+		cacheHp += 100;
+		updateBars();
+	}
+
+	/** Anything the Armory can't sell right now (beyond price and unlock wave), or null. */
+	public static String canBuy(String id) {
+		if (id.equals("core_up") && coreUpgrades >= 3) {
+			return "The Core's already as tough as it gets.";
+		}
+		if (id.equals("repair") && cacheHp >= cacheMax) {
+			return "The Core is already at full health.";
+		}
+		return null;
+	}
+
+	// ----- The team bank (rubies) and power grid: one shared account -----
+
+	public static int bank() {
+		return (int) dev.rubymod.industry.Grid.rubies(TEAM);
+	}
+
+	public static void deposit(int rubies) {
+		dev.rubymod.industry.Grid.deposit(TEAM, rubies * 1000L);
+	}
+
+	public static boolean spend(int rubies) {
+		return dev.rubymod.industry.Grid.withdraw(TEAM, rubies);
+	}
+
+	private static void resetBank() {
+		var account = dev.rubymod.industry.Grid.account(TEAM);
+		account.milliRubies = START_BANK * 1000L;
+		account.charge = 0;
+		account.drills = 0;
+	}
+
+	/** For the HUD and the shop: who's in, and what's cleared. */
+	public static List<ServerPlayer> onlinePlayers(MinecraftServer server) {
+		return players(server);
+	}
+
+	public static void tellAll(MinecraftServer server, Component message) {
+		tell(server, message);
+	}
+
+	private static Component shopButton() {
+		return Component.literal("[ARMORY]").withStyle(s -> s.withColor(ChatFormatting.AQUA).withBold(true)
+				.withClickEvent(new ClickEvent.RunCommand("/horde shop"))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Spend the team's rubies (or right-click the Armory by the Core)"))));
+	}
+
+	/** Names of what just unlocked at the Armory (after clearing wave n). */
+	private static String unlockedAt(int n) {
+		StringBuilder b = new StringBuilder();
+		for (HordeShop.Entry e : HordeShop.CATALOG) {
+			if (e.wave() == n) {
+				b.append(b.isEmpty() ? "" : ", ").append(e.name());
+			}
+		}
+		return b.toString();
+	}
+
+	private static boolean teamHasAntiAir(MinecraftServer server, ServerLevel arena) {
+		for (ServerPlayer p : players(server)) {
+			if (has(p, ModItems.SKYHAMMER)) {
+				return true;
+			}
+		}
+		BlockPos c = center();
+		for (int x = -HALF; x <= HALF; x += 16) {
+			for (int z = -HALF; z <= HALF; z += 16) {
+				var chunk = arena.getChunk(c.offset(x, 0, z));
+				for (BlockPos pos : chunk.getBlockEntitiesPos()) {
+					BlockState state = arena.getBlockState(pos);
+					if (state.is(ModBlocks.FLAK_CANNON) || state.is(ModBlocks.SAM_SITE)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	// ----- Where the horde comes from -----
+
+	private static final String[] DIR_NAMES = {"north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"};
+	private static final int[][] DIRS = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
+	/** Which of the 8 directions the next (or current) wave comes from. */
+	private static final List<Integer> spawnDirs = new ArrayList<>();
+
+	private static void chooseDirections(int n) {
+		List<Integer> all = new ArrayList<>(List.of(0, 1, 2, 3, 4, 5, 6, 7));
+		java.util.Collections.shuffle(all);
+		int count = n >= 8 ? 3 : n >= 4 ? 2 : 1;
+		spawnDirs.clear();
+		spawnDirs.addAll(all.subList(0, count));
+	}
+
+	private static String directionNames() {
+		List<String> names = new ArrayList<>();
+		for (int d : spawnDirs) {
+			names.add(DIR_NAMES[d]);
+		}
+		return names.size() <= 1 ? String.join("", names) : String.join(", ", names.subList(0, names.size() - 1)) + " and " + names.get(names.size() - 1);
+	}
+
+	/** A spot on the horde's side of the battlefield. */
+	private static BlockPos spawnPoint(ServerLevel arena, RandomSource random) {
+		if (spawnDirs.isEmpty()) {
+			chooseDirections(wave);
+		}
+		int[] d = DIRS[spawnDirs.get(random.nextInt(spawnDirs.size()))];
+		double len = Math.hypot(d[0], d[1]);
+		double side = (random.nextDouble() - 0.5) * 16;
+		double x = d[0] / len * SPAWN_R - d[1] / len * side;
+		double z = d[1] / len * SPAWN_R + d[0] / len * side;
+		BlockPos c = center();
+		BlockPos at = BlockPos.containing(c.getX() + x, c.getY(), c.getZ() + z);
+		return BlockPos.containing(at.getX() + 0.5, Hub.safeY(arena, at.getX() + 0.5, at.getY(), at.getZ() + 0.5), at.getZ() + 0.5);
+	}
+
+	/** Red flares where the next wave will come from (the last 15 seconds before it). */
+	private static void flares(ServerLevel arena) {
+		BlockPos c = center();
+		for (int dir : spawnDirs) {
+			int[] d = DIRS[dir];
+			double len = Math.hypot(d[0], d[1]);
+			double x = c.getX() + 0.5 + d[0] / len * SPAWN_R;
+			double z = c.getZ() + 0.5 + d[1] / len * SPAWN_R;
+			for (int y = 0; y < 30; y += 2) {
+				arena.sendParticles(new DustParticleOptions(0xFF2020, 3.0F), true, true, x, c.getY() + y, z, 2, 0.3, 0.5, 0.3, 0);
+			}
+		}
+	}
+
+	// ----- Monsters smash through walls -----
+
+	/** Damage on blocks the horde is battering. */
+	private static final Map<BlockPos, Float> SIEGE = new HashMap<>();
+	private static final Map<UUID, Vec3> LAST_POS = new HashMap<>();
+
+	private static float siegeHp(BlockState state) {
+		if (state.is(ModBlocks.REINFORCED_CONCRETE)) {
+			return 400;
+		} else if (state.is(ModBlocks.BLAST_DOOR)) {
+			return 300;
+		} else if (state.is(ModBlocks.CONCRETE_WALL)) {
+			return 180;
+		} else if (state.is(ModBlocks.REINFORCED_GLASS)) {
+			return 120;
+		} else if (state.is(ModBlocks.SANDBAGS)) {
+			return 70;
+		}
+		return 30 + state.getBlock().defaultDestroyTime() * 25;
+	}
+
+	private static float siegePower(Mob mob) {
+		if (mob instanceof Ravager) {
+			return 60;
+		}
+		String name = mob.getCustomName() == null ? "" : mob.getCustomName().getString();
+		if (name.equals("Juggernaut")) {
+			return 25;
+		}
+		return mob instanceof Zombie z && z.isBaby() ? 5 : 10;
+	}
+
+	/** True for the battlefield's own blocks that nothing should break: the Core, the Armory, the floor, the edge. */
+	public static boolean protectedBlock(ServerLevel level, BlockPos pos) {
+		if (level.dimension() != Duels.ARENA || !inField(pos)) {
+			return false;
+		}
+		BlockPos c = center();
+		BlockState state = level.getBlockState(pos);
+		return pos.getY() <= GROUND || state.is(Blocks.BARRIER) || pos.equals(c) || pos.equals(c.above()) || pos.equals(armoryPos());
+	}
+
+	private static boolean inField(BlockPos pos) {
+		return Math.abs(pos.getX() - CX) <= HALF + 8 && Math.abs(pos.getZ() - CZ) <= HALF + 8;
+	}
+
+	private static BlockPos armoryPos() {
+		return center().offset(4, 0, 0);
+	}
+
+	/** A monster that hasn't moved for a second, with its goal further off: it hits whatever's in its way. */
+	private static void siege(MinecraftServer server, ServerLevel arena, Mob mob, Vec3 goal) {
+		Vec3 now = mob.position();
+		Vec3 before = LAST_POS.put(mob.getUUID(), now);
+		if (before == null || before.distanceToSqr(now) > 0.25 || now.distanceTo(goal) < 3.0) {
+			return;
+		}
+		Vec3 dir = goal.subtract(now).multiply(1, 0, 1).normalize();
+		for (double h : new double[] {0.5, 1.5}) {
+			Vec3 from = now.add(0, h, 0);
+			var hit = arena.clip(new ClipContext(from, from.add(dir.scale(2.2)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mob));
+			if (hit.getType() != HitResult.Type.BLOCK) {
+				continue;
+			}
+			BlockPos pos = hit.getBlockPos();
+			if (protectedBlock(arena, pos)) {
+				continue;
+			}
+			if (mob instanceof Creeper) {
+				// A Sapper stuck at a wall: blow it open.
+				arena.explode(mob, mob.getX(), mob.getY(), mob.getZ(), 3.0F, Level.ExplosionInteraction.MOB);
+				mob.discard();
+				return;
+			}
+			BlockState state = arena.getBlockState(pos);
+			float done = SIEGE.merge(pos.immutable(), siegePower(mob) * (float) challenge.damage, Float::sum);
+			float hp = siegeHp(state);
+			arena.playSound(null, pos, SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.HOSTILE, 0.7F, 0.9F + arena.getRandom().nextFloat() * 0.2F);
+			if (done >= hp) {
+				SIEGE.remove(pos);
+				arena.destroyBlockProgress(pos.hashCode(), pos, -1);
+				arena.destroyBlock(pos, false);
+			} else {
+				arena.destroyBlockProgress(pos.hashCode(), pos, Math.min(9, (int) (done / hp * 10)));
+			}
+			return;
+		}
 	}
 
 	private static void stop(ServerLevel arena) {
@@ -526,7 +741,7 @@ public final class Horde {
 			Outpost.runWork(8_000_000L);
 			if (Outpost.WORK.isEmpty()) {
 				RubyMod.LOGGER.info("Horde outpost built ({} ticks)", server.getTickCount() - buildStartedAt);
-				Arenas.markBuilt("horde");
+				Arenas.markBuilt("horde2");
 			}
 		}
 		if (state == State.IDLE) {
@@ -560,6 +775,9 @@ public final class Horde {
 					}
 					updateBars();
 				}
+				if (timer < 15 * 20 && timer % 10 == 0) {
+					flares(arena);
+				}
 				if (timer <= 0) {
 					startWave(server, arena, wave + 1);
 				}
@@ -584,7 +802,7 @@ public final class Horde {
 						FIGHTERS.remove(p.getUUID());
 						BAR.removePlayer(p);
 						CACHE_BAR.removePlayer(p);
-						Net.send(p, new MorePayloads.HordeOffer(0, List.of()));
+						Net.send(p, new MorePayloads.HordeShopSync(false, 0, 0, List.of()));
 						p.getInventory().clearContent();
 						p.removeAllEffects();
 						if (!TEST_PLAYERS.containsKey(p.getUUID())) {
@@ -646,31 +864,23 @@ public final class Horde {
 		fogWave = fogWave(n);
 		for (ServerPlayer player : players(server)) {
 			Fighter f = FIGHTERS.get(player.getUUID());
-			// Anything not picked from the last offer: take the first one.
-			if (f.offer != null) {
-				give(player, f, f.offer.get(0));
-				player.sendSystemMessage(Component.literal("Picked for you: " + f.offer.get(0).title).withStyle(ChatFormatting.GRAY));
-				f.offer = null;
-				Net.send(player, new MorePayloads.HordeOffer(0, List.of()));
-			}
 			if (!f.alive) {
 				revive(arena, player, f, null);
 				player.sendSystemMessage(Component.literal("You're back in!").withStyle(ChatFormatting.GREEN));
 			}
 			String sub = bosses > 0 ? (bosses == 1 ? "A Brute is coming!" : bosses + " Brutes are coming!")
-					: fogWave ? "Fog: you can't see far, but they glow" : airRaid(n) ? "Shoot down the gunship with your Skyhammer!" : total + " enemies";
+					: fogWave ? "Fog: you can't see far, but they glow" : airRaid(n) ? "An enemy gunship! Flak, SAMs and Skyhammers!" : "From the " + directionNames();
 			Alerts.title(player, "WAVE " + n, sub, bosses > 0 || airRaid(n) ? ChatFormatting.DARK_RED : ChatFormatting.RED);
 			player.level().playSound(null, player.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.PLAYERS, 0.7F, 1.0F);
 			if (fogWave) {
 				// Darkness closes in (night vision stays on, so it's spooky rather than pitch black).
 				player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 20 * 60 * 10, 0, false, false));
 			}
-			if (airRaid(n) && !has(player, ModItems.SKYHAMMER)) {
-				add(player, new ItemStack(ModItems.SKYHAMMER), new ItemStack(ModItems.AA_MISSILE, 6));
-				player.sendSystemMessage(Component.literal("You got a Skyhammer: aim at the gunship and hold right-click to lock on.")
+			if (airRaid(n) && !teamHasAntiAir(server, arena)) {
+				// Nobody bought anything that can hit a gunship: one Skyhammer each, so it's not hopeless.
+				add(player, new ItemStack(ModItems.SKYHAMMER), new ItemStack(ModItems.AA_MISSILE, 4));
+				player.sendSystemMessage(Component.literal("An enemy gunship and no anti-air! Here's a Skyhammer: aim at it and hold right-click to lock on.")
 						.withStyle(ChatFormatting.GOLD));
-			} else if (airRaid(n)) {
-				add(player, new ItemStack(ModItems.AA_MISSILE, 4));
 			}
 			if (n == 5) {
 				Goals.add(server, player.getUUID(), "horde5", 1);
@@ -690,24 +900,26 @@ public final class Horde {
 			bestTeam = String.join(", ", FIGHTERS.values().stream().map(f -> f.name).toList()) + ", " + challenge.title;
 			saveBest(server);
 		}
-		// Patch up the cache a bit.
-		cacheHp = Math.min(cacheMax, cacheHp + cacheMax * 3 / 10);
+		int bonus = 40 + 15 * wave;
+		deposit(bonus);
+		chooseDirections(wave + 1);
+		String unlocked = unlockedAt(wave);
 		for (ServerPlayer p : players(server)) {
 			Fighter f = FIGHTERS.get(p.getUUID());
-			topUp(p, f, 1);
 			if (f.alive && !p.isSpectator()) {
 				p.setHealth(p.getMaxHealth());
 			}
 			if (fogWave) {
 				p.removeEffect(MobEffects.DARKNESS);
 			}
-			offer(p, f);
-			Alerts.title(p, "WAVE " + wave + " CLEARED", "Pick your reward!", ChatFormatting.GREEN);
+			Alerts.title(p, "WAVE " + wave + " CLEARED", "+" + bonus + " rubies for the team (" + bank() + ")", ChatFormatting.GREEN);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.8F, 1.0F);
-			p.sendSystemMessage(Component.literal("Wave " + wave + " cleared! Pick a reward (the menu that just opened). Ammo and health refilled, "
-					+ "the cache patched up. Next wave in 90 seconds: build some cover! ").withStyle(ChatFormatting.GREEN).append(readyButton()));
+			p.sendSystemMessage(Component.literal("Wave " + wave + " cleared! +" + bonus + " rubies: the team has " + bank() + ". "
+					+ (unlocked.isEmpty() ? "" : "New at the Armory: " + unlocked + ". ") + "The next wave comes from the " + directionNames()
+					+ " in 90 seconds. ").withStyle(ChatFormatting.GREEN).append(shopButton()).append(" ").append(readyButton()));
 			f.ready = false;
 		}
+		HordeShop.syncAll(server, false);
 		fogWave = false;
 		updateBars();
 	}
@@ -771,7 +983,7 @@ public final class Horde {
 			Alerts.title(p, "GAME OVER", why, ChatFormatting.RED);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.WITHER_DEATH, SoundSource.PLAYERS, 0.5F, 1.0F);
 			p.removeEffect(MobEffects.DARKNESS);
-			Net.send(p, new MorePayloads.HordeOffer(0, List.of()));
+			Net.send(p, new MorePayloads.HordeShopSync(false, 0, 0, List.of()));
 			p.sendSystemMessage(Component.literal("====== HORDE (" + challenge.title + "): you survived " + survived + (survived == 1 ? " wave" : " waves")
 					+ " ======").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 			p.sendSystemMessage(Component.literal(why).withStyle(ChatFormatting.RED));
@@ -795,16 +1007,16 @@ public final class Horde {
 				BAR.setProgress(0);
 			}
 			default -> {
-				String head = wave == 0 ? "Get ready! (" + challenge.title + ")" : "Wave " + wave + " cleared!";
+				String head = (wave == 0 ? "Build your base! (" + challenge.title + ")" : "Wave " + wave + " cleared!") + "   \u2022   " + bank() + " rubies";
 				long ready = FIGHTERS.values().stream().filter(x -> x.ready).count();
 				int secs = Math.max(0, timer / 20);
 				BAR.setName(Component.literal(head + "   Next wave in " + secs / 60 + ":" + String.format("%02d", secs % 60)
 						+ "   \u2022   " + ready + "/" + FIGHTERS.size() + " ready (/horde ready)"));
 				BAR.setColor(BossEvent.BossBarColor.GREEN);
-				BAR.setProgress(Math.max(0, timer) / (float) (wave == 0 ? 300 : BREAK_TICKS));
+				BAR.setProgress(Math.min(1.0F, Math.max(0, timer) / (float) (wave == 0 ? BUILD_TICKS : BREAK_TICKS)));
 			}
 		}
-		CACHE_BAR.setName(Component.literal("Supply Cache  " + Math.max(0, cacheHp * 100 / Math.max(1, cacheMax)) + "%"));
+		CACHE_BAR.setName(Component.literal("Ruby Core  " + Math.max(0, cacheHp * 100 / Math.max(1, cacheMax)) + "%"));
 		CACHE_BAR.setProgress(Math.max(0, Math.min(1.0F, cacheHp / (float) Math.max(1, cacheMax))));
 		CACHE_BAR.setColor(cacheHp < cacheMax / 3 ? BossEvent.BossBarColor.RED : BossEvent.BossBarColor.YELLOW);
 	}
@@ -995,15 +1207,32 @@ public final class Horde {
 		if (entity.getUUID().equals(gunship)) {
 			gunship = null;
 		}
+		int bounty = bounty(entity);
+		deposit(bounty);
 		if (source.getEntity() instanceof ServerPlayer killer && FIGHTERS.containsKey(killer.getUUID())) {
 			FIGHTERS.get(killer.getUUID()).kills++;
 			int left = toSpawn + bosses + MOBS.size();
-			killer.sendOverlayMessage(Component.literal("+1 kill  (" + left + " left)").withStyle(ChatFormatting.GREEN));
+			killer.sendOverlayMessage(Component.literal("+" + bounty + " rubies  \u2022  " + left + " left").withStyle(ChatFormatting.GREEN));
 		}
 		updateBars();
 	}
 
-	// ----- Kits and rewards -----
+	/** Rubies for the team bank per kill (bigger threats pay more). */
+	private static int bounty(LivingEntity e) {
+		if (e instanceof AircraftEntity) {
+			return 80;
+		} else if (e instanceof Ravager) {
+			return 40;
+		} else if (e instanceof SoldierEntity s) {
+			return s.role() == SoldierEntity.AT_GUNNER ? 12 : 8;
+		} else if (e instanceof Creeper) {
+			return 6;
+		}
+		String name = e.getCustomName() == null ? "" : e.getCustomName().getString();
+		return name.equals("Juggernaut") ? 18 : name.equals("Runner") ? 3 : 4;
+	}
+
+	// ----- Kits -----
 
 	private static ItemStack gun(Item item) {
 		ItemStack stack = new ItemStack(item);
@@ -1029,135 +1258,27 @@ public final class Horde {
 		return false;
 	}
 
-	/** The starting kit, plus the usual rewards for every wave already cleared (for anyone joining late). */
+	/** The starting kit (the same for anyone joining late: the team bank is shared). */
 	private static void giveKit(ServerPlayer player, Fighter fighter, int cleared) {
 		player.getInventory().clearContent();
-		// The rifle takes Heavy Ammo, the pistol Light Ammo.
-		add(player, gun(ModItems.ARR_RIFLE), gun(ModItems.SERVICE_PISTOL), new ItemStack(ModItems.RUBY_SWORD), new ItemStack(ModItems.FRAG_GRENADE, 2),
-				new ItemStack(ModItems.HEAVY_AMMO, 64), new ItemStack(ModItems.HEAVY_AMMO, 64), new ItemStack(ModItems.LIGHT_AMMO, 48));
+		// Everyone starts with a rifle and a pistol; the rest comes from the Armory.
+		add(player, gun(ModItems.ARR_RIFLE), gun(ModItems.SERVICE_PISTOL), new ItemStack(ModItems.HEAVY_AMMO, 64), new ItemStack(ModItems.HEAVY_AMMO, 64),
+				new ItemStack(ModItems.LIGHT_AMMO, 48), new ItemStack(ModItems.FRAG_GRENADE, 2));
 		player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
 		player.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
 		player.setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.IRON_LEGGINGS));
 		player.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.IRON_BOOTS));
-		for (int w = 1; w <= cleared; w++) {
-			give(player, fighter, w <= STANDARD.length ? STANDARD[w - 1] : Reward.GRENADES);
-		}
+		add(player, new ItemStack(ModBlocks.SANDBAGS, 16));
 		player.getInventory().setSelectedSlot(0);
 		player.inventoryMenu.broadcastChanges();
-	}
-
-	/** Three rewards to choose from (new gear you don't have yet comes up more often). */
-	private static void offer(ServerPlayer player, Fighter f) {
-		RandomSource random = player.getRandom();
-		List<Reward> pool = new ArrayList<>();
-		for (Reward r : Reward.values()) {
-			if (r.fromWave <= wave && !(r.unique && f.owned.contains(r))) {
-				pool.add(r);
-			}
-		}
-		List<Reward> picks = new ArrayList<>();
-		while (picks.size() < 3 && !pool.isEmpty()) {
-			int sum = 0;
-			for (Reward r : pool) {
-				sum += r.unique ? 3 : 2;
-			}
-			int roll = random.nextInt(sum);
-			for (Reward r : pool) {
-				roll -= r.unique ? 3 : 2;
-				if (roll < 0) {
-					picks.add(r);
-					pool.remove(r);
-					break;
-				}
-			}
-		}
-		f.offer = picks;
-		List<String> lines = new ArrayList<>();
-		for (Reward r : picks) {
-			lines.add(r.name() + "|" + r.title + "|" + r.about + "|" + r.icon);
-		}
-		Net.send(player, new MorePayloads.HordeOffer(wave, lines));
-	}
-
-	/** The player clicked a reward. */
-	public static void pick(ServerPlayer player, String id) {
-		Fighter f = FIGHTERS.get(player.getUUID());
-		if (f == null || f.offer == null) {
-			return;
-		}
-		for (Reward r : f.offer) {
-			if (r.name().equals(id)) {
-				give(player, f, r);
-				f.offer = null;
-				player.sendSystemMessage(Component.literal("You took: " + r.title).withStyle(ChatFormatting.GREEN));
-				player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.8F, 1.0F);
-				Net.send(player, new MorePayloads.HordeOffer(0, List.of()));
-				return;
-			}
-		}
-	}
-
-	private static void give(ServerPlayer player, Fighter f, Reward r) {
-		switch (r) {
-			case SHOTGUN -> add(player, gun(ModItems.COMBAT_SHOTGUN), new ItemStack(ModItems.SHOTGUN_SHELL, 32));
-			case SNIPER -> add(player, gun(ModItems.LONGSHOT_SNIPER), new ItemStack(ModItems.SNIPER_ROUND, 16));
-			case ARMOR -> {
-				player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.RUBY_HELMET));
-				if (!player.getItemBySlot(EquipmentSlot.CHEST).is(ModItems.JETPACK)) {
-					player.setItemSlot(EquipmentSlot.CHEST, new ItemStack(ModItems.RUBY_CHESTPLATE));
-				} else {
-					add(player, new ItemStack(ModItems.RUBY_CHESTPLATE));
-				}
-				player.setItemSlot(EquipmentSlot.LEGS, new ItemStack(ModItems.RUBY_LEGGINGS));
-				player.setItemSlot(EquipmentSlot.FEET, new ItemStack(ModItems.RUBY_BOOTS));
-			}
-			case ROCKETS -> add(player, new ItemStack(ModItems.ROCKET_LAUNCHER), new ItemStack(ModItems.ROCKET, 8));
-			case BLASTER -> add(player, gun(ModItems.RUBY_BLASTER), new ItemStack(ModItems.RUBY_CELL, 64));
-			case JETPACK -> add(player, new ItemStack(ModItems.JETPACK));
-			case LANCER -> add(player, new ItemStack(ModItems.LANCER), new ItemStack(ModItems.AT_MISSILE, 6));
-			case SANDBAGS -> add(player, new ItemStack(ModBlocks.SANDBAGS, 24));
-			case WALLS -> add(player, new ItemStack(ModBlocks.CONCRETE_WALL, 16));
-			case TURRET -> add(player, new ItemStack(ModBlocks.SENTRY_TURRET), new ItemStack(ModItems.HEAVY_AMMO, 64));
-			case APPLES -> add(player, new ItemStack(Items.GOLDEN_APPLE, 3));
-			case GRENADES -> add(player, new ItemStack(ModItems.FRAG_GRENADE, 5));
-			case AMMO -> topUp(player, f, 2);
-		}
-		f.owned.add(r);
-		player.inventoryMenu.broadcastChanges();
-	}
-
-	/** Ammo for everything you own, after each wave ({@code times} over for an Ammo Crate). */
-	private static void topUp(ServerPlayer player, Fighter f, int times) {
-		for (int i = 0; i < times; i++) {
-			add(player, new ItemStack(ModItems.HEAVY_AMMO, 64), new ItemStack(ModItems.LIGHT_AMMO, 24));
-			if (f.owned.contains(Reward.SHOTGUN)) {
-				add(player, new ItemStack(ModItems.SHOTGUN_SHELL, 16));
-			}
-			if (f.owned.contains(Reward.SNIPER)) {
-				add(player, new ItemStack(ModItems.SNIPER_ROUND, 8));
-			}
-			if (f.owned.contains(Reward.ROCKETS)) {
-				add(player, new ItemStack(ModItems.ROCKET, 3));
-			}
-			if (f.owned.contains(Reward.BLASTER)) {
-				add(player, new ItemStack(ModItems.RUBY_CELL, 32));
-			}
-			if (f.owned.contains(Reward.LANCER)) {
-				add(player, new ItemStack(ModItems.AT_MISSILE, 2));
-			}
-		}
 	}
 
 	// ----- Enemies -----
 
 	private static void spawnOne(ServerLevel arena) {
 		RandomSource random = arena.getRandom();
-		Direction gate = Direction.from2DDataValue(random.nextInt(4));
 		BlockPos c = center();
-		int along = HALF + 8 + random.nextInt(3);
-		int side = random.nextInt(3) - 1;
-		int x = c.getX() + gate.getStepX() * along + gate.getStepZ() * side;
-		int z = c.getZ() + gate.getStepZ() * along + gate.getStepX() * side;
+		BlockPos at = spawnPoint(arena, random);
 		boolean boss = bosses > 0;
 		Kind kind = boss ? null : pickKind(arena, random);
 		Mob mob = boss ? EntityTypes.RAVAGER.create(arena, EntitySpawnReason.EVENT) : create(arena, kind);
@@ -1170,7 +1291,7 @@ public final class Horde {
 		} else {
 			toSpawn--;
 		}
-		mob.snapTo(x + 0.5, c.getY(), z + 0.5, gate.getOpposite().toYRot(), 0);
+		mob.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, (float) Math.toDegrees(Math.atan2(-(c.getX() - at.getX()), c.getZ() - at.getZ())), 0);
 		// Tougher every wave, and for every extra player.
 		double extraHealth = kind == Kind.JUGGERNAUT ? 3.0 : kind == Kind.RUNNER ? 0.6 : 1.0;
 		AttributeInstance health = mob.getAttribute(Attributes.MAX_HEALTH);
@@ -1333,12 +1454,12 @@ public final class Horde {
 		if (now - cacheAlertAt > 6000) {
 			cacheAlertAt = now;
 			for (ServerPlayer p : players(server)) {
-				p.sendOverlayMessage(Component.literal("⚠ The Supply Cache is under attack!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+				p.sendOverlayMessage(Component.literal("⚠ The Ruby Core is under attack!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 			}
 		}
 		if (cacheHp <= 0) {
 			cacheHp = 0;
-			gameOver(server, arena, "The Supply Cache was destroyed.");
+			gameOver(server, arena, "The Ruby Core was destroyed.");
 		}
 	}
 
@@ -1363,8 +1484,9 @@ public final class Horde {
 				continue; // the gunship flies itself
 			}
 			double away = Math.max(Math.abs(mob.getX() - c.getX()), Math.abs(mob.getZ() - c.getZ()));
-			if (away > HALF + 14 || mob.getY() < GROUND - 4) {
-				mob.teleportTo(c.getX() + 0.5, c.getY(), c.getZ() + HALF + 9.5);
+			if (away > HALF + 6 || mob.getY() < GROUND - 4) {
+				BlockPos back = spawnPoint(arena, arena.getRandom());
+				mob.teleportTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5);
 			}
 			ServerPlayer nearest = targets.stream().min(Comparator.comparingDouble(p -> p.distanceToSqr(mob))).orElse(null);
 			boolean raider = mob.entityTags().contains(RAIDER_TAG) || mob instanceof Ravager;
@@ -1391,12 +1513,18 @@ public final class Horde {
 				} else {
 					mob.setTarget(null);
 					mob.getNavigation().moveTo(cache.x, cache.y, cache.z, mob instanceof Ravager ? 0.9 : 1.0);
+					siege(server, arena, mob, cache);
 				}
 			} else if (nearest != null) {
 				if (mob instanceof SoldierEntity soldier) {
 					soldier.setObjective(nearest.blockPosition());
-				} else if (!(mob.getTarget() instanceof ServerPlayer t) || !targets.contains(t)) {
-					mob.setTarget(nearest);
+				} else {
+					if (!(mob.getTarget() instanceof ServerPlayer t) || !targets.contains(t)) {
+						mob.setTarget(nearest);
+					}
+					if (!(mob instanceof net.minecraft.world.entity.monster.skeleton.AbstractSkeleton)) {
+						siege(server, arena, mob, nearest.position());
+					}
 				}
 			}
 			if (left <= 4 && toSpawn == 0 && bosses == 0) {
@@ -1405,9 +1533,10 @@ public final class Horde {
 			}
 		}
 		// Keep the cache standing (explosions nearby can't knock it out).
-		if (!arena.getBlockState(c).is(Blocks.IRON_BLOCK)) {
-			arena.setBlock(c, Blocks.IRON_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS);
+		if (!arena.getBlockState(c).is(ModBlocks.RUBY_BLOCK)) {
+			arena.setBlock(c, ModBlocks.RUBY_BLOCK.defaultBlockState(), Block.UPDATE_CLIENTS);
 		}
+		LAST_POS.keySet().retainAll(MOBS);
 		if (!arena.getBlockState(c.above()).is(Blocks.BEACON)) {
 			arena.setBlock(c.above(), Blocks.BEACON.defaultBlockState(), Block.UPDATE_CLIENTS);
 		}
@@ -1587,16 +1716,17 @@ public final class Horde {
 
 	public static String debugState() {
 		return state + " timer " + timer + " work " + Outpost.WORK.size() + " wave " + wave + " toSpawn " + toSpawn + " alive " + MOBS.size() + " cache " + cacheHp + "/" + cacheMax + " fighters "
-				+ FIGHTERS.values().stream().map(f -> f.name + (f.alive ? "" : "(down)") + (f.offer != null ? "(choosing)" : "")).toList()
-				+ " difficulty " + challenge.title;
+				+ FIGHTERS.values().stream().map(f -> f.name + (f.alive ? "" : "(down)")).toList()
+				+ " difficulty " + challenge.title + " bank " + bank() + " siege " + SIEGE.size() + " from " + directionNames();
 	}
 
-	// ----- The outpost -----
+	// ----- The battlefield -----
 
 	/**
-	 * A walled outpost with a gate on each side (enemies pour in through tunnels behind
-	 * them), the Supply Cache in a sandbagged command post in the middle, and the same
-	 * cover in every quarter. Rebuilt at the start of every game.
+	 * An open field for the team to build on: the Ruby Core in the middle with the Armory
+	 * beside it, rocks, trees and old ruins scattered about (the same every game), an
+	 * invisible edge all round. Rebuilt (cleared of everything the last team built) at
+	 * the start of every game, a few milliseconds a tick.
 	 */
 	static final class Outpost {
 		private static final int FLAGS = Block.UPDATE_CLIENTS;
@@ -1622,7 +1752,6 @@ public final class Horde {
 			});
 		}
 
-		/** A box relative to the middle (y 0 = the ground's top block). */
 		private static void box(ServerLevel level, int x1, int y1, int z1, int x2, int y2, int z2, BlockState state) {
 			for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
 				for (int y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
@@ -1633,19 +1762,12 @@ public final class Horde {
 			}
 		}
 
-		/** The same box in all four quarters (turned 90 degrees each time). */
-		private static void quad(ServerLevel level, int x1, int y1, int z1, int x2, int y2, int z2, BlockState state) {
-			int[] a = {x1, z1};
-			int[] b = {x2, z2};
-			for (int k = 0; k < 4; k++) {
-				box(level, a[0], y1, a[1], b[0], y2, b[1], state);
-				a = new int[] {-a[1], a[0]};
-				b = new int[] {-b[1], b[0]};
-			}
+		private static double h(int i, int salt) {
+			return dev.rubymod.world.WarzoneTerrain.hash3(i, salt, 77);
 		}
 
 		static void build(ServerLevel level) {
-			int outer = HALF + 14;
+			int outer = HALF + 3;
 			for (int cx = (CX - outer) >> 4; cx <= (CX + outer) >> 4; cx++) {
 				for (int cz = (CZ - outer) >> 4; cz <= (CZ + outer) >> 4; cz++) {
 					int fcx = cx;
@@ -1656,88 +1778,81 @@ public final class Horde {
 			BlockState air = Blocks.AIR.defaultBlockState();
 			BlockState barrier = Blocks.BARRIER.defaultBlockState();
 			BlockState dirt = Blocks.DIRT.defaultBlockState();
-			// Ground: grass with worn patches, and gravel roads from each gate to the middle.
+			// Grass with worn patches; an invisible wall and ceiling at the edge.
 			for (int x = -outer; x <= outer; x++) {
 				for (int z = -outer; z <= outer; z++) {
-					double h = dev.rubymod.world.WarzoneTerrain.hash3(x, 7, z);
-					BlockState floor = Math.min(Math.abs(x), Math.abs(z)) <= 1 && Math.max(Math.abs(x), Math.abs(z)) > 6 ? Blocks.GRAVEL.defaultBlockState()
-							: h < 0.12 ? Blocks.COARSE_DIRT.defaultBlockState() : h < 0.16 ? Blocks.PODZOL.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
-					for (int y = -3; y <= 40; y++) {
-						set(level, x, y, z, y < 0 ? dirt : y == 0 ? floor : y == 40 ? barrier : air);
+					int fx = x;
+					int fz = z;
+					boolean edge = Math.abs(x) > HALF + 1 || Math.abs(z) > HALF + 1;
+					double r = dev.rubymod.world.WarzoneTerrain.hash3(x, 7, z);
+					BlockState floor = r < 0.06 ? Blocks.COARSE_DIRT.defaultBlockState() : r < 0.09 ? Blocks.PODZOL.defaultBlockState()
+							: r < 0.11 ? Blocks.GRAVEL.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
+					WORK.add(() -> {
+						for (int y = -3; y <= 40; y++) {
+							BlockState want = y < 0 ? dirt : y == 0 ? floor : y == 40 || edge ? barrier : air;
+							BlockPos pos = new BlockPos(CX + fx, GROUND + y, CZ + fz);
+							if (level.getBlockState(pos) != want) {
+								level.setBlock(pos, want, FLAGS);
+							}
+						}
+					});
+				}
+			}
+			// The Ruby Core on a little stone plaza, and the Armory next to it.
+			box(level, -3, 0, -3, 3, 0, 3, Blocks.POLISHED_ANDESITE.defaultBlockState());
+			box(level, 0, 1, 0, 0, 1, 0, ModBlocks.RUBY_BLOCK.defaultBlockState());
+			box(level, 0, 2, 0, 0, 2, 0, Blocks.BEACON.defaultBlockState());
+			box(level, 4, 1, 0, 4, 1, 0, ModBlocks.ARMORY.defaultBlockState());
+			// Boulders, trees and old ruins (the same every game), none too close to the Core.
+			BlockState[] rock = {Blocks.STONE.defaultBlockState(), Blocks.ANDESITE.defaultBlockState(), Blocks.MOSSY_COBBLESTONE.defaultBlockState(),
+					Blocks.COBBLESTONE.defaultBlockState()};
+			for (int i = 0; i < 26; i++) {
+				int x = (int) Math.round((h(i, 1) * 2 - 1) * (HALF - 6));
+				int z = (int) Math.round((h(i, 2) * 2 - 1) * (HALF - 6));
+				if (Math.hypot(x, z) < 16) {
+					continue;
+				}
+				int size = 1 + (int) (h(i, 3) * 2);
+				for (int dx = -size; dx <= size; dx++) {
+					for (int dz = -size; dz <= size; dz++) {
+						int height = size + 1 - Math.max(Math.abs(dx), Math.abs(dz)) - (h(i * 31 + dx * 7 + dz, 4) < 0.3 ? 1 : 0);
+						if (height > 0) {
+							box(level, x + dx, 1, z + dz, x + dx, height, z + dz, rock[(int) (h(i + dx + dz, 5) * rock.length)]);
+						}
 					}
 				}
 			}
-			BlockState wall = Blocks.STONE_BRICKS.defaultBlockState();
-			BlockState cracked = Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
-			BlockState mossy = Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
-			int w = HALF + 1;
-			// The outer wall, with an invisible cap up to the ceiling, and a gate in each side.
-			for (int i = -w; i <= w; i++) {
-				for (int[] p : new int[][] {{i, -w}, {i, w}, {-w, i}, {w, i}}) {
-					double h = dev.rubymod.world.WarzoneTerrain.hash3(p[0], 3, p[1]);
-					box(level, p[0], 1, p[1], p[0], 5, p[1], h < 0.2 ? cracked : h < 0.35 ? mossy : wall);
-					box(level, p[0], 6, p[1], p[0], 39, p[1], barrier);
+			BlockState log = Blocks.OAK_LOG.defaultBlockState();
+			BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+			for (int i = 0; i < 22; i++) {
+				int x = (int) Math.round((h(i, 11) * 2 - 1) * (HALF - 4));
+				int z = (int) Math.round((h(i, 12) * 2 - 1) * (HALF - 4));
+				if (Math.hypot(x, z) < 14) {
+					continue;
 				}
+				box(level, x - 2, 4, z - 2, x + 2, 5, z + 2, leaves);
+				box(level, x - 1, 6, z - 1, x + 1, 6, z + 1, leaves);
+				box(level, x, 1, z, x, 5, z, log);
 			}
-			quad(level, -2, 1, -w, 2, 39, -w, air);
-			// Gate tunnels (where the enemies come from), closed at the far end.
-			quad(level, -3, 1, -w - 11, -3, 5, -w - 1, wall);
-			quad(level, 3, 1, -w - 11, 3, 5, -w - 1, wall);
-			quad(level, -3, 1, -w - 12, 3, 5, -w - 12, wall);
-			quad(level, -3, 6, -w - 12, 3, 39, -w - 1, barrier);
-			quad(level, -2, 6, -w - 11, 2, 39, -w - 1, air);
-			quad(level, -2, 0, -w - 11, 2, 0, -w - 1, Blocks.COARSE_DIRT.defaultBlockState());
-			quad(level, -3, 5, -w, 3, 5, -w, Blocks.POLISHED_ANDESITE.defaultBlockState()); // lintel over each gate
-			quad(level, -2, 5, -w, 2, 5, -w, air);
-			// The command post: a waist-high sandbag ring with a doorway on each side, crates,
-			// and the Supply Cache (an iron block and a beacon) in the middle.
-			BlockState sandbags = ModBlocks.SANDBAGS.defaultBlockState();
-			quad(level, -6, 1, -6, 6, 1, -6, sandbags); // shoot over it, crouch behind it
-			quad(level, -1, 1, -6, 1, 1, -6, air);
-			quad(level, 4, 1, -4, 4, 1, -4, Blocks.BARREL.defaultBlockState());
-			box(level, 0, 1, 0, 0, 1, 0, Blocks.IRON_BLOCK.defaultBlockState());
-			box(level, 0, 2, 0, 0, 2, 0, Blocks.BEACON.defaultBlockState());
-			box(level, 0, 3, 0, 0, 7, 0, air);
-			// Cover in each quarter: crates, low walls, sandbag lines and a ruined house.
-			BlockState crate = Blocks.BARREL.defaultBlockState();
-			quad(level, 10, 1, -14, 11, 1, -14, crate);
-			quad(level, 10, 1, -13, 10, 2, -13, crate);
-			quad(level, 15, 1, -8, 15, 2, -4, wall);
-			quad(level, 7, 1, -20, 12, 1, -20, sandbags);
-			quad(level, 18, 1, -18, 18, 1, -14, sandbags);
-			quad(level, -12, 1, -11, -8, 2, -11, mossy);
-			// The ruined house.
-			quad(level, 20, 1, -26, 27, 3, -26, wall);
-			quad(level, 20, 1, -26, 20, 3, -20, cracked);
-			quad(level, 27, 1, -26, 27, 2, -20, wall);
-			quad(level, 23, 1, -26, 24, 2, -26, air);
-			quad(level, 20, 1, -23, 20, 2, -22, air);
-			quad(level, 25, 3, -26, 27, 3, -26, air);
-			// Watchtowers in the corners, with a ladder up.
-			BlockState planks = Blocks.SPRUCE_PLANKS.defaultBlockState();
-			quad(level, 27, 1, 27, 31, 5, 31, planks);
-			quad(level, 28, 1, 28, 30, 4, 30, air); // hollow, with a floor up top to shoot from
-			quad(level, 27, 6, 27, 31, 6, 31, Blocks.SPRUCE_FENCE.defaultBlockState());
-			quad(level, 28, 6, 28, 30, 6, 30, air);
-			quad(level, 27, 1, 29, 27, 2, 29, air); // doorway
-			for (int k = 0; k < 4; k++) {
-				// Ladder on the inner face of the back wall, facing into the tower.
-				int[] at = rotate(29, 30, k);
-				Direction facing = switch (k) {
-					case 0 -> Direction.NORTH;
-					case 1 -> Direction.EAST;
-					case 2 -> Direction.SOUTH;
-					default -> Direction.WEST;
-				};
-				box(level, at[0], 1, at[1], at[0], 5, at[1], Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, facing));
-				int[] lamp = rotate(9, 9, k);
-				box(level, lamp[0], 1, lamp[1], lamp[0], 3, lamp[1], Blocks.DARK_OAK_FENCE.defaultBlockState());
-				box(level, lamp[0], 4, lamp[1], lamp[0], 4, lamp[1], Blocks.LANTERN.defaultBlockState());
+			BlockState bricks = Blocks.STONE_BRICKS.defaultBlockState();
+			BlockState cracked = Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
+			for (int i = 0; i < 10; i++) {
+				int x = (int) Math.round((h(i, 21) * 2 - 1) * (HALF - 10));
+				int z = (int) Math.round((h(i, 22) * 2 - 1) * (HALF - 10));
+				if (Math.hypot(x, z) < 20) {
+					continue;
+				}
+				int len = 3 + (int) (h(i, 23) * 5);
+				boolean alongX = h(i, 24) < 0.5;
+				for (int k = 0; k < len; k++) {
+					int height = 1 + (int) (h(i * 13 + k, 25) * 2.5);
+					box(level, x + (alongX ? k : 0), 1, z + (alongX ? 0 : k), x + (alongX ? k : 0), height, z + (alongX ? 0 : k), k % 3 == 1 ? cracked : bricks);
+				}
 			}
 			WORK.add(() -> label(level));
 		}
 
-		/** A floating label over the cache. */
+		/** A floating label over the Core. */
 		private static void label(ServerLevel level) {
 			Display.TextDisplay sign = EntityTypes.TEXT_DISPLAY.create(level, EntitySpawnReason.EVENT);
 			if (sign != null) {
@@ -1746,19 +1861,11 @@ public final class Horde {
 				((DisplayAccessor) sign).rubymod$setBillboard(Display.BillboardConstraints.VERTICAL);
 				((DisplayAccessor) sign).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(),
 						new Vector3f(1.4F, 1.4F, 1.4F), new Quaternionf()));
-				((TextDisplayAccessor) sign).rubymod$setText(Component.literal("SUPPLY CACHE\n").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-						.append(Component.literal("Don't let them wreck it!").withStyle(ChatFormatting.WHITE)));
+				((TextDisplayAccessor) sign).rubymod$setText(Component.literal("RUBY CORE\n").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)
+						.append(Component.literal("Defend it! Shop at the Armory").withStyle(ChatFormatting.WHITE)));
 				((TextDisplayAccessor) sign).rubymod$setBackground(0x80000000);
 				level.addFreshEntity(sign);
 			}
-		}
-
-		private static int[] rotate(int x, int z, int k) {
-			int[] p = {x, z};
-			for (int i = 0; i < k; i++) {
-				p = new int[] {-p[1], p[0]};
-			}
-			return p;
 		}
 	}
 }

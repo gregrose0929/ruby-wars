@@ -39,7 +39,19 @@ public class LandmineBlock extends Block {
 
 	@Override
 	protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity, InsideBlockEffectApplier effectApplier, boolean isPrecise) {
-		if (!(level instanceof ServerLevel serverLevel) || !Rules.phase().pvp()) {
+		if (!(level instanceof ServerLevel serverLevel)) {
+			return;
+		}
+		if (dev.rubymod.game.Horde.inOutpost(serverLevel, pos)) {
+			// Co-op Horde: only the horde sets them off.
+			if (dev.rubymod.game.Horde.isEnemy(entity)) {
+				serverLevel.removeBlock(pos, false);
+				dev.rubymod.game.Armor.blast(serverLevel, null, null, net.minecraft.world.phys.Vec3.atCenterOf(pos), 80.0F, null);
+				Explosions.explode(serverLevel, null, pos.getX() + 0.5, pos.getY() + 0.3, pos.getZ() + 0.5, 3.0F, false);
+			}
+			return;
+		}
+		if (!Rules.phase().pvp()) {
 			return;
 		}
 		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ());

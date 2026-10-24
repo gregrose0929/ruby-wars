@@ -50,9 +50,11 @@ skip the hub when you load them (H still works). Turn the hub off with `"hub": f
 
 ## Co-op Horde
 
-A fun side mode: everyone in Horde fights together in a walled outpost to protect the
-**Supply Cache** (the beacon in the middle) from waves of enemies pouring in through
-four gates. Some enemies hunt you; some go straight for the cache.
+A Ruby Wars base, built by everyone together, against a horde. The team gets an open
+battlefield (rocks, trees, old ruins) with the **Ruby Core** in the middle and an
+**Armory** next to it. You have 2 minutes to build before wave 1. Waves come from 1 to 3
+directions (named in chat, with red flares in the sky just before), and get bigger and
+nastier. If the Core is destroyed, it's game over.
 
 - **Difficulty:** pick Easy, Normal or Hard on the Horde card (H) when you start a game,
   or click the choice in chat before wave 1 (`/play horde easy|normal|hard` works too).
@@ -60,25 +62,43 @@ four gates. Some enemies hunt you; some go straight for the cache.
   four and 18 for six (Normal); wave 5 is 16 solo and 50 for six. Enemies also get
   tougher per player (and per wave), Brutes much more so, and more fight at once in a
   bigger game. Someone joining or leaving mid-wave changes the rest of that wave.
-- **Pick your reward.** Clear a wave and everyone chooses 1 of 3: guns (shotgun, sniper,
-  rocket launcher, Ruby Blaster, Lancer), ruby armor, a jetpack, sandbags or concrete
-  walls to build cover, a Sentry Turret (load it with Heavy Ammo; it shoots Horde
-  enemies by itself), golden apples, grenades or an ammo crate. Plus ammo, full health,
-  and the cache patched up, then 90 seconds to get ready (build cover!). When everyone
-  clicks "I'm ready" (or types `/horde ready`), the next wave starts in 5 seconds.
+- **The team bank.** Every kill puts rubies in one bank the whole team shares (bigger
+  enemies pay more; the gunship pays most), and every cleared wave adds a bonus. The
+  team starts with 200. The bank shows top left.
+- **The Armory.** Right-click the Armory by the Core (or click [ARMORY] in chat, or
+  `/horde shop`) to spend the bank. Tabs: Weapons (rifle, shotgun, sword, grenades,
+  then sniper, C4, rockets, Ruby Blaster, Skyhammer, Lancer, air strikes), Ammo (plus
+  ruby armor, a Rangefinder and mortar shells, a jetpack), Build (sandbags, planks,
+  ladders, concrete walls, barbed wire, floodlights, glass, a blast door, reinforced
+  concrete), Defenses (Sentry Turrets, landmines, claymores, Tesla Coils, a mortar,
+  anti-tank mines, flak, a SAM site, point defense, a shield generator), Power (solar
+  panels, a generator and coal, batteries) and Support (repair the Core, hire a guard,
+  make the Core tougher, a jeep, an AT guard, a tank). New things unlock as waves are
+  cleared; the shop shows when. Things from Ruby Wars that don't make sense here
+  (drills, vaults, missiles, claims) aren't sold.
+- **Build a base.** Monsters smash through walls in their way, so stronger walls hold
+  longer (sandbags < glass < concrete < blast doors < reinforced concrete), and
+  Sappers blow holes in them. Mines, claymores, barbed wire, turrets and Tesla Coils
+  only go after the horde. Machines run on the team's one power grid: build solar
+  panels or a generator to power Tesla Coils and the like. Mortars fire on a spot
+  marked with a Rangefinder. Each game starts on a fresh battlefield.
+- **Between waves:** full health, then 90 seconds to build and shop. When everyone
+  clicks "I'm ready" (in the Armory or chat, or `/horde ready`), the next wave starts
+  in 5 seconds.
 - **Revive your teammates.** If someone goes down, crouch next to them for 3 seconds to
   bring them back; otherwise they're back at the next wave. Everyone has one **Second
   Wind** per game: when the whole team is down, someone gets back up (so solo players
-  get one extra life). It's game over when the team is down for good or the cache is
+  get one extra life). It's game over when the team is down for good or the Core is
   destroyed, and everyone goes back to the hub.
 - **Enemies:** zombies, husks and spiders first; then Runners (fast little zombies),
-  skeletons, Sappers (creepers that blow up walls and the cache), soldiers, Shield
+  skeletons, Sappers (creepers that blow up walls and the Core), soldiers, Shield
   Soldiers (shoot them from the side), Juggernauts (armored, slow, very tough) and AT
   gunners.
 - **Special waves:** every 5th wave brings Brutes (ravagers), waves 4, 9, 14... are fog
   waves (darkness closes in, but enemies glow), and waves 7, 12, 17... are air raids:
-  an enemy gunship circles the outpost and everyone gets a Skyhammer to shoot it down.
-- Join mid-game any time; you get the usual rewards for the waves already cleared.
+  an enemy gunship circles the Core: shoot it down with flak, a SAM site or Skyhammers
+  (if the team has none, everyone gets a Skyhammer).
+- Join mid-game any time: you get the starting kit, and the team bank is yours too.
   The best wave (and who reached it) shows on the hub sign. Reaching wave 5 completes
   the "Reach wave 5 in Co-op Horde" goal (a star for Ruby Wars). Nothing else from Horde
   carries over.
@@ -624,7 +644,7 @@ so you don't need to start a season to test weapons.
 
 ## Commands
 
-Everyone: `/hub`, `/tour`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`,
+Everyone: `/hub`, `/tour`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`, `/horde shop`, `/horde ready`,
 `/play gungame|hideseek|infection|ctf|koth|tanks|skyrace|build|rush` (party games), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
 base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),

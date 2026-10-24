@@ -19,7 +19,9 @@ public class ArmoryBlock extends Block {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		if (player instanceof ServerPlayer serverPlayer) {
+		if (player instanceof ServerPlayer serverPlayer && dev.rubymod.game.Horde.playing(serverPlayer)) {
+			dev.rubymod.game.HordeShop.open(serverPlayer);
+		} else if (player instanceof ServerPlayer serverPlayer) {
 			Shop.open(serverPlayer, 0);
 		}
 		return InteractionResult.SUCCESS;

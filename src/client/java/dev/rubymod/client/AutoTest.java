@@ -460,24 +460,31 @@ public final class AutoTest {
 			log("cache under attack: {}", dev.rubymod.game.Horde.debugState());
 			shot(mc, "plus-raiders");
 		});
-		// Clear the wave: the reward menu should open.
+		// Clear the wave: rubies for the team.
 		then(5, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
 		then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
 		then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
 		then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
 		then(40, mc -> {
 			log("cleared: {} screen {}", dev.rubymod.game.Horde.debugState(), mc.gui.screen());
-			shot(mc, "plus-rewards");
+			shot(mc, "plus-cleared");
+		});
+		// Open the Armory and buy a turret and some walls.
+		then(5, mc -> mc.player.connection.sendCommand("horde shop"));
+		then(20, mc -> {
+			log("shop open: {}", mc.gui.screen());
+			shot(mc, "plus-shop");
 		});
 		then(5, mc -> {
-			if (mc.gui.screen() instanceof HordeRewardScreen screen) {
-				String id = screen.firstOptionId();
-				log("picking {}", id);
-				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.HordePick(id));
-				mc.gui.setScreen(null);
-			}
+			net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.HordeBuy("turret"));
+			net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.HordeBuy("walls"));
+			net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.HordeBuy("tank"));
 		});
-		then(20, mc -> log("picked: {} | {}", dev.rubymod.game.Horde.debugState(), inventorySummary(mc)));
+		then(20, mc -> {
+			log("bought: {} | {}", dev.rubymod.game.Horde.debugState(), inventorySummary(mc));
+			shot(mc, "plus-shop-after");
+			mc.gui.setScreen(null);
+		});
 		// Fog wave.
 		then(5, mc -> onServer(mc, server -> dev.rubymod.game.Horde.jumpTo(server, 4)));
 		then(5, mc -> command(mc, "execute as @p at @s run tp @s -20000.5 66 -4.5 180 5"));
@@ -714,6 +721,80 @@ public final class AutoTest {
 		}
 		if (mode.startsWith("party")) {
 			partyScript(mode.length() > 5 ? mode.substring(6) : "");
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("hordebase")) {
+			// Co-op Horde as base defense: the battlefield, the Armory, walls the horde smashes.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play horde normal"));
+			then(200, mc -> {
+				log("joined: {} | {}", dev.rubymod.game.Horde.debugState(), inventorySummary(mc));
+				command(mc, "effect give @a minecraft:resistance infinite 255 true");
+				command(mc, "effect give @a minecraft:night_vision infinite 0 true");
+				command(mc, "execute as @p at @s run tp @s -20000 112 52 180 45");
+			});
+			then(60, mc -> shot(mc, "base-field"));
+			then(5, mc -> command(mc, "execute as @p at @s run tp @s -20000.5 65 3.5 0 10"));
+			then(20, mc -> mc.player.connection.sendCommand("horde shop"));
+			then(20, mc -> {
+				log("shop: {}", mc.gui.screen());
+				shot(mc, "base-shop");
+			});
+			then(5, mc -> {
+				for (String id : new String[] {"turret", "walls", "landmines", "solar", "tesla"}) {
+					net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.HordeBuy(id));
+				}
+			});
+			then(20, mc -> {
+				log("bought: {} | {}", dev.rubymod.game.Horde.debugState(), inventorySummary(mc));
+				shot(mc, "base-shop-after");
+				mc.gui.setScreen(null);
+			});
+			// A concrete ring round the Core, 2 high.
+			then(5, mc -> {
+				command(mc, "execute in rubymod:arena run fill -20007 65 -7 -19993 66 -7 rubymod:concrete_wall");
+				command(mc, "execute in rubymod:arena run fill -20007 65 7 -19993 66 7 rubymod:concrete_wall");
+				command(mc, "execute in rubymod:arena run fill -20007 65 -7 -20007 66 7 rubymod:concrete_wall");
+				command(mc, "execute in rubymod:arena run fill -19993 65 -7 -19993 66 7 rubymod:concrete_wall");
+			});
+			then(10, mc -> onServer(mc, server -> dev.rubymod.game.Horde.skipWait()));
+			then(60, mc -> {
+				log("wave 1: {}", dev.rubymod.game.Horde.debugState());
+				command(mc, "execute as @p at @s run tp @s -20000.5 65 -4.5 0 15");
+			});
+			then(600, mc -> {
+				log("30s into wave 1: {}", dev.rubymod.game.Horde.debugState());
+				shot(mc, "base-siege");
+			});
+			then(400, mc -> {
+				onServer(mc, server -> {
+					var arena = server.getLevel(dev.rubymod.game.Duels.ARENA);
+					int walls = 0;
+					for (int x = -20007; x <= -19993; x++) {
+						for (int z = -7; z <= 7; z++) {
+							for (int y = 65; y <= 66; y++) {
+								if (arena.getBlockState(new net.minecraft.core.BlockPos(x, y, z)).is(dev.rubymod.registry.ModBlocks.CONCRETE_WALL)) {
+									walls++;
+								}
+							}
+						}
+					}
+					log("walls left {} of 112 | {}", walls, dev.rubymod.game.Horde.debugState());
+				});
+				shot(mc, "base-siege2");
+			});
+			then(5, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+			then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+			then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+			then(60, mc -> log("cleared: {}", dev.rubymod.game.Horde.debugState()));
 			then(20, mc -> {
 				log("done");
 				mc.stop();

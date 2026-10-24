@@ -86,7 +86,15 @@ public class MachineBlock extends BaseEntityBlock {
 
 	@Override
 	public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity by, ItemStack stack) {
-		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MachineBlockEntity be && by instanceof Player player) {
+		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MachineBlockEntity be && by instanceof Player player
+				&& dev.rubymod.game.Horde.playing(player) && dev.rubymod.game.Horde.inOutpost((net.minecraft.server.level.ServerLevel) level, pos)) {
+			// Co-op Horde: everything runs on the team's one power grid.
+			be.setOwner(dev.rubymod.game.Horde.TEAM);
+			Integer tier = stack.get(ModComponents.MACHINE_TIER);
+			if (tier != null) {
+				be.setTier(tier);
+			}
+		} else if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MachineBlockEntity be && by instanceof Player player) {
 			be.setOwner(player.getUUID());
 			String goal = switch (kind) {
 				case RUBY_DRILL -> "drill";

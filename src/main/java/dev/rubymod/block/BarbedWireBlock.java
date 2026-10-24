@@ -30,6 +30,16 @@ public class BarbedWireBlock extends Block {
 
 	@Override
 	protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity, InsideBlockEffectApplier effectApplier, boolean isPrecise) {
+		if (level instanceof ServerLevel horde && dev.rubymod.game.Horde.inOutpost(horde, pos)) {
+			// Co-op Horde: the team walks through its own wire; the horde gets stuck and cut.
+			if (dev.rubymod.game.Horde.isEnemy(entity)) {
+				entity.makeStuckInBlock(state, new Vec3(0.3, 0.6, 0.3));
+				if (level.getGameTime() % 20 == 0) {
+					entity.hurtServer(horde, level.damageSources().sweetBerryBush(), 2.0F);
+				}
+			}
+			return;
+		}
 		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ());
 		if (entity instanceof Player player && claim != null && claim.canUse(player.getUUID())) {
 			return;

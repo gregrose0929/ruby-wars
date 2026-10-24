@@ -135,6 +135,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (owner.equals(NOBODY)) {
 			return true;
 		}
+		if (owner.equals(dev.rubymod.game.Horde.TEAM)) {
+			return dev.rubymod.game.Horde.playing(player);
+		}
 		if (owner.equals(player.getUUID()) || Rules.isAdminBypass(player)) {
 			return true;
 		}
@@ -379,6 +382,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (shooter.getUUID().equals(owner)) {
 			return true;
 		}
+		if (owner.equals(dev.rubymod.game.Horde.TEAM)) {
+			return shooter instanceof Player p && dev.rubymod.game.Horde.playing(p) || !dev.rubymod.game.Horde.isEnemy(shooter);
+		}
 		SeasonData.Claim claim = SeasonData.get().claimOf(owner);
 		return claim != null && claim.canUse(shooter.getUUID());
 	}
@@ -475,7 +481,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		double best = r;
 		for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
 				new AABB(top, top).inflate(r), e -> e.isAlive() && !e.isSpectator())) {
-			boolean hostile = e instanceof net.minecraft.world.entity.monster.Enemy
+			boolean hostile = e instanceof net.minecraft.world.entity.monster.Enemy || dev.rubymod.game.Horde.isEnemy(e)
 					|| e instanceof Player p && claim != null && Rules.phase().pvp() && Rules.isEnemyOf(claim, p);
 			double d = e.position().distanceTo(top);
 			if (hostile && d < best && canSee(level, top, e.getEyePosition())) {

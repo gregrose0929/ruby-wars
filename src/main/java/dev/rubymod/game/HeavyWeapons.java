@@ -45,6 +45,9 @@ public final class HeavyWeapons {
 	}
 
 	private static boolean checkWar(ServerPlayer player) {
+		if (Horde.playing(player)) {
+			return true; // Co-op Horde: fire away
+		}
 		if (!Rules.phase().raidWeaponsActive()) {
 			player.sendSystemMessage(Component.literal("Heavy weapons only fire during Open War on Battle Day.").withStyle(ChatFormatting.YELLOW), true);
 			return false;

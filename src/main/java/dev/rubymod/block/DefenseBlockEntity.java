@@ -126,6 +126,8 @@ public class DefenseBlockEntity extends BlockEntity {
 			case CLAYMORE -> {
 				if (t % 4 == 0 && Rules.phase().pvp() && (claim = claimHere(serverLevel, pos)) != null) {
 					tickClaymore(serverLevel, pos, state, claim);
+				} else if (t % 4 == 0 && dev.rubymod.game.Horde.inOutpost(serverLevel, pos)) {
+					tickHordeClaymore(serverLevel, pos, state);
 				}
 			}
 			case FLAK -> {
@@ -389,6 +391,20 @@ public class DefenseBlockEntity extends BlockEntity {
 	}
 
 	// ----- Claymore -----
+
+	/** Co-op Horde: goes off when the horde walks in front of it. */
+	private static void tickHordeClaymore(ServerLevel level, BlockPos pos, BlockState state) {
+		Direction facing = state.hasProperty(ClaymoreBlock.FACING) ? state.getValue(ClaymoreBlock.FACING) : Direction.NORTH;
+		Vec3 front = Vec3.atCenterOf(pos).add(Vec3.atLowerCornerOf(facing.getUnitVec3i()).scale(2.5));
+		AABB zone = new AABB(front, front).inflate(1.8, 1.5, 1.8);
+		if (level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, zone, e -> e.isAlive() && dev.rubymod.game.Horde.isEnemy(e)).isEmpty()) {
+			return;
+		}
+		level.removeBlock(pos, false);
+		Vec3 blast = Vec3.atCenterOf(pos).add(Vec3.atLowerCornerOf(facing.getUnitVec3i()).scale(1.2));
+		dev.rubymod.game.Armor.blast(level, null, null, blast.add(Vec3.atLowerCornerOf(facing.getUnitVec3i()).scale(1.5)), 60.0F, null);
+		Explosions.explode(level, null, blast.x, blast.y, blast.z, 2.5F, false);
+	}
 
 	private static void tickClaymore(ServerLevel level, BlockPos pos, BlockState state, SeasonData.Claim claim) {
 		Direction facing = state.hasProperty(ClaymoreBlock.FACING) ? state.getValue(ClaymoreBlock.FACING) : Direction.NORTH;

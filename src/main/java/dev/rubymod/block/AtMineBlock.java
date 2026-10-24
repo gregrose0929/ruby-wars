@@ -42,6 +42,15 @@ public class AtMineBlock extends Block {
 
 	@Override
 	protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity, InsideBlockEffectApplier effectApplier, boolean isPrecise) {
+		if (level instanceof ServerLevel horde && dev.rubymod.game.Horde.inOutpost(horde, pos)) {
+			// Co-op Horde: a big blast for the horde (it's what stops Brutes).
+			if (dev.rubymod.game.Horde.isEnemy(entity)) {
+				horde.removeBlock(pos, false);
+				Armor.blast(horde, null, null, Vec3.atCenterOf(pos), 130.0F, null);
+				Explosions.explode(horde, null, pos.getX() + 0.5, pos.getY() + 0.3, pos.getZ() + 0.5, 3.5F, false);
+			}
+			return;
+		}
 		if (!(level instanceof ServerLevel serverLevel) || !Armor.isArmored(entity) || entity.getControllingPassenger() == null) {
 			return;
 		}

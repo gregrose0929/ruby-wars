@@ -28,7 +28,7 @@ public class ModeScreen extends Screen {
 	private static final List<Game> MAIN = List.of(
 			new Game("rubywars", "RUBY WARS", "The main game. Build a base for two weeks, then battle for one day. Last one standing wins.",
 					"rubymod:ruby_heart", 0xFFE0303A),
-			new Game("horde", "CO-OP HORDE", "Team up to protect the Supply Cache from waves of enemies. Pick a reward after every wave.",
+			new Game("horde", "CO-OP HORDE", "Build a base together and defend the Ruby Core from waves of monsters. Spend the team's rubies on gear.",
 					"rubymod:arr_rifle", 0xFF3FC85A));
 
 	/** The latest info from the server (where you are, a status line per game). */

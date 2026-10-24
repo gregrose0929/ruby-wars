@@ -28,6 +28,14 @@ public final class HubCommand {
 				return 0;
 			}
 			return 1;
+		})).then(Commands.literal("shop").executes(c -> {
+			var player = c.getSource().getPlayerOrException();
+			if (!dev.rubymod.game.Horde.playing(player)) {
+				c.getSource().sendFailure(Component.literal("The Horde Armory is only for Co-op Horde."));
+				return 0;
+			}
+			dev.rubymod.game.HordeShop.open(player);
+			return 1;
 		})));
 		dispatcher.register(Commands.literal("tour")
 				.executes(c -> {

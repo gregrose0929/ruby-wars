@@ -148,16 +148,18 @@ public final class MorePayloads {
 		}
 	}
 
-	/** Server -> client: Horde rewards to pick from after a wave, "id|title|about|icon item" each (empty: close the menu). */
-	public record HordeOffer(int wave, List<String> options) implements CustomPacketPayload {
-		public static final Type<HordeOffer> TYPE = new Type<>(RubyMod.id("horde_offer"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, HordeOffer> CODEC = StreamCodec.composite(
-				ByteBufCodecs.VAR_INT, HordeOffer::wave,
-				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), HordeOffer::options,
-				HordeOffer::new);
+	/** Server -> client: the Horde Armory: team bank, waves cleared and "id|category|name|icon|price|wave|about" per item (open: show the screen). */
+	public record HordeShopSync(boolean open, int bank, int cleared, List<String> entries) implements CustomPacketPayload {
+		public static final Type<HordeShopSync> TYPE = new Type<>(RubyMod.id("horde_shop"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, HordeShopSync> CODEC = StreamCodec.composite(
+				ByteBufCodecs.BOOL, HordeShopSync::open,
+				ByteBufCodecs.VAR_INT, HordeShopSync::bank,
+				ByteBufCodecs.VAR_INT, HordeShopSync::cleared,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), HordeShopSync::entries,
+				HordeShopSync::new);
 
 		@Override
-		public Type<HordeOffer> type() {
+		public Type<HordeShopSync> type() {
 			return TYPE;
 		}
 	}
@@ -210,14 +212,14 @@ public final class MorePayloads {
 		}
 	}
 
-	/** Client -> server: the Horde reward picked. */
-	public record HordePick(String id) implements CustomPacketPayload {
-		public static final Type<HordePick> TYPE = new Type<>(RubyMod.id("horde_pick"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, HordePick> CODEC = StreamCodec.composite(
-				ByteBufCodecs.STRING_UTF8, HordePick::id, HordePick::new);
+	/** Client -> server: buy this from the Horde Armory. */
+	public record HordeBuy(String id) implements CustomPacketPayload {
+		public static final Type<HordeBuy> TYPE = new Type<>(RubyMod.id("horde_buy"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, HordeBuy> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, HordeBuy::id, HordeBuy::new);
 
 		@Override
-		public Type<HordePick> type() {
+		public Type<HordeBuy> type() {
 			return TYPE;
 		}
 	}
@@ -350,11 +352,11 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(ResearchSync.TYPE, ResearchSync.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ModeSelect.TYPE, ModeSelect.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ModeInfo.TYPE, ModeInfo.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(HordeOffer.TYPE, HordeOffer.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(HordeShopSync.TYPE, HordeShopSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(OpenModes.TYPE, OpenModes.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ProfileRequest.TYPE, ProfileRequest.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ProfileSync.TYPE, ProfileSync.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(CosmeticSelect.TYPE, CosmeticSelect.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(HordePick.TYPE, HordePick.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(HordeBuy.TYPE, HordeBuy.CODEC);
 	}
 }
