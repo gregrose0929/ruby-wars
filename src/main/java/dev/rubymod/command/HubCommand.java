@@ -11,7 +11,10 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
-/** /hub: back to the hub. /play rubywars|horde|hub: switch games (the same as the portals, or the H key). */
+/**
+ * /hub: back to the hub. /play rubywars|horde|hub: switch games (the same as the portals, or the H key).
+ * /play horde easy|normal|hard starts Horde at that difficulty (or changes it before wave 1).
+ */
 public final class HubCommand {
 	private HubCommand() {
 	}
@@ -20,7 +23,10 @@ public final class HubCommand {
 		dispatcher.register(Commands.literal("hub").executes(c -> go(c, "hub")));
 		dispatcher.register(Commands.literal("play").executes(HubCommand::list)
 				.then(Commands.literal("rubywars").executes(c -> go(c, "rubywars")))
-				.then(Commands.literal("horde").executes(c -> go(c, "horde")))
+				.then(Commands.literal("horde").executes(c -> go(c, "horde"))
+						.then(Commands.literal("easy").executes(c -> go(c, "horde:easy")))
+						.then(Commands.literal("normal").executes(c -> go(c, "horde:normal")))
+						.then(Commands.literal("hard").executes(c -> go(c, "horde:hard"))))
 				.then(Commands.literal("hub").executes(c -> go(c, "hub"))));
 	}
 

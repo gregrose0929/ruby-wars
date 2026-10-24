@@ -49,20 +49,37 @@ skip the hub when you load them (H still works). Turn the hub off with `"hub": f
 
 ## Co-op Horde
 
-Everyone in Horde fights together in a walled outpost: waves of zombies, husks,
-spiders, skeletons and enemy soldiers pour in through four gates, with a Brute (a
-ravager) every 5th wave. Each wave is bigger and tougher, and grows with the team.
+A fun side mode: everyone in Horde fights together in a walled outpost to protect the
+**Supply Cache** (the beacon in the middle) from waves of enemies pouring in through
+four gates. Some enemies hunt you; some go straight for the cache.
 
-- Start with a rifle, a pistol, a ruby sword, grenades and iron armor.
-- Clear a wave and everyone gets a reward, a refill and full health, then 15 seconds to
-  get ready: Combat Shotgun, sandbags (build cover!), Longshot Sniper, ruby armor,
-  Rocket Launcher, concrete walls, Ruby Blaster, a Jetpack, the Lancer, then rockets and
-  grenades.
-- If you go down, you watch until the next wave starts. If the whole team is down,
-  it's game over, and everyone goes back to the hub. Join mid-game any time; you get
-  everything already earned.
-- The best wave ever (and who reached it) shows on the hub sign. Reaching wave 5
-  completes the "Reach wave 5 in Co-op Horde" goal (a star for Ruby Wars).
+- **Difficulty:** pick Easy, Normal or Hard on the Horde card (H) when you start a game,
+  or click the choice in chat before wave 1 (`/play horde easy|normal|hard` works too).
+- **It scales with the team.** Wave 1 is 6 enemies for one player, 8 for two, 13 for
+  four and 18 for six (Normal); wave 5 is 16 solo and 50 for six. Enemies also get
+  tougher per player (and per wave), Brutes much more so, and more fight at once in a
+  bigger game. Someone joining or leaving mid-wave changes the rest of that wave.
+- **Pick your reward.** Clear a wave and everyone chooses 1 of 3: guns (shotgun, sniper,
+  rocket launcher, Ruby Blaster, Lancer), ruby armor, a jetpack, sandbags or concrete
+  walls to build cover, a Sentry Turret (load it with Heavy Ammo; it shoots Horde
+  enemies by itself), golden apples, grenades or an ammo crate. Plus ammo, full health,
+  and the cache patched up, then 15 seconds to get ready.
+- **Revive your teammates.** If someone goes down, crouch next to them for 3 seconds to
+  bring them back; otherwise they're back at the next wave. Everyone has one **Second
+  Wind** per game: when the whole team is down, someone gets back up (so solo players
+  get one extra life). It's game over when the team is down for good or the cache is
+  destroyed, and everyone goes back to the hub.
+- **Enemies:** zombies, husks and spiders first; then Runners (fast little zombies),
+  skeletons, Sappers (creepers that blow up walls and the cache), soldiers, Shield
+  Soldiers (shoot them from the side), Juggernauts (armored, slow, very tough) and AT
+  gunners.
+- **Special waves:** every 5th wave brings Brutes (ravagers), waves 4, 9, 14... are fog
+  waves (darkness closes in, but enemies glow), and waves 7, 12, 17... are air raids:
+  an enemy gunship circles the outpost and everyone gets a Skyhammer to shoot it down.
+- Join mid-game any time; you get the usual rewards for the waves already cleared.
+  The best wave (and who reached it) shows on the hub sign. Reaching wave 5 completes
+  the "Reach wave 5 in Co-op Horde" goal (a star for Ruby Wars). Nothing else from Horde
+  carries over.
 
 ## The Ruby Wars map
 
@@ -553,7 +570,7 @@ so you don't need to start a season to test weapons.
 
 ## Commands
 
-Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
+Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`, `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
 base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),
 `/squad ...`, `/sc <message>`, `/waypoint ...`.

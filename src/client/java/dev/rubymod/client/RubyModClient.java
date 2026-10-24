@@ -162,6 +162,7 @@ public class RubyModClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.MapSync.TYPE, (payload, context) -> ClientState.map = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ResearchSync.TYPE, (payload, context) -> ClientState.research = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ModeInfo.TYPE, (payload, context) -> ModeScreen.info = payload);
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordeOffer.TYPE, (payload, context) -> HordeRewardScreen.show(payload));
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.LookInfo.TYPE, (payload, context) -> {
 			ClientState.look = payload;
 			ClientState.lookAt = System.currentTimeMillis();

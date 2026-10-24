@@ -151,9 +151,17 @@ public final class Hub {
 
 	// ----- Switching games -----
 
-	/** Go to "rubywars", "horde" or "hub". Returns an error to show, or null when it worked. */
+	/** Go to "rubywars", "horde" (or "horde:easy|normal|hard") or "hub". Returns an error to show, or null when it worked. */
 	public static String go(ServerPlayer player, String target) {
+		Horde.Challenge challenge = null;
+		if (target.startsWith("horde:")) {
+			challenge = Horde.Challenge.byName(target.substring(6));
+			target = "horde";
+		}
 		Where from = where(player);
+		if (from == Where.HORDE && target.equals("horde") && challenge != null) {
+			return Horde.setDifficulty(player, challenge);
+		}
 		if (from == Where.DUEL) {
 			return "Finish your duel first (or /duel leave).";
 		}
@@ -202,7 +210,7 @@ public final class Hub {
 		// ... and arrive.
 		switch (to) {
 			case RUBY_WARS -> enterRubyWars(player);
-			case HORDE -> Horde.join(player);
+			case HORDE -> Horde.join(player, challenge);
 			default -> enterHub(player);
 		}
 		return null;
@@ -635,6 +643,6 @@ public final class Hub {
 	public static List<String> modeLines(MinecraftServer server) {
 		return List.of(
 				"rubywars|Ruby Wars|" + rubyWarsStatus(server),
-				"horde|Co-op Horde|" + Horde.status());
+				"horde|Co-op Horde|" + Horde.status() + "|" + Horde.running());
 	}
 }

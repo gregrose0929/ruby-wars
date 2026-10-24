@@ -980,6 +980,16 @@ public class AircraftEntity extends Mob {
 		return drone;
 	}
 
+	/** A Co-op Horde enemy gunship: a helicopter circling {@code center} (Horde aims and fires its weapons). */
+	public static AircraftEntity gunship(ServerLevel level, Vec3 center, double radius) {
+		AircraftEntity heli = new AircraftEntity(ModEntities.ATTACK_HELI, level);
+		heli.snapTo(center.x + radius, center.y, center.z, 180, 0);
+		heli.droneCenter = center;
+		heli.droneRadius = radius;
+		heli.speed = 0.55;
+		return heli;
+	}
+
 	private void autopilot() {
 		Vec3 velocity;
 		if (droneCenter != null) {

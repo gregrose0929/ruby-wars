@@ -171,6 +171,8 @@ public final class GameEvents {
 			}
 			Net.send(player, new dev.rubymod.net.MorePayloads.ModeInfo(Hub.where(player).name(), Hub.modeLines(player.level().getServer())));
 		});
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordePick.TYPE, (payload, context) ->
+				Horde.pick(context.player(), payload.id()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ResearchUnlock.TYPE, (payload, context) -> {
 			String error = Research.unlock(context.player(), payload.node());
 			if (error != null) {

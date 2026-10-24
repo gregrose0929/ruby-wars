@@ -75,6 +75,8 @@ public class SoldierEntity extends PathfinderMob {
 	private int raidId = -1;
 	/** Duel practice bot: the player it hunts down (null for guards and raiders). */
 	private UUID prey;
+	/** Horde shield soldier: shots from the front mostly bounce off the shield. */
+	private boolean shielded;
 
 	public SoldierEntity(EntityType<? extends SoldierEntity> type, Level level) {
 		super(type, level);
@@ -161,6 +163,14 @@ public class SoldierEntity extends PathfinderMob {
 
 	public void setObjective(BlockPos objective) {
 		this.objective = objective;
+	}
+
+	/** Carry a riot shield: hits from the front do a fifth of the damage, so flank them. */
+	public void setShielded() {
+		shielded = true;
+		setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(net.minecraft.world.item.Items.SHIELD));
+		setDropChance(EquipmentSlot.OFFHAND, 0.0F);
+		setCustomName(Component.literal("Shield Soldier").withStyle(ChatFormatting.RED));
 	}
 
 	/** The practice bot and Horde soldiers fight players even in Peaceful (where vanilla stops mobs targeting players). */
@@ -418,6 +428,14 @@ public class SoldierEntity extends PathfinderMob {
 		if (!isRaider() && attacker instanceof Player p && (p.getUUID().equals(owner) || Squads.same(owner, p.getUUID())) && !p.isCreative()) {
 			return false;
 		}
+		if (shielded && source.getSourcePosition() != null && !source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) {
+			Vec3 toAttacker = source.getSourcePosition().subtract(position()).multiply(1, 0, 1).normalize();
+			Vec3 facing = Vec3.directionFromRotation(0, yBodyRot);
+			if (toAttacker.dot(facing) > 0.45) {
+				amount *= 0.2F;
+				level.playSound(null, getX(), getY(), getZ(), SoundEvents.SHIELD_BLOCK.value(), SoundSource.HOSTILE, 0.8F, 1.0F);
+			}
+		}
 		return super.hurtServer(level, source, amount);
 	}
 
@@ -449,6 +467,7 @@ public class SoldierEntity extends PathfinderMob {
 		if (prey != null) {
 			output.putString("prey", prey.toString());
 		}
+		output.putBoolean("shielded", shielded);
 	}
 
 	@Override
@@ -465,6 +484,7 @@ public class SoldierEntity extends PathfinderMob {
 			setHomeTo(post, 10);
 		}
 		prey = input.getString("prey").map(UUID::fromString).orElse(null);
+		shielded = input.getBooleanOr("shielded", false);
 		if (isRaider() && prey == null) {
 			// Raids don't survive a restart (a duel's practice bot does: its chunk can be saved mid-duel).
 			discard();

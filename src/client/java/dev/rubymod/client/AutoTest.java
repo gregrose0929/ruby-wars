@@ -95,6 +95,126 @@ public final class AutoTest {
 				+ mc.player.level().dimension().identifier() + ", " + mc.gameMode.getPlayerMode();
 	}
 
+	private static void onServer(Minecraft mc, java.util.function.Consumer<net.minecraft.server.MinecraftServer> action) {
+		var server = mc.getSingleplayerServer();
+		server.execute(() -> action.accept(server));
+	}
+
+	private static net.fabricmc.fabric.api.entity.FakePlayer buddy;
+
+	/** Co-op Horde with a stand-in teammate: scaling, revive, rewards, the cache, fog, air raid, Second Wind. */
+	private static void hordePlusScript() {
+		then(0, mc -> {
+			for (String line : dev.rubymod.game.Horde.scalingTable()) {
+				log("scale {}", line);
+			}
+			command(mc, "time set noon");
+			command(mc, "difficulty normal");
+			command(mc, "gamemode survival @a");
+		});
+		then(20, mc -> command(mc, "execute as @p run play horde normal"));
+		then(40, mc -> onServer(mc, server -> {
+			var arena = server.getLevel(dev.rubymod.game.Duels.ARENA);
+			buddy = net.fabricmc.fabric.api.entity.FakePlayer.get(arena,
+					new com.mojang.authlib.GameProfile(java.util.UUID.fromString("00000000-0000-0000-0000-0000000b0d1e"), "Buddy"));
+			dev.rubymod.game.Horde.addTestFighter(buddy);
+			log("with buddy: {}", dev.rubymod.game.Horde.debugState());
+		}));
+		then(10, mc -> {
+			command(mc, "effect give @a minecraft:resistance infinite 255 true");
+			command(mc, "execute as @p at @s run tp @s -20003.5 66 4.5 -135 15");
+			onServer(mc, server -> dev.rubymod.game.Horde.skipWait());
+		});
+		then(60, mc -> {
+			log("wave 1: {}", dev.rubymod.game.Horde.debugState());
+			shot(mc, "plus-cache");
+		});
+		// Buddy goes down; we crouch next to them to bring them back.
+		then(10, mc -> onServer(mc, server -> {
+			buddy.teleportTo(-20004.5, 66, 6.5);
+			dev.rubymod.game.Horde.knockDown(buddy);
+			log("buddy down: {}", dev.rubymod.game.Horde.debugState());
+		}));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -20003.5 66 4.5 -60 30"));
+		then(20, mc -> shot(mc, "plus-down"));
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		then(30, mc -> shot(mc, "plus-reviving"));
+		then(50, mc -> {
+			mc.options.keyShift.setDown(false);
+			log("after revive: {}", dev.rubymod.game.Horde.debugState());
+		});
+		// Let raiders reach the cache for a while (we stand back in a tower).
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -19971.5 72 29.5 135 25"));
+		then(500, mc -> {
+			log("cache under attack: {}", dev.rubymod.game.Horde.debugState());
+			shot(mc, "plus-raiders");
+		});
+		// Clear the wave: the reward menu should open.
+		then(5, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+		then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+		then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+		then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+		then(40, mc -> {
+			log("cleared: {} screen {}", dev.rubymod.game.Horde.debugState(), mc.gui.screen());
+			shot(mc, "plus-rewards");
+		});
+		then(5, mc -> {
+			if (mc.gui.screen() instanceof HordeRewardScreen screen) {
+				String id = screen.firstOptionId();
+				log("picking {}", id);
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.HordePick(id));
+				mc.gui.setScreen(null);
+			}
+		});
+		then(20, mc -> log("picked: {} | {}", dev.rubymod.game.Horde.debugState(), inventorySummary(mc)));
+		// Fog wave.
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.Horde.jumpTo(server, 4)));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -20000.5 66 -4.5 180 5"));
+		then(260, mc -> {
+			log("fog wave: {} darkness {}", dev.rubymod.game.Horde.debugState(), mc.player.hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS));
+			shot(mc, "plus-fog");
+		});
+		// Air raid.
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			onServer(mc, server -> dev.rubymod.game.Horde.jumpTo(server, 7));
+		});
+		then(140, mc -> {
+			var heli = mc.level.getEntitiesOfClass(dev.rubymod.entity.AircraftEntity.class, mc.player.getBoundingBox().inflate(80));
+			log("air raid: {} gunships {} skyhammer {}", dev.rubymod.game.Horde.debugState(), heli.size(),
+					mc.player.getInventory().contains(new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.SKYHAMMER)));
+			if (!heli.isEmpty()) {
+				var h = heli.get(0);
+				var to = h.position().subtract(mc.player.getEyePosition());
+				mc.player.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+				mc.player.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+			}
+		});
+		then(10, mc -> shot(mc, "plus-airraid"));
+		then(100, mc -> log("after 5s of air raid: health {} {}", mc.player.getHealth(), dev.rubymod.game.Horde.debugState()));
+		// Brutes, with two players.
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.Horde.jumpTo(server, 5)));
+		then(200, mc -> {
+			log("brute wave: {}", dev.rubymod.game.Horde.debugState());
+			var brutes = mc.level.getEntitiesOfClass(net.minecraft.world.entity.monster.Ravager.class, mc.player.getBoundingBox().inflate(90));
+			log("brutes {}", brutes.size());
+			shot(mc, "plus-brute");
+		});
+		// Everyone down: one Second Wind, then game over.
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.Horde.knockDown(buddy);
+			dev.rubymod.game.Horde.knockDown(server.getPlayerList().getPlayers().get(0));
+			log("team down: {}", dev.rubymod.game.Horde.debugState());
+		}));
+		then(80, mc -> log("after second wind: {} mode {}", dev.rubymod.game.Horde.debugState(), mc.gameMode.getPlayerMode()));
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.Horde.knockDown(server.getPlayerList().getPlayers().get(0));
+			log("down again: {}", dev.rubymod.game.Horde.debugState());
+		}));
+		then(30, mc -> shot(mc, "plus-gameover"));
+		then(240, mc -> log("end: {} in {}", dev.rubymod.game.Horde.debugState(), mc.player.level().dimension().identifier()));
+	}
+
 	/** Stand in the Horde outpost (unkillable) and watch the enemies come: where they are, what they are. */
 	private static void hordeFightScript() {
 		then(0, mc -> {
@@ -220,6 +340,14 @@ public final class AutoTest {
 			command(mc, "gamerule send_command_feedback false");
 			command(mc, "gamerule sendCommandFeedback false");
 		});
+		if (mode.equals("hordeplus")) {
+			hordePlusScript();
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("joinflow")) {
 			// Joined a real (dedicated) server: should land in the hub, then switch games by command.
 			then(60, mc -> {

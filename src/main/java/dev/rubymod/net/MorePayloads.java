@@ -148,6 +148,32 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: Horde rewards to pick from after a wave, "id|title|about|icon item" each (empty: close the menu). */
+	public record HordeOffer(int wave, List<String> options) implements CustomPacketPayload {
+		public static final Type<HordeOffer> TYPE = new Type<>(RubyMod.id("horde_offer"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, HordeOffer> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, HordeOffer::wave,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), HordeOffer::options,
+				HordeOffer::new);
+
+		@Override
+		public Type<HordeOffer> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the Horde reward picked. */
+	public record HordePick(String id) implements CustomPacketPayload {
+		public static final Type<HordePick> TYPE = new Type<>(RubyMod.id("horde_pick"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, HordePick> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, HordePick::id, HordePick::new);
+
+		@Override
+		public Type<HordePick> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: where you are (Hub.Where) and one "id|title|status" line per game, for the game picker. */
 	public record ModeInfo(String where, List<String> modes) implements CustomPacketPayload {
 		public static final Type<ModeInfo> TYPE = new Type<>(RubyMod.id("mode_info"));
@@ -276,5 +302,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(ResearchSync.TYPE, ResearchSync.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ModeSelect.TYPE, ModeSelect.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ModeInfo.TYPE, ModeInfo.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(HordeOffer.TYPE, HordeOffer.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(HordePick.TYPE, HordePick.CODEC);
 	}
 }

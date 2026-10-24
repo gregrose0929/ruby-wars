@@ -104,6 +104,8 @@ public class DefenseBlockEntity extends BlockEntity {
 			case SENTRY_TURRET -> {
 				if (t % 4 == 0 && (claim = claimHere(serverLevel, pos)) != null && (Rules.phase().pvp() || dev.rubymod.game.Raids.active(claim))) {
 					be.tickTurret(serverLevel, pos, claim);
+				} else if (t % 4 == 0 && dev.rubymod.game.Horde.inOutpost(serverLevel, pos)) {
+					be.tickHordeTurret(serverLevel, pos);
 				}
 			}
 			case INTERCEPTOR -> {
@@ -163,6 +165,36 @@ public class DefenseBlockEntity extends BlockEntity {
 	}
 
 	// ----- Sentry Turret -----
+
+	/** In a Co-op Horde game: shoot the nearest Horde enemy in sight. */
+	private void tickHordeTurret(ServerLevel level, BlockPos pos) {
+		if (ammo <= 0) {
+			return;
+		}
+		Vec3 gun = Vec3.atCenterOf(pos).add(0, 0.7, 0);
+		Optional<net.minecraft.world.entity.LivingEntity> target = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+				new AABB(gun, gun).inflate(TURRET_RANGE), e -> e.isAlive() && dev.rubymod.game.Horde.isEnemy(e) && !dev.rubymod.game.Armor.isArmored(e)).stream()
+				.filter(e -> canSee(level, gun, e.getEyePosition()) || canSee(level, gun, e.position().add(0, 0.6, 0)))
+				.min(Comparator.comparingDouble(e -> e.distanceToSqr(gun)));
+		if (target.isEmpty()) {
+			return;
+		}
+		net.minecraft.world.entity.LivingEntity victim = target.get();
+		Vec3 aim = victim.position().add(0, victim.getBbHeight() * 0.6, 0);
+		aimAt(level, pos, gun, aim);
+		victim.setInvulnerableTime(0);
+		victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, null), TURRET_DAMAGE);
+		ammo--;
+		cooldown = 3;
+		setChanged();
+		level.playSound(null, pos, dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.BLOCKS, 1.0F, 1.25F);
+		Vec3 step = aim.subtract(gun).normalize();
+		double length = aim.distanceTo(gun);
+		for (double d = 1; d < length; d += 1.5) {
+			Vec3 p = gun.add(step.scale(d));
+			level.sendParticles(ParticleTypes.ELECTRIC_SPARK, p.x, p.y, p.z, 1, 0, 0, 0, 0);
+		}
+	}
 
 	private void tickTurret(ServerLevel level, BlockPos pos, SeasonData.Claim claim) {
 		if (ammo <= 0) {
