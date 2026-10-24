@@ -90,6 +90,23 @@ public final class Hub {
 	private Hub() {
 	}
 
+	/**
+	 * The lowest height at or above {@code y} where a player fits (feet and head both free),
+	 * so nobody is ever put inside a block. Searches up to 64 blocks, then gives up.
+	 */
+	public static double safeY(ServerLevel level, double x, double y, double z) {
+		BlockPos start = BlockPos.containing(x, y, z);
+		level.getChunk(start.getX() >> 4, start.getZ() >> 4);
+		for (int i = 0; i < 64; i++) {
+			BlockPos feet = start.above(i);
+			if (level.getBlockState(feet).getCollisionShape(level, feet).isEmpty()
+					&& level.getBlockState(feet.above()).getCollisionShape(level, feet.above()).isEmpty()) {
+				return i == 0 ? y : feet.getY();
+			}
+		}
+		return y;
+	}
+
 	/** Players are sent to the hub when they join (dedicated servers only; singleplayer worlds start where you left off). */
 	public static boolean routesJoins(MinecraftServer server) {
 		return server.isDedicatedServer() && GameConfig.get().hub;
@@ -281,7 +298,7 @@ public final class Hub {
 			new Stop(150, "GREEN PORTAL", "Co-op Horde: team up against waves of enemies", 0x40FF60, HORDE_X + 0.5, PORTAL_Z + 0.5),
 			new Stop(240, "PURPLE PORTAL", "Party Games: 9 quick games to play together", 0xC050FF, 0.5, PARTY_Z + 0.5),
 			new Stop(330, "PRESS H", "any time to switch games (or come back here)", 0x55D8FF, Double.NaN, 0),
-			new Stop(410, "PRESS P", "for your stats and cosmetics. Y opens the help book!", 0xFFC040, Double.NaN, 0),
+			new Stop(410, "PRESS I", "for your stats and cosmetics. Y opens the help book!", 0xFFC040, Double.NaN, 0),
 			new Stop(490, "HAVE FUN!", "Walk into a portal to play", 0xFFFFFF, Double.NaN, 0));
 
 	public static void startTour(ServerPlayer player) {
@@ -357,7 +374,10 @@ public final class Hub {
 			// First time in (or nothing saved): the world spawn, the Ruby Crater on the Ruby Wars Map.
 			ServerLevel overworld = server.overworld();
 			BlockPos spawn = overworld.getRespawnData().pos();
-			player.teleportTo(overworld, spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, Set.<Relative>of(), 0, 0, true);
+			overworld.getChunk(spawn.getX() >> 4, spawn.getZ() >> 4);
+			int top = overworld.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ());
+			double y = safeY(overworld, spawn.getX() + 0.5, Math.max(spawn.getY(), top), spawn.getZ() + 0.5);
+			player.teleportTo(overworld, spawn.getX() + 0.5, y, spawn.getZ() + 0.5, Set.<Relative>of(), 0, 0, true);
 			player.setGameMode(Rules.isEliminated(player.getUUID()) ? GameType.SPECTATOR : GameType.SURVIVAL);
 			player.setHealth(player.getMaxHealth());
 		} else {
@@ -373,8 +393,11 @@ public final class Hub {
 			if (level == null || level.dimension() == HUB || level.dimension() == Duels.ARENA) {
 				level = server.overworld();
 			}
-			player.teleportTo(level, in.getDoubleOr("X", 0), in.getDoubleOr("Y", 100), in.getDoubleOr("Z", 0), Set.<Relative>of(),
-					in.getFloatOr("Yaw", 0), in.getFloatOr("Pitch", 0), true);
+			// Where you left off (moved up if something's been built there since).
+			double x = in.getDoubleOr("X", 0);
+			double z = in.getDoubleOr("Z", 0);
+			double y = safeY(level, x, in.getDoubleOr("Y", 100), z);
+			player.teleportTo(level, x, y, z, Set.<Relative>of(), in.getFloatOr("Yaw", 0), in.getFloatOr("Pitch", 0), true);
 			GameType mode = GameType.byName(in.getStringOr("Mode", "survival"), GameType.SURVIVAL);
 			if (mode == GameType.ADVENTURE) {
 				mode = GameType.SURVIVAL;

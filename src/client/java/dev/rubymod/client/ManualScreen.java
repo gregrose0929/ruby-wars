@@ -17,7 +17,7 @@ public class ManualScreen extends Screen {
 			new Page("The Hub",
 					"Joining the server puts you in the hub. Walk into a portal to play: Ruby Wars (red) or Co-op Horde (green).",
 					"Press H any time to switch games, or use /hub and /play rubywars|horde. /tour shows the hub tour again.",
-					"Press P for your profile: your stats, and cosmetics you've earned (hats, trails, kill effects).",
+					"Press I for your profile: your stats, and cosmetics you've earned (hats, trails, kill effects).",
 					"Leaving Ruby Wars saves where you were and everything you carry; going back puts it all back.",
 					"On Battle Day everyone still in the season is called back into Ruby Wars."),
 			new Page("Party Games",

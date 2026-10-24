@@ -302,8 +302,14 @@ public abstract class PartyGame {
 	}
 
 	private void runWork() {
+		if (work.isEmpty()) {
+			return;
+		}
 		while (!work.isEmpty() && System.nanoTime() < budgetEnd) {
 			work.poll().run();
+		}
+		if (work.isEmpty()) {
+			dev.rubymod.game.Arenas.markBuilt(id);
 		}
 	}
 
@@ -577,7 +583,7 @@ public abstract class PartyGame {
 	}
 
 	protected void teleport(ServerPlayer player, double x, double y, double z, float yaw) {
-		player.teleportTo(level(), x, y, z, Set.<Relative>of(), yaw, 0.0F, true);
+		player.teleportTo(level(), x, Hub.safeY(level(), x, y, z), z, Set.<Relative>of(), yaw, 0.0F, true);
 		player.resetFallDistance();
 	}
 

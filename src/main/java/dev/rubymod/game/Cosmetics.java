@@ -41,7 +41,7 @@ import net.minecraft.world.phys.Vec3;
  * Cosmetics, earned by playing (they never change how anything plays): a hat that
  * floats above your head, a trail of particles when you move, and an effect when you
  * get a kill. Unlocked by stats (win a party game, reach a Horde wave...), picked on the
- * profile screen (P). Hidden while you're hiding in Hide & Seek, invisible, or watching.
+ * profile screen (I). Hidden while you're hiding in Hide & Seek, invisible, or watching.
  */
 public final class Cosmetics {
 	public enum Kind { HAT, TRAIL, KILL }
@@ -106,7 +106,7 @@ public final class Cosmetics {
 					r.killEffect = c.id();
 				}
 				if (!free) {
-					player.sendSystemMessage(Component.literal("✨ New " + kindName(c.kind()) + " unlocked: " + c.name() + "! Press P to wear it.")
+					player.sendSystemMessage(Component.literal("✨ New " + kindName(c.kind()) + " unlocked: " + c.name() + "! Press I to wear it.")
 							.withStyle(ChatFormatting.LIGHT_PURPLE));
 					player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.5F, 1.4F);
 				}

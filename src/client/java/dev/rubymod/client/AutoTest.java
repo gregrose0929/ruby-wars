@@ -651,6 +651,59 @@ public final class AutoTest {
 			command(mc, "gamerule send_command_feedback false");
 			command(mc, "gamerule sendCommandFeedback false");
 		});
+		if (mode.equals("fixes")) {
+			final double[] saved = new double[3];
+			then(0, mc -> {
+				command(mc, "gamemode survival @a");
+				command(mc, "difficulty normal");
+			});
+			then(900, mc -> onServer(mc, server -> log("after first-time builds: tick max {} ms avg {} ms", maxTickMs(server),
+					server.getAverageTickTimeNanos() / 1_000_000)));
+			then(20, mc -> {
+				saved[0] = mc.player.getX();
+				saved[1] = mc.player.getY();
+				saved[2] = mc.player.getZ();
+				command(mc, "execute as @p run hub");
+			});
+			then(60, mc -> onServer(mc, server -> {
+				// Someone builds right where we left off.
+				var level = server.overworld();
+				var at = net.minecraft.core.BlockPos.containing(saved[0], saved[1], saved[2]);
+				for (int y = 0; y < 4; y++) {
+					level.setBlock(at.above(y), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+				}
+				log("built stone at {}", at.toShortString());
+			}));
+			then(10, mc -> command(mc, "execute as @p run play rubywars"));
+			then(60, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var feet = me.blockPosition();
+				log("back in Ruby Wars at y {} (left at {}): feet {} head {}, in wall {}", me.getY(), saved[1],
+						me.level().getBlockState(feet).getBlock(), me.level().getBlockState(feet.above()).getBlock(), me.isInWall());
+			}));
+			then(10, mc -> command(mc, "execute as @p run play horde"));
+			then(60, mc -> log("horde countdown: {}", dev.rubymod.game.Horde.debugState()));
+			then(5, mc -> mc.player.connection.sendCommand("horde ready"));
+			for (int i = 0; i < 8; i++) {
+				then(40, mc -> log("after ready: {}", dev.rubymod.game.Horde.debugState()));
+			}
+			then(5, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+			then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+			then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+			then(30, mc -> command(mc, "kill @e[tag=rubymod_horde,type=!minecraft:text_display]"));
+			then(30, mc -> {
+				log("break: {} screen {}", dev.rubymod.game.Horde.debugState(), mc.gui.screen());
+				shot(mc, "fixes-break");
+			});
+			then(200, mc -> log("still the break 10s later: {}", dev.rubymod.game.Horde.debugState()));
+			then(5, mc -> mc.player.connection.sendCommand("horde ready"));
+			then(140, mc -> log("after ready again (wave 2 should have started): {}", dev.rubymod.game.Horde.debugState()));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("extras")) {
 			extrasScript();
 			then(20, mc -> {
@@ -669,6 +722,28 @@ public final class AutoTest {
 		}
 		if (mode.equals("hordeplus")) {
 			hordePlusScript();
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("joinprofile")) {
+			// Dedicated server: does the profile (P) fill in when opened fresh?
+			then(60, mc -> {
+				ProfileScreen.data = null;
+				mc.gui.setScreen(new ProfileScreen());
+			});
+			then(40, mc -> {
+				log("profile data arrived: {}", ProfileScreen.data == null ? "NO" : ProfileScreen.data.stats().size() + " stat lines, "
+						+ ProfileScreen.data.cosmetics().size() + " cosmetics");
+				shot(mc, "join-profile");
+			});
+			then(5, mc -> mc.gui.setScreen(null));
+			then(5, mc -> mc.player.connection.sendCommand("play horde"));
+			then(120, mc -> log("in horde: {}", inventorySummary(mc)));
+			then(5, mc -> mc.player.connection.sendCommand("horde ready"));
+			then(40, mc -> shot(mc, "join-horde-ready"));
 			then(20, mc -> {
 				log("done");
 				mc.stop();
@@ -2881,7 +2956,7 @@ public final class AutoTest {
 	// ----- Runner -----
 
 	private static void tick(Minecraft mc) {
-		if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null && !"joinflow".equals(System.getenv("RUBYMOD_AUTOTEST"))) {
+		if (mc.player == null || mc.level == null || mc.getSingleplayerServer() == null && !String.valueOf(System.getenv("RUBYMOD_AUTOTEST")).startsWith("join")) {
 			// Still on a menu: report which one, so a stuck launch can be diagnosed.
 			if (++waiting % 100 == 0) {
 				String screen = mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getName();

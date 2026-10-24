@@ -96,6 +96,9 @@ public final class PartyGames {
 	public static void prebuild(MinecraftServer server) {
 		for (PartyGame game : ALL) {
 			game.attach(server);
+			if (dev.rubymod.game.Arenas.built(game.id)) {
+				continue; // built on an earlier run
+			}
 			try {
 				game.queueBuild();
 			} catch (RuntimeException e) {

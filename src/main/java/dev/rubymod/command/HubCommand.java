@@ -21,6 +21,14 @@ public final class HubCommand {
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 		dispatcher.register(Commands.literal("hub").executes(c -> go(c, "hub")));
+		dispatcher.register(Commands.literal("horde").then(Commands.literal("ready").executes(c -> {
+			String error = dev.rubymod.game.Horde.ready(c.getSource().getPlayerOrException());
+			if (error != null) {
+				c.getSource().sendFailure(Component.literal(error));
+				return 0;
+			}
+			return 1;
+		})));
 		dispatcher.register(Commands.literal("tour")
 				.executes(c -> {
 					var player = c.getSource().getPlayerOrException();

@@ -95,7 +95,7 @@ import net.minecraft.world.phys.Vec3;
  * <li>Waves scale with the team: a solo game is much smaller than a game for six, and
  * enemies get tougher per player as well as per wave. Easy / Normal / Hard on top.</li>
  * <li>Clear a wave: everyone picks 1 of 3 rewards, gets ammo and full health, and the
- * cache is patched up. 15 seconds to get ready.</li>
+ * cache is patched up. A minute and a half to get ready (or everyone readies up to go now).</li>
  * <li>Go down and a teammate can crouch next to you for 3 seconds to bring you back;
  * otherwise you're back at the next wave. Everyone gets one Second Wind per game for
  * when the whole team is down. It's over when the team is down for good or the cache
@@ -114,7 +114,7 @@ public final class Horde {
 	private static final int GROUND = Duels.GROUND;
 	/** Half the outpost's inside width. */
 	private static final int HALF = 34;
-	private static final int BREAK_TICKS = 15 * 20;
+	private static final int BREAK_TICKS = 90 * 20;
 	private static final int REVIVE_TICKS = 60;
 	private static final String MOB_TAG = "rubymod_horde";
 	private static final String RAIDER_TAG = "rubymod_horde_raider";
@@ -201,6 +201,8 @@ public final class Horde {
 		int reviveProgress;
 		/** Ticks until a Second Wind gets you back up (-1: none coming). */
 		int windIn = -1;
+		/** Ready for the next wave (everyone ready: it starts in 5 seconds). */
+		boolean ready;
 		/** Rewards on offer right now (null: nothing to pick). */
 		List<Reward> offer;
 		final Set<Reward> owned = EnumSet.noneOf(Reward.class);
@@ -375,6 +377,9 @@ public final class Horde {
 			total += add;
 		}
 		tell(server, Component.literal(fighter.name + " joined the Horde!").withStyle(ChatFormatting.GREEN));
+		if (state == State.COUNTDOWN || state == State.BREAK) {
+			player.sendSystemMessage(Component.literal("Ready when you are: ").withStyle(ChatFormatting.GRAY).append(readyButton()));
+		}
 		player.sendSystemMessage(Component.literal("Co-op Horde (" + challenge.title + "): protect the Supply Cache in the middle and survive. "
 				+ "Clear a wave to pick a reward. If a teammate goes down, crouch next to them to bring them back. H or /hub to leave.")
 				.withStyle(ChatFormatting.GOLD));
@@ -456,9 +461,23 @@ public final class Horde {
 
 	// ----- The game -----
 
+	private static int buildStartedAt;
+
+	/** Build the outpost in the background when the server starts, so the first game starts right away. */
+	public static void prebuild(MinecraftServer server) {
+		ServerLevel arena = server.getLevel(Duels.ARENA);
+		if (arena != null && Outpost.WORK.isEmpty() && !Arenas.built("horde")) {
+			buildStartedAt = server.getTickCount();
+			Outpost.build(arena);
+		}
+	}
+
 	private static void startGame(ServerLevel arena) {
 		clearArea(arena);
-		Outpost.build(arena);
+		buildStartedAt = arena.getServer().getTickCount();
+		if (Outpost.WORK.isEmpty()) {
+			Outpost.build(arena); // (a build from the server start still running covers it)
+		}
 		wave = 0;
 		state = State.COUNTDOWN;
 		timer = 15 * 20;
@@ -503,7 +522,13 @@ public final class Horde {
 	}
 
 	public static void tick(MinecraftServer server) {
-		Outpost.runWork(5_000_000L);
+		if (!Outpost.WORK.isEmpty()) {
+			Outpost.runWork(8_000_000L);
+			if (Outpost.WORK.isEmpty()) {
+				RubyMod.LOGGER.info("Horde outpost built ({} ticks)", server.getTickCount() - buildStartedAt);
+				Arenas.markBuilt("horde");
+			}
+		}
 		if (state == State.IDLE) {
 			return;
 		}
@@ -680,10 +705,41 @@ public final class Horde {
 			Alerts.title(p, "WAVE " + wave + " CLEARED", "Pick your reward!", ChatFormatting.GREEN);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.8F, 1.0F);
 			p.sendSystemMessage(Component.literal("Wave " + wave + " cleared! Pick a reward (the menu that just opened). Ammo and health refilled, "
-					+ "the cache patched up. Next wave in 15 seconds.").withStyle(ChatFormatting.GREEN));
+					+ "the cache patched up. Next wave in 90 seconds: build some cover! ").withStyle(ChatFormatting.GREEN).append(readyButton()));
+			f.ready = false;
 		}
 		fogWave = false;
 		updateBars();
+	}
+
+	private static Component readyButton() {
+		return Component.literal("[I'M READY]").withStyle(s -> s.withColor(ChatFormatting.YELLOW).withBold(true)
+				.withClickEvent(new ClickEvent.RunCommand("/horde ready"))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal("When everyone's ready, the next wave starts in 5 seconds"))));
+	}
+
+	/** /horde ready: when everyone in the game is ready, skip the rest of the break. */
+	public static String ready(ServerPlayer player) {
+		Fighter f = FIGHTERS.get(player.getUUID());
+		if (f == null) {
+			return "You're not in Horde.";
+		}
+		if (state != State.BREAK && state != State.COUNTDOWN) {
+			return "There's no break to skip right now.";
+		}
+		if (f.ready) {
+			return null;
+		}
+		f.ready = true;
+		MinecraftServer server = player.level().getServer();
+		long ready = FIGHTERS.values().stream().filter(x -> x.ready).count();
+		tell(server, Component.literal(f.name + " is ready (" + ready + "/" + FIGHTERS.size() + ")").withStyle(ChatFormatting.YELLOW));
+		if (ready >= FIGHTERS.size() && timer > 5 * 20) {
+			timer = 5 * 20;
+			tell(server, Component.literal("Everyone's ready! Next wave in 5 seconds.").withStyle(ChatFormatting.GOLD));
+		}
+		updateBars();
+		return null;
 	}
 
 	/** The team is down for good, or the cache fell. */
@@ -740,7 +796,10 @@ public final class Horde {
 			}
 			default -> {
 				String head = wave == 0 ? "Get ready! (" + challenge.title + ")" : "Wave " + wave + " cleared!";
-				BAR.setName(Component.literal(head + "   Next wave in " + Math.max(0, timer / 20)));
+				long ready = FIGHTERS.values().stream().filter(x -> x.ready).count();
+				int secs = Math.max(0, timer / 20);
+				BAR.setName(Component.literal(head + "   Next wave in " + secs / 60 + ":" + String.format("%02d", secs % 60)
+						+ "   \u2022   " + ready + "/" + FIGHTERS.size() + " ready (/horde ready)"));
 				BAR.setColor(BossEvent.BossBarColor.GREEN);
 				BAR.setProgress(Math.max(0, timer) / (float) (wave == 0 ? 300 : BREAK_TICKS));
 			}
@@ -775,7 +834,7 @@ public final class Horde {
 			y = at.y;
 			z = at.z;
 		}
-		player.teleportTo(arena, x, y, z, Set.<Relative>of(), at == null ? random.nextFloat() * 360.0F : player.getYRot(), 0.0F, true);
+		player.teleportTo(arena, x, Hub.safeY(arena, x, y, z), z, Set.<Relative>of(), at == null ? random.nextFloat() * 360.0F : player.getYRot(), 0.0F, true);
 		player.setGameMode(GameType.SURVIVAL);
 		player.removeAllEffects();
 		player.clearFire();
@@ -1527,7 +1586,7 @@ public final class Horde {
 	}
 
 	public static String debugState() {
-		return state + " wave " + wave + " toSpawn " + toSpawn + " alive " + MOBS.size() + " cache " + cacheHp + "/" + cacheMax + " fighters "
+		return state + " timer " + timer + " work " + Outpost.WORK.size() + " wave " + wave + " toSpawn " + toSpawn + " alive " + MOBS.size() + " cache " + cacheHp + "/" + cacheMax + " fighters "
 				+ FIGHTERS.values().stream().map(f -> f.name + (f.alive ? "" : "(down)") + (f.offer != null ? "(choosing)" : "")).toList()
 				+ " difficulty " + challenge.title;
 	}

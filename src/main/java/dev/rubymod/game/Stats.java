@@ -28,7 +28,7 @@ import net.minecraft.world.level.storage.LevelResource;
 /**
  * Lifetime stats for every player, across every mode (they last across seasons):
  * party game wins and kills, Horde records, Sky Race times, duels and seasons won.
- * They feed the profile screen (P), the hub leaderboards and cosmetic unlocks. Also
+ * They feed the profile screen (I), the hub leaderboards and cosmetic unlocks. Also
  * what each player has unlocked and is wearing, and whether they've had the hub tour.
  * Saved to world/rubywars/stats.json.
  */

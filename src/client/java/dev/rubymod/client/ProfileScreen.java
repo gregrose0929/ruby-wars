@@ -16,7 +16,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Your profile (P): lifetime stats on the left, cosmetics on the right (hats, trails,
+ * Your profile (I): lifetime stats on the left, cosmetics on the right (hats, trails,
  * kill effects). Click one you've unlocked to wear it (click again to take it off);
  * hover a locked one to see how to earn it.
  */

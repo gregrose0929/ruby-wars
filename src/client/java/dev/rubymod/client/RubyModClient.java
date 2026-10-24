@@ -58,7 +58,7 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping manualKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.manual", InputConstants.KEY_Y, CATEGORY));
 		KeyMapping squadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.squad", InputConstants.KEY_O, CATEGORY));
 		KeyMapping modesKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.modes", InputConstants.KEY_H, CATEGORY));
-		KeyMapping profileKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.profile", InputConstants.KEY_P, CATEGORY));
+		KeyMapping profileKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.profile_menu", InputConstants.KEY_I, CATEGORY));
 		autopilotKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.autopilot", InputConstants.KEY_Z, CATEGORY));
 		flaresKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.flares", InputConstants.KEY_X, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));

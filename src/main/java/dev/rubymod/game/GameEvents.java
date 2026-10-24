@@ -79,8 +79,10 @@ public final class GameEvents {
 			Duels.reset();
 			Horde.reset();
 			Horde.load(server);
+			Arenas.load(server);
 			dev.rubymod.game.party.PartyGames.reset(server);
 			dev.rubymod.game.party.PartyGames.prebuild(server);
+			Horde.prebuild(server);
 			Stats.load(server);
 			Cosmetics.reset();
 			Hub.reset();

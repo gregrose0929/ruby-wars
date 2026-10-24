@@ -644,7 +644,7 @@ public final class Duels {
 		double z = c.getZ() - dir * duel.mode.spawnZ + 0.5;
 		float yaw = side == 0 ? 0.0F : 180.0F; // facing the other side
 		player.stopRiding();
-		player.teleportTo(arena, x, c.getY(), z, Set.<Relative>of(), yaw, 0.0F, true);
+		player.teleportTo(arena, x, Hub.safeY(arena, x, c.getY(), z), z, Set.<Relative>of(), yaw, 0.0F, true);
 		player.setGameMode(GameType.SURVIVAL);
 		player.setHealth(player.getMaxHealth());
 		player.getFoodData().setFoodLevel(20);
@@ -830,7 +830,8 @@ public final class Duels {
 			player.getInventory().clearContent();
 			ServerLevel overworld = server.overworld();
 			BlockPos spawn = overworld.getRespawnData().pos();
-			player.teleportTo(overworld, spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, Set.<Relative>of(), 0, 0, true);
+			player.teleportTo(overworld, spawn.getX() + 0.5, Hub.safeY(overworld, spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5), spawn.getZ() + 0.5,
+					Set.<Relative>of(), 0, 0, true);
 			player.setGameMode(GameType.SURVIVAL);
 			return;
 		}
@@ -846,7 +847,8 @@ public final class Duels {
 		if (level == null || level.dimension() == ARENA) {
 			level = server.overworld();
 		}
-		player.teleportTo(level, in.getDoubleOr("X", 0), in.getDoubleOr("Y", 100), in.getDoubleOr("Z", 0), Set.<Relative>of(),
+		player.teleportTo(level, in.getDoubleOr("X", 0), Hub.safeY(level, in.getDoubleOr("X", 0), in.getDoubleOr("Y", 100), in.getDoubleOr("Z", 0)),
+				in.getDoubleOr("Z", 0), Set.<Relative>of(),
 				in.getFloatOr("Yaw", 0), in.getFloatOr("Pitch", 0), true);
 		player.setGameMode(GameType.byName(in.getStringOr("Mode", "survival"), GameType.SURVIVAL));
 		player.setHealth(Math.max(1.0F, in.getFloatOr("Health", player.getMaxHealth())));

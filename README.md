@@ -64,7 +64,8 @@ four gates. Some enemies hunt you; some go straight for the cache.
   rocket launcher, Ruby Blaster, Lancer), ruby armor, a jetpack, sandbags or concrete
   walls to build cover, a Sentry Turret (load it with Heavy Ammo; it shoots Horde
   enemies by itself), golden apples, grenades or an ammo crate. Plus ammo, full health,
-  and the cache patched up, then 15 seconds to get ready.
+  and the cache patched up, then 90 seconds to get ready (build cover!). When everyone
+  clicks "I'm ready" (or types `/horde ready`), the next wave starts in 5 seconds.
 - **Revive your teammates.** If someone goes down, crouch next to them for 3 seconds to
   bring them back; otherwise they're back at the next wave. Everyone has one **Second
   Wind** per game: when the whole team is down, someone gets back up (so solo players
@@ -84,7 +85,7 @@ four gates. Some enemies hunt you; some go straight for the cache.
 
 ## Profile, cosmetics and leaderboards
 
-Press **P** for your profile: lifetime stats across every mode (party game wins and
+Press **I** for your profile: lifetime stats across every mode (party game wins and
 kills, Horde best wave, Sky Race best time, duels and seasons won) and your cosmetics.
 Cosmetics never change how anything plays; they're earned by playing:
 
@@ -182,7 +183,7 @@ All timings, prices, and sizes are in `config/rubywars.json`.
 | Minimap | U: hide or show it |
 | Field Manual | Y: short in-game guide pages on everything here |
 | Choose a game | H: Ruby Wars, Co-op Horde, party games, or back to the hub |
-| Profile | P: your stats and cosmetics |
+| Profile | I: your stats and cosmetics (P is Minecraft's own player list) |
 
 In any vehicle the view is truly first person: no hands, no held item, and the
 hotbar and hearts make way for the vehicle's HUD.

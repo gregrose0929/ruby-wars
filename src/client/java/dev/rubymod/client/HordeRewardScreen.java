@@ -21,6 +21,8 @@ public class HordeRewardScreen extends Screen {
 	private final int wave;
 	private final List<String[]> options;
 	private int[][] cards = new int[0][];
+	private int[] readyButton = new int[4];
+	private boolean ready;
 
 	private HordeRewardScreen(MorePayloads.HordeOffer offer) {
 		super(Component.literal("Pick a reward"));
@@ -85,10 +87,23 @@ public class HordeRewardScreen extends Screen {
 			g.centeredText(font, "TAKE IT", x + cardW / 2, by + 3, 0xFFFFFFFF);
 		}
 		g.centeredText(font, "Not sure? The first one is taken for you when the next wave starts.", width / 2, y0 + cardH + 12, 0xFF8A949E);
+		int bw = 200;
+		int bx = (width - bw) / 2;
+		int by = y0 + cardH + 26;
+		readyButton = new int[] {bx, by, bw, 16};
+		boolean over = mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 16;
+		g.fill(bx, by, bx + bw, by + 16, over ? 0xFFD8A030 : 0xC0A07820);
+		g.centeredText(font, ready ? "You're ready! Waiting for the others" : "I'm ready: start the next wave", width / 2, by + 4, 0xFFFFFFFF);
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+		if (!ready && event.x() >= readyButton[0] && event.x() < readyButton[0] + readyButton[2] && event.y() >= readyButton[1]
+				&& event.y() < readyButton[1] + readyButton[3] && minecraft != null && minecraft.player != null) {
+			ready = true;
+			minecraft.player.connection.sendCommand("horde ready");
+			return true;
+		}
 		for (int i = 0; i < cards.length; i++) {
 			int[] b = cards[i];
 			if (event.x() >= b[0] && event.x() < b[0] + b[2] && event.y() >= b[1] && event.y() < b[1] + b[3]) {
