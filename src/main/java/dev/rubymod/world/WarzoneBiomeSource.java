@@ -29,9 +29,10 @@ public class WarzoneBiomeSource extends BiomeSource implements BiomeResolver {
 			RegistryOps.retrieveElement(Biomes.DESERT),
 			RegistryOps.retrieveElement(Biomes.SNOWY_TAIGA),
 			RegistryOps.retrieveElement(Biomes.SNOWY_PLAINS),
-			RegistryOps.retrieveElement(Biomes.WINDSWEPT_HILLS)
-	).apply(i, (ocean, beach, snowyBeach, river, plains, forest, taiga, desert, snowyTaiga, snowyPlains, hills) -> new WarzoneBiomeSource(
-			new Holder[] {ocean, beach, snowyBeach, river, plains, forest, taiga, desert, snowyTaiga, snowyPlains, hills})));
+			RegistryOps.retrieveElement(Biomes.WINDSWEPT_HILLS),
+			com.mojang.serialization.Codec.DOUBLE.optionalFieldOf("scale", 1.0).forGetter(s -> s.scale)
+	).apply(i, (ocean, beach, snowyBeach, river, plains, forest, taiga, desert, snowyTaiga, snowyPlains, hills, scale) -> new WarzoneBiomeSource(
+			new Holder[] {ocean, beach, snowyBeach, river, plains, forest, taiga, desert, snowyTaiga, snowyPlains, hills}, scale)));
 
 	private static final int OCEAN = 0;
 	private static final int BEACH = 1;
@@ -46,10 +47,12 @@ public class WarzoneBiomeSource extends BiomeSource implements BiomeResolver {
 	private static final int HILLS = 10;
 
 	private final Holder<Biome>[] biomes;
+	private final double scale;
 
 	@SuppressWarnings("unchecked")
-	private WarzoneBiomeSource(Holder[] biomes) {
+	private WarzoneBiomeSource(Holder[] biomes, double scale) {
 		this.biomes = (Holder<Biome>[]) biomes;
+		this.scale = scale;
 	}
 
 	@Override
@@ -69,7 +72,7 @@ public class WarzoneBiomeSource extends BiomeSource implements BiomeResolver {
 
 	@Override
 	public Holder<Biome> getNoiseBiome(int quartX, int quartY, int quartZ) {
-		WarzoneTerrain.Column c = WarzoneTerrain.column(quartX * 4 + 2, quartZ * 4 + 2);
+		WarzoneTerrain.Column c = WarzoneTerrain.column(quartX * 4 + 2, quartZ * 4 + 2, scale);
 		boolean snow = c.theme() == WarzoneTerrain.THEME_SNOW;
 		int b = switch (c.zone()) {
 			case OCEAN -> OCEAN;

@@ -102,7 +102,220 @@ public final class AutoTest {
 
 	private static net.fabricmc.fabric.api.entity.FakePlayer buddy;
 
-	/** Co-op Horde with a stand-in teammate: scaling, revive, rewards, the cache, fog, air raid, Second Wind. */
+	private static dev.rubymod.game.party.PartyGame pg(String id) {
+		return dev.rubymod.game.party.PartyGames.byId(id);
+	}
+
+	private static net.minecraft.server.level.ServerPlayer me(net.minecraft.server.MinecraftServer server) {
+		return server.getPlayerList().getPlayers().get(0);
+	}
+
+	private static net.fabricmc.fabric.api.entity.FakePlayer partyBuddy(net.minecraft.server.MinecraftServer server) {
+		return net.fabricmc.fabric.api.entity.FakePlayer.get(server.getLevel(dev.rubymod.game.Duels.ARENA),
+				new com.mojang.authlib.GameProfile(java.util.UUID.fromString("00000000-0000-0000-0000-0000000b0d1e"), "Buddy"));
+	}
+
+	/** Join a party game (with Buddy if it needs two), skip the lobby, run {@code mechanics}, look, leave. */
+	private static void partyMode(String id, boolean withBuddy, Runnable mechanics) {
+		then(5, mc -> {
+			log("=== {} ===", id);
+			command(mc, "execute as @p run play " + id);
+		});
+		if (withBuddy) {
+			then(10, mc -> onServer(mc, server -> dev.rubymod.game.party.PartyGames.addTestPlayer(pg(id), partyBuddy(server))));
+		}
+		then(10, mc -> onServer(mc, server -> pg(id).skipLobby()));
+		then(60, mc -> {
+			log("{} started: {}", id, pg(id).debugState());
+			shot(mc, "party-" + id + "-start");
+		});
+		mechanics.run();
+		then(5, mc -> {
+			mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+			mc.options.keyShift.setDown(false);
+			mc.gui.setScreen(null);
+			log("{} end: {}", id, pg(id).debugState());
+			onServer(mc, server -> {
+				if (pg(id).contains(partyBuddy(server))) {
+					pg(id).leave(partyBuddy(server));
+				}
+			});
+			command(mc, "execute as @p run hub");
+		});
+		then(40, mc -> log("{} left: player in {}", id, mc.player.level().dimension().identifier()));
+	}
+
+	/** Every party game in turn (or just one: party:<id>). */
+	private static void partyScript(String only) {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "difficulty normal");
+			command(mc, "gamemode survival @a");
+		});
+		then(20, mc -> {
+			mc.gui.setScreen(new ModeScreen());
+		});
+		then(40, mc -> {
+			shot(mc, "party-picker");
+			mc.gui.setScreen(null);
+		});
+		if (only.isEmpty() || only.equals("gungame")) {
+			partyMode("gungame", false, () -> {
+				for (int i = 0; i < 2; i++) {
+					then(20, mc -> onServer(mc, server -> {
+						var player = me(server);
+						var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+						var bot = level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, player.getBoundingBox().inflate(90)).stream().findFirst();
+						bot.ifPresent(b -> b.hurtServer(level, player.damageSources().playerAttack(player), 1000));
+						log("gungame after a bot kill: {}", pg("gungame").debugState());
+					}));
+				}
+				then(30, mc -> shot(mc, "party-gungame-level"));
+			});
+		}
+		if (only.isEmpty() || only.equals("hideseek")) {
+			partyMode("hideseek", true, () -> {
+				then(5, mc -> onServer(mc, server -> {
+					pg("hideseek").forceTeam(me(server), 0);
+					pg("hideseek").forceTeam(partyBuddy(server), 1);
+					var pos = new net.minecraft.core.BlockPos(-45005, 65, -5);
+					dev.rubymod.game.party.PartyGames.onUseBlock(me(server), pos, net.minecraft.world.item.ItemStack.EMPTY, pos);
+					log("hider disguised: {}", pg("hideseek").debugState());
+				}));
+				then(70, mc -> {
+					mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+				});
+				then(20, mc -> shot(mc, "party-hideseek-disguise"));
+				then(5, mc -> onServer(mc, server -> pg("hideseek").fastForward(40 * 20 - 1)));
+				then(10, mc -> onServer(mc, server -> {
+					dev.rubymod.game.Rules.canHurt(partyBuddy(server), me(server));
+					log("after the seeker's hit: {}", pg("hideseek").debugState());
+				}));
+				then(20, mc -> shot(mc, "party-hideseek-found"));
+			});
+		}
+		if (only.isEmpty() || only.equals("infection")) {
+			partyMode("infection", true, () -> {
+				then(5, mc -> onServer(mc, server -> {
+					pg("infection").forceTeam(me(server), 0);
+					pg("infection").forceTeam(partyBuddy(server), 1);
+				}));
+				then(30, mc -> shot(mc, "party-infection-survivor"));
+				then(160, mc -> onServer(mc, server -> {
+					var buddy = partyBuddy(server);
+					me(server).hurtServer(me(server).level(), buddy.damageSources().playerAttack(buddy), 1000);
+					log("after the bite: {}", pg("infection").debugState());
+				}));
+				then(30, mc -> shot(mc, "party-infection-end"));
+			});
+		}
+		if (only.isEmpty() || only.equals("ctf")) {
+			partyMode("ctf", true, () -> {
+				then(5, mc -> onServer(mc, server -> {
+					pg("ctf").forceTeam(me(server), 0);
+					pg("ctf").forceTeam(partyBuddy(server), 1);
+				}));
+				then(20, mc -> shot(mc, "party-ctf-base"));
+				then(5, mc -> onServer(mc, server -> pg("ctf").fastForward(20 * 20 - 1)));
+				then(10, mc -> command(mc, "execute as @p at @s run tp @s -59999.5 67 43.5 180 20"));
+				then(20, mc -> {
+					log("at the blue flag: {} head {}", pg("ctf").debugState(), mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD));
+					shot(mc, "party-ctf-carrying");
+				});
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s -59999.5 67 -40.5 0 20"));
+				then(20, mc -> log("back home: {}", pg("ctf").debugState()));
+			});
+		}
+		if (only.isEmpty() || only.equals("koth")) {
+			partyMode("koth", false, () -> {
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s -54999.5 68 0.5 0 10"));
+				then(120, mc -> {
+					log("koth on the hill: {}", pg("koth").debugState());
+					shot(mc, "party-koth-hill");
+				});
+			});
+		}
+		if (only.isEmpty() || only.equals("tanks")) {
+			partyMode("tanks", true, () -> {
+				then(160, mc -> {
+					log("tanks: riding {} | {}", mc.player.getVehicle(), pg("tanks").debugState());
+					shot(mc, "party-tanks-ride");
+				});
+			});
+		}
+		if (only.isEmpty() || only.equals("skyrace")) {
+			partyMode("skyrace", false, () -> {
+				then(160, mc -> shot(mc, "party-skyrace-go"));
+				for (int i = 0; i < 24; i++) {
+					int ring = i % 12;
+					int[] heights = {10, 15, 20, 14, 9, 16, 22, 17, 11, 18, 13, 8};
+					double a = Math.toRadians(15 + ring * 30);
+					double cx = -70000 + 0.5 + Math.cos(a) * 50;
+					double cy = dev.rubymod.game.Duels.GROUND + heights[ring];
+					double cz = 0.5 + Math.sin(a) * 34;
+					double tx = -Math.sin(a) * 50;
+					double tz = Math.cos(a) * 34;
+					double len = Math.sqrt(tx * tx + tz * tz);
+					double fx = tx / len;
+					double fz = tz / len;
+					then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "execute as @p at @s run tp @s %.2f %.2f %.2f", cx - fx * 1.5, cy - 0.9, cz - fz * 1.5)));
+					then(2, mc -> command(mc, String.format(java.util.Locale.ROOT, "execute as @p at @s run tp @s %.2f %.2f %.2f", cx + fx * 1.5, cy - 0.9, cz + fz * 1.5)));
+				}
+				then(20, mc -> {
+					log("skyrace after the course: {}", pg("skyrace").debugState());
+					shot(mc, "party-skyrace-finish");
+				});
+			});
+		}
+		if (only.isEmpty() || only.equals("build")) {
+			partyMode("build", true, () -> {
+				then(20, mc -> onServer(mc, server -> {
+					var player = me(server);
+					log("build: TNT allowed {}, oak planks allowed {}, rifle allowed {}",
+							pg("build").allowsItemUse(player, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.TNT)),
+							pg("build").allowsItemUse(player, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS)),
+							pg("build").allowsItemUse(player, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.ARR_RIFLE)));
+					var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+					for (int y = 0; y < 5; y++) {
+						level.setBlock(player.blockPosition().offset(2, y, 2), net.minecraft.world.level.block.Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+					}
+				}));
+				then(20, mc -> shot(mc, "party-build-building"));
+				then(5, mc -> onServer(mc, server -> pg("build").fastForward(5 * 60 * 20 - 1)));
+				then(260, mc -> onServer(mc, server -> {
+					var player = me(server);
+					pg("build").allowsItemUse(player, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WOOL.pick(net.minecraft.world.item.DyeColor.GREEN)));
+					log("voted on plot 2: {}", pg("build").debugState());
+				}));
+				then(10, mc -> shot(mc, "party-build-voting"));
+				then(260, mc -> {
+					log("build results: {}", pg("build").debugState());
+					shot(mc, "party-build-results");
+				});
+			});
+		}
+		if (only.isEmpty() || only.equals("rush")) {
+			partyMode("rush", false, () -> {
+				then(20, mc -> shot(mc, "party-rush-drop"));
+				then(260, mc -> {
+					log("rush landed: {} at {}", pg("rush").debugState(), mc.player.blockPosition());
+					shot(mc, "party-rush-landed");
+				});
+				then(5, mc -> onServer(mc, server -> pg("rush").fastForward(60 * 20 + 7 * 60 * 20 - 40)));
+				then(80, mc -> {
+					log("rush zone closed: health {} {}", mc.player.getHealth(), pg("rush").debugState());
+					shot(mc, "party-rush-zone");
+				});
+				then(5, mc -> onServer(mc, server -> {
+					me(server).hurtServer(me(server).level(), me(server).damageSources().generic(), 1000);
+					log("rush after going down: {}", pg("rush").debugState());
+				}));
+				then(20, mc -> shot(mc, "party-rush-out"));
+			});
+		}
+	}
+
+	/** Co-op Horde with a stand-in teammate: scaling, revive, rewards, the cache, fog, air raid, Second Wind. */	/** Co-op Horde with a stand-in teammate: scaling, revive, rewards, the cache, fog, air raid, Second Wind. */
 	private static void hordePlusScript() {
 		then(0, mc -> {
 			for (String line : dev.rubymod.game.Horde.scalingTable()) {
@@ -340,6 +553,14 @@ public final class AutoTest {
 			command(mc, "gamerule send_command_feedback false");
 			command(mc, "gamerule sendCommandFeedback false");
 		});
+		if (mode.startsWith("party")) {
+			partyScript(mode.length() > 5 ? mode.substring(6) : "");
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("hordeplus")) {
 			hordePlusScript();
 			then(20, mc -> {

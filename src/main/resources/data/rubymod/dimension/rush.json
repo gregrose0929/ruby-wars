@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:overworld",
+  "generator": {
+    "type": "rubymod:warzone",
+    "scale": 0.25,
+    "biome_source": {
+      "type": "rubymod:warzone",
+      "scale": 0.25
+    }
+  }
+}

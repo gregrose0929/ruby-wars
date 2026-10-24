@@ -39,6 +39,7 @@ game. Walk into one, press **H** anywhere for the game picker, or type `/hub` an
 
 - **Ruby Wars** (red portal) is the main game: the season.
 - **Co-op Horde** (green portal) is a team game you can play any time (see below).
+- **Party Games** (purple portal, in the middle) opens the game picker with 9 quick games.
 
 Leaving Ruby Wars saves where you were and everything you carry (in
 `world/rubywars/hub/`); going back puts it all back, so the hub and Horde never touch
@@ -80,6 +81,25 @@ four gates. Some enemies hunt you; some go straight for the cache.
   The best wave (and who reached it) shows on the hub sign. Reaching wave 5 completes
   the "Reach wave 5 in Co-op Horde" goal (a star for Ruby Wars). Nothing else from Horde
   carries over.
+
+## Party games
+
+Nine quick, round-based games from the hub's purple portal or the H picker
+(`/play <id>`). Rounds loop: a 15-second lobby, the round, 8 seconds of results, then
+the next round, until everyone leaves. Each has its own arena, rebuilt between rounds;
+your own things stay saved in the hub's save.
+
+| Game | `/play` | Players | What it is |
+| --- | --- | --- | --- |
+| Gun Game | `gungame` | 1+ (bots fill in) | Every kill swaps your weapon for the next: pistol, shotgun, rifle, sniper, Ruby Blaster, rockets, sword. Win with a sword kill; get knifed and you drop a level. |
+| Holo Hide & Seek | `hideseek` | 2+ | Hiders right-click any block to turn into it, and lock in place by standing still for 2 seconds. Seekers wait 40 seconds, then one hit finds a hider (who then seeks too). Hiders chirp every 30 seconds. 3.5 minutes. |
+| Infection | `infection` | 2+ | One zombie (fast, strong) at the start; anyone caught becomes a zombie. Survivors have a pistol and shotgun and must last 4 minutes. Wild zombies wander in. |
+| Capture the Flag | `ctf` | 2+ (teams) | Red vs Blue. 20 seconds to build sandbag defenses, then grab their flag and bring it to yours. Dropped flags: your team walks over it to send it home. First to 3. |
+| King of the Hill | `koth` | 1+ (bots fill in) | Score a point a second while you're the only one in the gold zone; it moves every minute. First to 75. |
+| Tank Battle | `tanks` | 2+ (teams) | Red vs Blue in tanks on the vehicle arena; a fresh tank 5 seconds after you're knocked out. First team to 10. |
+| Sky Race | `skyrace` | 1+ | Jetpack through 12 rings in the sky, twice around. Land on the glowing pads to refuel. The record time is kept. |
+| Build Battle | `build` | 2+ | Same theme for everyone, 5 minutes in creative on your own plot (blocks and wands only), then rate every build 1 to 5 stars. |
+| Ruby Rush | `rush` | 1+ (bots fill in) | A battle royale on Rush Island (a quarter-size copy of the Ruby Wars Map in its own world). Float down, loot crates, stay inside the closing red zone. No respawns; last one standing wins. |
 
 ## The Ruby Wars map
 
@@ -570,7 +590,8 @@ so you don't need to start a season to test weapons.
 
 ## Commands
 
-Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`, `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
+Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`,
+`/play gungame|hideseek|infection|ctf|koth|tanks|skyrace|build|rush` (party games), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
 base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),
 `/squad ...`, `/sc <message>`, `/waypoint ...`.

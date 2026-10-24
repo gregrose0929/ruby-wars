@@ -74,9 +74,11 @@ public final class Hub {
 	private static final int SPAWN_Z = 4;
 	private static final int RUBY_X = -7;
 	private static final int HORDE_X = 7;
+	/** The Party Games arch stands between and behind the other two. */
+	private static final int PARTY_Z = -18;
 	private static final String LABEL_TAG = "rubymod_hub_label";
 
-	public enum Where { RUBY_WARS, HUB, HORDE, DUEL }
+	public enum Where { RUBY_WARS, HUB, HORDE, DUEL, PARTY }
 
 	private static boolean built;
 	private static final Map<UUID, Integer> PORTAL_COOLDOWN = new HashMap<>();
@@ -130,13 +132,16 @@ public final class Hub {
 		if (Horde.playing(player)) {
 			return Where.HORDE;
 		}
+		if (dev.rubymod.game.party.PartyGames.of(player) != null) {
+			return Where.PARTY;
+		}
 		return inRubyWarsWorld(player) ? Where.RUBY_WARS : Where.HUB;
 	}
 
 	/** In the season's worlds (overworld, Nether, End), not the hub or the arena. */
 	public static boolean inRubyWarsWorld(Player player) {
 		ResourceKey<Level> dim = player.level().dimension();
-		return dim != HUB && dim != Duels.ARENA;
+		return dim != HUB && dim != Duels.ARENA && dim != dev.rubymod.game.party.RubyRush.RUSH;
 	}
 
 	/** Season players can't leave Ruby Wars on Battle Day (unless they're out). */
@@ -153,6 +158,14 @@ public final class Hub {
 
 	/** Go to "rubywars", "horde" (or "horde:easy|normal|hard") or "hub". Returns an error to show, or null when it worked. */
 	public static String go(ServerPlayer player, String target) {
+		dev.rubymod.game.party.PartyGame game = null;
+		if (target.startsWith("game:")) {
+			game = dev.rubymod.game.party.PartyGames.byId(target.substring(5));
+			if (game == null) {
+				return "Unknown game.";
+			}
+			target = "party";
+		}
 		Horde.Challenge challenge = null;
 		if (target.startsWith("horde:")) {
 			challenge = Horde.Challenge.byName(target.substring(6));
@@ -169,12 +182,17 @@ public final class Hub {
 			case "rubywars" -> Where.RUBY_WARS;
 			case "horde" -> Where.HORDE;
 			case "hub" -> Where.HUB;
+			case "party" -> Where.PARTY;
 			default -> null;
 		};
 		if (to == null) {
 			return "Unknown game. Try /play rubywars or /play horde.";
 		}
-		if (to == from) {
+		dev.rubymod.game.party.PartyGame current = dev.rubymod.game.party.PartyGames.of(player);
+		if (to == Where.PARTY && current == game) {
+			return "You're already in " + game.title + ".";
+		}
+		if (to == from && to != Where.PARTY) {
 			return switch (to) {
 				case RUBY_WARS -> "You're already in Ruby Wars.";
 				case HORDE -> "You're already in Horde.";
@@ -195,6 +213,12 @@ public final class Hub {
 				return error;
 			}
 		}
+		if (to == Where.PARTY) {
+			String error = game.canJoin(player);
+			if (error != null) {
+				return error;
+			}
+		}
 		if (to == Where.RUBY_WARS && Rules.phase() == Phase.ENDED && SeasonData.get().player(player.getUUID()) == null) {
 			// Nothing to stop you looking around; just so you know.
 			player.sendSystemMessage(Component.literal("The season is over: wait for the next one to start.").withStyle(ChatFormatting.GRAY));
@@ -206,11 +230,14 @@ public final class Hub {
 			}
 		} else if (from == Where.HORDE) {
 			Horde.leave(player);
+		} else if (from == Where.PARTY) {
+			current.leave(player);
 		}
 		// ... and arrive.
 		switch (to) {
 			case RUBY_WARS -> enterRubyWars(player);
 			case HORDE -> Horde.join(player, challenge);
+			case PARTY -> game.join(player);
 			default -> enterHub(player);
 		}
 		return null;
@@ -360,7 +387,8 @@ public final class Hub {
 	/** Just after joining (after duels have given back what they owe): send people to the hub, or wherever Battle Day needs them. */
 	private static void onJoin(ServerPlayer player) {
 		MinecraftServer server = player.level().getServer();
-		if (player.level().dimension() == Duels.ARENA && !Duels.inDuel(player) && !Horde.playing(player)) {
+		boolean gameWorld = player.level().dimension() == Duels.ARENA || player.level().dimension() == dev.rubymod.game.party.RubyRush.RUSH;
+		if (gameWorld && !Duels.inDuel(player) && !Horde.playing(player) && dev.rubymod.game.party.PartyGames.of(player) == null) {
 			// Left in the middle of a Horde game: their Horde gear stays behind.
 			player.getInventory().clearContent();
 			player.removeAllEffects();
@@ -405,6 +433,14 @@ public final class Hub {
 				continue;
 			}
 			AABB box = player.getBoundingBox();
+			if (box.intersects(new AABB(-2, FLOOR + 1, PARTY_Z + 0.2, 3, FLOOR + 7, PARTY_Z + 0.8))) {
+				// The Party Games portal opens the game picker.
+				PORTAL_COOLDOWN.put(player.getUUID(), 40);
+				player.teleportTo(hub, player.getX(), FLOOR + 1, PARTY_Z + 3.5, Set.<Relative>of(), 180.0F, 0.0F, true);
+				dev.rubymod.net.Net.send(player, new dev.rubymod.net.MorePayloads.ModeInfo(whereLabel(player), modeLines(server)));
+				dev.rubymod.net.Net.send(player, new dev.rubymod.net.MorePayloads.OpenModes());
+				continue;
+			}
 			String target = box.intersects(portalBox(RUBY_X)) ? "rubywars" : box.intersects(portalBox(HORDE_X)) ? "horde" : null;
 			if (target == null) {
 				continue;
@@ -425,11 +461,32 @@ public final class Hub {
 		return new AABB(cx - 2, FLOOR + 1, PORTAL_Z + 0.2, cx + 3, FLOOR + 7, PORTAL_Z + 0.8);
 	}
 
+	/** For the game picker: where you are ("PARTY:gungame" for a party game). */
+	public static String whereLabel(ServerPlayer player) {
+		Where where = where(player);
+		if (where == Where.PARTY) {
+			return "PARTY:" + dev.rubymod.game.party.PartyGames.of(player).id;
+		}
+		return where.name();
+	}
+
 	/** Every second: hub housekeeping, and Battle Day calling everyone in. */
 	public static void tickSecond(MinecraftServer server) {
 		ServerLevel hub = server.getLevel(HUB);
 		if (hub == null) {
 			return;
+		}
+		for (ServerPlayer player : new ArrayList<>(server.getPlayerList().getPlayers())) {
+			Where where = where(player);
+			if ((where == Where.HORDE || where == Where.PARTY) && mustStay(player)) {
+				if (where == Where.HORDE) {
+					Horde.leave(player);
+				} else {
+					dev.rubymod.game.party.PartyGames.of(player).leave(player);
+				}
+				player.sendSystemMessage(Component.literal("Battle Day has begun! Back to Ruby Wars.").withStyle(ChatFormatting.RED));
+				enterRubyWars(player);
+			}
 		}
 		for (ServerPlayer player : new ArrayList<>(hub.players())) {
 			if (mustStay(player)) {
@@ -513,6 +570,12 @@ public final class Hub {
 		arch(level, RUBY_X, Blocks.RED_NETHER_BRICKS.defaultBlockState(), ruby, ModBlocks.RUBY_PORTAL.defaultBlockState());
 		arch(level, HORDE_X, Blocks.MOSSY_STONE_BRICKS.defaultBlockState(), Blocks.VERDANT_FROGLIGHT.defaultBlockState(),
 				ModBlocks.HORDE_PORTAL.defaultBlockState());
+		// Party Games: between and behind, on a purple path.
+		for (int z = PARTY_Z + 1; z <= -4; z++) {
+			set(level, 0, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.PURPLE).defaultBlockState());
+		}
+		arch(level, 0, PARTY_Z, Blocks.PURPUR_BLOCK.defaultBlockState(), Blocks.PEARLESCENT_FROGLIGHT.defaultBlockState(),
+				ModBlocks.PARTY_PORTAL.defaultBlockState());
 		// Lamp posts around the plaza.
 		for (int[] p : new int[][] {{-13, 6}, {13, 6}, {-15, -4}, {15, -4}, {0, 16}}) {
 			for (int y = 1; y <= 3; y++) {
@@ -533,6 +596,10 @@ public final class Hub {
 	}
 
 	private static void arch(ServerLevel level, int cx, BlockState frame, BlockState corner, BlockState portal) {
+		arch(level, cx, PORTAL_Z, frame, corner, portal);
+	}
+
+	private static void arch(ServerLevel level, int cx, int PORTAL_Z, BlockState frame, BlockState corner, BlockState portal) {
 		for (int y = 1; y <= 7; y++) {
 			set(level, cx - 3, FLOOR + y, PORTAL_Z, y == 7 || y == 1 ? corner : frame);
 			set(level, cx + 3, FLOOR + y, PORTAL_Z, y == 7 || y == 1 ? corner : frame);
@@ -559,6 +626,8 @@ public final class Hub {
 			new Label("ruby_info", RUBY_X + 0.5, FLOOR + 8.1, PORTAL_Z + 0.5, 2.0F),
 			new Label("horde_title", HORDE_X + 0.5, FLOOR + 10.4, PORTAL_Z + 0.5, 3.6F),
 			new Label("horde_info", HORDE_X + 0.5, FLOOR + 8.1, PORTAL_Z + 0.5, 2.0F),
+			new Label("party_title", 0.5, FLOOR + 10.4, PARTY_Z + 0.5, 3.0F),
+			new Label("party_info", 0.5, FLOOR + 8.1, PARTY_Z + 0.5, 1.8F),
 			new Label("welcome", 0.5, FLOOR + 1.1, 0.5, 0.9F));
 
 	private static Component labelText(MinecraftServer server, String key) {
@@ -567,6 +636,9 @@ public final class Hub {
 			case "ruby_info" -> Component.literal("Build a base, then fight!\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(rubyWarsSign(server)).withStyle(ChatFormatting.GOLD));
 			case "horde_title" -> Component.literal("CO-OP HORDE").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD);
+			case "party_title" -> Component.literal("PARTY GAMES").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+			case "party_info" -> Component.literal("9 quick games to play together\n").withStyle(ChatFormatting.WHITE)
+					.append(Component.literal(partyPlaying() + " playing now").withStyle(ChatFormatting.GOLD));
 			case "horde_info" -> Component.literal("Survive the waves together!\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(Horde.status().replace("  \u2022  ", "\n")).withStyle(ChatFormatting.GOLD));
 			default -> {
@@ -574,6 +646,14 @@ public final class Hub {
 				yield text.append(Component.literal("Walk into a portal to play.\nPress H any time to switch games.").withStyle(ChatFormatting.WHITE));
 			}
 		};
+	}
+
+	private static int partyPlaying() {
+		int n = 0;
+		for (dev.rubymod.game.party.PartyGame game : dev.rubymod.game.party.PartyGames.ALL) {
+			n += game.running() ? 1 : 0;
+		}
+		return n == 0 ? 0 : (int) dev.rubymod.game.party.PartyGames.playerCount();
 	}
 
 	/** Short lines for the sign over the Ruby Wars portal. */
@@ -639,10 +719,12 @@ public final class Hub {
 		}
 	}
 
-	/** For the game picker (H): "id|title|status" for each game. */
+	/** For the game picker (H): "id|title|status..." for each game. */
 	public static List<String> modeLines(MinecraftServer server) {
-		return List.of(
-				"rubywars|Ruby Wars|" + rubyWarsStatus(server),
-				"horde|Co-op Horde|" + Horde.status() + "|" + Horde.running());
+		List<String> lines = new ArrayList<>();
+		lines.add("rubywars|Ruby Wars|" + rubyWarsStatus(server));
+		lines.add("horde|Co-op Horde|" + Horde.status() + "|" + Horde.running());
+		lines.addAll(dev.rubymod.game.party.PartyGames.lines());
+		return lines;
 	}
 }

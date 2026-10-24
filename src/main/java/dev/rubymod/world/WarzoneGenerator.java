@@ -41,11 +41,21 @@ import net.minecraft.world.level.levelgen.structure.StructureSet;
  * no villages or other structures, so the map stays the same for everyone.
  */
 public class WarzoneGenerator extends ChunkGenerator {
-	public static final MapCodec<WarzoneGenerator> CODEC = BiomeSource.CODEC.fieldOf("biome_source")
-			.xmap(WarzoneGenerator::new, g -> g.biomeSource).stable();
+	public static final MapCodec<WarzoneGenerator> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(i -> i.group(
+			BiomeSource.CODEC.fieldOf("biome_source").forGetter(g -> g.biomeSource),
+			com.mojang.serialization.Codec.DOUBLE.optionalFieldOf("scale", 1.0).forGetter(g -> g.scale)
+	).apply(i, WarzoneGenerator::new));
 
-	public WarzoneGenerator(BiomeSource biomeSource) {
+	/** 1 for the Ruby Wars Map; smaller for a shrunk copy (Ruby Rush). */
+	private final double scale;
+
+	public WarzoneGenerator(BiomeSource biomeSource, double scale) {
 		super(biomeSource);
+		this.scale = scale;
+	}
+
+	private WarzoneTerrain.Column column(int x, int z) {
+		return WarzoneTerrain.column(x, z, scale);
 	}
 
 	@Override
@@ -59,7 +69,7 @@ public class WarzoneGenerator extends ChunkGenerator {
 	}
 
 	/** The block at height y in a column (water and air included). */
-	private static BlockState block(int x, int y, int z, WarzoneTerrain.Column c) {
+	private BlockState block(int x, int y, int z, WarzoneTerrain.Column c) {
 		int h = c.height();
 		if (y <= -64) {
 			return Blocks.BEDROCK.defaultBlockState();
@@ -71,7 +81,7 @@ public class WarzoneGenerator extends ChunkGenerator {
 			return Blocks.DEEPSLATE.defaultBlockState();
 		}
 		int depth = h - y;
-		if (c.zone() == WarzoneTerrain.Zone.CRATER && WarzoneTerrain.craterRuby(x, y, z, h)) {
+		if (c.zone() == WarzoneTerrain.Zone.CRATER && WarzoneTerrain.craterRuby((int) Math.floor(x / scale), y, (int) Math.floor(z / scale), h)) {
 			return ModBlocks.RUBY_ORE.defaultBlockState();
 		}
 		if (depth > 4) {
@@ -113,7 +123,7 @@ public class WarzoneGenerator extends ChunkGenerator {
 			for (int lz = 0; lz < 16; lz++) {
 				int x = cp.getMinBlockX() + lx;
 				int z = cp.getMinBlockZ() + lz;
-				WarzoneTerrain.Column c = WarzoneTerrain.column(x, z);
+				WarzoneTerrain.Column c = column(x, z);
 				int top = Math.max(c.height(), WarzoneTerrain.SEA);
 				for (int y = minY; y <= top; y++) {
 					BlockState state = block(x, y, z, c);
@@ -156,12 +166,12 @@ public class WarzoneGenerator extends ChunkGenerator {
 
 	@Override
 	public int getSpawnHeight(LevelHeightAccessor heightAccessor) {
-		return WarzoneTerrain.column(0, 0).height() + 1;
+		return column(0, 0).height() + 1;
 	}
 
 	@Override
 	public int getBaseHeight(int x, int z, Heightmap.Types type, LevelHeightAccessor heightAccessor, RandomState randomState) {
-		WarzoneTerrain.Column c = WarzoneTerrain.column(x, z);
+		WarzoneTerrain.Column c = column(x, z);
 		if (c.height() < WarzoneTerrain.SEA && type.isOpaque().test(Blocks.WATER.defaultBlockState())) {
 			return WarzoneTerrain.SEA + 1;
 		}
@@ -170,7 +180,7 @@ public class WarzoneGenerator extends ChunkGenerator {
 
 	@Override
 	public NoiseColumn getBaseColumn(int x, int z, LevelHeightAccessor heightAccessor, RandomState randomState) {
-		WarzoneTerrain.Column c = WarzoneTerrain.column(x, z);
+		WarzoneTerrain.Column c = column(x, z);
 		BlockState[] states = new BlockState[heightAccessor.getHeight()];
 		for (int i = 0; i < states.length; i++) {
 			states[i] = block(x, heightAccessor.getMinY() + i, z, c);
@@ -180,7 +190,7 @@ public class WarzoneGenerator extends ChunkGenerator {
 
 	@Override
 	public void addDebugScreenInfo(List<String> result, RandomState randomState, BlockPos pos, SamplerContext samplerContext) {
-		WarzoneTerrain.Column c = WarzoneTerrain.column(pos.getX(), pos.getZ());
+		WarzoneTerrain.Column c = column(pos.getX(), pos.getZ());
 		result.add("Ruby Wars map: " + c.zone() + ", corner " + c.theme());
 	}
 }

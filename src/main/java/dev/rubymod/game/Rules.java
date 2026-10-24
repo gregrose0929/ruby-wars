@@ -96,10 +96,14 @@ public final class Rules {
 		if (!(attacker instanceof Player a) || !(victim instanceof Player v) || a == v) {
 			return true;
 		}
-		if (isEliminated(a.getUUID())) {
+		if (v instanceof net.minecraft.server.level.ServerPlayer sv && SpawnShield.isShielded(sv)) {
 			return false;
 		}
-		if (v instanceof net.minecraft.server.level.ServerPlayer sv && SpawnShield.isShielded(sv)) {
+		Boolean party = dev.rubymod.game.party.PartyGames.canHurt(a, v);
+		if (party != null) {
+			return party;
+		}
+		if (isEliminated(a.getUUID()) && Hub.inRubyWarsWorld(a)) {
 			return false;
 		}
 		Boolean horde = Horde.canHurt(a, v);

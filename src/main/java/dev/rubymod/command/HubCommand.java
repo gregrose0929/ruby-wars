@@ -21,7 +21,11 @@ public final class HubCommand {
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 		dispatcher.register(Commands.literal("hub").executes(c -> go(c, "hub")));
-		dispatcher.register(Commands.literal("play").executes(HubCommand::list)
+		var play = Commands.literal("play").executes(HubCommand::list);
+		for (dev.rubymod.game.party.PartyGame game : dev.rubymod.game.party.PartyGames.ALL) {
+			play.then(Commands.literal(game.id).executes(c -> go(c, "game:" + game.id)));
+		}
+		dispatcher.register(play
 				.then(Commands.literal("rubywars").executes(c -> go(c, "rubywars")))
 				.then(Commands.literal("horde").executes(c -> go(c, "horde"))
 						.then(Commands.literal("easy").executes(c -> go(c, "horde:easy")))

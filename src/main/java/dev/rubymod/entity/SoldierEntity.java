@@ -161,6 +161,14 @@ public class SoldierEntity extends PathfinderMob {
 		return s;
 	}
 
+	/** Party games: switch the practice bot to hunting someone else. */
+	public void setPrey(UUID prey) {
+		this.prey = prey;
+		if (getTarget() != null && !getTarget().getUUID().equals(prey)) {
+			setTarget(null);
+		}
+	}
+
 	public void setObjective(BlockPos objective) {
 		this.objective = objective;
 	}
@@ -221,7 +229,7 @@ public class SoldierEntity extends PathfinderMob {
 		if (!(e instanceof LivingEntity living) || !living.isAlive() || e == this) {
 			return false;
 		}
-		if (e instanceof Player p && (p.isCreative() || p.isSpectator() || Rules.isEliminated(p.getUUID()))) {
+		if (e instanceof Player p && (p.isCreative() || p.isSpectator() || Rules.isEliminated(p.getUUID()) && dev.rubymod.game.Hub.inRubyWarsWorld(p))) {
 			return false;
 		}
 		if (isRaider()) {

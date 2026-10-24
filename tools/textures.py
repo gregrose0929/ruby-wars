@@ -1056,7 +1056,7 @@ def blocks():
 
     # Hub portals: a slow swirl of light, 8 frames (red for Ruby Wars, green for Horde).
     import math
-    for name, (r, g, bl) in (("ruby_portal", (230, 40, 50)), ("horde_portal", (60, 220, 90))):
+    for name, (r, g, bl) in (("ruby_portal", (230, 40, 50)), ("horde_portal", (60, 220, 90)), ("party_portal", (170, 70, 235))):
         strip = []
         for k in range(8):
             for y in range(16):
@@ -1260,7 +1260,7 @@ def main(root):
         write_png(os.path.join(root, "textures/block", name + ".png"), img)
     with open(os.path.join(root, "textures/block", "conveyor_belt.png.mcmeta"), "w") as f:
         f.write('{"animation": {"frametime": 2}}' + chr(10))
-    for name in ("ruby_portal", "horde_portal"):
+    for name in ("ruby_portal", "horde_portal", "party_portal"):
         with open(os.path.join(root, "textures/block", name + ".png.mcmeta"), "w") as f:
             f.write('{"animation": {"frametime": 3, "interpolate": true}}' + chr(10))
     door = [row[:] for row in blocks()["blast_door_top"][:8]] + [row[:] for row in blocks()["blast_door_bottom"][8:]]

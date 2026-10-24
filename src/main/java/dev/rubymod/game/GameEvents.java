@@ -75,6 +75,7 @@ public final class GameEvents {
 			Duels.reset();
 			Horde.reset();
 			Horde.load(server);
+			dev.rubymod.game.party.PartyGames.reset(server);
 			Hub.reset();
 			if (server.getLevel(Hub.HUB) != null) {
 				Hub.ensureBuilt(server.getLevel(Hub.HUB));
@@ -102,6 +103,7 @@ public final class GameEvents {
 			Range.tick(server);
 			Duels.tick(server);
 			Horde.tick(server);
+			dev.rubymod.game.party.PartyGames.tick(server);
 			Hub.tick(server);
 			Jetpacks.tick(server);
 			VersionCheck.tick(server);
@@ -147,6 +149,7 @@ public final class GameEvents {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			Duels.onLeave(server, handler.getPlayer());
 			Horde.onLeave(server, handler.getPlayer());
+			dev.rubymod.game.party.PartyGames.onDisconnect(handler.getPlayer());
 			VersionCheck.onLeave(handler.getPlayer());
 			Jetpacks.forget(handler.getPlayer().getUUID());
 			CombatTag.onLeave(server, handler.getPlayer());
@@ -169,7 +172,7 @@ public final class GameEvents {
 					player.sendSystemMessage(Component.literal(error).withStyle(ChatFormatting.RED));
 				}
 			}
-			Net.send(player, new dev.rubymod.net.MorePayloads.ModeInfo(Hub.where(player).name(), Hub.modeLines(player.level().getServer())));
+			Net.send(player, new dev.rubymod.net.MorePayloads.ModeInfo(Hub.whereLabel(player), Hub.modeLines(player.level().getServer())));
 		});
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordePick.TYPE, (payload, context) ->
 				Horde.pick(context.player(), payload.id()));
@@ -274,7 +277,7 @@ public final class GameEvents {
 		ServerLivingEntityEvents.ALLOW_DEATH.register((entity, source, amount) -> {
 			if (entity instanceof ServerPlayer player) {
 				// Duel and Horde deaths respawn you in the arena instead (no grave, no stats).
-				if (Horde.onDeath(player, source) || Duels.onDeath(player, source)) {
+				if (Horde.onDeath(player, source) || dev.rubymod.game.party.PartyGames.onDeath(player, source) || Duels.onDeath(player, source)) {
 					return false;
 				}
 				dev.rubymod.block.GraveBlock.bury(player);
@@ -288,6 +291,7 @@ public final class GameEvents {
 			} else {
 				Duels.onEntityDeath(entity, source);
 				Horde.onEntityDeath(entity, source);
+				dev.rubymod.game.party.PartyGames.onEntityDeath(entity, source);
 			}
 			confirmHit(entity, source, true);
 		});
@@ -306,6 +310,9 @@ public final class GameEvents {
 		PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {
 			if (level.isClientSide()) {
 				return true;
+			}
+			if (player instanceof ServerPlayer sp && !dev.rubymod.game.party.PartyGames.allowsBreak(sp, pos)) {
+				return false;
 			}
 			if (state.is(ModBlocks.RUBY_HEART)) {
 				return canBreakHeart((ServerPlayer) player, level, pos);
@@ -334,6 +341,15 @@ public final class GameEvents {
 			BlockPos pos = hit.getBlockPos();
 			BlockState state = level.getBlockState(pos);
 			ItemStack held = player.getItemInHand(hand);
+			if (player instanceof ServerPlayer sp && dev.rubymod.game.party.PartyGames.of(sp) != null) {
+				BlockPos placeAt = state.canBeReplaced() ? pos : pos.relative(hit.getDirection());
+				if (dev.rubymod.game.party.PartyGames.onUseBlock(sp, pos, held, placeAt)) {
+					return InteractionResult.FAIL;
+				}
+				if (!dev.rubymod.game.party.PartyGames.allowsItemUse(sp, held)) {
+					return InteractionResult.FAIL;
+				}
+			}
 			boolean planting = held.getItem() instanceof BreachingChargeItem;
 			if (!planting && !Rules.canInteract(player, level, pos, state) && !(player.isShiftKeyDown() && held.getItem() instanceof BlockItem)) {
 				deny(player, "That belongs to " + ownerName(level, pos) + ".");
@@ -353,10 +369,13 @@ public final class GameEvents {
 			if (level.isClientSide()) {
 				return InteractionResult.PASS;
 			}
-			if (Rules.isEliminated(player.getUUID())) {
+			if (Rules.isEliminated(player.getUUID()) && Hub.inRubyWarsWorld(player)) {
 				return InteractionResult.FAIL;
 			}
 			ItemStack held = player.getItemInHand(hand);
+			if (player instanceof ServerPlayer sp && !dev.rubymod.game.party.PartyGames.allowsItemUse(sp, held)) {
+				return InteractionResult.FAIL;
+			}
 			if (held.getItem() instanceof BucketItem) {
 				Vec3 eye = player.getEyePosition();
 				BlockHitResult hit = level.clip(new ClipContext(eye, eye.add(player.getLookAngle().scale(6)), ClipContext.Block.OUTLINE,

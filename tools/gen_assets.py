@@ -174,7 +174,7 @@ def gen_blocks(client_jar):
     simple_state("reinforced_glass")
     column("armory")
     # Hub portals: a thin glowing curtain (no item).
-    for name in ("ruby_portal", "horde_portal"):
+    for name in ("ruby_portal", "horde_portal", "party_portal"):
         sprite = {"force_translucent": True, "sprite": f"{NS}:block/{name}"}
         write(f"{ASSETS}/models/block/{name}.json", {"parent": "minecraft:block/block", "ambientocclusion": False,
               "textures": {"particle": f"{NS}:block/{name}", "portal": sprite},
@@ -262,6 +262,7 @@ LANG = {
     "key.rubymod.modes": "Choose a Game (Hub, Ruby Wars, Horde)",
     "block.rubymod.ruby_portal": "Ruby Wars Portal",
     "block.rubymod.horde_portal": "Horde Portal",
+    "block.rubymod.party_portal": "Party Games Portal",
     "key.rubymod.squad": "Squad",
     "key.rubymod.autopilot": "Autopilot (aircraft)",
     "key.rubymod.flares": "Flares (aircraft)",

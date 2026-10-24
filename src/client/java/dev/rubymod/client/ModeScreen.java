@@ -1,8 +1,8 @@
 package dev.rubymod.client;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import dev.rubymod.RubyMod;
 import dev.rubymod.net.MorePayloads;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -12,32 +12,35 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The game picker (H): a big card for each game, and a button back to the hub.
- * Click a card to go and play it.
+ * The game picker (H): the two main games as big cards on the left (Ruby Wars, and
+ * Co-op Horde with a difficulty choice to start it), the party games as a list on the
+ * right, and a button back to the hub. Click anything to go and play it.
  */
 public class ModeScreen extends Screen {
 	private record Game(String id, String title, String about, String icon, int color) {
 	}
 
-	private static final List<Game> GAMES = List.of(
+	private static final List<Game> MAIN = List.of(
 			new Game("rubywars", "RUBY WARS", "The main game. Build a base for two weeks, then battle for one day. Last one standing wins.",
-					"ruby_heart", 0xFFE0303A),
+					"rubymod:ruby_heart", 0xFFE0303A),
 			new Game("horde", "CO-OP HORDE", "Team up to protect the Supply Cache from waves of enemies. Pick a reward after every wave.",
-					"arr_rifle", 0xFF3FC85A));
+					"rubymod:arr_rifle", 0xFF3FC85A));
 
 	/** The latest info from the server (where you are, a status line per game). */
 	public static MorePayloads.ModeInfo info;
 
 	private int[][] cards = new int[0][];
 	private int[] hubButton = new int[4];
-	/** Easy / Normal / Hard buttons on the Horde card (when nobody's playing yet). */
 	private final int[][] difficultyButtons = new int[3][];
 	private static final String[] DIFFICULTIES = {"easy", "normal", "hard"};
 	private static final int[] DIFFICULTY_COLORS = {0xFF3FC85A, 0xFFD8A030, 0xFFE0303A};
+	private final List<int[]> rows = new ArrayList<>();
+	private final List<String> rowIds = new ArrayList<>();
 
 	public ModeScreen() {
 		super(Component.literal("Choose a game"));
@@ -70,102 +73,161 @@ public class ModeScreen extends Screen {
 		return f == null ? "..." : f[2];
 	}
 
+	private boolean here(String id) {
+		return switch (id) {
+			case "rubywars" -> where().equals("RUBY_WARS");
+			case "horde" -> where().equals("HORDE");
+			default -> where().equals("PARTY:" + id.substring(5));
+		};
+	}
+
 	/** No Horde game yet: the card offers Easy / Normal / Hard instead of one Play button. */
 	private boolean pickDifficulty(Game game) {
 		String[] f = fields(game.id());
-		return game.id().equals("horde") && f != null && f.length >= 4 && f[3].equals("false") && !here(game);
+		return game.id().equals("horde") && f != null && f.length >= 4 && f[3].equals("false") && !here(game.id());
 	}
 
-	private boolean here(Game game) {
-		return game.id().equals("rubywars") ? where().equals("RUBY_WARS") : where().equals("HORDE");
+	private static ItemStack icon(String id) {
+		return new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(id)));
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
-		int cardW = Math.min(180, (width - 30) / 2);
-		int cardH = 136;
-		int gap = 10;
-		int x0 = (width - cardW * 2 - gap) / 2;
-		int y0 = Math.max(34, (height - cardH) / 2 - 10);
-		g.centeredText(font, "CHOOSE A GAME", width / 2, y0 - 22, 0xFFFFFFFF);
-		cards = new int[GAMES.size()][];
-		for (int i = 0; i < GAMES.size(); i++) {
-			Game game = GAMES.get(i);
-			int x = x0 + i * (cardW + gap);
-			int y = y0;
-			cards[i] = new int[] {x, y, cardW, cardH};
-			boolean here = here(game);
-			boolean hover = !here && mouseX >= x && mouseX < x + cardW && mouseY >= y && mouseY < y + cardH;
-			g.fill(x, y, x + cardW, y + cardH, hover ? 0xF0242C34 : 0xE0161B20);
-			g.outline(x, y, cardW, cardH, hover ? 0xFFFFFFFF : game.color());
-			g.fill(x + 1, y + 1, x + cardW - 1, y + 24, game.color() & 0x60FFFFFF);
-			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(RubyMod.id(game.icon()))), x + 6, y + 4);
-			g.text(font, game.title(), x + 28, y + 8, 0xFFFFFFFF, true);
-			int ty = y + 32;
-			for (FormattedCharSequence line : font.split(Component.literal(game.about()), cardW - 14)) {
-				g.text(font, line, x + 7, ty, 0xFFD8DEE4, false);
+		g.centeredText(font, "CHOOSE A GAME", width / 2, 8, 0xFFFFFFFF);
+		int top = 22;
+		int bottom = height - 34;
+		int colW = Math.min(210, width / 2 - 12);
+		int leftX = width / 2 - colW - 4;
+		int rightX = width / 2 + 4;
+		// Left: the main games.
+		int cardH = Math.min(104, (bottom - top - 6) / 2);
+		cards = new int[MAIN.size()][];
+		for (int i = 0; i < MAIN.size(); i++) {
+			Game game = MAIN.get(i);
+			int x = leftX;
+			int y = top + i * (cardH + 6);
+			cards[i] = new int[] {x, y, colW, cardH};
+			boolean here = here(game.id());
+			boolean hover = !here && mouseX >= x && mouseX < x + colW && mouseY >= y && mouseY < y + cardH;
+			g.fill(x, y, x + colW, y + cardH, hover ? 0xF0242C34 : 0xE0161B20);
+			g.outline(x, y, colW, cardH, hover ? 0xFFFFFFFF : game.color());
+			g.fill(x + 1, y + 1, x + colW - 1, y + 20, game.color() & 0x60FFFFFF);
+			g.item(icon(game.icon()), x + 4, y + 2);
+			g.text(font, game.title(), x + 24, y + 6, 0xFFFFFFFF, true);
+			int ty = y + 24;
+			for (FormattedCharSequence line : font.split(Component.literal(game.about()), colW - 10)) {
+				if (ty > y + cardH - 40) {
+					break;
+				}
+				g.text(font, line, x + 5, ty, 0xFFD8DEE4, false);
 				ty += 10;
 			}
-			ty += 4;
-			for (FormattedCharSequence line : font.split(Component.literal(status(game.id())), cardW - 14)) {
-				g.text(font, line, x + 7, ty, 0xFFFFC040, false);
-				ty += 10;
-			}
-			// The play button along the bottom (or a difficulty choice, to start Horde).
-			int by = y + cardH - 22;
+			g.text(font, font.plainSubstrByWidth(status(game.id()), colW - 10), x + 5, y + cardH - 32, 0xFFFFC040, false);
+			int by = y + cardH - 19;
 			if (pickDifficulty(game)) {
-				int bw = (cardW - 12 - 8) / 3;
+				int bw = (colW - 10 - 8) / 3;
 				for (int d = 0; d < 3; d++) {
-					int bx = x + 6 + d * (bw + 4);
-					difficultyButtons[d] = new int[] {bx, by, bw, 16};
-					boolean over = mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 16;
-					g.fill(bx, by, bx + bw, by + 16, over ? DIFFICULTY_COLORS[d] : DIFFICULTY_COLORS[d] & 0xB0FFFFFF);
+					int bx = x + 5 + d * (bw + 4);
+					difficultyButtons[d] = new int[] {bx, by, bw, 15};
+					boolean over = mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 15;
+					g.fill(bx, by, bx + bw, by + 15, over ? DIFFICULTY_COLORS[d] : DIFFICULTY_COLORS[d] & 0xB0FFFFFF);
 					g.centeredText(font, DIFFICULTIES[d].toUpperCase(), bx + bw / 2, by + 4, 0xFFFFFFFF);
 				}
-				g.text(font, "Start on:", x + 7, by - 11, 0xFF9AA4AE, false);
 			} else {
-				g.fill(x + 6, by, x + cardW - 6, by + 16, here ? 0xFF3A4048 : hover ? game.color() : game.color() & 0xB0FFFFFF);
-				g.centeredText(font, here ? "YOU'RE HERE" : "PLAY", x + cardW / 2, by + 4, 0xFFFFFFFF);
+				g.fill(x + 5, by, x + colW - 5, by + 15, here ? 0xFF3A4048 : hover ? game.color() : game.color() & 0xB0FFFFFF);
+				g.centeredText(font, here ? "YOU'RE HERE" : "PLAY", x + colW / 2, by + 4, 0xFFFFFFFF);
 			}
 		}
+		// Right: the party games.
+		g.text(font, "PARTY GAMES", rightX + 2, top, 0xFFC080FF, true);
+		rows.clear();
+		rowIds.clear();
+		List<String[]> party = new ArrayList<>();
+		if (info != null) {
+			for (String line : info.modes()) {
+				if (line.startsWith("game:")) {
+					String[] f = line.split("[|]", 5);
+					if (f.length == 5) {
+						party.add(f);
+					}
+				}
+			}
+		}
+		int rowH = party.isEmpty() ? 20 : Math.min(24, (bottom - top - 12) / party.size());
+		String tooltip = null;
+		for (int i = 0; i < party.size(); i++) {
+			String[] f = party.get(i);
+			int y = top + 12 + i * rowH;
+			boolean here = here(f[0]);
+			boolean hover = !here && mouseX >= rightX && mouseX < rightX + colW && mouseY >= y && mouseY < y + rowH - 2;
+			g.fill(rightX, y, rightX + colW, y + rowH - 2, here ? 0xE0204030 : hover ? 0xF0302440 : 0xD0181520);
+			if (hover) {
+				g.outline(rightX, y, colW, rowH - 2, 0xFFC080FF);
+				tooltip = f[4];
+			}
+			g.item(icon(f[3]), rightX + 2, y + (rowH - 2 - 16) / 2);
+			int textY = y + (rowH - 2) / 2 - (rowH >= 22 ? 8 : 4);
+			g.text(font, f[1], rightX + 22, textY, 0xFFFFFFFF, false);
+			String s = here ? "You're here" : f[2];
+			if (rowH >= 22) {
+				g.text(font, font.plainSubstrByWidth(s, colW - 26), rightX + 22, textY + 10, here ? 0xFF7CF59A : 0xFF9AA4AE, false);
+			} else {
+				int tw = font.width(f[1]) + 6;
+				g.text(font, font.plainSubstrByWidth(s, colW - 26 - tw), rightX + 22 + tw, textY, here ? 0xFF7CF59A : 0xFF9AA4AE, false);
+			}
+			rows.add(new int[] {rightX, y, colW, rowH - 2});
+			rowIds.add(f[0]);
+		}
+		// Bottom: back to the hub.
 		boolean inHub = where().equals("HUB");
 		int bw = 140;
 		int bx = (width - bw) / 2;
-		int by = y0 + cardH + 12;
-		hubButton = new int[] {bx, by, bw, 18};
-		boolean hover = !inHub && mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 18;
-		g.fill(bx, by, bx + bw, by + 18, inHub ? 0xC0202830 : hover ? 0xF02A6A88 : 0xE0204858);
-		g.outline(bx, by, bw, 18, 0xFF55D8FF);
-		g.centeredText(font, inHub ? "You're in the hub" : "Back to the hub", width / 2, by + 5, 0xFFFFFFFF);
-		g.centeredText(font, "Your Ruby Wars base and things are saved while you're away.", width / 2, by + 26, 0xFF8A949E);
+		int by = height - 28;
+		hubButton = new int[] {bx, by, bw, 16};
+		boolean hover = !inHub && mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 16;
+		g.fill(bx, by, bx + bw, by + 16, inHub ? 0xC0202830 : hover ? 0xF02A6A88 : 0xE0204858);
+		g.outline(bx, by, bw, 16, 0xFF55D8FF);
+		g.centeredText(font, inHub ? "You're in the hub" : "Back to the hub", width / 2, by + 4, 0xFFFFFFFF);
+		g.centeredText(font, "Your Ruby Wars base and things are saved while you're away.", width / 2, height - 10, 0xFF8A949E);
+		if (tooltip != null) {
+			g.setComponentTooltipForNextFrame(font, List.of(Component.literal(tooltip)), mouseX, mouseY);
+		}
 	}
 
 	private static boolean inside(MouseButtonEvent event, int[] box) {
-		return event.x() >= box[0] && event.x() < box[0] + box[2] && event.y() >= box[1] && event.y() < box[1] + box[3];
+		return box != null && event.x() >= box[0] && event.x() < box[0] + box[2] && event.y() >= box[1] && event.y() < box[1] + box[3];
+	}
+
+	private void go(String mode) {
+		ClientPlayNetworking.send(new MorePayloads.ModeSelect(mode));
+		onClose();
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
-		if (pickDifficulty(GAMES.get(1))) {
+		if (pickDifficulty(MAIN.get(1))) {
 			for (int d = 0; d < 3; d++) {
-				if (difficultyButtons[d] != null && inside(event, difficultyButtons[d])) {
-					ClientPlayNetworking.send(new MorePayloads.ModeSelect("horde:" + DIFFICULTIES[d]));
-					onClose();
+				if (inside(event, difficultyButtons[d])) {
+					go("horde:" + DIFFICULTIES[d]);
 					return true;
 				}
 			}
 		}
 		for (int i = 0; i < cards.length; i++) {
-			if (inside(event, cards[i]) && !here(GAMES.get(i)) && !pickDifficulty(GAMES.get(i))) {
-				ClientPlayNetworking.send(new MorePayloads.ModeSelect(GAMES.get(i).id()));
-				onClose();
+			if (inside(event, cards[i]) && !here(MAIN.get(i).id()) && !pickDifficulty(MAIN.get(i))) {
+				go(MAIN.get(i).id());
+				return true;
+			}
+		}
+		for (int i = 0; i < rows.size(); i++) {
+			if (inside(event, rows.get(i)) && !here(rowIds.get(i))) {
+				go(rowIds.get(i));
 				return true;
 			}
 		}
 		if (inside(event, hubButton) && !where().equals("HUB")) {
-			ClientPlayNetworking.send(new MorePayloads.ModeSelect("hub"));
-			onClose();
+			go("hub");
 			return true;
 		}
 		return super.mouseClicked(event, doubled);

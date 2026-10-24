@@ -18,4 +18,7 @@ public interface DisplayAccessor {
 
 	@Invoker("setViewRange")
 	void rubymod$setViewRange(float range);
+
+	@Invoker("setPosRotInterpolationDuration")
+	void rubymod$setPosRotInterpolationDuration(int ticks);
 }

@@ -178,6 +178,10 @@ public class ModBlocks {
 			props().mapColor(MapColor.EMERALD).strength(-1.0F, 3_600_000.0F).noCollision().noOcclusion().noLootTable().lightLevel(s -> 11)
 					.sound(SoundType.GLASS).pushReaction(PushReaction.IMMOVEABLE));
 
+	public static final Block PARTY_PORTAL = registerNoItem("party_portal", p -> new dev.rubymod.block.ModePortalBlock(0xC050FF, p),
+			props().mapColor(MapColor.COLOR_PURPLE).strength(-1.0F, 3_600_000.0F).noCollision().noOcclusion().noLootTable().lightLevel(s -> 11)
+					.sound(SoundType.GLASS).pushReaction(PushReaction.IMMOVEABLE));
+
 	private static Block registerNoItem(String name, Function<BlockBehaviour.Properties, Block> factory, BlockBehaviour.Properties properties) {
 		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, RubyMod.id(name));
 		return Registry.register(BuiltInRegistries.BLOCK, key, factory.apply(properties.setId(key)));

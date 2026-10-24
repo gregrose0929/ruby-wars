@@ -162,6 +162,17 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: open the game picker (walking into the hub's Party Games portal). */
+	public record OpenModes() implements CustomPacketPayload {
+		public static final Type<OpenModes> TYPE = new Type<>(RubyMod.id("open_modes"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, OpenModes> CODEC = StreamCodec.unit(new OpenModes());
+
+		@Override
+		public Type<OpenModes> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: the Horde reward picked. */
 	public record HordePick(String id) implements CustomPacketPayload {
 		public static final Type<HordePick> TYPE = new Type<>(RubyMod.id("horde_pick"));
@@ -303,6 +314,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.serverboundPlay().register(ModeSelect.TYPE, ModeSelect.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ModeInfo.TYPE, ModeInfo.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HordeOffer.TYPE, HordeOffer.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(OpenModes.TYPE, OpenModes.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HordePick.TYPE, HordePick.CODEC);
 	}
 }

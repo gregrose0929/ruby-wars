@@ -279,8 +279,8 @@ public final class Duels {
 		if (duelOf(player.getUUID()) != null) {
 			return you ? "You're already in a duel. /duel leave to quit it." : who + " is already in a duel.";
 		}
-		if (Horde.playing(player)) {
-			return you ? "Leave Horde first (H)." : who + " is playing Horde.";
+		if (Horde.playing(player) || dev.rubymod.game.party.PartyGames.of(player) != null) {
+			return you ? "Leave your game first (H)." : who + " is in another game.";
 		}
 		if (Rules.isEliminated(player.getUUID()) || player.isSpectator()) {
 			return you ? "Spectators can't duel." : who + " is spectating.";
@@ -921,13 +921,13 @@ public final class Duels {
 	 * The three arenas, rebuilt (and repaired) at the start of every duel. Each is
 	 * symmetric, so neither side has the better spawn.
 	 */
-	static final class ArenaBuilder {
+	public static final class ArenaBuilder {
 		private static final int FLAGS = Block.UPDATE_CLIENTS;
 
 		private ArenaBuilder() {
 		}
 
-		static void build(ServerLevel level, Mode mode, BlockPos c) {
+		public static void build(ServerLevel level, Mode mode, BlockPos c) {
 			int r = switch (mode) {
 				case GUNS -> mode.half + 4;
 				case VEHICLES -> mode.half + 4;

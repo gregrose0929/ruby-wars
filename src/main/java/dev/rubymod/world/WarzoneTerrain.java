@@ -48,8 +48,24 @@ public final class WarzoneTerrain {
 	}
 
 	public static Column column(int bx, int bz) {
-		double x = bx + 0.5;
-		double z = bz + 0.5;
+		return columnAt(bx + 0.5, bz + 0.5);
+	}
+
+	/**
+	 * The same island shrunk to {@code scale} (Ruby Rush uses a quarter-size copy): the
+	 * layout shrinks, and hills and mountains get lower so slopes stay walkable.
+	 */
+	public static Column column(int bx, int bz, double scale) {
+		if (scale >= 0.999) {
+			return column(bx, bz);
+		}
+		Column c = columnAt((bx + 0.5) / scale, (bz + 0.5) / scale);
+		double squash = Math.max(0.4, Math.min(1.0, scale * 2.0));
+		int h = c.height() > SEA ? SEA + (int) Math.round((c.height() - SEA) * squash) : c.height();
+		return new Column(h, c.zone(), c.theme());
+	}
+
+	private static Column columnAt(double x, double z) {
 		int k = quadrant(x, z);
 		// Turn the point back into the first corner: every corner shares this land.
 		double cx = x;

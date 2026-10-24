@@ -49,7 +49,8 @@ public final class Gunfire {
 	}
 
 	public static void tryFire(ServerLevel level, ServerPlayer player, ItemStack stack, GunItem gun) {
-		if (player.isSpectator() || Rules.isEliminated(player.getUUID())) {
+		if (player.isSpectator() || Rules.isEliminated(player.getUUID()) && dev.rubymod.game.Hub.inRubyWarsWorld(player)
+				|| player instanceof net.minecraft.server.level.ServerPlayer sp && !dev.rubymod.game.party.PartyGames.allowsGuns(sp)) {
 			return;
 		}
 		long now = level.getGameTime();
