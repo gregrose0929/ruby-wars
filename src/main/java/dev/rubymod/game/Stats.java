@@ -29,7 +29,7 @@ import net.minecraft.world.level.storage.LevelResource;
  * Lifetime stats for every player, across every mode (they last across seasons):
  * party game wins and kills, Horde records, Sky Race times, duels and seasons won.
  * They feed the profile screen (I), the hub leaderboards and cosmetic unlocks. Also
- * what each player has unlocked and is wearing, and whether they've had the hub tour.
+ * what each player has unlocked and is wearing.
  * Saved to world/rubywars/stats.json.
  */
 public final class Stats {
@@ -52,7 +52,6 @@ public final class Stats {
 		public String hat = "";
 		public String trail = "";
 		public String killEffect = "";
-		public boolean toured;
 
 		public int totalWins() {
 			return wins.values().stream().mapToInt(Integer::intValue).sum();

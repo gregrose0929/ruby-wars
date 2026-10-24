@@ -153,7 +153,7 @@ public final class AutoTest {
 		return max / 1_000_000;
 	}
 
-	/** The hub tour, profile and cosmetics, leaderboards, bots in CTF and Gun Game, crash safety, tick times. */
+	/** The hub, profile and cosmetics, leaderboards, bots in CTF and Gun Game, crash safety, tick times. */
 	private static void extrasScript() {
 		then(0, mc -> {
 			command(mc, "time set noon");
@@ -162,14 +162,9 @@ public final class AutoTest {
 		});
 		then(60, mc -> onServer(mc, server -> log("tick times after start (arenas building in the background): max {} ms, avg {} ms",
 				maxTickMs(server), server.getAverageTickTimeNanos() / 1_000_000)));
-		// First visit to the hub: the tour.
+		// First visit to the hub.
 		then(5, mc -> command(mc, "execute as @p run hub"));
-		then(80, mc -> shot(mc, "extras-tour-1"));
-		then(100, mc -> shot(mc, "extras-tour-2"));
-		then(330, mc -> {
-			shot(mc, "extras-tour-end");
-			onServer(mc, server -> log("toured: {}", dev.rubymod.game.Stats.get(me(server)).toured));
-		});
+		then(80, mc -> shot(mc, "extras-hub"));
 		// Some wins: cosmetics unlock.
 		then(5, mc -> onServer(mc, server -> {
 			var me = me(server);
@@ -240,7 +235,7 @@ public final class AutoTest {
 			dev.rubymod.game.party.PartyGames.crashed(pg("gungame"), new RuntimeException("test crash"));
 			log("after the test crash: {} | player in {}", pg("gungame").debugState(), me(server).level().dimension().identifier());
 		}));
-		then(40, mc -> onServer(mc, server -> log("tick times overall: max {} ms, avg {} ms; toured {}", maxTickMs(server), server.getAverageTickTimeNanos() / 1_000_000, dev.rubymod.game.Stats.get(me(server)).toured)));
+		then(40, mc -> onServer(mc, server -> log("tick times overall: max {} ms, avg {} ms", maxTickMs(server), server.getAverageTickTimeNanos() / 1_000_000)));
 	}
 
 	/** Every party game in turn (or just one: party:<id>). */	/** Every party game in turn (or just one: party:<id>). */

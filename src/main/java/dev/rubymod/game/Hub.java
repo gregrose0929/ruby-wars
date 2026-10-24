@@ -84,8 +84,6 @@ public final class Hub {
 	private static final Map<UUID, Integer> PORTAL_COOLDOWN = new HashMap<>();
 	/** Players who just joined, and how many ticks until they're sorted out. */
 	private static final Map<UUID, Integer> JOINING = new HashMap<>();
-	/** Players on the hub tour, and how far along (ticks). */
-	private static final Map<UUID, Integer> TOUR = new HashMap<>();
 
 	private Hub() {
 	}
@@ -116,7 +114,6 @@ public final class Hub {
 		built = false;
 		PORTAL_COOLDOWN.clear();
 		JOINING.clear();
-		TOUR.clear();
 	}
 
 	/** Called on join: a few ticks later, duels give back what they owe and the hub takes the player in. */
@@ -280,81 +277,7 @@ public final class Hub {
 		player.clearFire();
 		player.setHealth(player.getMaxHealth());
 		player.resetFallDistance();
-		if (!Stats.get(player).toured && !player.getClass().getSimpleName().equals("FakePlayer")) {
-			startTour(player);
-		} else {
-			Alerts.title(player, "THE HUB", "Walk into a portal to play  \u2022  H switches games", ChatFormatting.AQUA);
-		}
-	}
-
-	// ----- The first-time tour -----
-
-	private record Stop(int at, String title, String sub, int color, double x, double z) {
-	}
-
-	private static final List<Stop> TOUR_STOPS = List.of(
-			new Stop(0, "WELCOME!", "Here's a quick tour (20 seconds)", 0xFFFFFF, Double.NaN, 0),
-			new Stop(60, "RED PORTAL", "Ruby Wars: build a base, then battle!", 0xFF3030, RUBY_X + 0.5, PORTAL_Z + 0.5),
-			new Stop(150, "GREEN PORTAL", "Co-op Horde: team up against waves of enemies", 0x40FF60, HORDE_X + 0.5, PORTAL_Z + 0.5),
-			new Stop(240, "PURPLE PORTAL", "Party Games: 9 quick games to play together", 0xC050FF, 0.5, PARTY_Z + 0.5),
-			new Stop(330, "PRESS H", "any time to switch games (or come back here)", 0x55D8FF, Double.NaN, 0),
-			new Stop(410, "PRESS I", "for your stats and cosmetics. Y opens the help book!", 0xFFC040, Double.NaN, 0),
-			new Stop(490, "HAVE FUN!", "Walk into a portal to play", 0xFFFFFF, Double.NaN, 0));
-
-	public static void startTour(ServerPlayer player) {
-		TOUR.put(player.getUUID(), 0);
-		player.sendSystemMessage(Component.literal("Welcome to Ruby Wars! A quick tour of the hub is starting. ").withStyle(ChatFormatting.AQUA)
-				.append(Component.literal("[Skip the tour]").withStyle(s -> s.withColor(ChatFormatting.GRAY).withUnderlined(true)
-						.withClickEvent(new net.minecraft.network.chat.ClickEvent.RunCommand("/tour skip")))));
-	}
-
-	public static void endTour(ServerPlayer player) {
-		TOUR.remove(player.getUUID());
-		Stats.get(player).toured = true;
-		Stats.markDirty();
-	}
-
-	private static void tickTour(MinecraftServer server, ServerLevel hub) {
-		for (UUID id : new ArrayList<>(TOUR.keySet())) {
-			ServerPlayer player = server.getPlayerList().getPlayer(id);
-			if (player == null) {
-				TOUR.remove(id);
-				continue;
-			}
-			if (player.level() != hub) {
-				endTour(player); // they found their own way
-				continue;
-			}
-			int t = TOUR.get(id) + 4;
-			TOUR.put(id, t);
-			Stop current = null;
-			for (Stop stop : TOUR_STOPS) {
-				if (t >= stop.at()) {
-					current = stop;
-				}
-				if (t - 4 < stop.at() && t >= stop.at()) {
-					Alerts.title(player, stop.title(), stop.sub(), ChatFormatting.WHITE);
-					player.sendSystemMessage(Component.literal("\u25B6 " + stop.title().charAt(0) + stop.title().substring(1).toLowerCase() + ": " + stop.sub())
-							.withStyle(ChatFormatting.AQUA));
-					player.level().playSound(null, player.blockPosition(), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 0.6F, 1.2F);
-				}
-			}
-			// A trail of sparkles from the player to the portal being described.
-			if (current != null && !Double.isNaN(current.x())) {
-				double fx = player.getX();
-				double fz = player.getZ();
-				double dx = current.x() - fx;
-				double dz = current.z() - fz;
-				double len = Math.max(1, Math.sqrt(dx * dx + dz * dz));
-				for (double d = 1; d < len; d += 1.2) {
-					hub.sendParticles(player, new net.minecraft.core.particles.DustParticleOptions(current.color(), 1.6F), true, false,
-							fx + dx / len * d, FLOOR + 1.6, fz + dz / len * d, 1, 0, 0.05, 0, 0);
-				}
-			}
-			if (t >= 520) {
-				endTour(player);
-			}
-		}
+		Alerts.title(player, "THE HUB", "Walk into a portal to play  \u2022  H switches games", ChatFormatting.AQUA);
 	}
 
 	/** Back into Ruby Wars: where you were, with what you had. */
@@ -526,7 +449,6 @@ public final class Hub {
 		if (hub == null || server.getTickCount() % 4 != 0) {
 			return;
 		}
-		tickTour(server, hub);
 		PORTAL_COOLDOWN.replaceAll((id, t) -> t - 4);
 		PORTAL_COOLDOWN.values().removeIf(t -> t <= 0);
 		for (ServerPlayer player : new ArrayList<>(hub.players())) {

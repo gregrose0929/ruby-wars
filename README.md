@@ -123,9 +123,6 @@ you're hiding in Hide & Seek, invisible or watching. The hub has two leaderboard
 Champions (most wins) and Records (Horde waves, Sky Race times, most party kills). Stats
 live in `world/rubywars/stats.json` and last across seasons.
 
-New players get a 20-second tour of the hub the first time they arrive (`/tour` shows it
-again, `/tour skip` skips it).
-
 ## Party games
 
 Nine quick, round-based games from the hub's purple portal or the H picker
@@ -644,7 +641,7 @@ so you don't need to start a season to test weapons.
 
 ## Commands
 
-Everyone: `/hub`, `/tour`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`, `/horde shop`, `/horde ready`,
+Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`, `/horde shop`, `/horde ready`,
 `/play gungame|hideseek|infection|ctf|koth|tanks|skyrace|build|rush` (party games), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
 base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),
