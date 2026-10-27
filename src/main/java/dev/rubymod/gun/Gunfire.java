@@ -10,6 +10,7 @@ import dev.rubymod.game.SpawnShield;
 import dev.rubymod.net.Net;
 import dev.rubymod.net.Payloads;
 import dev.rubymod.registry.ModComponents;
+import dev.rubymod.game.rift.RelicEffects;
 import dev.rubymod.registry.ModDamage;
 
 
@@ -71,9 +72,12 @@ public final class Gunfire {
 			return;
 		}
 
-		NEXT_SHOT.put(player.getUUID(), now + stats.fireInterval());
+		boolean rift = dev.rubymod.game.rift.Rift.playing(player);
+		NEXT_SHOT.put(player.getUUID(), now + (rift ? Math.max(1, Math.round(stats.fireInterval() * RelicEffects.fireIntervalScale(player)))
+				: stats.fireInterval()));
 		SpawnShield.clear(player);
-		if (!player.isCreative()) {
+		boolean infinite = rift && RelicEffects.infiniteAmmo(player);
+		if (!player.isCreative() && !infinite) {
 			stack.set(ModComponents.AMMO, ammo - 1);
 		}
 
@@ -81,9 +85,16 @@ public final class Gunfire {
 		float spread = aiming ? stats.aimSpread() : stats.hipSpread();
 		Vec3 eye = player.getEyePosition();
 		dev.rubymod.game.Duels.onShot(player, stats.pellets());
-		for (int i = 0; i < stats.pellets(); i++) {
-			Vec3 dir = withSpread(player.getLookAngle(), spread, player.getRandom());
-			trace(level, player, stats, eye, dir, stats.range(), stats.special() == GunStats.Special.BOUNCE ? 1 : 0);
+		int volleys = rift ? RelicEffects.shotMultiplier(player) : 1;
+		int bounces = (stats.special() == GunStats.Special.BOUNCE ? 1 : 0) + (rift ? RelicEffects.extraBounces(player) : 0);
+		for (int v = 0; v < volleys; v++) {
+			for (int i = 0; i < stats.pellets(); i++) {
+				Vec3 dir = withSpread(player.getLookAngle(), spread + v * 1.2F, player.getRandom());
+				trace(level, player, stats, eye, dir, stats.range(), bounces);
+			}
+		}
+		if (rift) {
+			RelicEffects.onShot(level, player, stack);
 		}
 
 		playShot(level, player, stats);
@@ -97,8 +108,16 @@ public final class Gunfire {
 		float kick = aiming ? stats.recoil() * 0.6F : stats.recoil();
 		Net.send(player, new Payloads.Recoil(kick, (random.nextFloat() - 0.5F) * kick * 0.5F));
 
-		if (ammo - 1 <= 0 && !player.isCreative()) {
+		if (ammo - 1 <= 0 && !player.isCreative() && !infinite) {
 			startReload(player);
+		}
+	}
+
+	/** Ruby Rift's Arsenal: another gun in your hotbar fires along with the one in your hand (no ammo used). */
+	public static void ghostShot(ServerLevel level, ServerPlayer player, GunStats stats) {
+		Vec3 eye = player.getEyePosition();
+		for (int i = 0; i < stats.pellets(); i++) {
+			trace(level, player, stats, eye, withSpread(player.getLookAngle(), stats.hipSpread(), player.getRandom()), stats.range(), 0);
 		}
 	}
 
@@ -128,6 +147,9 @@ public final class Gunfire {
 				double travelled = start.distanceTo(hitPos);
 				Vec3 normal = Vec3.atLowerCornerOf(blockHit.getDirection().getUnitVec3i());
 				Vec3 reflected = dir.subtract(normal.scale(2 * dir.dot(normal)));
+				if (dev.rubymod.game.rift.Rift.playing(shooter)) {
+					reflected = RelicEffects.bounceAim(level, shooter, hitPos, reflected);
+				}
 				drawTracer(level, start, hitPos, stats);
 				trace(level, shooter, stats, hitPos.add(normal.scale(0.05)), reflected, range - travelled, bounces - 1);
 				return;
@@ -197,10 +219,18 @@ public final class Gunfire {
 		}
 		boolean headshot = target instanceof LivingEntity && hitPos.y >= eyeY - 0.22;
 		float damage = stats.damage() * (headshot ? stats.headshot() : 1.0F);
+		boolean rift = dev.rubymod.game.rift.Rift.playing(shooter);
+		if (rift) {
+			damage = RelicEffects.damage(shooter, target, damage);
+		}
+		float healthBefore = target instanceof LivingEntity living ? living.getHealth() : 0;
 		target.setInvulnerableTime(0);
 		boolean wasAlive = target.isAlive();
 		target.hurtServer(level, ModDamage.source(level, headshot ? ModDamage.HEADSHOT : ModDamage.BULLET, shooter, shooter), damage);
 		boolean killed = wasAlive && !target.isAlive();
+		if (rift && killed) {
+			RelicEffects.overkill(shooter, target, damage - healthBefore);
+		}
 		Bounties.onGunHit(shooter, target, headshot);
 		level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, hitPos.x, hitPos.y, hitPos.z, 1, 0.1, 0.1, 0.1, 0.0);
 		Net.send(shooter, new Payloads.HitMarker(headshot, killed));

@@ -150,6 +150,148 @@ public final class AutoTest {
 
 	private static net.minecraft.core.BlockPos tankMark;
 
+	private static String riftOpenNode() {
+		var screen = dev.rubymod.client.rift.RiftClient.lastScreen;
+		if (screen != null && screen.kind().equals("map")) {
+			for (String line : screen.lines()) {
+				String[] f = line.split("[|]", -1);
+				if (f.length >= 8 && f[7].equals("open")) {
+					return f[0];
+				}
+			}
+		}
+		return "0";
+	}
+
+	private static String riftFirstOffer() {
+		var screen = dev.rubymod.client.rift.RiftClient.lastScreen;
+		if (screen != null) {
+			for (String line : screen.lines()) {
+				String[] f = line.split("[|]", -1);
+				if (f.length >= 7 && !f[0].equals("title") && !f[0].equals("gold")) {
+					return f[0];
+				}
+			}
+		}
+		return "";
+	}
+
+	/** Shoot your rifle at the nearest Rift monster (server side, aimed for you). */
+	private static void riftShoot(Minecraft mc) {
+		onServer(mc, server -> {
+			var me = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) me.level();
+			var target = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, me.getBoundingBox().inflate(40),
+					e -> dev.rubymod.game.rift.Rift.isEnemy(e) && e.isAlive()).stream()
+					.min(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(me))).orElse(null);
+			if (target == null) {
+				return;
+			}
+			var to = target.getBoundingBox().getCenter().subtract(me.getEyePosition());
+			me.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+			me.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+			me.setYHeadRot(me.getYRot());
+			me.getInventory().setSelectedSlot(0);
+			var stack = me.getMainHandItem();
+			if (stack.getItem() instanceof dev.rubymod.gun.GunItem gun) {
+				dev.rubymod.gun.Gunfire.forget(me.getUUID());
+				dev.rubymod.gun.Gunfire.tryFire(level, me, stack, gun);
+			}
+		});
+	}
+
+	private static void riftScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "difficulty normal");
+			command(mc, "gamemode survival @a");
+		});
+		then(20, mc -> command(mc, "execute as @p run play rift"));
+		then(160, mc -> {
+			command(mc, "effect give @a minecraft:resistance infinite 255 true");
+			log("threshold: {}", dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-threshold");
+		});
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+		then(30, mc -> {
+			log("vote: {} | screen {}", dev.rubymod.game.rift.Rift.debugState(), mc.gui.screen());
+			shot(mc, "rift-map");
+		});
+		then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+				new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+		then(200, mc -> {
+			log("room: {}", dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-room");
+		});
+		then(80, mc -> {
+			log("fight: {}", dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-fight");
+		});
+		// Relics, with the flashy pickup.
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.rift.Rift.testSkip(server, "chain_lightning");
+			dev.rubymod.game.rift.Rift.testSkip(server, "pocket_tank");
+			dev.rubymod.game.rift.Rift.testSkip(server, "drop_turret");
+		}));
+		then(6, mc -> shot(mc, "rift-pickup"));
+		then(10, mc -> onServer(mc, server -> {
+			dev.rubymod.game.rift.Rift.testSkip(server, "orbital_strike");
+			dev.rubymod.game.rift.Rift.testSkip(server, "cryo");
+			dev.rubymod.game.rift.Rift.testSkip(server, "napalm");
+		}));
+		then(8, mc -> shot(mc, "rift-legendary"));
+		for (int i = 0; i < 24; i++) {
+			then(4, mc -> riftShoot(mc));
+		}
+		then(2, mc -> {
+			log("after shooting: {}", dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-shooting");
+		});
+		then(60, mc -> shot(mc, "rift-orbital"));
+		// Clear the room: the relic choice.
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+		then(80, mc -> {
+			log("cleared: {} | screen {}", dev.rubymod.game.rift.Rift.debugState(), mc.gui.screen());
+			shot(mc, "rift-offer");
+		});
+		then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+				new dev.rubymod.net.MorePayloads.RiftChoice("pick", riftFirstOffer())));
+		then(20, mc -> shot(mc, "rift-portal"));
+		then(5, mc -> onServer(mc, server -> {
+			var me = me(server);
+			var b = dev.rubymod.game.rift.Rift.debugState();
+			log("picked: {}", b);
+		}));
+		// The boss.
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "boss")));
+		then(200, mc -> onServer(mc, server -> {
+			var me = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) me.level();
+			me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 255, false, false));
+			level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, me.getBoundingBox().inflate(80),
+					e -> dev.rubymod.game.rift.JuggernautMech.isBoss(e)).stream().findFirst().ifPresent(b ->
+					me.teleportTo(level, b.getX() + 7, b.getY() + 2, b.getZ() + 9, java.util.Set.of(), 140, 5, true));
+		}));
+		then(30, mc -> {
+			log("boss: {}", dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-boss");
+		});
+		then(120, mc -> {
+			log("boss fight: {}", dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-boss2");
+		});
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+		then(30, mc -> shot(mc, "rift-boss-dying"));
+		then(80, mc -> {
+			log("after the boss: {}", dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-victory");
+		});
+		then(20, mc -> {
+			log("done");
+			mc.stop();
+		});
+	}
+
 	private static long maxTickMs(net.minecraft.server.MinecraftServer server) {
 		long max = 0;
 		for (long t : server.getTickTimesNanos()) {
@@ -811,6 +953,10 @@ public final class AutoTest {
 				log("done");
 				mc.stop();
 			});
+			return;
+		}
+		if (mode.equals("rift")) {
+			riftScript();
 			return;
 		}
 		if (mode.equals("villagetour")) {

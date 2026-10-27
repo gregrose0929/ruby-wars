@@ -1,0 +1,91 @@
+package dev.rubymod.game.rift;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.util.RandomSource;
+
+/**
+ * Which three relics you're offered: better tiers from elites, a Legendary in every
+ * treasure room, nothing you already have, and a lean toward the elements you're already
+ * building around (two Shock relics make a third more likely).
+ */
+final class RelicOffers {
+	private RelicOffers() {
+	}
+
+	static List<Relic> offer(Rift.Runner r, RiftMap.Type room, RandomSource random) {
+		List<Relic> out = new ArrayList<>();
+		for (int i = 0; i < 3; i++) {
+			Relic.Tier tier = switch (room) {
+				case TREASURE -> i == 0 ? Relic.Tier.LEGENDARY : Relic.Tier.RARE;
+				case BOSS -> Relic.Tier.LEGENDARY;
+				case ELITE -> roll(random, 0, 55, 22, 23);
+				default -> roll(random, 38, 52, 0, 10);
+			};
+			Relic pick = pick(r, tier, out, random);
+			if (pick == null) {
+				pick = pick(r, Relic.Tier.RARE, out, random);
+			}
+			if (pick == null) {
+				pick = pick(r, Relic.Tier.COMMON, out, random);
+			}
+			if (pick != null) {
+				out.add(pick);
+			}
+		}
+		return out;
+	}
+
+	private static Relic.Tier roll(RandomSource random, int common, int rare, int legendary, int cursed) {
+		int v = random.nextInt(common + rare + legendary + cursed);
+		if (v < common) {
+			return Relic.Tier.COMMON;
+		} else if (v < common + rare) {
+			return Relic.Tier.RARE;
+		} else if (v < common + rare + legendary) {
+			return Relic.Tier.LEGENDARY;
+		}
+		return Relic.Tier.CURSED;
+	}
+
+	private static Relic pick(Rift.Runner r, Relic.Tier tier, List<Relic> already, RandomSource random) {
+		List<Relic> pool = new ArrayList<>();
+		for (Relic relic : Relic.values()) {
+			if (relic.tier != tier || (r != null && r.has(relic)) || already.contains(relic)) {
+				continue;
+			}
+			int weight = 1;
+			if (r != null && relic.element != Relic.Element.NONE) {
+				long same = r.relics.stream().filter(x -> x.element == relic.element).count();
+				weight += (int) same * 2;
+			}
+			for (int k = 0; k < weight; k++) {
+				pool.add(relic);
+			}
+		}
+		return pool.isEmpty() ? null : pool.get(random.nextInt(pool.size()));
+	}
+
+	/** The merchant's stock: two commons, a rare or two, and sometimes a legendary. */
+	static List<Relic> shopStock(RandomSource random) {
+		List<Relic> out = new ArrayList<>();
+		for (Relic.Tier t : new Relic.Tier[] {Relic.Tier.COMMON, Relic.Tier.COMMON, Relic.Tier.RARE, Relic.Tier.RARE,
+				random.nextFloat() < 0.4F ? Relic.Tier.LEGENDARY : Relic.Tier.CURSED}) {
+			Relic r = pick(null, t, out, random);
+			if (r != null) {
+				out.add(r);
+			}
+		}
+		return out;
+	}
+
+	static int price(Relic r) {
+		return switch (r.tier) {
+			case COMMON -> 60;
+			case RARE -> 100;
+			case LEGENDARY -> 220;
+			case CURSED -> 80;
+		};
+	}
+}

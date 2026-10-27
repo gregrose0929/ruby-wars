@@ -78,7 +78,7 @@ public final class Hub {
 	private static final int PARTY_Z = -18;
 	private static final String LABEL_TAG = "rubymod_hub_label";
 
-	public enum Where { RUBY_WARS, HUB, HORDE, DUEL, PARTY }
+	public enum Where { RUBY_WARS, HUB, HORDE, DUEL, PARTY, RIFT }
 
 	private static boolean built;
 	private static final Map<UUID, Integer> PORTAL_COOLDOWN = new HashMap<>();
@@ -149,6 +149,9 @@ public final class Hub {
 		if (Horde.playing(player)) {
 			return Where.HORDE;
 		}
+		if (dev.rubymod.game.rift.Rift.playing(player)) {
+			return Where.RIFT;
+		}
 		if (dev.rubymod.game.party.PartyGames.of(player) != null) {
 			return Where.PARTY;
 		}
@@ -198,6 +201,7 @@ public final class Hub {
 		Where to = switch (target) {
 			case "rubywars" -> Where.RUBY_WARS;
 			case "horde" -> Where.HORDE;
+			case "rift" -> Where.RIFT;
 			case "hub" -> Where.HUB;
 			case "party" -> Where.PARTY;
 			default -> null;
@@ -213,6 +217,7 @@ public final class Hub {
 			return switch (to) {
 				case RUBY_WARS -> "You're already in Ruby Wars.";
 				case HORDE -> "You're already in Horde.";
+				case RIFT -> "You're already in the Rift.";
 				default -> "You're already in the hub.";
 			};
 		}
@@ -222,6 +227,12 @@ public final class Hub {
 			}
 			if (CombatTag.tagged(player.getUUID())) {
 				return "You're in combat. Wait a few seconds.";
+			}
+		}
+		if (to == Where.RIFT) {
+			String error = dev.rubymod.game.rift.Rift.canJoin(player);
+			if (error != null) {
+				return error;
 			}
 		}
 		if (to == Where.HORDE) {
@@ -247,6 +258,8 @@ public final class Hub {
 			}
 		} else if (from == Where.HORDE) {
 			Horde.leave(player);
+		} else if (from == Where.RIFT) {
+			dev.rubymod.game.rift.Rift.leave(player);
 		} else if (from == Where.PARTY) {
 			current.leave(player);
 		}
@@ -254,6 +267,7 @@ public final class Hub {
 		switch (to) {
 			case RUBY_WARS -> enterRubyWars(player);
 			case HORDE -> Horde.join(player, challenge);
+			case RIFT -> dev.rubymod.game.rift.Rift.join(player);
 			case PARTY -> game.join(player);
 			default -> enterHub(player);
 		}
@@ -501,9 +515,11 @@ public final class Hub {
 		}
 		for (ServerPlayer player : new ArrayList<>(server.getPlayerList().getPlayers())) {
 			Where where = where(player);
-			if ((where == Where.HORDE || where == Where.PARTY) && mustStay(player)) {
+			if ((where == Where.HORDE || where == Where.PARTY || where == Where.RIFT) && mustStay(player)) {
 				if (where == Where.HORDE) {
 					Horde.leave(player);
+				} else if (where == Where.RIFT) {
+					dev.rubymod.game.rift.Rift.leave(player);
 				} else {
 					dev.rubymod.game.party.PartyGames.of(player).leave(player);
 				}
@@ -792,6 +808,7 @@ public final class Hub {
 		List<String> lines = new ArrayList<>();
 		lines.add("rubywars|Ruby Wars|" + rubyWarsStatus(server));
 		lines.add("horde|Co-op Horde|" + Horde.status() + "|" + Horde.running());
+		lines.add("rift|Ruby Rift|" + dev.rubymod.game.rift.Rift.status() + "|" + dev.rubymod.game.rift.Rift.running());
 		lines.addAll(dev.rubymod.game.party.PartyGames.lines());
 		return lines;
 	}

@@ -8,6 +8,7 @@
 		"FireBlockMixin",
 		"FlowingFluidMixin",
 		"ItemDisplayAccessor",
+		"MannequinAccessor",
 		"PlayerMixin",
 		"ServerExplosionMixin",
 		"TextDisplayAccessor"

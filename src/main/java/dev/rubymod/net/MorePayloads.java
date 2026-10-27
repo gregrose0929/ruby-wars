@@ -227,6 +227,82 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: open (or refresh) a Ruby Rift screen: "map", "offer", "shop", "event", or "close". */
+	public record RiftScreen(String kind, List<String> lines) implements CustomPacketPayload {
+		public static final Type<RiftScreen> TYPE = new Type<>(RubyMod.id("rift_screen"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, RiftScreen> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, RiftScreen::kind,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), RiftScreen::lines,
+				RiftScreen::new);
+
+		@Override
+		public Type<RiftScreen> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: a Ruby Rift choice: "vote" (map node), "pick" (relic), "buy", "reroll", "event", "ability" (jump, blink). */
+	public record RiftChoice(String kind, String id) implements CustomPacketPayload {
+		public static final Type<RiftChoice> TYPE = new Type<>(RubyMod.id("rift_choice"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, RiftChoice> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, RiftChoice::kind,
+				ByteBufCodecs.STRING_UTF8, RiftChoice::id,
+				RiftChoice::new);
+
+		@Override
+		public Type<RiftChoice> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: the Ruby Rift HUD: a header line, the team's gold, your relics ("id|icon|TIER") and the team ("name|hp|max|down"). Empty header: no HUD. */
+	public record RiftHud(String header, int gold, List<String> relics, List<String> team) implements CustomPacketPayload {
+		public static final Type<RiftHud> TYPE = new Type<>(RubyMod.id("rift_hud"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, RiftHud> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, RiftHud::header,
+				ByteBufCodecs.VAR_INT, RiftHud::gold,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), RiftHud::relics,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), RiftHud::team,
+				RiftHud::new);
+
+		@Override
+		public Type<RiftHud> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: a floating damage number where you hit something. */
+	public record DamageNumber(float x, float y, float z, float amount, int color) implements CustomPacketPayload {
+		public static final Type<DamageNumber> TYPE = new Type<>(RubyMod.id("damage_number"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DamageNumber> CODEC = StreamCodec.composite(
+				ByteBufCodecs.FLOAT, DamageNumber::x,
+				ByteBufCodecs.FLOAT, DamageNumber::y,
+				ByteBufCodecs.FLOAT, DamageNumber::z,
+				ByteBufCodecs.FLOAT, DamageNumber::amount,
+				ByteBufCodecs.INT, DamageNumber::color,
+				DamageNumber::new);
+
+		@Override
+		public Type<DamageNumber> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: a screen effect: "flash" (a colour wash), "slowmo" (a cold vignette), "rewind", "relic:<item id>" (the big item pop). */
+	public record ScreenFx(String kind, int color, int ticks) implements CustomPacketPayload {
+		public static final Type<ScreenFx> TYPE = new Type<>(RubyMod.id("screen_fx"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ScreenFx> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ScreenFx::kind,
+				ByteBufCodecs.INT, ScreenFx::color,
+				ByteBufCodecs.VAR_INT, ScreenFx::ticks,
+				ScreenFx::new);
+
+		@Override
+		public Type<ScreenFx> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: buy this from the Horde Armory. */
 	public record HordeBuy(String id) implements CustomPacketPayload {
 		public static final Type<HordeBuy> TYPE = new Type<>(RubyMod.id("horde_buy"));
@@ -374,5 +450,10 @@ public final class MorePayloads {
 		PayloadTypeRegistry.serverboundPlay().register(CosmeticSelect.TYPE, CosmeticSelect.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HordeBuy.TYPE, HordeBuy.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaceMap.TYPE, RaceMap.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(RiftScreen.TYPE, RiftScreen.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(RiftChoice.TYPE, RiftChoice.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(RiftHud.TYPE, RiftHud.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DamageNumber.TYPE, DamageNumber.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(ScreenFx.TYPE, ScreenFx.CODEC);
 	}
 }

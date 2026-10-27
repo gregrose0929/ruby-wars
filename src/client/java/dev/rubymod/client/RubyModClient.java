@@ -64,6 +64,7 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			dev.rubymod.client.rift.RiftClient.tick(client);
 			while (reloadKey.consumeClick()) {
 				if (Targeting.piloting(client) != null) {
 					ClientPlayNetworking.send(new Payloads.AircraftCycle());
@@ -112,7 +113,7 @@ public class RubyModClient implements ClientModInitializer {
 				}
 			}
 			while (researchKey.consumeClick()) {
-				if (client.player != null && client.gui.screen() == null) {
+				if (client.player != null && client.gui.screen() == null && !dev.rubymod.client.rift.RiftClient.reopen()) {
 					client.gui.setScreen(new ResearchScreen());
 				}
 			}
@@ -262,6 +263,8 @@ public class RubyModClient implements ClientModInitializer {
 		HudElementRegistry.addLast(RubyMod.id("pilot_hud"), new PilotHud());
 		HudElementRegistry.addLast(RubyMod.id("vehicle_hud"), new VehicleHud());
 		HudElementRegistry.addLast(RubyMod.id("launcher_seeker"), new LauncherSeeker());
+		HudElementRegistry.addLast(RubyMod.id("rift"), new dev.rubymod.client.rift.RiftClient.Hud());
+		dev.rubymod.client.rift.RiftClient.register();
 		// In a vehicle the vehicle HUD replaces the hotbar, hearts, hunger, armor, air and XP.
 		for (var element : java.util.List.of(VanillaHudElements.HOTBAR, VanillaHudElements.HEALTH_BAR, VanillaHudElements.FOOD_BAR,
 				VanillaHudElements.ARMOR_BAR, VanillaHudElements.AIR_BAR, VanillaHudElements.EXPERIENCE_LEVEL, VanillaHudElements.INFO_BAR,

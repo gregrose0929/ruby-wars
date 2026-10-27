@@ -106,6 +106,10 @@ public final class Rules {
 		if (isEliminated(a.getUUID()) && Hub.inRubyWarsWorld(a)) {
 			return false;
 		}
+		Boolean rift = dev.rubymod.game.rift.Rift.canHurt(a, v);
+		if (rift != null) {
+			return rift;
+		}
 		Boolean horde = Horde.canHurt(a, v);
 		if (horde != null) {
 			return horde;

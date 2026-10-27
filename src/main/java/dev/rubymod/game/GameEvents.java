@@ -66,7 +66,7 @@ public final class GameEvents {
 				entity.discard();
 				return;
 			}
-			if (!GameConfig.get().hostileMobs && entity instanceof net.minecraft.world.entity.monster.Enemy && !entity.entityTags().contains("rubymod_horde")
+			if (!GameConfig.get().hostileMobs && entity instanceof net.minecraft.world.entity.monster.Enemy && !entity.entityTags().contains("rubymod_horde") && !entity.entityTags().contains(dev.rubymod.game.rift.Rift.TAG)
 					&& entity.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) {
 				entity.discard();
 			}
@@ -84,6 +84,7 @@ public final class GameEvents {
 			Explosions.clearHits();
 			Duels.reset();
 			Horde.reset();
+			dev.rubymod.game.rift.Rift.reset();
 			Horde.load(server);
 			Arenas.load(server);
 			dev.rubymod.game.party.PartyGames.reset(server);
@@ -125,6 +126,14 @@ public final class GameEvents {
 			}
 			dev.rubymod.game.party.PartyGames.tick(server);
 			try {
+				dev.rubymod.game.rift.Rift.tick(server);
+			} catch (RuntimeException e) {
+				riftErrors++;
+				if (riftErrors % 200 == 1) {
+					dev.rubymod.RubyMod.LOGGER.error("Ruby Rift hit an error (skipping the tick)", e);
+				}
+			}
+			try {
 				Hub.tick(server);
 				Cosmetics.tick(server);
 			} catch (RuntimeException e) {
@@ -137,7 +146,7 @@ public final class GameEvents {
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
 				for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 					safeZoneNotice(player);
-					var id = Horde.playing(player) ? Horde.TEAM : player.getUUID();
+					var id = Horde.playing(player) ? Horde.TEAM : dev.rubymod.game.rift.Rift.playing(player) ? new java.util.UUID(0, 1) : player.getUUID();
 					Net.send(player, new Payloads.Economy(dev.rubymod.industry.Grid.rubies(id), dev.rubymod.industry.Grid.charge(id),
 							dev.rubymod.industry.Grid.capacity(id), dev.rubymod.industry.Grid.producedPerSecond(id),
 							dev.rubymod.industry.Grid.consumedPerSecond(id)));
@@ -176,6 +185,7 @@ public final class GameEvents {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			Duels.onLeave(server, handler.getPlayer());
 			Horde.onLeave(server, handler.getPlayer());
+			dev.rubymod.game.rift.Rift.onDisconnect(handler.getPlayer());
 			dev.rubymod.game.party.PartyGames.onDisconnect(handler.getPlayer());
 			VersionCheck.onLeave(handler.getPlayer());
 			Jetpacks.forget(handler.getPlayer().getUUID());
@@ -214,6 +224,8 @@ public final class GameEvents {
 			}
 			Net.send(context.player(), new dev.rubymod.net.MorePayloads.ProfileSync(Stats.profileLines(context.player()), Cosmetics.lines(context.player())));
 		});
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.RiftChoice.TYPE, (payload, context) ->
+				dev.rubymod.game.rift.RiftChoices.handle(context.player(), payload.kind(), payload.id()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordeBuy.TYPE, (payload, context) -> {
 			String error = HordeShop.buy(context.player(), payload.id());
 			if (error != null) {
@@ -306,6 +318,7 @@ public final class GameEvents {
 		// Nothing gets hurt in the hub.
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> entity.level().dimension() != Hub.HUB
 				&& Rules.canHurt(source.getEntity(), entity) && !Armor.crewProtected(entity, source)
+				&& (!(entity instanceof ServerPlayer runner) || dev.rubymod.game.rift.RelicEffects.allowDamage(runner, source, amount))
 				&& !(source.is(net.minecraft.world.damagesource.DamageTypes.IN_WALL) && entity instanceof ServerPlayer p
 						&& dev.rubymod.game.party.PartyGames.of(p) != null));
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamage, damageTaken, blocked) -> {
@@ -316,6 +329,19 @@ public final class GameEvents {
 				Net.send(player, new Payloads.DamageFrom(source.getSourcePosition().x, source.getSourcePosition().z));
 			}
 			if (damageTaken > 0) {
+				try {
+					if (source.getEntity() instanceof ServerPlayer attacker && attacker != entity && dev.rubymod.game.rift.Rift.playing(attacker)) {
+						int color = dev.rubymod.game.rift.RelicEffects.effectColor >= 0 ? dev.rubymod.game.rift.RelicEffects.effectColor
+								: source.is(dev.rubymod.registry.ModDamage.HEADSHOT) ? 0xFFFFD040 : 0xFFFFFFFF;
+						dev.rubymod.game.rift.RiftFx.damageNumber(attacker, entity, damageTaken, color);
+						dev.rubymod.game.rift.RelicEffects.onHit(attacker, entity, damageTaken);
+					}
+					if (entity instanceof ServerPlayer victim && dev.rubymod.game.rift.Rift.playing(victim)) {
+						dev.rubymod.game.rift.RelicEffects.afterDamage(victim);
+					}
+				} catch (RuntimeException e) {
+					dev.rubymod.RubyMod.LOGGER.error("Ruby Rift hit effects failed", e);
+				}
 				confirmHit(entity, source, false);
 				Duels.onHit(entity, source, damageTaken);
 			}
@@ -333,7 +359,8 @@ public final class GameEvents {
 					Horde.hiccup(player.level().getServer(), e);
 					hordeDeath = Horde.playing(player);
 				}
-				if (hordeDeath || dev.rubymod.game.party.PartyGames.onDeath(player, source) || Duels.onDeath(player, source)) {
+				if (hordeDeath || dev.rubymod.game.rift.Rift.onDeath(player, source) || dev.rubymod.game.party.PartyGames.onDeath(player, source)
+						|| Duels.onDeath(player, source)) {
 					return false;
 				}
 				dev.rubymod.block.GraveBlock.bury(player);
@@ -347,6 +374,14 @@ public final class GameEvents {
 			} else {
 				Duels.onEntityDeath(entity, source);
 				Horde.onEntityDeath(entity, source);
+				try {
+					if (source.getEntity() instanceof ServerPlayer killer && dev.rubymod.game.rift.Rift.playing(killer) && dev.rubymod.game.rift.Rift.isEnemy(entity)) {
+						dev.rubymod.game.rift.RelicEffects.onKill(killer, entity);
+					}
+					dev.rubymod.game.rift.Rift.onMobDeath(entity, source);
+				} catch (RuntimeException e) {
+					dev.rubymod.RubyMod.LOGGER.error("Ruby Rift kill effects failed", e);
+				}
 				if (source.getEntity() instanceof ServerPlayer killer && entity instanceof net.minecraft.world.entity.Mob) {
 					Cosmetics.onKill(killer, entity.position());
 				}
@@ -484,6 +519,8 @@ public final class GameEvents {
 		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), pos);
 		return claim == null ? "someone" : claim.ownerName;
 	}
+
+	private static int riftErrors;
 
 	/** Who was standing in a base last second (build phase: safe inside, fair game outside). */
 	private static final java.util.Map<java.util.UUID, Boolean> IN_BASE = new java.util.HashMap<>();

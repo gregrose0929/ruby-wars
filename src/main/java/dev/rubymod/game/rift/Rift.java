@@ -1,0 +1,1309 @@
+package dev.rubymod.game.rift;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import dev.rubymod.RubyMod;
+import dev.rubymod.game.Alerts;
+import dev.rubymod.game.Duels;
+import dev.rubymod.game.Hub;
+import dev.rubymod.game.SpawnShield;
+import dev.rubymod.gun.GunItem;
+import dev.rubymod.mixin.DisplayAccessor;
+import dev.rubymod.mixin.ItemDisplayAccessor;
+import dev.rubymod.mixin.TextDisplayAccessor;
+import dev.rubymod.net.MorePayloads;
+import dev.rubymod.net.Net;
+import dev.rubymod.registry.ModComponents;
+import dev.rubymod.registry.ModItems;
+
+import com.mojang.math.Transformation;
+
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * Ruby Rift: a co-op roguelike for 1-4 players. A run is one descent through the Rift:
+ * pick your route on a branching map, fight through freshly built rooms, and after each
+ * one choose a relic (one of three) that changes how you play for the rest of the run.
+ * Elites, a merchant, mystery events, a campfire, treasure, and a boss at the bottom (the
+ * Juggernaut Mech). Go down and a teammate can bring you back; if everyone's down the
+ * run is over. Your Ruby Wars things are safe in the hub the whole time.
+ */
+public final class Rift {
+	public static final String TAG = "rubymod_rift";
+	private static final int X = -90000;
+	private static final int GROUND = Duels.GROUND;
+	private static final BlockPos THRESHOLD = new BlockPos(X, GROUND, -400);
+	private static final BlockPos[] SLOTS = {new BlockPos(X, GROUND, 0), new BlockPos(X, GROUND, 400)};
+	private static final int STAGING_TICKS = 25 * 20;
+	private static final int VOTE_TICKS = 25 * 20;
+	private static final int REWARD_TICKS = 45 * 20;
+
+	enum State { IDLE, STAGING, VOTE, TRAVEL, FIGHT, CALM, OVER }
+
+	static final class Runner {
+		final UUID id;
+		final String name;
+		final List<Relic> relics = new ArrayList<>();
+		boolean alive = true;
+		Vec3 downAt;
+		int revive;
+		UUID marker;
+		List<Relic> offer = List.of();
+		int vote = -1;
+		int kills;
+		boolean placed;
+		RelicEffects.State fx = new RelicEffects.State();
+		/** Event rooms: this runner's options (and whether they've chosen). */
+		List<String> event = List.of();
+
+		Runner(UUID id, String name) {
+			this.id = id;
+			this.name = name;
+		}
+
+		boolean has(Relic r) {
+			return relics.contains(r);
+		}
+	}
+
+	static final Map<UUID, Runner> RUNNERS = new LinkedHashMap<>();
+	static final Set<UUID> MOBS = new HashSet<>();
+	private static final List<Pending> PENDING = new ArrayList<>();
+	static final ArrayDeque<Runnable> WORK = new ArrayDeque<>();
+	private static final ServerBossEvent BAR = new ServerBossEvent(UUID.randomUUID(), Component.literal("Ruby Rift"), BossEvent.BossBarColor.RED,
+			BossEvent.BossBarOverlay.NOTCHED_10);
+
+	static State state = State.IDLE;
+	private static int timer;
+	static RiftMap map;
+	static RiftMap.Node node;
+	static RiftRoom room;
+	private static int slot;
+	static int gold;
+	private static boolean secondWind = true;
+	private static boolean timeLoopUsed;
+	private static int wave;
+	private static int waves;
+	private static int waveBudget;
+	private static boolean portalOpen;
+	private static UUID portalDisplay;
+	private static JuggernautMech boss;
+	private static long seed;
+	private static int ticks;
+	/** Room events and the shop: what's for sale ("relic id" -> price), shared. */
+	private static final Map<Relic, Integer> SHOP = new LinkedHashMap<>();
+	private static final Map<UUID, Integer> STRAY_CHECK = new HashMap<>();
+
+	/** A monster about to come through a tear in the Rift. */
+	private record Pending(BlockPos at, RiftEnemies.Kind kind, RiftEnemies.Twist twist, int[] left) {
+	}
+
+	private Rift() {
+	}
+
+	// ----- Who's in -----
+
+	public static boolean playing(Player player) {
+		return RUNNERS.containsKey(player.getUUID());
+	}
+
+	static Runner runner(Entity e) {
+		return e == null ? null : RUNNERS.get(e.getUUID());
+	}
+
+	public static boolean isEnemy(Entity e) {
+		return e != null && MOBS.contains(e.getUUID());
+	}
+
+	/** Runners never hurt each other (null: not a Rift matter). */
+	public static Boolean canHurt(Player a, Player b) {
+		return playing(a) || playing(b) ? Boolean.FALSE : null;
+	}
+
+	static List<ServerPlayer> players(MinecraftServer server) {
+		List<ServerPlayer> out = new ArrayList<>();
+		for (UUID id : RUNNERS.keySet()) {
+			ServerPlayer p = server.getPlayerList().getPlayer(id);
+			if (p != null) {
+				out.add(p);
+			}
+		}
+		return out;
+	}
+
+	static ServerLevel level(MinecraftServer server) {
+		return server.getLevel(Duels.ARENA);
+	}
+
+	public static String status() {
+		return switch (state) {
+			case IDLE -> "Nobody in the Rift";
+			case STAGING -> RUNNERS.size() + " getting ready";
+			case OVER -> "Run ending";
+			default -> RUNNERS.size() + " in a run  •  floor " + (node == null ? 1 : node.floor + 1) + "/" + (RiftMap.FLOORS + 1);
+		};
+	}
+
+	public static boolean running() {
+		return state != State.IDLE && state != State.STAGING;
+	}
+
+	public static String canJoin(ServerPlayer player) {
+		if (RUNNERS.size() >= 4) {
+			return "The Rift run is full (4 players).";
+		}
+		return null;
+	}
+
+	public static void join(ServerPlayer player) {
+		MinecraftServer server = player.level().getServer();
+		Runner r = new Runner(player.getUUID(), player.getName().getString());
+		RUNNERS.put(player.getUUID(), r);
+		BAR.addPlayer(player);
+		if (state == State.IDLE) {
+			startStaging(server);
+		}
+		if (state == State.STAGING || state == State.OVER) {
+			r.placed = false;
+			if (WORK.isEmpty() && room != null) {
+				place(player, room.entry);
+			} else {
+				hold(player);
+			}
+		} else {
+			// Mid-run: watch until the next room, then join in with a free relic.
+			r.alive = false;
+			hold(player);
+			player.sendSystemMessage(Component.literal("A run is going: you'll join in at the next room (with a relic to catch up).")
+					.withStyle(ChatFormatting.LIGHT_PURPLE));
+		}
+		tell(server, Component.literal(player.getName().getString() + " entered the Rift.").withStyle(ChatFormatting.LIGHT_PURPLE));
+		player.sendSystemMessage(Component.literal("RUBY RIFT: a co-op roguelike. Fight room to room, pick a relic after each one, and beat the boss at the "
+				+ "bottom. If you go down, a teammate can crouch next to you to bring you back. H or /hub to leave.").withStyle(ChatFormatting.LIGHT_PURPLE));
+	}
+
+	public static void leave(ServerPlayer player) {
+		Runner r = RUNNERS.remove(player.getUUID());
+		BAR.removePlayer(player);
+		if (r == null) {
+			return;
+		}
+		MinecraftServer server = player.level().getServer();
+		removeMarker(server, r);
+		RelicEffects.cleanup(player, r);
+		player.getInventory().clearContent();
+		player.removeAllEffects();
+		Net.send(player, new MorePayloads.RiftHud("", 0, List.of(), List.of()));
+		Net.send(player, new MorePayloads.RiftScreen("close", List.of()));
+		if (RUNNERS.isEmpty()) {
+			stop(server);
+		} else if (running() && RUNNERS.values().stream().noneMatch(x -> x.alive)) {
+			teamDown(server);
+		}
+	}
+
+	public static void onDisconnect(ServerPlayer player) {
+		if (playing(player)) {
+			leave(player);
+
+		}
+	}
+
+	/** Everyone out: tidy the Rift. */
+	private static void stop(MinecraftServer server) {
+		ServerLevel level = level(server);
+		clearMobs(level);
+		if (boss != null) {
+			boss.remove(level);
+			boss = null;
+		}
+		removePortal(level);
+		RelicEffects.clearWorld(level);
+		state = State.IDLE;
+		map = null;
+		node = null;
+		BAR.removeAllPlayers();
+		BAR.setVisible(false);
+	}
+
+	public static void reset() {
+		RUNNERS.clear();
+		MOBS.clear();
+		PENDING.clear();
+		WORK.clear();
+		state = State.IDLE;
+		map = null;
+		node = null;
+		room = null;
+		boss = null;
+		BAR.removeAllPlayers();
+	}
+
+	// ----- Placing people -----
+
+	private static void hold(ServerPlayer player) {
+		ServerLevel level = level(player.level().getServer());
+		player.teleportTo(level, THRESHOLD.getX() + 0.5, THRESHOLD.getY() + 30, THRESHOLD.getZ() + 0.5, Set.<Relative>of(), 0, 0, true);
+		player.setGameMode(GameType.SPECTATOR);
+	}
+
+	static void place(ServerPlayer player, Vec3 at) {
+		ServerLevel level = level(player.level().getServer());
+		Runner r = RUNNERS.get(player.getUUID());
+		RandomSource random = player.getRandom();
+		double x = at.x + random.nextInt(5) - 2;
+		double z = at.z - random.nextInt(2);
+		player.teleportTo(level, x, Hub.safeY(level, x, at.y, z), z, Set.<Relative>of(), 180, 0, true);
+		player.setGameMode(GameType.ADVENTURE);
+		player.clearFire();
+		player.resetFallDistance();
+		SpawnShield.grant(player);
+		if (r != null) {
+			r.placed = true;
+			r.alive = true;
+		}
+	}
+
+	private static ItemStack gun(Item item) {
+		ItemStack s = new ItemStack(item);
+		s.set(ModComponents.AMMO, ((GunItem) item).stats().magazine());
+		return s;
+	}
+
+	/** The starting kit (and a fresh one between runs). */
+	private static void kit(ServerPlayer player) {
+		player.getInventory().clearContent();
+		player.removeAllEffects();
+		player.getInventory().add(gun(ModItems.ARR_RIFLE));
+		player.getInventory().add(gun(ModItems.COMBAT_SHOTGUN));
+		player.getInventory().add(new ItemStack(ModItems.RUBY_SWORD));
+		player.getInventory().add(new ItemStack(ModItems.FRAG_GRENADE, 3));
+		ammo(player);
+		player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+		player.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+		player.setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.IRON_LEGGINGS));
+		player.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.IRON_BOOTS));
+		player.getInventory().setSelectedSlot(0);
+		player.setHealth(player.getMaxHealth());
+	}
+
+	/** Topped up with ammo. */
+	private static void ammo(ServerPlayer player) {
+		var inv = player.getInventory();
+		int heavy = inv.countItem(ModItems.HEAVY_AMMO);
+		int shells = inv.countItem(ModItems.SHOTGUN_SHELL);
+		if (heavy < 192) {
+			inv.add(new ItemStack(ModItems.HEAVY_AMMO, Math.min(64, 192 - heavy)));
+			if (192 - heavy > 64) {
+				inv.add(new ItemStack(ModItems.HEAVY_AMMO, Math.min(64, 128 - heavy)));
+			}
+		}
+		if (shells < 48) {
+			inv.add(new ItemStack(ModItems.SHOTGUN_SHELL, 48 - shells));
+		}
+	}
+
+	// ----- The run -----
+
+	private static void startStaging(MinecraftServer server) {
+		ServerLevel level = level(server);
+		state = State.STAGING;
+		timer = STAGING_TICKS;
+		gold = 0;
+		secondWind = true;
+		timeLoopUsed = false;
+		seed = level.getRandom().nextLong();
+		clearMobs(level);
+		removePortal(level);
+		room = RiftRoom.build(WORK, level, THRESHOLD, RiftRoom.Theme.THRESHOLD, RiftMap.Type.REST, seed);
+		BAR.setVisible(true);
+	}
+
+	public static void tick(MinecraftServer server) {
+		ticks++;
+		if (!WORK.isEmpty()) {
+			long end = System.nanoTime() + 8_000_000L;
+			while (!WORK.isEmpty() && System.nanoTime() < end) {
+				WORK.poll().run();
+			}
+			if (WORK.isEmpty()) {
+				roomReady(server);
+			}
+		}
+		if (state == State.IDLE) {
+			return;
+		}
+		ServerLevel level = level(server);
+		if (room != null && WORK.isEmpty() && ticks % 3 == 0) {
+			room.ambient(level, level.getRandom());
+		}
+		tickPending(level);
+		for (ServerPlayer p : players(server)) {
+			Runner r = RUNNERS.get(p.getUUID());
+			RelicEffects.tick(p, r, level);
+		}
+		RelicEffects.tickWorld(level);
+		if (portalOpen) {
+			tickPortal(server, level);
+		}
+		tickRevives(server, level);
+		switch (state) {
+			case STAGING -> {
+				if (WORK.isEmpty()) {
+					timer--;
+					if (timer % 20 == 0) {
+						BAR.setName(Component.literal("Ruby Rift  •  The run starts in " + timer / 20 + "s  (step into the portal to start now)"));
+						BAR.setProgress(Math.max(0, timer) / (float) STAGING_TICKS);
+					}
+					if (timer <= 0) {
+						beginRun(server);
+					}
+				}
+			}
+			case VOTE -> {
+				timer--;
+				if (timer % 20 == 0) {
+					BAR.setName(Component.literal("Choose the next room  •  " + timer / 20 + "s"));
+					BAR.setProgress(Math.max(0, timer) / (float) VOTE_TICKS);
+				}
+				boolean all = RUNNERS.values().stream().allMatch(r -> r.vote >= 0);
+				if (all || timer <= 0) {
+					travel(server);
+				}
+			}
+			case FIGHT -> tickFight(server, level);
+			case CALM -> {
+				if (timer > 0 && --timer == 0) {
+					// Out of time to choose: take the first offer.
+					for (Runner r : RUNNERS.values()) {
+						if (!r.offer.isEmpty()) {
+							choose(server, r, r.offer.get(0));
+						}
+					}
+				}
+			}
+			case OVER -> {
+				if (--timer <= 0) {
+					backToThreshold(server);
+				}
+			}
+			default -> {
+			}
+		}
+		if (ticks % 10 == 0) {
+			syncHud(server);
+		}
+	}
+
+	private static void beginRun(MinecraftServer server) {
+		map = RiftMap.generate(RandomSource.create(seed));
+		node = null;
+		for (ServerPlayer p : players(server)) {
+			kit(p);
+			RelicEffects.apply(p, RUNNERS.get(p.getUUID()));
+			Alerts.title(p, "THE RIFT OPENS", "Choose your path", ChatFormatting.LIGHT_PURPLE);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.7F, 1.2F);
+		}
+		openVote(server);
+	}
+
+	private static void openVote(MinecraftServer server) {
+		state = State.VOTE;
+		timer = VOTE_TICKS;
+		portalOpen = false;
+		removePortal(level(server));
+		for (Runner r : RUNNERS.values()) {
+			r.vote = -1;
+		}
+		sendMap(server);
+		BAR.setColor(BossEvent.BossBarColor.PURPLE);
+	}
+
+	private static void sendMap(MinecraftServer server) {
+		List<String> lines = new ArrayList<>(map.lines());
+		Map<Integer, Integer> votes = new HashMap<>();
+		for (Runner r : RUNNERS.values()) {
+			if (r.vote >= 0) {
+				votes.merge(r.vote, 1, Integer::sum);
+			}
+		}
+		lines.add("votes|" + String.join(",", votes.entrySet().stream().map(e -> e.getKey() + ":" + e.getValue()).toList()));
+		for (ServerPlayer p : players(server)) {
+			Net.send(p, new MorePayloads.RiftScreen("map", lines));
+		}
+	}
+
+	static void vote(ServerPlayer player, int nodeId) {
+		Runner r = RUNNERS.get(player.getUUID());
+		if (r == null || state != State.VOTE) {
+			return;
+		}
+		if (map.choices().stream().noneMatch(n -> n.id == nodeId)) {
+			return;
+		}
+		r.vote = nodeId;
+		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.PLAYERS, 0.5F, 1.4F);
+		sendMap(player.level().getServer());
+	}
+
+	/** Off to the room with the most votes (ties: the first). */
+	private static void travel(MinecraftServer server) {
+		Map<Integer, Integer> votes = new HashMap<>();
+		for (Runner r : RUNNERS.values()) {
+			if (r.vote >= 0) {
+				votes.merge(r.vote, 1, Integer::sum);
+			}
+		}
+		List<RiftMap.Node> choices = map.choices();
+		RiftMap.Node pick = choices.get(0);
+		int best = -1;
+		for (RiftMap.Node n : choices) {
+			int v = votes.getOrDefault(n.id, 0);
+			if (v > best) {
+				best = v;
+				pick = n;
+			}
+		}
+		node = pick;
+		map.visited.add(pick.id);
+		state = State.TRAVEL;
+		ServerLevel level = level(server);
+		clearMobs(level);
+		removePortal(level);
+		RelicEffects.clearWorld(level);
+		slot = 1 - slot;
+		room = RiftRoom.build(WORK, level, SLOTS[slot], pick.theme, pick.type, seed + pick.id * 7919L);
+		for (ServerPlayer p : players(server)) {
+			Net.send(p, new MorePayloads.RiftScreen("close", List.of()));
+			p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false));
+			RiftFx.screen(p, "flash", 0xFF1A0010, 30);
+			Alerts.title(p, pick.type == RiftMap.Type.BOSS ? "THE BOTTOM OF THE RIFT" : pick.type.title.toUpperCase(),
+					pick.theme.title, ChatFormatting.LIGHT_PURPLE);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.25F, 1.4F);
+		}
+		BAR.setName(Component.literal("Into the " + pick.theme.title + "..."));
+		BAR.setVisible(true);
+	}
+
+	/** A room finished building: bring everyone in. */
+	private static void roomReady(MinecraftServer server) {
+		ServerLevel level = level(server);
+		if (state == State.STAGING || state == State.OVER) {
+			for (ServerPlayer p : players(server)) {
+				place(p, room.entry);
+				if (state == State.STAGING) {
+					kit(p);
+				}
+			}
+			openPortal(level);
+			return;
+		}
+		if (state != State.TRAVEL) {
+			return;
+		}
+		for (ServerPlayer p : players(server)) {
+			Runner r = RUNNERS.get(p.getUUID());
+			boolean late = !r.alive && r.downAt == null;
+			removeMarker(server, r);
+			r.downAt = null;
+			place(p, room.entry);
+			ammo(p);
+			RelicEffects.onRoomStart(p, r, level);
+			RiftFx.screen(p, "flash", node.theme.color, 20);
+			if (late) {
+				// Joined mid-run: a free relic to catch up.
+				r.offer = RelicOffers.offer(r, RiftMap.Type.FIGHT, RandomSource.create(seed ^ p.getUUID().hashCode()));
+				sendOffer(p, r, "A relic to catch up");
+			}
+		}
+		switch (node.type) {
+			case FIGHT, ELITE -> startFight(server, level);
+			case BOSS -> {
+				state = State.FIGHT;
+				wave = 0;
+				waves = 0;
+				boss = JuggernautMech.spawn(level, room, RUNNERS.size(), node.floor);
+				BAR.setVisible(false);
+				for (ServerPlayer p : players(server)) {
+					Alerts.title(p, "JUGGERNAUT MECH", "Break its armor, then hit the glowing core!", ChatFormatting.RED);
+					p.level().playSound(null, p.blockPosition(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 0.7F, 0.7F);
+					RiftFx.shake(p, 1.5F, 30);
+				}
+			}
+			default -> startCalm(server, level);
+		}
+	}
+
+	// ----- Fights -----
+
+	private static void startFight(MinecraftServer server, ServerLevel level) {
+		state = State.FIGHT;
+		boolean elite = node.type == RiftMap.Type.ELITE;
+		waves = elite ? 2 : node.floor >= 4 ? 3 : 2;
+		wave = 0;
+		int players = Math.max(1, RUNNERS.size());
+		waveBudget = (int) Math.round((5 + node.floor * 2.2) * (1 + 0.6 * (players - 1)));
+		BAR.setColor(elite ? BossEvent.BossBarColor.YELLOW : BossEvent.BossBarColor.RED);
+		nextWave(server, level);
+	}
+
+	private static void nextWave(MinecraftServer server, ServerLevel level) {
+		wave++;
+		RandomSource random = level.getRandom();
+		int budget = waveBudget;
+		boolean elite = node.type == RiftMap.Type.ELITE && wave == waves;
+		List<BlockPos> spawns = new ArrayList<>(room.spawns);
+		java.util.Collections.shuffle(spawns, new java.util.Random(random.nextLong()));
+		int i = 0;
+		if (elite) {
+			int count = node.floor >= 5 || RUNNERS.size() >= 3 ? 2 : 1;
+			for (int e = 0; e < count; e++) {
+				RiftEnemies.Twist twist = RiftEnemies.Twist.values()[random.nextInt(RiftEnemies.Twist.values().length)];
+				RiftEnemies.Kind kind = RiftEnemies.pick(node.theme, random);
+				PENDING.add(new Pending(spawns.get(i++ % spawns.size()), kind, twist, new int[] {40 + e * 20}));
+			}
+			budget /= 2;
+		}
+		while (budget > 0) {
+			RiftEnemies.Kind kind = RiftEnemies.pick(node.theme, random);
+			PENDING.add(new Pending(spawns.get(i++ % spawns.size()), kind, null, new int[] {30 + random.nextInt(40)}));
+			budget -= kind.cost();
+		}
+		for (ServerPlayer p : players(server)) {
+			if (wave > 1) {
+				p.sendOverlayMessage(Component.literal("⚠ Wave " + wave + " of " + waves + " is tearing through!").withStyle(ChatFormatting.LIGHT_PURPLE));
+			}
+		}
+	}
+
+	private static void tickPending(ServerLevel level) {
+		for (var it = PENDING.iterator(); it.hasNext();) {
+			Pending p = it.next();
+			Vec3 at = Vec3.atBottomCenterOf(p.at());
+			int left = --p.left()[0];
+			if (left % 3 == 0) {
+				// A tear in the Rift: a swirl of light where something's coming through.
+				double a = left * 0.4;
+				int color = p.twist() != null ? p.twist().color : room != null ? room.theme.color : 0xFF3D6E;
+				for (int k = 0; k < 3; k++) {
+					double ang = a + k * Math.PI * 2 / 3;
+					level.sendParticles(RiftFx.dust(color, 1.4F), true, false, at.x + Math.cos(ang) * 0.8, at.y + 0.2 + (40 - left) * 0.04,
+							at.z + Math.sin(ang) * 0.8, 1, 0, 0, 0, 0);
+				}
+				level.sendParticles(ParticleTypes.REVERSE_PORTAL, true, false, at.x, at.y + 1, at.z, 3, 0.3, 0.6, 0.3, 0.05);
+			}
+			if (left <= 0) {
+				it.remove();
+				Mob mob = RiftEnemies.create(level, p.kind(), p.at(), room.center, RiftEnemies.toughness(node == null ? 0 : node.floor, RUNNERS.size()),
+						p.twist());
+				if (mob != null) {
+					level.addFreshEntity(mob);
+					MOBS.add(mob.getUUID());
+					RiftFx.burst(level, at.add(0, 1, 0), p.twist() != null ? p.twist().color : room.theme.color, 18, 0.4);
+					level.playSound(null, p.at(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.HOSTILE, 0.6F, 0.6F);
+					if (p.twist() != null) {
+						level.playSound(null, p.at(), SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 1.0F, 1.2F);
+					}
+				}
+			}
+		}
+	}
+
+	private static void tickFight(MinecraftServer server, ServerLevel level) {
+		// Tidy: forget the dead, send strays back in, point everyone at a player.
+		List<ServerPlayer> targets = players(server).stream().filter(p -> !p.isSpectator() && RUNNERS.get(p.getUUID()).alive).toList();
+		for (UUID id : new ArrayList<>(MOBS)) {
+			Entity e = level.getEntity(id);
+			if (!(e instanceof Mob mob) || !mob.isAlive()) {
+				MOBS.remove(id);
+				continue;
+			}
+			if (ticks % 20 == 0) {
+				if (!room.inside(mob.position())) {
+					BlockPos back = room.spawns.get(level.getRandom().nextInt(room.spawns.size()));
+					mob.teleportTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5);
+				}
+				if ((mob.getTarget() == null || !mob.getTarget().isAlive() || mob.getTarget() instanceof Player t && t.isSpectator()) && !targets.isEmpty()) {
+					mob.setTarget(targets.stream().min(Comparator.comparingDouble(p -> p.distanceToSqr(mob))).orElse(null));
+				}
+			}
+			RiftEnemies.Twist twist = RiftEnemies.twistOf(mob);
+			if (twist != null && ticks % 4 == 0) {
+				RiftFx.ring(level, mob.position().add(0, 0.1, 0), mob.getBbWidth() * 0.9, RiftFx.dust(twist.color, 1.0F), 10);
+				if (twist == RiftEnemies.Twist.SUMMONER && ticks % 160 == 0 && MOBS.size() < 30) {
+					for (int k = 0; k < 2; k++) {
+						PENDING.add(new Pending(mob.blockPosition().offset(level.getRandom().nextInt(5) - 2, 0, level.getRandom().nextInt(5) - 2),
+								RiftEnemies.pick(node.theme, level.getRandom()), null, new int[] {20}));
+					}
+				}
+			}
+		}
+		if (boss != null) {
+			boss.tick(level, targets);
+			if (boss.dead()) {
+				boss = null;
+				victory(server);
+				return;
+			}
+		}
+		int alive = MOBS.size();
+		if (ticks % 20 == 0 && boss == null) {
+			BAR.setName(Component.literal(node.theme.title + "  •  Wave " + wave + "/" + waves + "  •  " + (alive + PENDING.size()) + " enemies"));
+			BAR.setProgress(Math.min(1, wave / (float) Math.max(1, waves)));
+		}
+		if (boss == null && PENDING.isEmpty() && (alive == 0 || wave < waves && alive <= 2)) {
+			if (wave < waves) {
+				nextWave(server, level);
+			} else if (alive == 0) {
+				cleared(server, level);
+			}
+		}
+	}
+
+	public static void onMobDeath(LivingEntity e, DamageSource source) {
+		if (!MOBS.remove(e.getUUID())) {
+			return;
+		}
+		RiftEnemies.Twist twist = e instanceof Mob m ? RiftEnemies.twistOf(m) : null;
+		int value = twist != null ? 30 : 6;
+		gold += value;
+		ServerLevel level = (ServerLevel) e.level();
+		if (twist == RiftEnemies.Twist.VOLATILE) {
+			RelicEffects.blast(level, null, e.position().add(0, 0.5, 0), 4.5, 10, 0xFFFF7A2E, true);
+		}
+		if (source.getEntity() instanceof ServerPlayer killer) {
+			Runner r = RUNNERS.get(killer.getUUID());
+			if (r != null) {
+				r.kills++;
+				killer.sendOverlayMessage(Component.literal("+" + value + " gold").withStyle(ChatFormatting.GOLD));
+			}
+		}
+		RiftFx.burst(level, e.position().add(0, e.getBbHeight() / 2, 0), 0xFFFFC02E, 6, 0.3);
+	}
+
+	private static void cleared(MinecraftServer server, ServerLevel level) {
+		int bonus = node.type == RiftMap.Type.ELITE ? 60 : 30;
+		gold += bonus;
+		for (ServerPlayer p : players(server)) {
+			Runner r = RUNNERS.get(p.getUUID());
+			Alerts.title(p, "ROOM CLEARED", "+" + bonus + " gold  •  choose a relic", ChatFormatting.GOLD);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.7F, 1.1F);
+			if (r.alive) {
+				p.heal(p.getMaxHealth() * 0.3F);
+			}
+		}
+		reviveAll(server, level, 0.5F);
+		fireworks(level, room.portal, 4);
+		RandomSource random = level.getRandom();
+		for (ServerPlayer p : players(server)) {
+			Runner r = RUNNERS.get(p.getUUID());
+			r.offer = RelicOffers.offer(r, node.type, random);
+			sendOffer(p, r, node.type == RiftMap.Type.ELITE ? "Elite slain: a better relic" : "Choose a relic");
+		}
+		state = State.CALM;
+		timer = REWARD_TICKS;
+		BAR.setName(Component.literal("Room cleared  •  choose a relic, then step into the portal"));
+		BAR.setProgress(1);
+		openPortal(level);
+	}
+
+	// ----- Calm rooms: treasure, shop, mystery, campfire -----
+
+	private static void startCalm(MinecraftServer server, ServerLevel level) {
+		state = State.CALM;
+		timer = REWARD_TICKS;
+		BAR.setProgress(1);
+		BAR.setColor(BossEvent.BossBarColor.PURPLE);
+		BAR.setName(Component.literal(switch (node.type) {
+			case TREASURE -> "Treasure!  \u2022  choose a relic, then step into the portal";
+			case SHOP -> "The Rift Merchant  \u2022  J to shop, then step into the portal";
+			case EVENT -> "Something strange...  \u2022  choose, then step into the portal";
+			default -> "A campfire  \u2022  rest, then step into the portal";
+		}));
+		RandomSource random = level.getRandom();
+		switch (node.type) {
+			case TREASURE -> {
+				level.setBlock(BlockPos.containing(room.portal).above(), net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 3);
+				fireworks(level, room.portal, 3);
+				for (ServerPlayer p : players(server)) {
+					Runner r = RUNNERS.get(p.getUUID());
+					r.offer = RelicOffers.offer(r, RiftMap.Type.TREASURE, random);
+					sendOffer(p, r, "Treasure! One of these is Legendary");
+				}
+			}
+			case SHOP -> {
+				SHOP.clear();
+				for (Relic r : RelicOffers.shopStock(random)) {
+					SHOP.put(r, RelicOffers.price(r));
+				}
+				Mob trader = EntityTypes.WANDERING_TRADER.create(level, EntitySpawnReason.EVENT);
+				if (trader != null) {
+					trader.snapTo(room.portal.x + 3, room.center.getY() + 1, room.portal.z, 180, 0);
+					trader.setNoAi(true);
+					trader.setPermanentlyInvulnerable(true);
+					trader.setCustomName(Component.literal("Rift Merchant").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+					trader.addTag(TAG);
+					level.addFreshEntity(trader);
+				}
+				for (ServerPlayer p : players(server)) {
+					sendShop(p);
+				}
+				timer = 0;
+			}
+			case EVENT -> {
+				level.setBlock(BlockPos.containing(room.portal).above(), net.minecraft.world.level.block.Blocks.ENCHANTING_TABLE.defaultBlockState(), 3);
+				int kind = random.nextInt(3);
+				for (ServerPlayer p : players(server)) {
+					Runner r = RUNNERS.get(p.getUUID());
+					r.event = RiftEvents.options(kind);
+					Net.send(p, new MorePayloads.RiftScreen("event", r.event));
+				}
+				timer = 0;
+			}
+			case REST -> {
+				level.setBlock(BlockPos.containing(room.portal).above(), net.minecraft.world.level.block.Blocks.CAMPFIRE.defaultBlockState(), 3);
+				reviveAll(server, level, 1.0F);
+				for (ServerPlayer p : players(server)) {
+					p.setHealth(p.getMaxHealth());
+					Alerts.title(p, "CAMPFIRE", "Everyone's healed and back up", ChatFormatting.GOLD);
+					p.level().playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 0.8F);
+					RiftFx.burst(level, p.position().add(0, 1, 0), 0xFF6EE38A, 24, 0.6);
+				}
+				timer = 0;
+			}
+			default -> {
+			}
+		}
+		openPortal(level);
+	}
+
+	static void sendOffer(ServerPlayer p, Runner r, String title) {
+		List<String> lines = new ArrayList<>();
+		lines.add("title|" + title);
+		for (Relic relic : r.offer) {
+			lines.add(relic.line(-1));
+		}
+		Net.send(p, new MorePayloads.RiftScreen("offer", lines));
+	}
+
+	static void sendShop(ServerPlayer p) {
+		List<String> lines = new ArrayList<>();
+		lines.add("title|Rift Merchant  •  the team has " + gold + " gold");
+		lines.add("gold|" + gold);
+		for (Map.Entry<Relic, Integer> e : SHOP.entrySet()) {
+			lines.add(e.getKey().line(e.getValue()));
+		}
+		lines.add("heal|Mend|Heal the whole team to full|minecraft:golden_apple|40");
+		Net.send(p, new MorePayloads.RiftScreen("shop", lines));
+	}
+
+	/** A relic picked from an offer. */
+	static void pick(ServerPlayer player, String id) {
+		Runner r = RUNNERS.get(player.getUUID());
+		Relic relic = Relic.byId(id);
+		if (r == null || relic == null || !r.offer.contains(relic)) {
+			return;
+		}
+		choose(player.level().getServer(), r, relic);
+	}
+
+	private static void choose(MinecraftServer server, Runner r, Relic relic) {
+		r.offer = List.of();
+		ServerPlayer p = server.getPlayerList().getPlayer(r.id);
+		if (p == null) {
+			return;
+		}
+		give(p, r, relic);
+		Net.send(p, new MorePayloads.RiftScreen("close", List.of()));
+	}
+
+	/** Gain a relic, with all the flash it deserves. */
+	static void give(ServerPlayer p, Runner r, Relic relic) {
+		if (r.has(relic)) {
+			return;
+		}
+		r.relics.add(relic);
+		RelicEffects.apply(p, r);
+		ServerLevel level = (ServerLevel) p.level();
+		Vec3 at = p.position();
+		RiftFx.beam(level, at, 14, ParticleTypes.END_ROD, relic.tier.color);
+		RiftFx.ring(level, at.add(0, 0.2, 0), 1.6, RiftFx.dust(relic.tier.color, 1.6F), 24);
+		RiftFx.burst(level, at.add(0, 1, 0), relic.element != Relic.Element.NONE ? relic.element.color : relic.tier.color, 30, 0.7);
+		RiftFx.screen(p, "relic:" + relic.icon, relic.tier.color, 40);
+		level.playSound(null, p.blockPosition(), relic.tier == Relic.Tier.LEGENDARY ? SoundEvents.UI_TOAST_CHALLENGE_COMPLETE : SoundEvents.BEACON_POWER_SELECT,
+				SoundSource.PLAYERS, 1.0F, relic.tier == Relic.Tier.CURSED ? 0.6F : 1.2F);
+		if (relic.tier == Relic.Tier.LEGENDARY || relic.tier == Relic.Tier.CURSED) {
+			var bolt = EntityTypes.LIGHTNING_BOLT.create(level, EntitySpawnReason.EVENT);
+			if (bolt != null) {
+				bolt.snapTo(at.x, at.y, at.z, 0, 0);
+				bolt.setVisualOnly(true);
+				level.addFreshEntity(bolt);
+			}
+			RiftFx.screen(p, "flash", relic.tier.color, 16);
+		}
+		tell(p.level().getServer(), Component.literal(r.name + " took ").withStyle(ChatFormatting.GRAY)
+				.append(Component.literal(relic.title).withColor(relic.tier.color & 0xFFFFFF)));
+	}
+
+	static void buy(ServerPlayer player, String id) {
+		Runner r = RUNNERS.get(player.getUUID());
+		if (r == null || node == null || node.type != RiftMap.Type.SHOP) {
+			return;
+		}
+		MinecraftServer server = player.level().getServer();
+		if (id.equals("heal")) {
+			if (gold < 40) {
+				player.sendOverlayMessage(Component.literal("Not enough gold.").withStyle(ChatFormatting.RED));
+				return;
+			}
+			gold -= 40;
+			for (ServerPlayer p : players(server)) {
+				p.setHealth(p.getMaxHealth());
+				RiftFx.burst((ServerLevel) p.level(), p.position().add(0, 1, 0), 0xFF6EE38A, 16, 0.5);
+			}
+		} else {
+			Relic relic = Relic.byId(id);
+			Integer price = relic == null ? null : SHOP.get(relic);
+			if (price == null || r.has(relic)) {
+				return;
+			}
+			if (gold < price) {
+				player.sendOverlayMessage(Component.literal("Not enough gold (the team has " + gold + ").").withStyle(ChatFormatting.RED));
+				return;
+			}
+			gold -= price;
+			SHOP.remove(relic);
+			give(player, r, relic);
+		}
+		for (ServerPlayer p : players(server)) {
+			sendShop(p);
+		}
+	}
+
+	static void event(ServerPlayer player, String option) {
+		Runner r = RUNNERS.get(player.getUUID());
+		if (r == null || r.event.isEmpty()) {
+			return;
+		}
+		r.event = List.of();
+		RiftEvents.resolve(player, r, option);
+		Net.send(player, new MorePayloads.RiftScreen("close", List.of()));
+	}
+
+	// ----- The way onward -----
+
+	private static void openPortal(ServerLevel level) {
+		portalOpen = true;
+		removePortal(level);
+		Display.ItemDisplay gem = EntityTypes.ITEM_DISPLAY.create(level, EntitySpawnReason.EVENT);
+		if (gem != null) {
+			gem.snapTo(room.portal.x, room.portal.y + 1.6, room.portal.z, 0, 0);
+			((ItemDisplayAccessor) gem).rubymod$setItemStack(new ItemStack(ModItems.RUBY));
+			((DisplayAccessor) gem).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(2.4F, 2.4F, 2.4F),
+					new Quaternionf()));
+			((DisplayAccessor) gem).rubymod$setPosRotInterpolationDuration(2);
+			gem.addTag(TAG);
+			level.addFreshEntity(gem);
+			portalDisplay = gem.getUUID();
+		}
+	}
+
+	private static void removePortal(ServerLevel level) {
+		portalOpen = false;
+		if (portalDisplay != null && level.getEntity(portalDisplay) instanceof Entity e) {
+			e.discard();
+		}
+		portalDisplay = null;
+	}
+
+	private static void tickPortal(MinecraftServer server, ServerLevel level) {
+		if (room == null || WORK.size() > 0) {
+			return;
+		}
+		Vec3 c = room.portal;
+		// A spinning ruby over a swirling vortex.
+		if (portalDisplay != null && level.getEntity(portalDisplay) instanceof Entity gem) {
+			gem.teleportTo(c.x, c.y + 1.6 + Math.sin(ticks * 0.1) * 0.2, c.z);
+			gem.setYRot(ticks * 6 % 360);
+		}
+		for (int k = 0; k < 3; k++) {
+			double a = ticks * 0.25 + k * Math.PI * 2 / 3;
+			double rr = 1.4 + Math.sin(ticks * 0.05 + k) * 0.2;
+			level.sendParticles(RiftFx.dust(0xFF3D6E, 1.5F), true, false, c.x + Math.cos(a) * rr, c.y + (ticks % 40) * 0.08, c.z + Math.sin(a) * rr,
+					1, 0, 0, 0, 0);
+		}
+		if (ticks % 2 == 0) {
+			level.sendParticles(ParticleTypes.END_ROD, true, false, c.x, c.y + 0.5, c.z, 1, 0.3, 1.2, 0.3, 0.02);
+			level.sendParticles(ParticleTypes.REVERSE_PORTAL, true, false, c.x, c.y + 1, c.z, 4, 0.6, 0.8, 0.6, 0.1);
+		}
+		// Step in: the next part begins (once everyone's picked their relic).
+		boolean picking = RUNNERS.values().stream().anyMatch(r -> !r.offer.isEmpty());
+		for (ServerPlayer p : players(server)) {
+			if (p.isSpectator() || p.position().distanceTo(c) > 2.2) {
+				continue;
+			}
+			if (picking) {
+				if (ticks % 40 == 0) {
+					p.sendOverlayMessage(Component.literal("Waiting for everyone to pick a relic...").withStyle(ChatFormatting.LIGHT_PURPLE));
+				}
+				continue;
+			}
+			level.playSound(null, p.blockPosition(), SoundEvents.PORTAL_TRIGGER, SoundSource.PLAYERS, 0.4F, 1.6F);
+			if (state == State.STAGING) {
+				beginRun(server);
+			} else if (state == State.OVER) {
+				timer = 1;
+			} else {
+				openVote(server);
+			}
+			return;
+		}
+	}
+
+	// ----- Going down and getting up -----
+
+	/** A runner would die: they're down instead. True when handled. */
+	public static boolean onDeath(ServerPlayer victim, DamageSource source) {
+		Runner r = RUNNERS.get(victim.getUUID());
+		if (r == null) {
+			return false;
+		}
+		MinecraftServer server = victim.level().getServer();
+		victim.stopRiding();
+		victim.setHealth(victim.getMaxHealth());
+		victim.removeAllEffects();
+		victim.clearFire();
+		if (!running() || !r.alive) {
+			if (room != null) {
+				place(victim, room.entry);
+			}
+			return true;
+		}
+		victim.setGameMode(GameType.SPECTATOR);
+		r.alive = false;
+		r.downAt = room != null && room.inside(victim.position()) ? victim.position() : room.entry;
+		r.revive = 0;
+		if (RUNNERS.values().stream().noneMatch(x -> x.alive)) {
+			teamDown(server);
+			return true;
+		}
+		spawnMarker(level(server), r);
+		Alerts.title(victim, "DOWN!", "A teammate can crouch next to you to bring you back", ChatFormatting.RED);
+		for (ServerPlayer p : players(server)) {
+			if (p != victim) {
+				p.sendSystemMessage(Component.literal(r.name + " is down! Crouch next to them to bring them back.").withStyle(ChatFormatting.RED));
+			}
+		}
+		return true;
+	}
+
+	private static void tickRevives(MinecraftServer server, ServerLevel level) {
+		for (Runner down : RUNNERS.values()) {
+			if (down.alive || down.downAt == null) {
+				continue;
+			}
+			if (ticks % 6 == 0) {
+				RiftFx.ring(level, down.downAt.add(0, 0.15, 0), 1.0, RiftFx.dust(0xFF3030, 1.2F), 12);
+			}
+			ServerPlayer helper = null;
+			boolean instant = false;
+			for (ServerPlayer p : players(server)) {
+				Runner r = RUNNERS.get(p.getUUID());
+				if (r.alive && !p.isSpectator() && p.position().distanceTo(down.downAt) < 2.2) {
+					if (r.has(Relic.FIELD_MEDIC)) {
+						helper = p;
+						instant = true;
+						break;
+					}
+					if (p.isShiftKeyDown()) {
+						helper = p;
+					}
+				}
+			}
+			if (helper == null) {
+				down.revive = Math.max(0, down.revive - 2);
+				continue;
+			}
+			down.revive += instant ? 60 : 1;
+			if (ticks % 4 == 0) {
+				helper.sendOverlayMessage(Component.literal("Reviving " + down.name + "... " + Math.min(100, down.revive * 100 / 60) + "%")
+						.withStyle(ChatFormatting.GREEN));
+				RiftFx.line(level, helper.position().add(0, 1, 0), down.downAt.add(0, 0.5, 0), RiftFx.dust(0x6EE38A, 1.0F), 0.4);
+			}
+			if (down.revive >= 60) {
+				revive(server, level, down, down.downAt, 0.5F);
+			}
+		}
+	}
+
+	private static void revive(MinecraftServer server, ServerLevel level, Runner r, Vec3 at, float health) {
+		ServerPlayer p = server.getPlayerList().getPlayer(r.id);
+		removeMarker(server, r);
+		r.downAt = null;
+		r.revive = 0;
+		if (p == null) {
+			return;
+		}
+		place(p, at);
+		RelicEffects.apply(p, r);
+		p.setHealth(p.getMaxHealth() * health);
+		RiftFx.burst(level, p.position().add(0, 1, 0), 0xFF6EE38A, 24, 0.6);
+		level.playSound(null, p.blockPosition(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 0.6F, 1.2F);
+	}
+
+	private static void reviveAll(MinecraftServer server, ServerLevel level, float health) {
+		for (Runner r : RUNNERS.values()) {
+			if (!r.alive && r.downAt != null) {
+				revive(server, level, r, r.downAt, health);
+			}
+		}
+	}
+
+	/** Everyone's down: the team's Second Wind, a Time Loop, or the end. */
+	private static void teamDown(MinecraftServer server) {
+		ServerLevel level = level(server);
+		Runner looper = RUNNERS.values().stream().filter(r -> r.has(Relic.TIME_LOOP)).findFirst().orElse(null);
+		if (looper != null && !timeLoopUsed) {
+			timeLoopUsed = true;
+			for (Runner r : RUNNERS.values()) {
+				revive(server, level, r, r.downAt != null ? r.downAt : room.entry, 1.0F);
+			}
+			for (UUID id : MOBS) {
+				if (level.getEntity(id) instanceof Mob mob) {
+					BlockPos back = room.spawns.get(level.getRandom().nextInt(room.spawns.size()));
+					mob.teleportTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5);
+					mob.setHealth(mob.getMaxHealth());
+				}
+			}
+			for (ServerPlayer p : players(server)) {
+				Alerts.title(p, "TIME LOOP", looper.name + "'s relic turned back time", ChatFormatting.AQUA);
+				RiftFx.screen(p, "rewind", 0xFF66E0FF, 40);
+				p.level().playSound(null, p.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.0F, 0.5F);
+			}
+			return;
+		}
+		if (secondWind) {
+			secondWind = false;
+			Runner last = RUNNERS.values().iterator().next();
+			revive(server, level, last, last.downAt != null ? last.downAt : room.entry, 0.6F);
+			for (ServerPlayer p : players(server)) {
+				Alerts.title(p, "SECOND WIND", last.name + " gets back up! (once per run)", ChatFormatting.GOLD);
+			}
+			return;
+		}
+		defeat(server);
+	}
+
+	private static void spawnMarker(ServerLevel level, Runner r) {
+		Display.TextDisplay sign = EntityTypes.TEXT_DISPLAY.create(level, EntitySpawnReason.EVENT);
+		if (sign != null) {
+			sign.snapTo(r.downAt.x, r.downAt.y + 1.4, r.downAt.z, 0, 0);
+			((DisplayAccessor) sign).rubymod$setBillboard(Display.BillboardConstraints.CENTER);
+			((TextDisplayAccessor) sign).rubymod$setText(Component.literal("✚ " + r.name + " is down\n").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)
+					.append(Component.literal("crouch here to revive").withStyle(ChatFormatting.WHITE)));
+			((TextDisplayAccessor) sign).rubymod$setBackground(0x80000000);
+			sign.addTag(TAG);
+			level.addFreshEntity(sign);
+			r.marker = sign.getUUID();
+		}
+	}
+
+	private static void removeMarker(MinecraftServer server, Runner r) {
+		if (r.marker != null && level(server).getEntity(r.marker) instanceof Entity e) {
+			e.discard();
+		}
+		r.marker = null;
+	}
+
+	// ----- Endings -----
+
+	private static void defeat(MinecraftServer server) {
+		state = State.OVER;
+		timer = 12 * 20;
+		int floor = node == null ? 1 : node.floor + 1;
+		for (ServerPlayer p : players(server)) {
+			Alerts.title(p, "THE RIFT CLAIMS YOU", "You reached floor " + floor + " of " + (RiftMap.FLOORS + 1), ChatFormatting.DARK_RED);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.WITHER_DEATH, SoundSource.PLAYERS, 0.5F, 0.8F);
+			RiftFx.screen(p, "flash", 0xFF400010, 40);
+			Runner r = RUNNERS.get(p.getUUID());
+			p.sendSystemMessage(Component.literal("====== RUN OVER: floor " + floor + ", " + r.kills + " kills, " + r.relics.size() + " relics ======")
+					.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
+			dev.rubymod.game.Stats.rift(p.getUUID(), r.name, floor, false);
+		}
+	}
+
+	private static void victory(MinecraftServer server) {
+		state = State.OVER;
+		timer = 20 * 20;
+		ServerLevel level = level(server);
+		fireworks(level, room.portal, 12);
+		for (ServerPlayer p : players(server)) {
+			Runner r = RUNNERS.get(p.getUUID());
+			Alerts.title(p, "RIFT CONQUERED!", "The Juggernaut Mech is scrap. You win!", ChatFormatting.GOLD);
+			RiftFx.screen(p, "flash", 0xFFFFC02E, 30);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 1.0F);
+			p.sendSystemMessage(Component.literal("====== VICTORY: " + r.kills + " kills, " + r.relics.size() + " relics ======")
+					.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			dev.rubymod.game.Stats.rift(p.getUUID(), r.name, RiftMap.FLOORS + 1, true);
+		}
+		reviveAll(server, level, 1.0F);
+		openPortal(level);
+	}
+
+	/** After a run: back to the Threshold, relics gone, ready for another. */
+	private static void backToThreshold(MinecraftServer server) {
+		ServerLevel level = level(server);
+		for (ServerPlayer p : players(server)) {
+			Runner r = RUNNERS.get(p.getUUID());
+			RelicEffects.cleanup(p, r);
+			r.relics.clear();
+			r.alive = true;
+			r.kills = 0;
+			removeMarker(server, r);
+			r.downAt = null;
+			Net.send(p, new MorePayloads.RiftScreen("close", List.of()));
+		}
+		startStaging(server);
+	}
+
+	// ----- Odds and ends -----
+
+	private static void clearMobs(ServerLevel level) {
+		for (UUID id : MOBS) {
+			if (level.getEntity(id) instanceof Entity e) {
+				e.discard();
+			}
+		}
+		MOBS.clear();
+		PENDING.clear();
+		if (room != null) {
+			AABB box = new AABB(room.center).inflate(room.half + 4, RiftRoom.HEIGHT + 6, room.half + 4);
+			for (Entity e : level.getEntities((Entity) null, box, e -> !(e instanceof Player) && (e.entityTags().contains(TAG) || e instanceof Mob))) {
+				e.discard();
+			}
+		}
+	}
+
+	static void fireworks(ServerLevel level, Vec3 at, int count) {
+		for (int i = 0; i < count; i++) {
+			ItemStack rocket = new ItemStack(Items.FIREWORK_ROCKET);
+			var colors = it.unimi.dsi.fastutil.ints.IntList.of(0xFF3D6E, 0xFFC02E, 0xC27BFF, 0x66E0FF);
+			rocket.set(net.minecraft.core.component.DataComponents.FIREWORKS, new net.minecraft.world.item.component.Fireworks(1,
+					List.of(new net.minecraft.world.item.component.FireworkExplosion(net.minecraft.world.item.component.FireworkExplosion.Shape.values()[i % 4],
+							colors, it.unimi.dsi.fastutil.ints.IntList.of(0xFFFFFF), true, true))));
+			var fw = new net.minecraft.world.entity.projectile.FireworkRocketEntity(level, at.x + (i % 3 - 1) * 2, at.y + 1, at.z + (i / 3 % 3 - 1) * 2,
+					rocket);
+			level.addFreshEntity(fw);
+		}
+	}
+
+	static void tell(MinecraftServer server, Component message) {
+		for (ServerPlayer p : players(server)) {
+			p.sendSystemMessage(message);
+		}
+	}
+
+	private static void syncHud(MinecraftServer server) {
+		String where = state == State.STAGING ? "THE THRESHOLD" : node == null ? "RUBY RIFT"
+				: "FLOOR " + (node.floor + 1) + "/" + (RiftMap.FLOORS + 1) + "  •  " + node.theme.title.toUpperCase();
+		List<String> team = new ArrayList<>();
+		for (Runner r : RUNNERS.values()) {
+			ServerPlayer p = server.getPlayerList().getPlayer(r.id);
+			if (p != null) {
+				team.add(r.name + "|" + (int) Math.ceil(p.getHealth()) + "|" + (int) p.getMaxHealth() + "|" + (r.alive ? "up" : "down"));
+			}
+		}
+		for (ServerPlayer p : players(server)) {
+			Runner r = RUNNERS.get(p.getUUID());
+			List<String> relics = r.relics.stream().map(x -> x.id() + "|" + x.icon + "|" + x.tier.name() + "|" + x.title).toList();
+			Net.send(p, new MorePayloads.RiftHud(where, gold, relics, team));
+		}
+	}
+
+	/** For autotests: the state in one line. */
+	public static String debugState() {
+		return state + " timer " + timer + " work " + WORK.size() + " node " + (node == null ? "-" : node.id + ":" + node.type + "/" + node.theme)
+				+ " wave " + wave + "/" + waves + " mobs " + MOBS.size() + " pending " + PENDING.size() + " gold " + gold + " runners "
+				+ RUNNERS.values().stream().map(r -> r.name + (r.alive ? "" : "(down)") + r.relics.stream().map(Relic::id).toList()).toList()
+				+ (boss != null ? " boss " + boss.debug() : "");
+	}
+
+	/** For autotests: skip ahead. */
+	public static void testSkip(MinecraftServer server, String what) {
+		switch (what) {
+			case "start" -> timer = 1;
+			case "clear" -> {
+				ServerLevel level = level(server);
+				PENDING.clear();
+				for (UUID id : new ArrayList<>(MOBS)) {
+					if (level.getEntity(id) instanceof LivingEntity e) {
+						e.hurtServer(level, level.damageSources().generic(), 10000);
+					}
+				}
+				wave = waves;
+			}
+			case "boss" -> {
+				if (map != null) {
+					RiftMap.Node b = map.nodes.get(map.nodes.size() - 1);
+					map.visited.add(b.id - 1 >= 0 ? map.nodes.get(map.nodes.size() - 2).id : 0);
+					for (Runner r : RUNNERS.values()) {
+						r.vote = b.id;
+					}
+					node = b;
+					state = State.VOTE;
+					timer = 1;
+				}
+			}
+			default -> {
+				Relic r = Relic.byId(what);
+				if (r != null) {
+					for (ServerPlayer p : players(server)) {
+						give(p, RUNNERS.get(p.getUUID()), r);
+					}
+				}
+			}
+		}
+	}
+}

@@ -47,6 +47,9 @@ public final class Stats {
 		/** Best Sky Race time in ticks (0: never finished). */
 		public int skyBest;
 		public int duelsWon;
+		public int riftRuns;
+		public int riftBestFloor;
+		public int riftWins;
 		public int seasonsWon;
 		public Set<String> unlocked = new HashSet<>();
 		public String hat = "";
@@ -174,6 +177,16 @@ public final class Stats {
 		changed(id);
 	}
 
+	public static void rift(UUID id, String name, int floor, boolean won) {
+		Record r = get(id, name);
+		r.riftRuns++;
+		r.riftBestFloor = Math.max(r.riftBestFloor, floor);
+		if (won) {
+			r.riftWins++;
+		}
+		changed(id);
+	}
+
 	public static void skyRace(UUID id, String name, int ticks) {
 		Record r = get(id, name);
 		if (r.skyBest == 0 || ticks < r.skyBest) {
@@ -227,6 +240,7 @@ public final class Stats {
 		lines.add("Party game kills|" + r.partyKills);
 		lines.add("Horde best|" + (r.hordeBestWave > 0 ? "wave " + r.hordeBestWave : "-") + " (" + r.hordeGames + " games, " + r.hordeKills + " kills, "
 				+ r.hordeRevives + " revives)");
+		lines.add("Ruby Rift|" + (r.riftRuns == 0 ? "-" : r.riftWins + " wins, best floor " + r.riftBestFloor + " (" + r.riftRuns + " runs)"));
 		lines.add("Sky Race best|" + (r.skyBest > 0 ? raceTime(r.skyBest) : "-"));
 		lines.add("Duels won|" + r.duelsWon);
 		lines.add("Ruby Wars seasons won|" + r.seasonsWon);

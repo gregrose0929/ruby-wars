@@ -29,7 +29,9 @@ public class ModeScreen extends Screen {
 			new Game("rubywars", "RUBY WARS", "The main game. Build a base for two weeks, then battle for one day. Last one standing wins.",
 					"rubymod:ruby_heart", 0xFFE0303A),
 			new Game("horde", "CO-OP HORDE", "Build a base together and defend the Ruby Core from waves of monsters. Spend the team's rubies on gear.",
-					"rubymod:arr_rifle", 0xFF3FC85A));
+					"rubymod:arr_rifle", 0xFF3FC85A),
+			new Game("rift", "RUBY RIFT", "Co-op roguelike: fight room to room, pick wild relics after each one, and beat the boss at the bottom.",
+					"minecraft:end_crystal", 0xFFFF3D6E));
 
 	/** The latest info from the server (where you are, a status line per game). */
 	public static MorePayloads.ModeInfo info;
@@ -79,6 +81,7 @@ public class ModeScreen extends Screen {
 		return switch (id) {
 			case "rubywars" -> where().equals("RUBY_WARS");
 			case "horde" -> where().equals("HORDE");
+			case "rift" -> where().equals("RIFT");
 			default -> where().equals("PARTY:" + id.substring(5));
 		};
 	}
@@ -103,7 +106,7 @@ public class ModeScreen extends Screen {
 		int leftX = width / 2 - colW - 4;
 		int rightX = width / 2 + 4;
 		// Left: the main games.
-		int cardH = Math.min(104, (bottom - top - 6) / 2);
+		int cardH = Math.min(104, (bottom - top - 6 * (MAIN.size() - 1)) / MAIN.size());
 		cards = new int[MAIN.size()][];
 		for (int i = 0; i < MAIN.size(); i++) {
 			Game game = MAIN.get(i);
