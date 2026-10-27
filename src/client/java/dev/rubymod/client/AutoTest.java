@@ -1204,6 +1204,59 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("starter")) {
+			// Start a season, place a Heart: the starter base appears and the drill fills the bank.
+			net.minecraft.core.BlockPos[] heart = new net.minecraft.core.BlockPos[1];
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "gamemode survival @a");
+				command(mc, "rubywars start");
+			});
+			then(300, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var level = server.overworld();
+				int x = 180;
+				int z = 40;
+				level.getChunk(x >> 4, z >> 4);
+				int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+				heart[0] = new net.minecraft.core.BlockPos(x, y, z);
+				me.teleportTo(level, x + 0.5, y, z - 6.5, java.util.Set.of(), 0, 30, true);
+				dev.rubymod.game.Research.sync(me);
+			}));
+			then(60, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var level = server.overworld();
+				log("problem placing here? {}", dev.rubymod.game.Claims.placementProblem(level, me, heart[0]));
+				level.setBlock(heart[0], dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState(), 3);
+				dev.rubymod.game.Claims.onHeartPlaced(level, me, heart[0]);
+				java.util.List<String> found = new java.util.ArrayList<>();
+				for (var pos : net.minecraft.core.BlockPos.betweenClosed(heart[0].offset(-4, -3, -4), heart[0].offset(4, 3, 4))) {
+					var b = level.getBlockState(pos).getBlock();
+					if (b instanceof dev.rubymod.industry.MachineBlock || b == dev.rubymod.registry.ModBlocks.ARMORY) {
+						found.add(b.getName().getString() + "@" + pos.subtract(heart[0]).toShortString());
+					}
+				}
+				log("starter base: {}", found);
+			}));
+			then(40, mc -> {
+				log("guide step {} | bounties {}", dev.rubymod.client.Guide.current(), ClientState.bounties.size());
+				shot(mc, "starter-base");
+			});
+			for (int i = 0; i < 4; i++) {
+				then(400, mc -> onServer(mc, server -> log("bank {} | charge {}", dev.rubymod.industry.Grid.rubies(me(server).getUUID()),
+						dev.rubymod.industry.Grid.charge(me(server).getUUID()))));
+			}
+			then(5, mc -> command(mc, "tp @p ~ ~8 ~ 0 50"));
+			then(40, mc -> shot(mc, "starter-above"));
+			then(5, mc -> mc.gui.setScreen(new ResearchScreen()));
+			then(20, mc -> shot(mc, "starter-guide"));
+			then(5, mc -> mc.gui.setScreen(null));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("guide")) {
 			// The NEXT STEP panel and the J guide as goals get done.
 			then(0, mc -> {

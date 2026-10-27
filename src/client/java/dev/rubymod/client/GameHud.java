@@ -40,7 +40,6 @@ public class GameHud implements HudElement {
 		drawPhaseBanner(g, font, w);
 		drawHeart(g, font);
 		drawEconomy(g, font);
-		drawBounties(g, font);
 		drawGuide(g, font);
 		drawAmmo(g, font, player, w, h);
 		drawReload(g, w, h);
@@ -207,83 +206,80 @@ public class GameHud implements HudElement {
 		}
 	}
 
-	/** Today's bounties under the bank panel: what to do, progress bars, and the reward; done ones turn green. */
-	private void drawBounties(GuiGraphicsExtractor g, Font font) {
-		if (ClientState.bounties.isEmpty() || ClientState.phase() != Phase.BUILD) {
-			return;
-		}
-		int y = 58;
-		var e = ClientState.economy;
-		if (e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
-			y = 26;
-		}
-		panel(g, 4, y, 166, y + 12 + ClientState.bounties.size() * 17);
-		g.text(font, "DAILY BOUNTIES", 9, y + 3, 0xFF8B93A1, false);
-		int ly = y + 14;
-		for (String line : ClientState.bounties) {
-			String[] p = line.split("[|]");
-			if (p.length < 5) {
-				continue;
-			}
-			boolean done = Boolean.parseBoolean(p[4]);
-			int progress = Integer.parseInt(p[1]);
-			int target = Math.max(1, Integer.parseInt(p[2]));
-			String what = p[0].replace(" on monsters", "").replace(" of any kind", "").replace(" or deepslate", "");
-			String text = font.plainSubstrByWidth(what + "  " + progress + "/" + target, 134);
-			g.text(font, text, 9, ly, done ? 0xFF5BE37D : WHITE, false);
-			String reward = "+" + p[3];
-			g.text(font, reward, 162 - font.width(reward), ly, done ? 0xFF5BE37D : 0xFFFF5A82, false);
-			g.fill(9, ly + 10, 162, ly + 12, 0xFF2A2F35);
-			g.fill(9, ly + 10, 9 + Math.round(153 * Math.min(1.0F, progress / (float) target)), ly + 12, done ? 0xFF5BE37D : GOLD);
-			ly += 17;
-		}
-	}
-
-	/** The guide's next step (see Guide), under the other left-hand panels, while building in the Ruby Wars world. */
+	/**
+	 * The guide's next step (see Guide) and today's bounties, in one panel under the Heart and
+	 * bank panels, while building in the Ruby Wars world.
+	 */
 	private void drawGuide(GuiGraphicsExtractor g, Font font) {
 		Phase phase = ClientState.phase();
-		if (!ClientState.inRubyWarsWorld() || ClientState.research == null || phase != Phase.LOBBY && phase != Phase.BUILD) {
+		if (!ClientState.inRubyWarsWorld() || phase != Phase.LOBBY && phase != Phase.BUILD) {
 			return;
 		}
-		int step = Guide.current();
-		if (step < 0) {
+		int step = ClientState.research == null ? -1 : Guide.current();
+		java.util.List<String> bounties = phase == Phase.BUILD ? ClientState.bounties : java.util.List.of();
+		if (step < 0 && bounties.isEmpty()) {
 			return;
 		}
-		// Below the Heart, bank and bounty panels (whichever are showing).
 		int y = ClientState.hud != null && phase != Phase.LOBBY ? 24 : 4;
 		var e = ClientState.economy;
-		boolean economy = !(e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY);
-		if (economy) {
+		if (!(e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY)) {
 			y += 34;
 		}
-		if (!ClientState.bounties.isEmpty() && phase == Phase.BUILD) {
-			y = (economy ? 58 : 26) + 12 + ClientState.bounties.size() * 17 + 4;
-		}
-		Guide.Step s = Guide.STEPS.get(step);
-		int[] progress = Guide.progress(s);
-		var hint = font.split(Component.literal(s.hint()), 156);
-		int lines = Math.min(4, hint.size());
+		Guide.Step s = step < 0 ? null : Guide.STEPS.get(step);
+		int[] progress = s == null ? null : Guide.progress(s);
+		var hint = s == null ? java.util.List.<net.minecraft.util.FormattedCharSequence>of() : font.split(Component.literal(s.hint()), 180);
+		int lines = Math.min(3, hint.size());
 		boolean bar = progress != null && progress[1] > 1;
-		int bottom = y + 26 + lines * 9 + (bar ? 5 : 0) + 11;
-		panel(g, 4, y, 166, bottom);
-		g.fill(4, y, 6, bottom, GOLD);
-		g.text(font, "NEXT STEP  " + (step + 1) + "/" + Guide.STEPS.size(), 10, y + 3, GOLD, false);
-		String count = bar ? progress[0] + "/" + progress[1] : "";
-		g.text(font, font.plainSubstrByWidth(s.title(), 152 - font.width(count)), 10, y + 14, WHITE, true);
-		if (bar) {
-			g.text(font, count, 162 - font.width(count), y + 14, GOLD, false);
+		int height = (s == null ? 0 : 26 + lines * 9 + (bar ? 5 : 0)) + (bounties.isEmpty() ? 0 : 13 + bounties.size() * 13) + (s == null ? 2 : 11);
+		panel(g, 4, y, 190, y + height);
+		g.fill(4, y, 6, y + height, GOLD);
+		int ly = y + 3;
+		if (s != null) {
+			g.text(font, "NEXT STEP  " + (step + 1) + "/" + Guide.STEPS.stream().filter(st -> !st.optional()).count(), 10, ly, GOLD, false);
+			String count = bar ? progress[0] + "/" + progress[1] : "";
+			g.text(font, font.plainSubstrByWidth(s.title(), 176 - font.width(count)), 10, ly + 11, WHITE, true);
+			if (bar) {
+				g.text(font, count, 186 - font.width(count), ly + 11, GOLD, false);
+			}
+			ly += 23;
+			for (int i = 0; i < lines; i++) {
+				g.text(font, hint.get(i), 10, ly, 0xFFB8C0C8, false);
+				ly += 9;
+			}
+			if (bar) {
+				g.fill(10, ly + 1, 186, ly + 3, 0xFF2A2F35);
+				g.fill(10, ly + 1, 10 + Math.round(176 * Math.min(1.0F, progress[0] / (float) progress[1])), ly + 3, GOLD);
+				ly += 5;
+			}
 		}
-		int ly = y + 26;
-		for (int i = 0; i < lines; i++) {
-			g.text(font, hint.get(i), 10, ly, 0xFFB8C0C8, false);
-			ly += 9;
+		// Today's bounties: small extra jobs for rubies.
+		if (!bounties.isEmpty()) {
+			if (s != null) {
+				g.fill(10, ly + 2, 186, ly + 3, 0x40FFFFFF);
+				ly += 5;
+			}
+			g.text(font, "TODAY'S BOUNTIES", 10, ly, 0xFF8B93A1, false);
+			ly += 11;
+			for (String line : bounties) {
+				String[] p = line.split("[|]");
+				if (p.length < 5) {
+					continue;
+				}
+				boolean done = Boolean.parseBoolean(p[4]);
+				int got = Integer.parseInt(p[1]);
+				int target = Math.max(1, Integer.parseInt(p[2]));
+				String what = p[0].replace(" on monsters", "").replace(" of any kind", "").replace(" or deepslate", "");
+				String reward = "+" + p[3];
+				g.text(font, font.plainSubstrByWidth(what + "  " + got + "/" + target, 172 - font.width(reward)), 10, ly, done ? 0xFF5BE37D : WHITE, false);
+				g.text(font, reward, 186 - font.width(reward), ly, done ? 0xFF5BE37D : 0xFFFF5A82, false);
+				g.fill(10, ly + 9, 186, ly + 10, 0xFF2A2F35);
+				g.fill(10, ly + 9, 10 + Math.round(176 * Math.min(1.0F, got / (float) target)), ly + 10, done ? 0xFF5BE37D : GOLD);
+				ly += 13;
+			}
 		}
-		if (bar) {
-			g.fill(10, ly + 1, 162, ly + 3, 0xFF2A2F35);
-			g.fill(10, ly + 1, 10 + Math.round(152 * Math.min(1.0F, progress[0] / (float) progress[1])), ly + 3, GOLD);
-			ly += 5;
+		if (s != null) {
+			g.text(font, "J: the full guide", 10, ly + 1, 0xFF7A838C, false);
 		}
-		g.text(font, "J: the full guide", 10, ly + 1, 0xFF7A838C, false);
 	}
 
 	private void drawAmmo(GuiGraphicsExtractor g, Font font, Player player, int w, int h) {

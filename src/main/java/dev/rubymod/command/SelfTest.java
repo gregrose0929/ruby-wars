@@ -221,7 +221,8 @@ public final class SelfTest {
 		Claims.damageHeart(level, claim, 50, null);
 		check("hearts: Heart is destroyed at 0 HP", claim.destroyed && level.getBlockState(base).isAir());
 
-		// ----- Shop -----
+		// ----- Shop ----- (an empty bank: the starter base put rubies in it)
+		dev.rubymod.industry.Grid.deposit(alpha.getUUID(), -dev.rubymod.industry.Grid.milliRubies(alpha.getUUID()));
 		alpha.getInventory().clearContent();
 		alpha.getInventory().add(new ItemStack(ModItems.RUBY, 10));
 		check("shop: buying takes rubies", Shop.takeRubies(alpha, 7) && Shop.countRubies(alpha) == 3);

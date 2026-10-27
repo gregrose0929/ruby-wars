@@ -16,8 +16,8 @@ public class ManualScreen extends Screen {
 	private static final List<Page> PAGES = List.of(
 			new Page("Getting Started",
 					"New? Try Free Roam first (H): every gun, vehicle and aircraft to play with, nothing to lose.",
-					"In Ruby Wars: place your Ruby Heart (your base), mine rubies in the Ruby Crater, craft an Armory (7 iron, 1 ruby, a crafting table).",
-					"Then a generator, a Ruby Drill and a Trade Depot: rubies flow into your bank while you play.",
+					"In Ruby Wars, place your Ruby Heart: a starter base appears around it, with an Armory and a Ruby Drill that fills your bank by itself.",
+					"Buy defenses at the Armory before raid day (days 3, 6, 9, 12), spend stars on upgrades (J) for tanks and jets, and grow your base.",
 					"The NEXT STEP panel (left of the screen) and the GUIDE tab (J) show what to do next, step by step."),
 			new Page("The Hub",
 					"Joining the server puts you in the hub. Walk into a portal to play: Ruby Wars (red), Co-op Horde (green) or the party games (purple).",

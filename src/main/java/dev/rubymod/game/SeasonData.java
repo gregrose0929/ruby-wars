@@ -103,6 +103,8 @@ public class SeasonData {
 		public transient int killstreakBefore;
 		public int missilesUsed;
 		public boolean heartGiven;
+		/** Got the ready-made base around their first Heart this season (StarterBase). */
+		public boolean starterBase;
 		public int bestKillstreak;
 		public int lastHeartMoveDay = -1;
 		public int bountyDay = -1;

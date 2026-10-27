@@ -16,26 +16,16 @@ public final class Guide {
 	}
 
 	public static final List<Step> STEPS = List.of(
-			new Step("Place your Ruby Heart", "Pick a spot for your base (K opens the map) and place the Heart: nobody else can build there.",
-					"heart", false),
-			new Step("Mine 10 Ruby Ore", "Dig in the Ruby Crater in the middle of the map (K), or deep underground.", "ruby10", false),
-			new Step("Buy something at an Armory", "Craft an Armory (7 iron, 1 ruby, a crafting table in the middle), place it at your base "
-					+ "and right-click it. It sells everything.", "armory", false),
-			new Step("Build a generator", "Buy a Combustion Generator or Solar Panels at the Armory: they power your machines.", "power", false),
-			new Step("Build a Ruby Drill", "Buy one at the Armory and place it near your generator: it digs ruby ore for you.", "drill", false),
-			new Step("Build a Trade Depot", "It sells ore into your bank, and the Armory spends from your bank. Add a Vault for interest.", "depot",
-					false),
-			new Step("Spend stars on an upgrade", "Goals give stars. Press J, open UPGRADES and pick one: it unlocks new gear in the Armory.",
-					"#research", false),
+			new Step("Place your Ruby Heart", "Pick a spot for your base (K opens the map) and place it. A starter base appears around it: "
+					+ "an Armory, and a Ruby Drill that fills your bank by itself.", "heart", false),
+			new Step("Buy something at your Armory", "Right-click the Armory by your Heart. It spends your bank, which your drill keeps filling.", "armory", false),
 			new Step("Place a base defense", "Sentry Turrets, walls and mines from the Armory: raiders attack your Heart on days 3, 6, 9 and 12.",
 					"defense", false),
-			new Step("Join a squad", "Press O to team up: you share a base, respawns and upgrades.", "squad", true),
-			new Step("Upgrade your Heart", "Buy \"Upgrade Ruby Heart\" at the Armory: a bigger base and more drills.", "heart2", false),
-			new Step("Drive 300 blocks", "Research Motor Pool (J), buy a Jeep or a Tank at the Armory and go for a drive.", "drive", false),
+			new Step("Spend stars on an upgrade", "Goals give stars. Press J, open UPGRADES and pick one: it unlocks tanks, jets and more "
+					+ "in the Armory.", "#research", false),
+			new Step("Upgrade your Heart", "Buy \"Upgrade Ruby Heart\" at the Armory: a bigger base and room for more drills.", "heart2", false),
 			new Step("Repel a raid", "Beat the raiders on a raid day, or call a practice raid any time with /rubywars raid.", "raid", false),
-			new Step("Get a machine to Mk III", "Right-click a machine to upgrade it with rubies.", "mk3", false),
-			new Step("Bank 2,000 rubies", "More drills, a Refinery and a Vault. You'll want rubies for Battle Day gear.", "bank2000", false),
-			new Step("Fly 1,000 blocks", "Research Aviation (J) for jets and helicopters, and an Airfield Pad to rearm them.", "fly", false));
+			new Step("Join a squad", "Press O to team up: you share a base, respawns and upgrades.", "squad", true));
 
 	private Guide() {
 	}

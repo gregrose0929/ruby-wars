@@ -85,6 +85,7 @@ public final class Claims {
 		level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.0F, 1.2F);
 		player.sendSystemMessage(Component.literal("Ruby Heart placed! You've claimed " + (claim.radius() * 2 + 1) + "x" + (claim.radius() * 2 + 1)
 				+ " blocks around it. Only you (and players you /rubywars trust) can build here.").withStyle(ChatFormatting.GREEN));
+		StarterBase.maybeBuild(level, player, pos);
 	}
 
 	/** The owner picked their Heart back up (build phase only). */
