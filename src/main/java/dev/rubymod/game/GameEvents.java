@@ -66,6 +66,12 @@ public final class GameEvents {
 				entity.discard();
 				return;
 			}
+			// Nothing drops in the Rift (no loot, no experience).
+			if ((entity instanceof net.minecraft.world.entity.item.ItemEntity || entity instanceof net.minecraft.world.entity.ExperienceOrb)
+					&& dev.rubymod.game.rift.Rift.protects(world, entity.blockPosition())) {
+				entity.discard();
+				return;
+			}
 			if (!GameConfig.get().hostileMobs && entity instanceof net.minecraft.world.entity.monster.Enemy && !entity.entityTags().contains("rubymod_horde") && !entity.entityTags().contains(dev.rubymod.game.rift.Rift.TAG)
 					&& entity.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) {
 				entity.discard();

@@ -94,11 +94,11 @@ public class RelicScreen extends Screen {
 		g.fillGradient(0, 0, width, height, 0xC8100410, 0xE8040208);
 		boolean anyLegend = cards.stream().anyMatch(c -> c.tier().equals("LEGENDARY"));
 		// Sparks rising behind the cards.
-		for (int i = 0; i < 50; i++) {
+		for (int i = 0; i < 24; i++) {
 			double s = (now / 25.0 + i * 61) % height;
 			int sx = (int) ((i * 173 + Math.sin(now / 700.0 + i) * 25) % width + width) % width;
 			int sy = height - (int) s;
-			int c = anyLegend && i % 2 == 0 ? 0xB0FFC02E : i % 3 == 0 ? 0x90FF3D6E : 0x70C27BFF;
+			int c = anyLegend && i % 2 == 0 ? 0x70FFC02E : i % 3 == 0 ? 0x50FF3D6E : 0x40C27BFF;
 			g.fill(sx, sy, sx + 2, sy + 2, c);
 		}
 		// Heading.
@@ -140,7 +140,7 @@ public class RelicScreen extends Screen {
 			boolean cursed = c.tier().equals("CURSED");
 			boolean cantAfford = c.price() > 0 && kind.equals("shop") && gold < c.price();
 			// Body: dark, tinted by the tier.
-			g.fillGradient(x, y, x + cardW, y + cardH, 0xF0000000 | (tier & 0xFFFFFF) >> 3 & 0x1F1F1F, 0xF0080408);
+			g.fill(x, y, x + cardW, y + cardH, 0xF8100A12);
 			// Glow behind the icon.
 			int glowA = (int) (60 + 40 * Math.sin(now / 300.0 + i));
 			g.fillGradient(x + 1, y + 1, x + cardW - 1, y + 50, glowA << 24 | tier & 0xFFFFFF, 0x00000000);
@@ -185,16 +185,17 @@ public class RelicScreen extends Screen {
 				ty += 12;
 			}
 			// Name and what it does.
-			for (FormattedCharSequence line : font.split(Component.literal(c.title()), cardW - 10)) {
+			for (FormattedCharSequence line : font.split(Component.literal(c.title()).withStyle(net.minecraft.ChatFormatting.BOLD), cardW - 10)) {
 				g.centeredText(font, line, x + cardW / 2, ty, 0xFFFFFFFF);
 				ty += 10;
 			}
-			ty += 3;
-			for (FormattedCharSequence line : font.split(Component.literal(c.about()), cardW - 12)) {
+			ty += 4;
+			g.fill(x + 12, ty - 3, x + cardW - 12, ty - 2, 0x40000000 | tier & 0xFFFFFF);
+			for (FormattedCharSequence line : font.split(Component.literal(c.about()), cardW - 14)) {
 				if (ty > y + cardH - 26) {
 					break;
 				}
-				g.centeredText(font, line, x + cardW / 2, ty, 0xFFC8C0D0);
+				g.centeredText(font, line, x + cardW / 2, ty, 0xFFEDE6F2);
 				ty += 10;
 			}
 			// The button.

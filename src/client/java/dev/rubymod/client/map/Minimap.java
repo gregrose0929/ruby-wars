@@ -38,6 +38,10 @@ public class Minimap implements HudElement {
 		if (!enabled || mc.player == null || mc.level == null || Vehicles.inVehicle(mc) && dev.rubymod.client.Targeting.piloting(mc) != null) {
 			return;
 		}
+		boolean racing = ClientState.race != null && System.currentTimeMillis() - ClientState.raceAt < 1000;
+		if (!ClientState.inRubyWarsWorld() && !racing) {
+			return; // the map's only for Ruby Wars (and the Sky Race)
+		}
 		int w = g.guiWidth();
 		int x0 = w - SIZE - 4;
 		int y0 = 4;

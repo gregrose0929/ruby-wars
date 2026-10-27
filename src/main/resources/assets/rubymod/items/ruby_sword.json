@@ -1,6 +1,20 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "rubymod:item/ruby_sword"
+		"type": "minecraft:select",
+		"property": "minecraft:custom_model_data",
+		"index": 0,
+		"cases": [
+			{
+				"when": "rift",
+				"model": {
+					"type": "minecraft:model",
+					"model": "rubymod:item/ruby_sword_rift"
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:model",
+			"model": "rubymod:item/ruby_sword"
+		}
 	}
 }

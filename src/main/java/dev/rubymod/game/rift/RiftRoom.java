@@ -89,25 +89,25 @@ public final class RiftRoom {
 					Blocks.CONCRETE.pick(DyeColor.LIGHT_GRAY).defaultBlockState(), Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState()},
 					b(Blocks.SEA_LANTERN), b(Blocks.POLISHED_ANDESITE), Blocks.CONCRETE.pick(DyeColor.LIGHT_BLUE).defaultBlockState(), b(Blocks.SEA_LANTERN),
 					b(Blocks.AIR), b(Blocks.AIR), b(Blocks.POLISHED_ANDESITE), b(Blocks.SEA_LANTERN), b(Blocks.ANDESITE_WALL));
-			case HEART -> new Palette(new BlockState[] {b(Blocks.POLISHED_BLACKSTONE), b(Blocks.RED_NETHER_BRICKS), b(Blocks.POLISHED_BLACKSTONE),
-					b(ModBlocks.RUBY_BLOCK), b(Blocks.CRYING_OBSIDIAN)}, b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.OBSIDIAN), b(Blocks.CRYING_OBSIDIAN),
-					b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.OBSIDIAN), b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.OBSIDIAN), b(ModBlocks.RUBY_BLOCK),
+			case HEART -> new Palette(new BlockState[] {b(Blocks.POLISHED_BLACKSTONE), b(ModBlocks.RIFT_STONE), b(Blocks.POLISHED_BLACKSTONE),
+					b(ModBlocks.RUBY_BLOCK), b(ModBlocks.RIFT_STONE)}, b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.OBSIDIAN), b(ModBlocks.RIFT_STONE),
+					b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.OBSIDIAN), b(Blocks.PEARLESCENT_FROGLIGHT), b(ModBlocks.RIFT_STONE), b(ModBlocks.RUBY_BLOCK),
 					b(Blocks.BLACKSTONE_WALL));
 			case CRYSTAL, THRESHOLD -> new Palette(new BlockState[] {b(Blocks.DEEPSLATE_TILES), b(Blocks.POLISHED_DEEPSLATE), b(Blocks.DEEPSLATE_TILES),
-					b(Blocks.CALCITE), b(Blocks.AMETHYST_BLOCK)}, b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.DEEPSLATE_BRICKS), b(Blocks.CRACKED_DEEPSLATE_BRICKS),
-					b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.DEEPSLATE_TILES), b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.POLISHED_DEEPSLATE),
-					b(ModBlocks.RUBY_BLOCK), b(Blocks.DEEPSLATE_BRICK_WALL));
+					b(ModBlocks.RIFT_STONE), b(Blocks.AMETHYST_BLOCK)}, b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.DEEPSLATE_BRICKS), b(ModBlocks.RIFT_STONE),
+					b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.DEEPSLATE_TILES), b(Blocks.PEARLESCENT_FROGLIGHT), b(ModBlocks.RIFT_STONE),
+					b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.DEEPSLATE_BRICK_WALL));
 			case FORGE, FOUNDRY -> new Palette(new BlockState[] {b(Blocks.POLISHED_BLACKSTONE_BRICKS), b(Blocks.BLACKSTONE), b(Blocks.POLISHED_BLACKSTONE),
-					b(Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS), b(Blocks.GILDED_BLACKSTONE)}, b(Blocks.OCHRE_FROGLIGHT), b(Blocks.NETHER_BRICKS),
-					b(Blocks.RED_NETHER_BRICKS), b(Blocks.SHROOMLIGHT), b(Blocks.BLACKSTONE), b(Blocks.SHROOMLIGHT), b(Blocks.POLISHED_BLACKSTONE),
+					b(ModBlocks.RIFT_MAGMA), b(Blocks.GILDED_BLACKSTONE)}, b(Blocks.OCHRE_FROGLIGHT), b(Blocks.NETHER_BRICKS),
+					b(ModBlocks.RIFT_MAGMA), b(Blocks.SHROOMLIGHT), b(Blocks.BLACKSTONE), b(Blocks.SHROOMLIGHT), b(ModBlocks.RIFT_MAGMA),
 					b(Blocks.OCHRE_FROGLIGHT), b(Blocks.POLISHED_BLACKSTONE_BRICK_WALL));
-			case FROST -> new Palette(new BlockState[] {b(Blocks.PACKED_ICE), b(Blocks.SNOW_BLOCK), b(Blocks.POLISHED_DIORITE), b(Blocks.PACKED_ICE),
-					b(Blocks.BLUE_ICE)}, b(Blocks.SEA_LANTERN), b(Blocks.PACKED_ICE), b(Blocks.BLUE_ICE), b(Blocks.SEA_LANTERN), b(Blocks.PACKED_ICE),
-					b(Blocks.SEA_LANTERN), b(Blocks.POLISHED_DIORITE), b(Blocks.SEA_LANTERN), b(Blocks.DIORITE_WALL));
-			case LAB -> new Palette(new BlockState[] {copper(WeatheringCopper.WeatherState.UNAFFECTED), copper(WeatheringCopper.WeatherState.EXPOSED),
+			case FROST -> new Palette(new BlockState[] {b(Blocks.PACKED_ICE), b(Blocks.SNOW_BLOCK), b(ModBlocks.RIFT_FROST), b(Blocks.PACKED_ICE),
+					b(Blocks.BLUE_ICE)}, b(Blocks.SEA_LANTERN), b(Blocks.PACKED_ICE), b(ModBlocks.RIFT_FROST), b(Blocks.SEA_LANTERN), b(Blocks.PACKED_ICE),
+					b(Blocks.SEA_LANTERN), b(ModBlocks.RIFT_FROST), b(Blocks.SEA_LANTERN), b(Blocks.DIORITE_WALL));
+			case LAB -> new Palette(new BlockState[] {copper(WeatheringCopper.WeatherState.UNAFFECTED), b(ModBlocks.RIFT_VERDANT),
 					b(Blocks.MOSS_BLOCK), b(Blocks.MOSSY_STONE_BRICKS), copper(WeatheringCopper.WeatherState.WEATHERED)}, b(Blocks.VERDANT_FROGLIGHT),
-					copper(WeatheringCopper.WeatherState.OXIDIZED), b(Blocks.MOSSY_STONE_BRICKS), b(Blocks.VERDANT_FROGLIGHT),
-					copper(WeatheringCopper.WeatherState.WEATHERED), b(Blocks.VERDANT_FROGLIGHT), copper(WeatheringCopper.WeatherState.EXPOSED),
+					copper(WeatheringCopper.WeatherState.OXIDIZED), b(ModBlocks.RIFT_VERDANT), b(Blocks.VERDANT_FROGLIGHT),
+					copper(WeatheringCopper.WeatherState.WEATHERED), b(Blocks.VERDANT_FROGLIGHT), b(ModBlocks.RIFT_VERDANT),
 					b(Blocks.VERDANT_FROGLIGHT), b(Blocks.MOSSY_STONE_BRICK_WALL));
 		};
 	}

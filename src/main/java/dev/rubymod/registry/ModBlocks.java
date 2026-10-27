@@ -182,6 +182,16 @@ public class ModBlocks {
 			props().mapColor(MapColor.COLOR_PURPLE).strength(-1.0F, 3_600_000.0F).noCollision().noOcclusion().noLootTable().lightLevel(s -> 11)
 					.sound(SoundType.GLASS).pushReaction(PushReaction.IMMOVEABLE));
 
+	/** Ruby Rift's glowing veined stone (built into the rooms; can't be broken). */
+	public static final Block RIFT_STONE = registerNoItem("rift_stone", Block::new, riftStone());
+	public static final Block RIFT_MAGMA = registerNoItem("rift_magma", Block::new, riftStone());
+	public static final Block RIFT_FROST = registerNoItem("rift_frost", Block::new, riftStone());
+	public static final Block RIFT_VERDANT = registerNoItem("rift_verdant", Block::new, riftStone());
+
+	private static BlockBehaviour.Properties riftStone() {
+		return BlockBehaviour.Properties.of().strength(-1.0F, 3600000.0F).lightLevel(s -> 9).noLootTable();
+	}
+
 	private static Block registerNoItem(String name, Function<BlockBehaviour.Properties, Block> factory, BlockBehaviour.Properties properties) {
 		ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, RubyMod.id(name));
 		return Registry.register(BuiltInRegistries.BLOCK, key, factory.apply(properties.setId(key)));

@@ -43,6 +43,8 @@ public final class GunModel extends Model<GunModel.Pose> {
 
 	/** Everything about how the gun looks in one draw. Distances are in gun pixels, angles in degrees. */
 	public static class Pose {
+		/** Ruby Rift reskin. */
+		public boolean rift;
 		public List<String> attachments = List.of();
 		public boolean loaded = true;
 		public boolean casingOnly;
@@ -81,6 +83,15 @@ public final class GunModel extends Model<GunModel.Pose> {
 	public final String name;
 	public final Identifier texture;
 	public final Identifier glow;
+	/** Ruby Rift's glowing reskin. */
+	public final Identifier riftTexture;
+	public final Identifier riftGlow;
+
+	/** A Ruby Rift weapon (tagged with the "rift" custom model data). */
+	public static boolean isRift(net.minecraft.world.item.ItemStack stack) {
+		var cmd = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA);
+		return cmd != null && cmd.strings().contains("rift");
+	}
 	public final Map<String, float[]> anchors;
 	private final ModelPart mag;
 	private final ModelPart magStd;
@@ -105,6 +116,8 @@ public final class GunModel extends Model<GunModel.Pose> {
 		this.name = name;
 		this.texture = RubyMod.id("textures/entity/gun/" + name + ".png");
 		this.glow = RubyMod.id("textures/entity/gun/" + name + "_glow.png");
+		this.riftTexture = RubyMod.id("textures/entity/gun/" + name + "_rift.png");
+		this.riftGlow = RubyMod.id("textures/entity/gun/" + name + "_rift_glow.png");
 		this.anchors = GunModels.ANCHORS.get(name);
 		this.mag = child(root, "mag");
 		this.magStd = child(mag, "mag_std");
@@ -235,8 +248,8 @@ public final class GunModel extends Model<GunModel.Pose> {
 		pose.pushPose();
 		float s = 1.0F / U;
 		pose.scale(-s, -s, s);
-		collector.submitModel(this, state, pose, RenderTypes.entityCutout(texture), light, overlay, outline);
-		collector.submitModel(this, state, pose, RenderTypes.eyes(glow), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
+		collector.submitModel(this, state, pose, RenderTypes.entityCutout(state.rift ? riftTexture : texture), light, overlay, outline);
+		collector.submitModel(this, state, pose, RenderTypes.eyes(state.rift ? riftGlow : glow), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
 		pose.popPose();
 	}
 }

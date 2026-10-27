@@ -41,6 +41,7 @@ public final class GunItemRenderer implements SpecialModelRenderer<GunModel.Pose
 	public GunModel.Pose extractArgument(ItemStack stack) {
 		GunModel.Pose pose = new GunModel.Pose();
 		pose.attachments = stack.getOrDefault(ModComponents.ATTACHMENTS, List.<String>of());
+		pose.rift = GunModel.isRift(stack);
 		var player = Minecraft.getInstance().player;
 		if (player != null && !(stack.getItem() instanceof GunItem)) {
 			// Launchers show the rocket in the tube unless they're reloading.

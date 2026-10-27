@@ -163,39 +163,42 @@ public final class RiftClient {
 			int w = g.guiWidth();
 			int h = g.guiHeight();
 			long now = System.currentTimeMillis();
-			// The run: where you are and the team's gold.
-			int pw = Math.max(150, font.width(hud.header()) + 14);
-			g.fillGradient(4, 4, 4 + pw, 34, 0xD0200814, 0xD0100410);
-			g.outline(4, 4, pw, 30, 0xFFFF3D6E);
-			g.text(font, "RUBY RIFT", 10, 8, 0xFFFF3D6E, true);
-			g.text(font, hud.header(), 10, 20, 0xFFE8D8F0, false);
-			String gold = "◆ " + hud.gold();
-			g.text(font, gold, 4 + pw - font.width(gold) - 6, 8, 0xFFFFC02E, true);
-			// The team.
-			int y = 40;
-			for (String line : hud.team()) {
-				String[] f = line.split("[|]");
-				if (f.length < 4) {
-					continue;
+			// The run: one clean card, top left.
+			String gold = String.valueOf(hud.gold());
+			int pw = Math.max(font.width(hud.header()) + 12, 100);
+			// On narrow screens, below the boss bars instead of beside them.
+			int top = 4 + pw > w / 2 - 92 ? 42 : 4;
+			g.fill(4, top, 4 + pw, top + 28, 0xE0100810);
+			g.fill(4, top, 4 + pw, top + 1, 0xFFFF3D6E);
+			g.text(font, "RUBY RIFT", 9, top + 5, 0xFFFF5A82, true);
+			g.item(new ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET), 4 + pw - font.width(gold) - 22, top + 1);
+			g.text(font, gold, 4 + pw - font.width(gold) - 5, top + 5, 0xFFFFD040, true);
+			g.text(font, hud.header(), 9, top + 16, 0xFFF0E6F6, true);
+			// The team (only when there is one).
+			int y = top + 32;
+			if (hud.team().size() > 1) {
+				for (String line : hud.team()) {
+					String[] f = line.split("[|]");
+					if (f.length < 4) {
+						continue;
+					}
+					boolean down = f[3].equals("down");
+					float hp = Mth.clamp(Float.parseFloat(f[1]) / Math.max(1, Float.parseFloat(f[2])), 0, 1);
+					g.fill(4, y, 110, y + 14, 0xC0100810);
+					g.text(font, font.plainSubstrByWidth(f[0], 58), 8, y + 3, down ? 0xFFFF6060 : 0xFFFFFFFF, true);
+					if (down) {
+						g.text(font, "DOWN", 72, y + 3, (now / 300) % 2 == 0 ? 0xFFFF3030 : 0xFFA02020, true);
+					} else {
+						int col = hp > 0.5F ? 0xFF5BE37D : hp > 0.25F ? 0xFFFFB040 : 0xFFFF4040;
+						g.fill(70, y + 5, 106, y + 9, 0xFF301018);
+						g.fill(70, y + 5, 70 + (int) (36 * hp), y + 9, col);
+					}
+					y += 16;
 				}
-				boolean down = f[3].equals("down");
-				float hp = Mth.clamp(Float.parseFloat(f[1]) / Math.max(1, Float.parseFloat(f[2])), 0, 1);
-				g.fill(4, y, 104, y + 13, 0xB0101014);
-				g.text(font, font.plainSubstrByWidth(f[0], 60), 7, y + 3, down ? 0xFFFF5050 : 0xFFFFFFFF, false);
-				if (down) {
-					boolean blink = (now / 300) % 2 == 0;
-					g.text(font, "DOWN", 70, y + 3, blink ? 0xFFFF3030 : 0xFF801010, true);
-				} else {
-					int bar = (int) (32 * hp);
-					int col = hp > 0.5F ? 0xFF5BE37D : hp > 0.25F ? 0xFFFFB040 : 0xFFFF4040;
-					g.fill(68, y + 4, 100, y + 9, 0xFF301010);
-					g.fill(68, y + 4, 68 + bar, y + 9, col);
-				}
-				y += 15;
 			}
-			// Your relics, along the bottom left, framed in their tier's colour.
-			int x = 4;
-			int ry = h - 24;
+			// Your relics: a column down the right edge, framed in their tier's colour.
+			int x = w - 22;
+			int ry = 6;
 			int n = 0;
 			for (String r : hud.relics()) {
 				String[] f = r.split("[|]");
@@ -203,23 +206,26 @@ public final class RiftClient {
 					continue;
 				}
 				int tier = tierColor(f[2]);
-				float pulse = 0.6F + 0.4F * (float) Math.sin(now / 400.0 + n);
-				int glow = (int) (pulse * 255) << 24 | tier & 0xFFFFFF;
-				g.fill(x, ry, x + 20, ry + 20, 0xC0101014);
-				g.outline(x, ry, 20, 20, glow);
-				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[1]))), x + 2, ry + 2);
-				x += 22;
+				float pulse = 0.55F + 0.45F * (float) Math.sin(now / 450.0 + n);
+				g.fill(x, ry, x + 18, ry + 18, 0xD0100810);
+				g.outline(x, ry, 18, 18, (int) (pulse * 255) << 24 | tier & 0xFFFFFF);
+				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[1]))), x + 1, ry + 1);
+				ry += 20;
 				n++;
-				if (x > w / 2 - 110) {
-					x = 4;
-					ry -= 22;
+				if (ry > h - 60) {
+					ry = 6;
+					x -= 20;
 				}
 			}
+			// What to do next, in a pill above the hotbar.
 			if (lastScreen != null && mc.gui.screen() == null) {
 				String hint = "Press J to " + (lastScreen.kind().equals("map") ? "choose the next room" : lastScreen.kind().equals("shop")
 						? "open the shop" : lastScreen.kind().equals("threshold") ? "open the Altar of Echoes" : "choose your relic");
-				boolean blink = (now / 500) % 2 == 0;
-				g.centeredText(font, hint, w / 2, h - 72, blink ? 0xFFFFC02E : 0xFFFF3D6E);
+				int tw = font.width(hint);
+				int hy = h - 74;
+				g.fill(w / 2 - tw / 2 - 8, hy - 4, w / 2 + tw / 2 + 8, hy + 12, 0xE0100810);
+				g.outline(w / 2 - tw / 2 - 8, hy - 4, tw + 16, 16, (now / 400) % 2 == 0 ? 0xFFFFC02E : 0xFFFF3D6E);
+				g.centeredText(font, hint, w / 2, hy, 0xFFFFFFFF);
 			}
 		}
 	}
@@ -261,8 +267,7 @@ public final class RiftClient {
 			g.pose().pushMatrix();
 			g.pose().translate(s[0], s[1]);
 			g.pose().scale(size, size);
-			g.text(font, text, -font.width(text) / 2 + 1, 1, Math.max(16, alpha) << 24, false);
-			g.text(font, text, -font.width(text) / 2, 0, color, false);
+			g.text(font, text, -font.width(text) / 2, 0, color, true);
 			g.pose().popMatrix();
 		}
 	}

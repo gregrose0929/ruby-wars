@@ -266,9 +266,23 @@ public final class AutoTest {
 			log("cleared: {} | screen {}", dev.rubymod.game.rift.Rift.debugState(), mc.gui.screen());
 			shot(mc, "rift-offer");
 		});
+		// Close the choice without picking and walk into the portal: the choice comes back.
+		then(5, mc -> mc.gui.setScreen(null));
+		then(5, mc -> onServer(mc, server -> {
+			var at = dev.rubymod.game.rift.Rift.portalPos();
+			var me = me(server);
+			me.teleportTo((net.minecraft.server.level.ServerLevel) me.level(), at.x + 0.5, at.y, at.z + 0.5, java.util.Set.of(), 180, 20, true);
+		}));
+		then(40, mc -> {
+			log("in the portal without picking: screen {} | {}", mc.gui.screen(), dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-portal-pickfirst");
+		});
 		then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
 				new dev.rubymod.net.MorePayloads.RiftChoice("pick", riftFirstOffer())));
-		then(20, mc -> shot(mc, "rift-portal"));
+		then(40, mc -> {
+			log("picked, standing in the portal: screen {} | {}", mc.gui.screen(), dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-portal");
+		});
 		then(5, mc -> onServer(mc, server -> {
 			var me = me(server);
 			var b = dev.rubymod.game.rift.Rift.debugState();

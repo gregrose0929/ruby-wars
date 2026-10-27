@@ -261,6 +261,20 @@ public final class RiftMeta {
 		}
 	}
 
+	/** Rift weapons look the part: glowing reskins (picked by the "rift" custom model data). */
+	static void riftify(ServerPlayer p) {
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack s = inv.getItem(i);
+			boolean weapon = s.getItem() instanceof GunItem || s.is(ModItems.RUBY_SWORD) || s.is(ModItems.FRAG_GRENADE) || s.is(ModItems.ROCKET_LAUNCHER)
+					|| s.is(ModItems.SKYHAMMER) || s.is(ModItems.LANCER);
+			if (weapon && !s.has(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA)) {
+				s.set(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA,
+						new net.minecraft.world.item.component.CustomModelData(List.of(), List.of(), List.of("rift"), List.of()));
+			}
+		}
+	}
+
 	// ----- Rewards at the end of a run -----
 
 	/** Shards for a run: two a room, three an elite, ten a boss; more with Heat. */

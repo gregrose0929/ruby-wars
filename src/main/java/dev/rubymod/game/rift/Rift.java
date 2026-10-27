@@ -170,6 +170,11 @@ public final class Rift {
 		return rec.riftUnlocks != null && rec.riftUnlocks.contains(relic);
 	}
 
+	/** The Rift's rooms: nothing in them can be broken. */
+	public static boolean protects(net.minecraft.world.level.Level level, BlockPos pos) {
+		return level.dimension() == Duels.ARENA && Math.abs(pos.getX() - X) <= 160;
+	}
+
 	/** True while hurting {@code e} is pointless (the Ruby Titan behind its pylons). */
 	public static boolean shielded(Entity e) {
 		return boss != null && boss.shielded(e);
@@ -419,6 +424,9 @@ public final class Rift {
 		for (ServerPlayer p : players(server)) {
 			Runner r = RUNNERS.get(p.getUUID());
 			RelicEffects.tick(p, r, level);
+			if (ticks % 20 == 0) {
+				RiftMeta.riftify(p);
+			}
 		}
 		RelicEffects.tickWorld(level);
 		if (portalOpen) {
@@ -1030,8 +1038,7 @@ public final class Rift {
 			}
 			RiftFx.screen(p, "flash", relic.tier.color, 16);
 		}
-		tell(p.level().getServer(), Component.literal(r.name + " took ").withStyle(ChatFormatting.GRAY)
-				.append(Component.literal(relic.title).withColor(relic.tier.color & 0xFFFFFF)));
+		p.sendOverlayMessage(Component.literal(relic.title).withColor(relic.tier.color & 0xFFFFFF));
 	}
 
 	static void buy(ServerPlayer player, String id) {
@@ -1082,8 +1089,8 @@ public final class Rift {
 	// ----- The way onward -----
 
 	private static void openPortal(ServerLevel level) {
-		portalOpen = true;
 		removePortal(level);
+		portalOpen = true;
 		Display.ItemDisplay gem = EntityTypes.ITEM_DISPLAY.create(level, EntitySpawnReason.EVENT);
 		if (gem != null) {
 			gem.snapTo(room.portal.x, room.portal.y + 1.6, room.portal.z, 0, 0);
@@ -1126,14 +1133,28 @@ public final class Rift {
 			level.sendParticles(ParticleTypes.REVERSE_PORTAL, true, false, c.x, c.y + 1, c.z, 4, 0.6, 0.8, 0.6, 0.1);
 		}
 		// Step in: the next part begins (once everyone's picked their relic).
-		boolean picking = RUNNERS.values().stream().anyMatch(r -> !r.offer.isEmpty());
+		List<String> picking = RUNNERS.values().stream().filter(r -> !r.offer.isEmpty() || !r.event.isEmpty()).map(r -> r.name).toList();
 		for (ServerPlayer p : players(server)) {
-			if (p.isSpectator() || p.position().distanceTo(c) > 2.2) {
+			double flat = Math.hypot(p.getX() - c.x, p.getZ() - c.z);
+			if (p.isSpectator() || flat > 2.6 || Math.abs(p.getY() - c.y) > 3) {
 				continue;
 			}
-			if (picking) {
-				if (ticks % 40 == 0) {
-					p.sendOverlayMessage(Component.literal("Waiting for everyone to pick a relic...").withStyle(ChatFormatting.LIGHT_PURPLE));
+			Runner me = RUNNERS.get(p.getUUID());
+			if (!me.offer.isEmpty() || !me.event.isEmpty()) {
+				// You haven't chosen yet: here's the choice again.
+				if (ticks % 30 == 0) {
+					if (!me.offer.isEmpty()) {
+						sendOffer(p, me, "Pick a relic first, then step in!");
+					} else {
+						Net.send(p, new MorePayloads.RiftScreen("event", me.event));
+					}
+					Alerts.title(p, "", "Choose first!", ChatFormatting.GOLD);
+				}
+				continue;
+			}
+			if (!picking.isEmpty()) {
+				if (ticks % 30 == 0) {
+					p.sendOverlayMessage(Component.literal("Waiting for " + String.join(", ", picking) + " to choose...").withStyle(ChatFormatting.LIGHT_PURPLE));
 				}
 				continue;
 			}
@@ -1425,6 +1446,11 @@ public final class Rift {
 			List<String> relics = r.relics.stream().map(x -> x.id() + "|" + x.icon + "|" + x.tier.name() + "|" + x.title).toList();
 			Net.send(p, new MorePayloads.RiftHud(where, state == State.STAGING ? RiftMeta.rec(p).riftShards : gold, relics, team));
 		}
+	}
+
+	/** For autotests: where the way onward is. */
+	public static Vec3 portalPos() {
+		return room == null ? null : room.portal;
 	}
 
 	/** For autotests: the state in one line. */

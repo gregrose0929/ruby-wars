@@ -99,7 +99,8 @@ public class GameHud implements HudElement {
 	/** "HIT - Tank 40%" / "DESTROYED - Tank" under the crosshair after a warhead lands. */
 	private void drawHitConfirm(GuiGraphicsExtractor g, Font font, int w, int h) {
 		var hit = ClientState.hitConfirm;
-		if (hit == null || System.currentTimeMillis() - ClientState.hitConfirmAt > 2500) {
+		// (The Rift shows damage numbers instead.)
+		if (hit == null || System.currentTimeMillis() - ClientState.hitConfirmAt > 2500 || dev.rubymod.client.rift.RiftClient.active()) {
 			return;
 		}
 		String text = hit.destroyed() ? (hit.percentLeft() < 0 ? "KILLED - " : "DESTROYED - ") + hit.target()
