@@ -60,6 +60,8 @@ public final class Gunfire {
 		if (now < NEXT_SHOT.getOrDefault(player.getUUID(), 0L)) {
 			return;
 		}
+		// Shooting ends your spawn protection (no firing from behind it).
+		dev.rubymod.game.SpawnShield.clear(player);
 		GunStats stats = gun.stats(stack);
 		int ammo = GunItem.ammo(stack);
 		if (ammo <= 0) {

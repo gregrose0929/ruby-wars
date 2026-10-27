@@ -92,7 +92,7 @@ public final class Duels {
 		/** Half the arena's width (walls for guns and vehicles; a warning line for planes). */
 		final int half;
 		/** Each side's spawn, this far from the centre along z. */
-		final int spawnZ;
+		public final int spawnZ;
 
 		Mode(String id, String title, int half, int spawnZ) {
 			this.id = id;
@@ -1014,6 +1014,9 @@ public final class Duels {
 			box(level, c, -x1, y1, -z1, -x2, y2, -z2, state);
 		}
 
+		/** How high the sealed arenas' invisible ceiling is (above the ground). */
+		private static final int CEILING = 30;
+
 		private static void guns(ServerLevel level, BlockPos c) {
 			int h = Mode.GUNS.half;
 			BlockState bricks = Blocks.STONE_BRICKS.defaultBlockState();
@@ -1030,7 +1033,10 @@ public final class Duels {
 			for (int[] side : new int[][] {{-h - 1, -h - 1, h + 1, -h - 1}, {-h - 1, h + 1, h + 1, h + 1}, {-h - 1, -h - 1, -h - 1, h + 1},
 					{h + 1, -h - 1, h + 1, h + 1}}) {
 				box(level, c, side[0], 1, side[1], side[2], 6, side[3], bricks);
-				box(level, c, side[0], 7, side[1], side[2], 30, side[3], Blocks.BARRIER.defaultBlockState());
+				box(level, c, side[0], 7, side[1], side[2], CEILING, side[3], Blocks.BARRIER.defaultBlockState());
+			}
+			for (int x = -h - 1; x <= h + 1; x++) {
+				box(level, c, x, CEILING, -h - 1, x, CEILING, h + 1, Blocks.BARRIER.defaultBlockState());
 			}
 			// Spawn shields: a low wall in front of each spawn.
 			pair(level, c, -4, 1, -Mode.GUNS.spawnZ + 4, 4, 2, -Mode.GUNS.spawnZ + 4, sand);
@@ -1086,10 +1092,15 @@ public final class Duels {
 			BlockState log = Blocks.OAK_LOG.defaultBlockState();
 			BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
 			flatten(level, c, -h - 3, -h - 3, h + 3, h + 3, 16, grass);
-			// Perimeter wall, 4 high: nothing on wheels or tracks gets over it.
+			// Perimeter wall, 4 high: nothing on wheels or tracks gets over it. Above it an invisible wall
+			// and ceiling: no shell or bullet leaves the stadium.
 			for (int[] side : new int[][] {{-h - 1, -h - 1, h + 1, -h - 1}, {-h - 1, h + 1, h + 1, h + 1}, {-h - 1, -h - 1, -h - 1, h + 1},
 					{h + 1, -h - 1, h + 1, h + 1}}) {
 				box(level, c, side[0], 1, side[1], side[2], 4, side[3], bricks);
+				box(level, c, side[0], 5, side[1], side[2], CEILING, side[3], Blocks.BARRIER.defaultBlockState());
+			}
+			for (int x = -h - 1; x <= h + 1; x++) {
+				box(level, c, x, CEILING, -h - 1, x, CEILING, h + 1, Blocks.BARRIER.defaultBlockState());
 			}
 			// Spawn pads.
 			box(level, c, -6, 0, -Mode.VEHICLES.spawnZ - 6, 6, 0, -Mode.VEHICLES.spawnZ + 8, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.RED).defaultBlockState());

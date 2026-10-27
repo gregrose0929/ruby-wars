@@ -23,7 +23,7 @@ public class ManualScreen extends Screen {
 			new Page("Party Games",
 					"The purple portal in the hub (or H) has 9 quick games. Rounds keep going until you leave.",
 					"Gun Game: a new weapon every kill. Hide & Seek: turn into a block! Infection: don't get caught by the zombies.",
-					"Capture the Flag and Tank Battle: Red vs Blue. King of the Hill: hold the gold zone. Sky Race: jetpack, elytra and ice boat races.",
+					"Capture the Flag, Tank Battle and Air Battle: Red vs Blue. King of the Hill: hold the gold zone. Sky Race: jetpack, elytra and ice boat races.",
 					"Build Battle: build the theme, then vote. Ruby Rush: a quick battle royale on a mini island."),
 			new Page("Co-op Horde",
 					"Build a base together and protect the Ruby Core in the middle from waves of monsters. You get 2 minutes to build first.",

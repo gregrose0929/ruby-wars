@@ -92,6 +92,8 @@ public class SeasonData {
 
 	public static class PlayerRecord {
 		public String name = "";
+		/** Owners of the enemy bases this player has found (they show on the map). */
+		public Set<String> discovered = new HashSet<>();
 		public boolean eliminated;
 		public int kills;
 		public int deaths;
@@ -187,6 +189,15 @@ public class SeasonData {
 
 	public Claim claimOf(UUID owner) {
 		return claims.get(owner.toString());
+	}
+
+	/** How far below its Heart a claim reaches: deeper down, anyone can dig (tunnel under a base). */
+	public static final int CLAIM_DEPTH = 12;
+
+	/** The claim protecting this block: inside the claim's square, and no deeper than CLAIM_DEPTH under its Heart. */
+	public Claim claimAt(String dimension, BlockPos pos) {
+		Claim claim = claimAt(dimension, pos.getX(), pos.getZ());
+		return claim != null && pos.getY() >= claim.y - CLAIM_DEPTH ? claim : null;
 	}
 
 	public Claim claimAt(String dimension, int x, int z) {

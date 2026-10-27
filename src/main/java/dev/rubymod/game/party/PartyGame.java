@@ -355,6 +355,7 @@ public abstract class PartyGame {
 			stop();
 			return;
 		}
+		unstick();
 		switch (phase) {
 			case LOBBY -> tickLobby();
 			case PLAYING -> {
@@ -599,6 +600,16 @@ public abstract class PartyGame {
 	protected void teleport(ServerPlayer player, double x, double y, double z, float yaw) {
 		player.teleportTo(level(), x, Hub.safeY(level(), x, y, z), z, Set.<Relative>of(), yaw, 0.0F, true);
 		player.resetFallDistance();
+	}
+
+	/** Anyone inside blocks (an arena rebuilt around them, a bad spawn) is lifted out on top. */
+	private void unstick() {
+		ServerLevel level = level();
+		for (ServerPlayer p : online()) {
+			if (!p.isSpectator() && p.getVehicle() == null && p.level() == level && !level.noCollision(p, p.getBoundingBox().deflate(0.1))) {
+				teleport(p, p.getX(), p.getY(), p.getZ(), p.getYRot());
+			}
+		}
 	}
 
 	/** Back into play: survival, full health, night vision, a moment of spawn protection. */

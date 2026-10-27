@@ -12,8 +12,10 @@ Design doc: https://claude.ai/code/artifact/7412ee76-bb2f-47f6-8045-6372edb0be5d
 2. **Build phase (14 days).** Everyone gets a Ruby Heart, a pistol, and some ammo.
    Place the Heart to claim the land around it (49x49 blocks at tier 1). Nobody
    else can build, break, or open things in your claim, nobody can be hurt inside a
-   claim, and explosions can't damage claims. Outside the claims you can fight. Mine Ruby Ore (rarer than diamonds, below Y 0), and spend
-   rubies at an Armory.
+   claim, and explosions can't damage claims. Outside the claims you can fight (and
+   die). A claim only reaches 12 blocks below its Heart: deeper down anyone can dig, so
+   you can tunnel under a base for Battle Day. Mine Ruby Ore (rarer than diamonds,
+   below Y 0), and spend rubies at an Armory.
 3. **Battle Day.**
    - **Lockdown (15 min):** claims open, defenses switch on, PvP still off.
    - **Open War (60 min):** PvP on. Hearts can be destroyed with Breaching Charges.
@@ -149,7 +151,8 @@ Rush they land 15 seconds in with a random gun.
 | Infection | `infection` | 2+ | One zombie (fast, strong) at the start; anyone caught becomes a zombie. Survivors have a pistol and shotgun and must last 4 minutes. Wild zombies wander in. |
 | Capture the Flag | `ctf` | 1+ (teams, bots fill in) | Red vs Blue. 20 seconds to build sandbag defenses, then grab their flag and bring it to yours. Dropped flags: your team walks over it to send it home. First to 3. |
 | King of the Hill | `koth` | 1+ (bots fill in) | Score a point a second while you're the only one in the gold zone; it moves every minute. First to 75. |
-| Tank Battle | `tanks` | 2+ (teams) | Red vs Blue in tanks on the vehicle arena (rebuilt fresh every round); a fresh tank 5 seconds after you're knocked out. First team to 10. |
+| Tank Battle | `tanks` | 2+ (teams) | Red vs Blue in tanks on the vehicle arena (rebuilt fresh every round, sealed so no shot leaves it); a fresh tank somewhere along your side 5 seconds after you're knocked out, with 5 seconds of protection. Bullets can't hurt tank crews. First team to 10. |
+| Air Battle | `air` | 2+ (teams) | Red vs Blue in the air over two facing runways. You take off in a different aircraft each time (fighter jet, attack jet, attack helicopter, bomber), with a Skyhammer to shoot back from the ground, and each runway has two Heavy AA Guns to climb into. Fly out of the battle area and you have 5 seconds to turn back. First team to 10. |
 | Sky Race | `skyrace` | 1+ | Fly through 12 rings in the sky, twice around, in 3 minutes. Rounds take turns: jetpacks (land on the glowing pads to refuel), elytras (jump off the launch tower; the elytra opens by itself, rockets for speed; land and you're put back at your last ring) and ice boats (an oval ice track on the ground, through a gate under each ring; get out of your boat and you're back at your last gate in a new one). The minimap shows the rings (next one green) and the other racers. Records are kept for each. |
 | Build Battle | `build` | 2+ | Same theme for everyone, 5 minutes in creative on your own plot (blocks and wands only), then rate every build 1 to 5 stars. |
 | Ruby Rush | `rush` | 1+ (bots fill in) | A battle royale on Rush Island (a quarter-size copy of the Ruby Wars Map in its own world). Float down, loot crates, stay inside the closing red zone. No respawns; last one standing wins. |
@@ -167,6 +170,10 @@ everyone can learn it. About 1,500 blocks across, with the world border just pas
   nobody gets a better start.
 - **Four rivers** wind from the crater to the sea between the corners, shallow enough to
   wade, with fords. Beaches and ocean all round.
+- **A village in each corner** (plains, taiga, desert and snowy houses, with villagers to
+  trade with and an iron golem), and **crumbled ruins** all over the land: broken houses,
+  half-fallen watchtowers, rows of pillars and old arches, some with a loot chest. They
+  stand in clearings, laid out the same in every corner.
 
 Pick it when creating a world (*World Type: Ruby Wars Map*), or on a server set
 `level-type=rubymod\:ruby_wars` in `server.properties` before the world is first made
@@ -494,8 +501,10 @@ ends when one squad (or one solo player) is left.
 ## Map, waypoints and pings
 
 The minimap (top right) shows the terrain you've explored, claim borders (yours
-green, your squad's blue, others red), squadmates, and markers: waypoints, your
-grave, pings, supply drops and raids. K opens the full map. Markers also float in
+green, your squad's blue, enemy bases red, but only once you or a squadmate has been
+within 40 blocks of one, or a Recon Drone has flown over it), squadmates, and markers:
+waypoints, your grave, pings, supply drops and raids. Enemy players never show up
+unless a Recon Drone or a ping spots them (the vanilla locator bar is off). K opens the full map. Markers also float in
 the world with their distance. Right-click the full map to drop a waypoint (or remove one). `/waypoint add <name>` saves where you stand
 (`/waypoint list`, `/waypoint remove <name>`). B pings a spot for your squad, or
 spots an enemy for 10 seconds; eliminated players can still spot for their squad
@@ -645,7 +654,7 @@ so you don't need to start a season to test weapons.
 ## Commands
 
 Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`, `/horde shop`, `/horde ready`,
-`/play gungame|hideseek|infection|ctf|koth|tanks|skyrace|build|rush` (party games), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
+`/play gungame|hideseek|infection|ctf|koth|tanks|air|skyrace|build|rush` (party games), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
 base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),
 `/squad ...`, `/sc <message>`, `/waypoint ...`.

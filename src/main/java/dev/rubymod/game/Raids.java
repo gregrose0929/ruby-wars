@@ -215,8 +215,9 @@ public final class Raids {
 		ACTIVE.put(raid.id, raid);
 		level.sendParticles(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, landing.getX() + 0.5, landing.getY() + 1, landing.getZ() + 0.5, 20, 1, 1, 1, 0.02);
 		level.playSound(null, landing, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 64.0F, 1.0F);
-		Waypoints.global("RAID on " + claim.ownerName, claim.pos(), 6, GameConfig.get().raidMinutes * 60 + warningSeconds);
-		Waypoints.global("Raiders", landing, 6, 120);
+		// Only the raided squad sees these: other players don't learn where the base is.
+		Waypoints.forSquad(owner, "RAID on " + claim.ownerName, claim.pos(), 6, GameConfig.get().raidMinutes * 60 + warningSeconds);
+		Waypoints.forSquad(owner, "Raiders", landing, 6, 120);
 		tellSide(server, owner, Component.literal("RAID! " + raid.raiders.size() + " raiders are coming for your Heart from the "
 				+ direction(claim.pos(), landing) + ". Kill them before they loot your bank!").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
 		for (ServerPlayer p : sidePlayers(server, owner)) {

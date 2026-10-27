@@ -140,6 +140,22 @@ public class WarzoneGenerator extends ChunkGenerator {
 	}
 
 	@Override
+	public void applyBiomeDecoration(net.minecraft.world.level.WorldGenLevel level, ChunkAccess chunk, StructureManager structureManager) {
+		// Villages and ruins sit in clearings: no trees (or flowers) in their chunks.
+		if (scale < 0.999 || !MapFeatures.clearing(chunk.getPos())) {
+			super.applyBiomeDecoration(level, chunk, structureManager);
+		}
+		// Villages and ruins (the full-size map only, not Ruby Rush's little copy).
+		if (scale >= 0.999) {
+			try {
+				MapFeatures.decorate(level, chunk);
+			} catch (RuntimeException e) {
+				dev.rubymod.RubyMod.LOGGER.error("Couldn't add villages and ruins to chunk {}", chunk.getPos(), e);
+			}
+		}
+	}
+
+	@Override
 	public void spawnOriginalMobs(WorldGenRegion region) {
 		// Animals at world creation, like vanilla (cows, sheep, pigs...).
 		ChunkPos center = region.getCenter();

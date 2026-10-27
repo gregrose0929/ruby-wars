@@ -14,7 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
  * moment you fire a weapon.
  */
 public final class SpawnShield {
-	public static final int TICKS = 80;
+	public static final int TICKS = 100;
 	private static final Map<UUID, Long> SHIELDED_UNTIL = new HashMap<>();
 
 	private SpawnShield() {

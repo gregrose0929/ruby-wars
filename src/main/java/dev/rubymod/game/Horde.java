@@ -210,6 +210,34 @@ public final class Horde {
 	}
 
 	/** For a crash: send everyone in Horde to the hub and stop the game. */
+	/** Ticks that hit an error lately (one a second is forgiven). */
+	private static int strikes;
+	private static long lastLogged;
+
+	/**
+	 * A tick hit an error: skip it and carry on (the game is kept). Only an error that
+	 * keeps happening, tick after tick for a few seconds, ends the game.
+	 */
+	public static void hiccup(MinecraftServer server, Throwable e) {
+		strikes += 20;
+		long now = System.currentTimeMillis();
+		if (now - lastLogged > 60_000) {
+			lastLogged = now;
+			RubyMod.LOGGER.error("Co-op Horde hit an error (skipping this tick, the game goes on)", e);
+		}
+		if (strikes > 20 * 60) {
+			strikes = 0;
+			crashed(server, e);
+		}
+	}
+
+	/** Called every good tick. */
+	private static void forgive() {
+		if (strikes > 0) {
+			strikes--;
+		}
+	}
+
 	public static void crashed(MinecraftServer server, Throwable e) {
 		RubyMod.LOGGER.error("Co-op Horde hit an error; sending its players to the hub", e);
 		try {
@@ -746,6 +774,7 @@ public final class Horde {
 	}
 
 	public static void tick(MinecraftServer server) {
+		forgive();
 		if (!Outpost.WORK.isEmpty()) {
 			Outpost.runWork(8_000_000L);
 			if (Outpost.WORK.isEmpty()) {
@@ -1489,10 +1518,11 @@ public final class Horde {
 		BlockPos c = center();
 		Vec3 cache = cachePos();
 		int left = toSpawn + bosses + MOBS.size();
-		for (Iterator<UUID> it = MOBS.iterator(); it.hasNext();) {
-			Entity e = arena.getEntity(it.next());
+		// A copy: explosions in here (Sappers) kill other monsters, which takes them off MOBS.
+		for (UUID id : new ArrayList<>(MOBS)) {
+			Entity e = arena.getEntity(id);
 			if (!(e instanceof Mob mob) || !mob.isAlive()) {
-				it.remove();
+				MOBS.remove(id);
 				continue;
 			}
 			if (mob instanceof AircraftEntity) {

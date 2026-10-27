@@ -80,8 +80,9 @@ public class TankBattle extends PartyGame {
 		ServerLevel level = level();
 		BlockPos c = center();
 		int dir = part.team == 0 ? 1 : -1;
-		double x = c.getX() + 0.5 + player.getRandom().nextInt(9) - 4;
-		double z = c.getZ() - dir * 100 + 0.5;
+		// Anywhere along your own back line (not the same spot every time), with 5 seconds of protection.
+		double x = c.getX() + 0.5 + player.getRandom().nextInt(101) - 50;
+		double z = c.getZ() - dir * (96 + player.getRandom().nextInt(10)) + 0.5;
 		float yaw = part.team == 0 ? 0 : 180;
 		UUID old = tanks.remove(player.getUUID());
 		if (old != null && level.getEntity(old) instanceof Entity e && !e.isVehicle()) {
@@ -93,7 +94,10 @@ public class TankBattle extends PartyGame {
 		give(player, new ItemStack(ModItems.LANCER), new ItemStack(ModItems.AT_MISSILE, 4), gun(ModItems.ARR_RIFLE), new ItemStack(ModItems.HEAVY_AMMO, 64));
 		Mob tank = ModEntities.TANK.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
 		if (tank != null) {
-			tank.snapTo(x, c.getY(), z + dir * 3, yaw, 0);
+			tank.snapTo(x, dev.rubymod.game.Hub.safeY(level, x, c.getY(), z + dir * 3), z + dir * 3, yaw, 0);
+			if (tank instanceof dev.rubymod.entity.VehicleEntity v) {
+				v.shield(dev.rubymod.game.SpawnShield.TICKS);
+			}
 			tank.yBodyRot = yaw;
 			tank.yHeadRot = yaw;
 			tank.addTag(tag());

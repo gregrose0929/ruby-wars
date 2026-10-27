@@ -44,7 +44,8 @@ public final class Waypoints {
 	private record Ping(UUID from, String squad, String name, BlockPos pos, long until) {
 	}
 
-	private record Global(String name, BlockPos pos, int kind, long until) {
+	/** A marker for everyone, or (side not null) just that player's squad. */
+	private record Global(String name, BlockPos pos, int kind, long until, UUID side) {
 	}
 
 	private record Spot(UUID side, long until) {
@@ -167,14 +168,46 @@ public final class Waypoints {
 	/** Everyone sees this marker until it expires (supply drops, raids). */
 	public static void global(String name, BlockPos pos, int kind, int seconds) {
 		GLOBAL.removeIf(g -> g.pos.equals(pos));
-		GLOBAL.add(new Global(name, pos, kind, System.currentTimeMillis() + seconds * 1000L));
+		GLOBAL.add(new Global(name, pos, kind, System.currentTimeMillis() + seconds * 1000L, null));
+	}
+
+	/** A marker only that player's squad sees. */
+	public static void forSquad(UUID side, String name, BlockPos pos, int kind, int seconds) {
+		GLOBAL.removeIf(g -> g.pos.equals(pos));
+		GLOBAL.add(new Global(name, pos, kind, System.currentTimeMillis() + seconds * 1000L, side));
 	}
 
 	public static void clearGlobal(BlockPos pos) {
 		GLOBAL.removeIf(g -> g.pos.equals(pos));
 	}
 
-	/** Once a second: every player's markers, squadmates and the claims within 600 blocks. */
+	/** How close you have to get to an enemy base (beyond its edge) to put it on your map. */
+	private static final int DISCOVER_RANGE = 40;
+
+	/** This player (and so their squad) has found the base owned by {@code owner}. */
+	public static void discover(UUID player, String owner, String playerName) {
+		SeasonData.PlayerRecord record = SeasonData.get().player(player, playerName);
+		if (record.discovered == null) {
+			record.discovered = new java.util.HashSet<>();
+		}
+		if (record.discovered.add(owner)) {
+			SeasonData.markDirty();
+		}
+	}
+
+	/** Has this player or anyone in their squad found that base? */
+	private static boolean discovered(UUID player, String owner) {
+		for (UUID id : Squads.mates(player)) {
+			SeasonData.PlayerRecord r = SeasonData.get().player(id);
+			if (r != null && r.discovered != null && r.discovered.contains(owner)) {
+				return true;
+			}
+		}
+		SeasonData.PlayerRecord r = SeasonData.get().player(player);
+		return r != null && r.discovered != null && r.discovered.contains(owner);
+	}
+
+	/** Once a second: every player's markers, squadmates and the bases they know about (their own, their squad's, any they've found). */
 	public static void sync(MinecraftServer server) {
 		long now = System.currentTimeMillis();
 		PINGS.removeIf(p -> p.until < now);
@@ -199,6 +232,9 @@ public final class Waypoints {
 				}
 			}
 			for (Global g : GLOBAL) {
+				if (g.side != null && !g.side.equals(id) && !Squads.same(id, g.side)) {
+					continue;
+				}
 				markers.add(new MorePayloads.Marker(g.name, g.pos.getX(), g.pos.getY(), g.pos.getZ(), (byte) g.kind));
 			}
 			for (java.util.Map.Entry<UUID, Spot> e : SPOTS.entrySet()) {
@@ -231,9 +267,13 @@ public final class Waypoints {
 				} else if (relation == 1) {
 					markers.add(new MorePayloads.Marker(claim.ownerName + "'s Heart", claim.x, claim.y, claim.z, (byte) 5));
 				}
-				double dx = claim.x - player.getX();
-				double dz = claim.z - player.getZ();
-				if (relation < 2 || dx * dx + dz * dz < 600 * 600) {
+				if (relation == 2 && Hub.inRubyWarsWorld(player) && Math.max(Math.abs(claim.x - player.getX()), Math.abs(claim.z - player.getZ()))
+						< claim.radius() + DISCOVER_RANGE && !discovered(id, claim.owner)) {
+					discover(id, claim.owner, player.getName().getString());
+					player.sendSystemMessage(net.minecraft.network.chat.Component.literal("You found " + claim.ownerName + "'s base! It's on your map now.")
+							.withStyle(net.minecraft.ChatFormatting.GOLD));
+				}
+				if (relation < 2 || discovered(id, claim.owner)) {
 					claims.add(new MorePayloads.ClaimInfo(claim.ownerName, claim.x, claim.z, claim.radius(), relation));
 				}
 			}

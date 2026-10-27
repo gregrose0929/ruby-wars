@@ -345,6 +345,14 @@ public final class AutoTest {
 					log("tanks: riding {} | {}", mc.player.getVehicle(), pg("tanks").debugState());
 					shot(mc, "party-tanks-ride");
 				});
+				// Bullets can't reach someone inside a tank.
+				then(5, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var buddy = partyBuddy(server);
+					float before = me.getHealth();
+					me.hurtServer(me.level(), dev.rubymod.registry.ModDamage.source(me.level(), dev.rubymod.registry.ModDamage.BULLET, buddy, buddy), 6.0F);
+					log("tank crew shot with a bullet: riding {} health {} -> {}", me.getVehicle() != null, before, me.getHealth());
+				}));
 				// A crater in the arena: the next round's rebuild should fill it, without freezing the server.
 				then(5, mc -> onServer(mc, server -> {
 					var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
@@ -360,6 +368,26 @@ public final class AutoTest {
 					log("tanks rebuilt: crater filled {}, gold gone {}, slowest tick {} ms",
 							!level.getBlockState(tankMark.below()).isAir(), level.getBlockState(tankMark.above()).isAir(), maxTickMs(server));
 				}));
+			});
+		}
+		if (only.isEmpty() || only.equals("air")) {
+			partyMode("air", true, () -> {
+				then(100, mc -> {
+					log("air: riding {} | {}", mc.player.getVehicle(), pg("air").debugState());
+					shot(mc, "party-air-runway");
+				});
+				then(5, mc -> onServer(mc, server -> {
+					var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+					log("AA guns: {}", level.getEntitiesOfClass(dev.rubymod.entity.HeavyAAGunEntity.class, me(server).getBoundingBox().inflate(400)).size());
+				}));
+				// Fly off the edge: five seconds to turn back, then you're out.
+				then(5, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var ride = me.getVehicle() != null ? me.getVehicle() : me;
+					ride.teleportTo(-75000 + 360, 140, 0);
+				}));
+				then(40, mc -> shot(mc, "party-air-edge"));
+				then(90, mc -> log("after leaving the area: {} health {}", pg("air").debugState(), mc.player.getHealth()));
 			});
 		}
 		if (only.isEmpty() || only.equals("skyrace")) {
@@ -779,6 +807,39 @@ public final class AutoTest {
 		}
 		if (mode.startsWith("party")) {
 			partyScript(mode.length() > 5 ? mode.substring(6) : "");
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("villagetour")) {
+			// Villages and ruins on the Ruby Wars map (run on a world made with that map type).
+			then(0, mc -> {
+				command(mc, "gamemode spectator @a");
+				command(mc, "time set noon");
+				command(mc, "weather clear");
+			});
+			var centers = dev.rubymod.world.MapFeatures.villageCenters();
+			var ruins = dev.rubymod.world.MapFeatures.ruins();
+			then(5, mc -> log("villages at {} | {} ruins", centers.stream().map(c -> c[0] + "," + c[1]).toList(), ruins.size()));
+			for (int i = 0; i < centers.size(); i++) {
+				int[] c = centers.get(i);
+				int g = dev.rubymod.world.WarzoneTerrain.column(c[0], c[1]).height();
+				int n = i;
+				then(10, mc -> command(mc, String.format("tp @p %d %d %d facing %d %d %d", c[0] + 34, g + 26, c[1] + 34, c[0], g, c[1])));
+				then(300, mc -> shot(mc, "village-" + n));
+			}
+			for (int i = 0; i < 8; i++) {
+				var r = ruins.get(i * ruins.size() / 8);
+				int g = dev.rubymod.world.WarzoneTerrain.column(r.x(), r.z()).height();
+				int n = i;
+				then(10, mc -> command(mc, String.format("tp @p %d %d %d facing %d %d %d", r.x() + 11, g + 7, r.z() + 11, r.x(), g + 2, r.z())));
+				then(200, mc -> {
+					log("ruin {} kind {} at {},{}", n, r.kind(), r.x(), r.z());
+					shot(mc, "ruin-" + n);
+				});
+			}
 			then(20, mc -> {
 				log("done");
 				mc.stop();

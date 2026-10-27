@@ -767,8 +767,18 @@ public class AircraftEntity extends Mob {
 
 	// ----- Damage, crashing -----
 
+	/** No damage until this game time (spawn protection in Air Battle). */
+	private long shieldUntil;
+
+	public void shield(int ticks) {
+		shieldUntil = level().getGameTime() + ticks;
+	}
+
 	@Override
 	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+		if (level.getGameTime() < shieldUntil) {
+			return false;
+		}
 		if (source.is(ModDamage.BULLET) || source.is(ModDamage.HEADSHOT)) {
 			amount *= 0.3F;
 		} else if (source.is(DamageTypeTags.IS_EXPLOSION)) {

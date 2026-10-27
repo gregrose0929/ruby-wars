@@ -88,6 +88,14 @@ public class ReconDroneEntity extends Mob {
 			for (Entity e : level.getEntities(this, getBoundingBox().inflate(SPOT_RANGE, 64, SPOT_RANGE), this::isEnemy)) {
 				Waypoints.spot(e, owner, 3);
 			}
+			// Enemy bases it flies over go on its owner's map.
+			if (owner != null) {
+				for (dev.rubymod.game.SeasonData.Claim claim : dev.rubymod.game.SeasonData.get().claims.values()) {
+					if (!claim.destroyed && !claim.canUse(owner) && Math.max(Math.abs(claim.x - getX()), Math.abs(claim.z - getZ())) < claim.radius() + SPOT_RANGE) {
+						Waypoints.discover(owner, claim.owner, null);
+					}
+				}
+			}
 		}
 		if (age % 40 == 0) {
 			level.playSound(null, getX(), getY(), getZ(), SoundEvents.BEE_LOOP, SoundSource.NEUTRAL, 0.6F, 1.6F);

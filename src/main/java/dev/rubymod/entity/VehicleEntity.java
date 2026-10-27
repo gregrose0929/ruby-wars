@@ -46,6 +46,8 @@ public class VehicleEntity extends Mob {
 	/** Turret traverse speed, degrees per tick. */
 	private static final float TRAVERSE = 4.0F;
 	private int cannonCooldown;
+	/** Can't be damaged until this game time (a fresh spawn in Tank Battle). */
+	private long shieldUntil;
 	/** Ticks the main gun takes to reload. */
 	public static final int RELOAD_TICKS = 60;
 	private static final EntityDataAccessor<Integer> RELOAD = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.INT);
@@ -130,6 +132,11 @@ public class VehicleEntity extends Mob {
 	/** Barrel elevation (negative = up, like player pitch). */
 	public float barrelPitch() {
 		return entityData.get(BARREL_PITCH);
+	}
+
+	/** No damage for a few seconds (spawn protection). */
+	public void shield(int ticks) {
+		shieldUntil = level().getGameTime() + ticks;
 	}
 
 	public boolean isTank() {
@@ -238,6 +245,9 @@ public class VehicleEntity extends Mob {
 
 	@Override
 	public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+		if (level.getGameTime() < shieldUntil) {
+			return false;
+		}
 		if (source.is(ModDamage.ANTI_ARMOR)) {
 			// Full damage: rockets, shells, missiles, mines (see Armor).
 		} else if (source.is(ModDamage.BULLET) || source.is(ModDamage.HEADSHOT) || source.is(ModDamage.TURRET)) {
@@ -276,6 +286,7 @@ public class VehicleEntity extends Mob {
 			return;
 		}
 		cannonCooldown = RELOAD_TICKS;
+		shieldUntil = 0; // firing ends spawn protection
 		entityData.set(RELOAD, RELOAD_TICKS);
 		Vec3 aim = Vec3.directionFromRotation(barrelPitch(), turretYaw());
 		Vec3 muzzle = muzzlePosition();

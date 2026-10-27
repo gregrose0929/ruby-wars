@@ -132,6 +132,8 @@ public final class SelfTest {
 		check("protection: owner can build in own claim", Rules.canBuild(alpha, level, inside));
 		check("protection: stranger can't build in claim during build phase", !Rules.canBuild(bravo, level, inside));
 		check("protection: stranger can build outside claims", Rules.canBuild(bravo, level, base.offset(150, 1, 0)));
+		check("protection: a claim reaches a little way under its Heart", !Rules.canBuild(bravo, level, inside.below(10)));
+		check("protection: deep under a claim anyone can dig", Rules.canBuild(bravo, level, base.below(SeasonData.CLAIM_DEPTH + 2)));
 		claim.trusted.add(bravo.getUUID().toString());
 		check("protection: trusted player can build", Rules.canBuild(bravo, level, inside));
 		claim.trusted.clear();

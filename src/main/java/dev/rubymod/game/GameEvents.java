@@ -76,6 +76,8 @@ public final class GameEvents {
 			var quiet = server.createCommandSourceStack().withSuppressedOutput();
 			server.getCommands().performPrefixedCommand(quiet, "gamerule advance_time false");
 			server.getCommands().performPrefixedCommand(quiet, "time set day");
+			// Nobody sees where other players are (the locator bar), unless a drone or ping spots them.
+			server.getCommands().performPrefixedCommand(quiet, "gamerule locator_bar false");
 			GameConfig.load();
 			SeasonData.load(server);
 			dev.rubymod.industry.Grid.load(server);
@@ -119,7 +121,7 @@ public final class GameEvents {
 			try {
 				Horde.tick(server);
 			} catch (RuntimeException e) {
-				Horde.crashed(server, e);
+				Horde.hiccup(server, e);
 			}
 			dev.rubymod.game.party.PartyGames.tick(server);
 			try {
@@ -303,7 +305,9 @@ public final class GameEvents {
 		// --- Combat ---
 		// Nothing gets hurt in the hub.
 		ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) -> entity.level().dimension() != Hub.HUB
-				&& Rules.canHurt(source.getEntity(), entity));
+				&& Rules.canHurt(source.getEntity(), entity) && !Armor.crewProtected(entity, source)
+				&& !(source.is(net.minecraft.world.damagesource.DamageTypes.IN_WALL) && entity instanceof ServerPlayer p
+						&& dev.rubymod.game.party.PartyGames.of(p) != null));
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamage, damageTaken, blocked) -> {
 			if (entity instanceof ServerPlayer victim && damageTaken > 0 && source.getEntity() instanceof ServerPlayer attacker) {
 				CombatTag.tag(attacker, victim);
@@ -326,8 +330,8 @@ public final class GameEvents {
 				try {
 					hordeDeath = Horde.onDeath(player, source);
 				} catch (RuntimeException e) {
-					Horde.crashed(player.level().getServer(), e);
-					hordeDeath = true;
+					Horde.hiccup(player.level().getServer(), e);
+					hordeDeath = Horde.playing(player);
 				}
 				if (hordeDeath || dev.rubymod.game.party.PartyGames.onDeath(player, source) || Duels.onDeath(player, source)) {
 					return false;
@@ -477,7 +481,7 @@ public final class GameEvents {
 	}
 
 	private static String ownerName(Level level, BlockPos pos) {
-		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ());
+		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), pos);
 		return claim == null ? "someone" : claim.ownerName;
 	}
 

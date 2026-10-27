@@ -23,6 +23,7 @@ public final class PartyGames {
 			new CaptureTheFlag(),
 			new KingOfTheHill(),
 			new TankBattle(),
+			new AirBattle(),
 			new SkyRace(),
 			new BuildBattle(),
 			new RubyRush());

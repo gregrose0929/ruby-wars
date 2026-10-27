@@ -24,6 +24,12 @@ import net.minecraft.world.phys.Vec3;
  * landmine 80, anti-tank mine 130, cruise missile 250.
  */
 public final class Armor {
+	/** Bullets can't reach anyone riding inside a tank or other armored vehicle (only anti-armor weapons can). */
+	public static boolean crewProtected(net.minecraft.world.entity.Entity victim, net.minecraft.world.damagesource.DamageSource source) {
+		return victim.getVehicle() != null && isArmored(victim.getVehicle()) && (source.is(dev.rubymod.registry.ModDamage.BULLET)
+				|| source.is(dev.rubymod.registry.ModDamage.HEADSHOT) || source.is(dev.rubymod.registry.ModDamage.TURRET));
+	}
+
 	/** How far from a vehicle's hull a burst still hurts it. */
 	private static final double REACH = 2.0;
 

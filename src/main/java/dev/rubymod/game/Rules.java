@@ -42,7 +42,7 @@ public final class Rules {
 		if (!phase().claimsProtected()) {
 			return true;
 		}
-		SeasonData.Claim claim = SeasonData.get().claimAt(dim(level), pos.getX(), pos.getZ());
+		SeasonData.Claim claim = SeasonData.get().claimAt(dim(level), pos);
 		return claim == null || claim.canUse(player.getUUID());
 	}
 
@@ -54,7 +54,7 @@ public final class Rules {
 		if (isAdminBypass(player)) {
 			return true;
 		}
-		SeasonData.Claim claim = SeasonData.get().claimAt(dim(level), pos.getX(), pos.getZ());
+		SeasonData.Claim claim = SeasonData.get().claimAt(dim(level), pos);
 		if (claim == null || claim.canUse(player.getUUID())) {
 			return true;
 		}
@@ -74,12 +74,12 @@ public final class Rules {
 		if (!phase().claimsProtected()) {
 			return true;
 		}
-		return SeasonData.get().claimAt(dim(level), pos.getX(), pos.getZ()) == null;
+		return SeasonData.get().claimAt(dim(level), pos) == null;
 	}
 
 	/** Is pos inside a claim that's currently protected from fire and explosions? */
 	public static boolean isProtectedFromGriefing(Level level, BlockPos pos) {
-		return !level.isClientSide() && phase().claimsProtected() && SeasonData.get().claimAt(dim(level), pos.getX(), pos.getZ()) != null;
+		return !level.isClientSide() && phase().claimsProtected() && SeasonData.get().claimAt(dim(level), pos) != null;
 	}
 
 	/** Should fluid be stopped from flowing from one block into the next (crossing into a claim)? */
@@ -87,8 +87,8 @@ public final class Rules {
 		if (level.isClientSide() || !phase().claimsProtected()) {
 			return false;
 		}
-		SeasonData.Claim target = SeasonData.get().claimAt(dim(level), to.getX(), to.getZ());
-		return target != null && target != SeasonData.get().claimAt(dim(level), from.getX(), from.getZ());
+		SeasonData.Claim target = SeasonData.get().claimAt(dim(level), to);
+		return target != null && target != SeasonData.get().claimAt(dim(level), from);
 	}
 
 	/** Can attacker hurt victim? Only matters between two players. */
@@ -129,7 +129,7 @@ public final class Rules {
 
 	/** Standing on anyone's claimed land. */
 	public static boolean inBase(Player player) {
-		return SeasonData.get().claimAt(dim(player.level()), player.getBlockX(), player.getBlockZ()) != null;
+		return SeasonData.get().claimAt(dim(player.level()), player.blockPosition()) != null;
 	}
 
 	public static boolean isEliminated(UUID player) {
