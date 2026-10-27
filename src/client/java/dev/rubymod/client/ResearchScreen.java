@@ -19,7 +19,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The research tree (J): four branches of unlocks for advanced Armory gear.
+ * The J screen: the GUIDE (what to do next in the season, step by step), the GOALS
+ * checklist (how you earn stars), and the research tree: four branches of unlocks for advanced Armory gear.
  * Green = researched, gold = ready to research, gray = needs the one above it.
  * Click a node to spend your points.
  */
@@ -27,8 +28,9 @@ public class ResearchScreen extends Screen {
 	private static final int NODE_H = 30;
 	private int nodeW = 118;
 	private final Map<Research.Node, int[]> boxes = new LinkedHashMap<>();
-	/** Which tab is showing: the goals checklist (how you earn stars) or the upgrade tree (how you spend them). */
-	private static boolean goalsTab = true;
+	/** Which tab is showing: 0 the guide, 1 the goals checklist (how you earn stars), 2 the upgrade tree (how you spend them). */
+	private static int tab = 0;
+	private int[] guideTabBox = new int[4];
 	private int[] goalsTabBox = new int[4];
 	private int[] treeTabBox = new int[4];
 
@@ -72,11 +74,16 @@ public class ResearchScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		int points = ClientState.research == null ? 0 : ClientState.research.points();
-		g.centeredText(font, "UPGRADES", width / 2, 8, 0xFF55D8FF);
+		g.centeredText(font, tab == 0 ? "YOUR SEASON" : tab == 1 ? "GOALS" : "UPGRADES", width / 2, 8, 0xFF55D8FF);
 		g.centeredText(font, "\u2605 " + points + " star" + (points == 1 ? "" : "s") + " to spend", width / 2, 20, 0xFFFFC040);
-		goalsTabBox = tab(g, "GOALS: earn stars", width / 2 - 124, 31, goalsTab, mouseX, mouseY);
-		treeTabBox = tab(g, "UPGRADES: spend stars", width / 2 + 4, 31, !goalsTab, mouseX, mouseY);
-		if (goalsTab) {
+		guideTabBox = tab(g, "GUIDE: what to do", width / 2 - 184, 31, tab == 0, mouseX, mouseY);
+		goalsTabBox = tab(g, "GOALS: earn stars", width / 2 - 60, 31, tab == 1, mouseX, mouseY);
+		treeTabBox = tab(g, "UPGRADES: spend stars", width / 2 + 64, 31, tab == 2, mouseX, mouseY);
+		if (tab == 0) {
+			drawGuide(g, mouseX, mouseY);
+			return;
+		}
+		if (tab == 1) {
 			drawGoals(g, mouseX, mouseY);
 			return;
 		}
@@ -138,6 +145,97 @@ public class ResearchScreen extends Screen {
 		return new int[] {x, y, w, h};
 	}
 
+	/** The guide: every step in order (two columns), the next one highlighted, with how to do it underneath; hover a step for its how-to. */
+	private void drawGuide(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+		int current = Guide.current();
+		int cols = width >= 400 ? 2 : 1;
+		int colW = Math.min(220, (width - 24 - (cols - 1) * 8) / cols);
+		int total = cols * colW + (cols - 1) * 8;
+		int x0 = (width - total) / 2;
+		int y0 = 50;
+		for (var line : font.split(Component.literal(Guide.season()), total)) {
+			g.centeredText(font, line, width / 2, y0, 0xFFFFC040);
+			y0 += 10;
+		}
+		y0 += 3;
+		int n = Guide.STEPS.size();
+		int rows = (n + cols - 1) / cols;
+		int rowH = 12;
+		String tip = null;
+		for (int i = 0; i < n; i++) {
+			Guide.Step s = Guide.STEPS.get(i);
+			boolean done = Guide.done(s);
+			boolean now = i == current;
+			int x = x0 + (i / rows) * (colW + 8);
+			int y = y0 + (i % rows) * rowH;
+			boolean hover = mouseX >= x && mouseX < x + colW && mouseY >= y && mouseY < y + rowH - 1;
+			g.fill(x, y, x + colW, y + rowH - 1, done ? 0xC0153020 : now ? 0xE0302810 : hover ? 0xD0202830 : 0xC0181D22);
+			if (now) {
+				g.outline(x, y, colW, rowH - 1, 0xFFFFC040);
+			}
+			g.text(font, done ? "\u2714" : (i + 1) + ".", x + 3, y + 2, done ? 0xFF5BE37D : now ? 0xFFFFC040 : 0xFF8A949E, false);
+			String right = s.optional() ? "optional" : "";
+			int[] p = Guide.progress(s);
+			if (!done && p != null && p[1] > 1) {
+				right = p[0] + "/" + p[1];
+			}
+			g.text(font, font.plainSubstrByWidth(s.title(), colW - 24 - font.width(right)), x + 18, y + 2,
+					done ? 0xFF7CF59A : now ? 0xFFFFFFFF : 0xFFC8D0D8, false);
+			g.text(font, right, x + colW - 3 - font.width(right), y + 2, done ? 0xFF5BE37D : 0xFF8A949E, false);
+			if (hover && !now) {
+				tip = s.hint();
+			}
+		}
+		int y = y0 + rows * rowH + 5;
+		if (current >= 0) {
+			Guide.Step s = Guide.STEPS.get(current);
+			var hint = font.split(Component.literal(s.hint()), total - 12);
+			g.fill(x0, y, x0 + total, y + 15 + hint.size() * 9, 0xE0302810);
+			g.outline(x0, y, total, 15 + hint.size() * 9, 0xFFFFC040);
+			g.text(font, "NEXT: " + s.title(), x0 + 6, y + 3, 0xFFFFC040, false);
+			int hy = y + 13;
+			for (var line : hint) {
+				g.text(font, line, x0 + 6, hy, 0xFFE8D8B0, false);
+				hy += 9;
+			}
+			y += 19 + hint.size() * 9;
+		} else {
+			g.centeredText(font, "Every step done! Keep growing your base and get ready for Battle Day.", width / 2, y, 0xFF5BE37D);
+			y += 12;
+		}
+		for (var line : font.split(Component.literal("Any time (H): Free Roam to try every weapon and vehicle, Party Games, Co-op Horde and Ruby Rift."),
+				total)) {
+			g.centeredText(font, line, width / 2, y, 0xFF8A949E);
+			y += 10;
+		}
+		if (tip != null) {
+			List<Component> lines = new ArrayList<>();
+			for (String part : wrap(tip, 48)) {
+				lines.add(Component.literal(part));
+			}
+			g.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
+		}
+	}
+
+	private static List<String> wrap(String text, int max) {
+		List<String> out = new ArrayList<>();
+		StringBuilder line = new StringBuilder();
+		for (String word : text.split(" ")) {
+			if (line.length() > 0 && line.length() + word.length() + 1 > max) {
+				out.add(line.toString());
+				line.setLength(0);
+			}
+			if (line.length() > 0) {
+				line.append(' ');
+			}
+			line.append(word);
+		}
+		if (line.length() > 0) {
+			out.add(line.toString());
+		}
+		return out;
+	}
+
 	/** The goals checklist: what to do next, with progress and the stars each one gives. */
 	private void drawGoals(GuiGraphicsExtractor g, int mouseX, int mouseY) {
 		List<String> goals = ClientState.research == null ? List.of() : ClientState.research.goals();
@@ -173,15 +271,19 @@ public class ResearchScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+		if (inside(event, guideTabBox)) {
+			tab = 0;
+			return true;
+		}
 		if (inside(event, goalsTabBox)) {
-			goalsTab = true;
+			tab = 1;
 			return true;
 		}
 		if (inside(event, treeTabBox)) {
-			goalsTab = false;
+			tab = 2;
 			return true;
 		}
-		if (goalsTab) {
+		if (tab != 2) {
 			return super.mouseClicked(event, doubled);
 		}
 		for (Map.Entry<Research.Node, int[]> e : boxes.entrySet()) {

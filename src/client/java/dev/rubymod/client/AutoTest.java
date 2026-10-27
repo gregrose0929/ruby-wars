@@ -1204,6 +1204,50 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("guide")) {
+			// The NEXT STEP panel and the J guide as goals get done.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "gamemode survival @a");
+			});
+			then(300, mc -> onServer(mc, server -> {
+				var me = me(server);
+				dev.rubymod.game.SeasonData.get().player(me.getUUID(), me.getName().getString());
+				dev.rubymod.game.Research.sync(me);
+			}));
+			then(40, mc -> {
+				log("guide: step {} | phase {} | research {}", dev.rubymod.client.Guide.current(), ClientState.phase(), ClientState.research != null);
+				shot(mc, "guide-hud-start");
+			});
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				dev.rubymod.game.Goals.add(server, me.getUUID(), "heart", 1);
+				dev.rubymod.game.Goals.add(server, me.getUUID(), "ruby10", 4);
+			}));
+			then(60, mc -> {
+				log("guide: step {}", dev.rubymod.client.Guide.current());
+				shot(mc, "guide-hud-ruby");
+			});
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				for (String id : new String[] {"ruby10", "armory", "power", "drill"}) {
+					dev.rubymod.game.Goals.add(server, me.getUUID(), id, 10);
+				}
+			}));
+			then(60, mc -> {
+				log("guide: step {}", dev.rubymod.client.Guide.current());
+				mc.gui.setScreen(new ResearchScreen());
+			});
+			then(20, mc -> shot(mc, "guide-tab"));
+			then(5, mc -> mc.gui.setScreen(new ManualScreen()));
+			then(20, mc -> shot(mc, "guide-manual"));
+			then(5, mc -> mc.gui.setScreen(null));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("riftthemes")) {
 			// Each level's glow color on a rifle, with the sword and a grenade in the hotbar.
 			then(0, mc -> {

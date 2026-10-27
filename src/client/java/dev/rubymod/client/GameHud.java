@@ -41,6 +41,7 @@ public class GameHud implements HudElement {
 		drawHeart(g, font);
 		drawEconomy(g, font);
 		drawBounties(g, font);
+		drawGuide(g, font);
 		drawAmmo(g, font, player, w, h);
 		drawReload(g, w, h);
 		drawHitMarker(g, w, h);
@@ -236,6 +237,53 @@ public class GameHud implements HudElement {
 			g.fill(9, ly + 10, 9 + Math.round(153 * Math.min(1.0F, progress / (float) target)), ly + 12, done ? 0xFF5BE37D : GOLD);
 			ly += 17;
 		}
+	}
+
+	/** The guide's next step (see Guide), under the other left-hand panels, while building in the Ruby Wars world. */
+	private void drawGuide(GuiGraphicsExtractor g, Font font) {
+		Phase phase = ClientState.phase();
+		if (!ClientState.inRubyWarsWorld() || ClientState.research == null || phase != Phase.LOBBY && phase != Phase.BUILD) {
+			return;
+		}
+		int step = Guide.current();
+		if (step < 0) {
+			return;
+		}
+		// Below the Heart, bank and bounty panels (whichever are showing).
+		int y = ClientState.hud != null && phase != Phase.LOBBY ? 24 : 4;
+		var e = ClientState.economy;
+		boolean economy = !(e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY);
+		if (economy) {
+			y += 34;
+		}
+		if (!ClientState.bounties.isEmpty() && phase == Phase.BUILD) {
+			y = (economy ? 58 : 26) + 12 + ClientState.bounties.size() * 17 + 4;
+		}
+		Guide.Step s = Guide.STEPS.get(step);
+		int[] progress = Guide.progress(s);
+		var hint = font.split(Component.literal(s.hint()), 156);
+		int lines = Math.min(4, hint.size());
+		boolean bar = progress != null && progress[1] > 1;
+		int bottom = y + 26 + lines * 9 + (bar ? 5 : 0) + 11;
+		panel(g, 4, y, 166, bottom);
+		g.fill(4, y, 6, bottom, GOLD);
+		g.text(font, "NEXT STEP  " + (step + 1) + "/" + Guide.STEPS.size(), 10, y + 3, GOLD, false);
+		String count = bar ? progress[0] + "/" + progress[1] : "";
+		g.text(font, font.plainSubstrByWidth(s.title(), 152 - font.width(count)), 10, y + 14, WHITE, true);
+		if (bar) {
+			g.text(font, count, 162 - font.width(count), y + 14, GOLD, false);
+		}
+		int ly = y + 26;
+		for (int i = 0; i < lines; i++) {
+			g.text(font, hint.get(i), 10, ly, 0xFFB8C0C8, false);
+			ly += 9;
+		}
+		if (bar) {
+			g.fill(10, ly + 1, 162, ly + 3, 0xFF2A2F35);
+			g.fill(10, ly + 1, 10 + Math.round(152 * Math.min(1.0F, progress[0] / (float) progress[1])), ly + 3, GOLD);
+			ly += 5;
+		}
+		g.text(font, "J: the full guide", 10, ly + 1, 0xFF7A838C, false);
 	}
 
 	private void drawAmmo(GuiGraphicsExtractor g, Font font, Player player, int w, int h) {
