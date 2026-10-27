@@ -77,6 +77,8 @@ public class RiftMapScreen extends Screen {
 			case "FROST" -> 0xFF8FE3FF;
 			case "LAB" -> 0xFF6EE38A;
 			case "FOUNDRY" -> 0xFFFF4040;
+			case "SKYDOCK" -> 0xFF66E0FF;
+			case "HEART" -> 0xFFFF3D6E;
 			default -> 0xFFFF3D6E;
 		};
 	}
@@ -88,6 +90,8 @@ public class RiftMapScreen extends Screen {
 			case "FROST" -> "Frozen Vault";
 			case "LAB" -> "Overgrown Lab";
 			case "FOUNDRY" -> "Mech Foundry";
+			case "SKYDOCK" -> "The Sky Dock";
+			case "HEART" -> "The Ruby Heart";
 			default -> "";
 		};
 	}
@@ -100,6 +104,7 @@ public class RiftMapScreen extends Screen {
 			case "EVENT" -> "minecraft:enchanted_book";
 			case "REST" -> "minecraft:campfire";
 			case "BOSS" -> "minecraft:nether_star";
+			case "TANK" -> "rubymod:tank";
 			default -> "minecraft:iron_sword";
 		};
 	}
@@ -111,7 +116,8 @@ public class RiftMapScreen extends Screen {
 			case "SHOP" -> "Merchant";
 			case "EVENT" -> "Mystery";
 			case "REST" -> "Campfire";
-			case "BOSS" -> "BOSS: Juggernaut Mech";
+			case "BOSS" -> "BOSS";
+			case "TANK" -> "Tank Assault";
 			default -> "Fight";
 		};
 	}
@@ -123,7 +129,8 @@ public class RiftMapScreen extends Screen {
 			case "SHOP" -> "Spend the team's gold on relics or healing.";
 			case "EVENT" -> "Something strange. A choice with a catch.";
 			case "REST" -> "A campfire: everyone healed and back on their feet.";
-			case "BOSS" -> "The bottom of the Rift. A walking war machine.";
+			case "BOSS" -> "The end of this act, and something huge waiting there.";
+			case "TANK" -> "Everyone in a tank, against enemy Rift Tanks.";
 			default -> "Monsters. Clear the room for gold and a relic.";
 		};
 	}
@@ -234,7 +241,7 @@ public class RiftMapScreen extends Screen {
 		}
 		// Legend.
 		int ly = height - 22;
-		g.centeredText(font, "⚔ Fight   ☠ Elite   ❖ Treasure   ◆ Merchant   ? Mystery   ♨ Campfire   ★ Boss", width / 2, ly + 8,
+		g.centeredText(font, "⚔ Fight   ⛟ Tank   ☠ Elite   ❖ Treasure   ◆ Merchant   ? Mystery   ♨ Campfire   ★ Boss", width / 2, ly + 8,
 				0xFF8A7A9A);
 		if (hovered != null) {
 			List<Component> tip = new ArrayList<>();

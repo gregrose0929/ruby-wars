@@ -28,7 +28,8 @@ import net.minecraft.world.phys.Vec3;
 public final class RiftRoom {
 	public enum Theme {
 		CRYSTAL("Crystal Caverns", 0xFFC27BFF), FORGE("Molten Forge", 0xFFFF7A2E), FROST("Frozen Vault", 0xFF8FE3FF), LAB("Overgrown Lab", 0xFF6EE38A),
-		FOUNDRY("Mech Foundry", 0xFFFF4040), THRESHOLD("The Threshold", 0xFFFF3D6E);
+		FOUNDRY("Mech Foundry", 0xFFFF4040), SKYDOCK("The Sky Dock", 0xFF66E0FF), HEART("The Ruby Heart", 0xFFFF3D6E),
+		THRESHOLD("The Threshold", 0xFFFF3D6E);
 
 		public final String title;
 		public final int color;
@@ -84,6 +85,14 @@ public final class RiftRoom {
 
 	private static Palette palette(Theme theme) {
 		return switch (theme) {
+			case SKYDOCK -> new Palette(new BlockState[] {b(Blocks.SMOOTH_STONE), b(Blocks.POLISHED_ANDESITE), b(Blocks.SMOOTH_STONE),
+					Blocks.CONCRETE.pick(DyeColor.LIGHT_GRAY).defaultBlockState(), Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState()},
+					b(Blocks.SEA_LANTERN), b(Blocks.POLISHED_ANDESITE), Blocks.CONCRETE.pick(DyeColor.LIGHT_BLUE).defaultBlockState(), b(Blocks.SEA_LANTERN),
+					b(Blocks.AIR), b(Blocks.AIR), b(Blocks.POLISHED_ANDESITE), b(Blocks.SEA_LANTERN), b(Blocks.ANDESITE_WALL));
+			case HEART -> new Palette(new BlockState[] {b(Blocks.POLISHED_BLACKSTONE), b(Blocks.RED_NETHER_BRICKS), b(Blocks.POLISHED_BLACKSTONE),
+					b(ModBlocks.RUBY_BLOCK), b(Blocks.CRYING_OBSIDIAN)}, b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.OBSIDIAN), b(Blocks.CRYING_OBSIDIAN),
+					b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.OBSIDIAN), b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.OBSIDIAN), b(ModBlocks.RUBY_BLOCK),
+					b(Blocks.BLACKSTONE_WALL));
 			case CRYSTAL, THRESHOLD -> new Palette(new BlockState[] {b(Blocks.DEEPSLATE_TILES), b(Blocks.POLISHED_DEEPSLATE), b(Blocks.DEEPSLATE_TILES),
 					b(Blocks.CALCITE), b(Blocks.AMETHYST_BLOCK)}, b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.DEEPSLATE_BRICKS), b(Blocks.CRACKED_DEEPSLATE_BRICKS),
 					b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.DEEPSLATE_TILES), b(Blocks.PEARLESCENT_FROGLIGHT), b(Blocks.POLISHED_DEEPSLATE),
@@ -107,7 +116,9 @@ public final class RiftRoom {
 
 	/** Queue up building a room at {@code center} (the old one there is replaced). */
 	static RiftRoom build(ArrayDeque<Runnable> work, ServerLevel level, BlockPos center, Theme theme, RiftMap.Type type, long seed) {
-		int half = type == RiftMap.Type.BOSS ? 28 : theme == Theme.THRESHOLD ? 14 : type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE ? 22 : 15;
+		int half = type == RiftMap.Type.BOSS || type == RiftMap.Type.TANK ? 30 : theme == Theme.THRESHOLD ? 14
+				: type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE ? 22 : 15;
+		boolean open = theme == Theme.SKYDOCK;
 		RiftRoom room = new RiftRoom(center, theme, half);
 		Palette pal = palette(theme);
 		RandomSource random = RandomSource.create(seed);
@@ -136,21 +147,21 @@ public final class RiftRoom {
 					for (int y = -3; y <= HEIGHT + 1; y++) {
 						BlockState want;
 						if (beyond) {
-							want = y <= HEIGHT ? under : air;
+							want = y <= HEIGHT ? (open && y > 8 ? air : under) : air;
 						} else if (y < 0) {
 							want = under;
 						} else if (wall) {
 							boolean band = y == HEIGHT - 4 || y == 1 && (fx + z) % 4 == 0;
-							want = y > HEIGHT ? under : band ? pal.wallGlow() : (fx * 7 + y * 3 + z * 5) % 11 == 0 ? pal.wallAccent() : pal.wall();
+							want = open && y > 8 ? b(Blocks.BARRIER) : y > HEIGHT ? under : band ? pal.wallGlow() : (fx * 7 + y * 3 + z * 5) % 11 == 0 ? pal.wallAccent() : pal.wall();
 						} else if (y == 0) {
 							int ring = (int) Math.round(r);
 							boolean glowRing = (ring == 6 || ring == 13 || ring == 20) && (Math.abs(fx) + Math.abs(z)) % 2 == 0;
 							double v = WarzoneTerrain.hash3(fx, (int) seed, z);
 							want = glowRing ? pal.floorGlow() : pal.floor()[(int) (v * pal.floor().length)];
 						} else if (y == HEIGHT) {
-							want = (Math.floorMod(fx, 6) == 3 && Math.floorMod(z, 6) == 3) ? pal.lamp() : pal.ceiling();
+							want = open ? air : (Math.floorMod(fx, 6) == 3 && Math.floorMod(z, 6) == 3) ? pal.lamp() : pal.ceiling();
 						} else if (y > HEIGHT) {
-							want = under;
+							want = open ? air : under;
 						} else {
 							want = air;
 						}
@@ -162,7 +173,10 @@ public final class RiftRoom {
 				}
 			});
 		}
-		if (type == RiftMap.Type.BOSS || type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE) {
+		if (type == RiftMap.Type.TANK) {
+			cover(work, level, room, pal, random);
+			features(work, level, room, random);
+		} else if (type == RiftMap.Type.BOSS || type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE) {
 			pillars(work, level, room, pal, random);
 			cover(work, level, room, pal, random);
 			features(work, level, room, random);
@@ -246,7 +260,21 @@ public final class RiftRoom {
 		int oz = room.center.getZ();
 		int h = room.half;
 		switch (room.theme) {
-			case CRYSTAL, THRESHOLD -> {
+			case SKYDOCK -> {
+				// Landing pads with glowing rings, and platforms for the AA guns.
+				for (int[] c : new int[][] {{-12, -12}, {12, -12}, {-12, 12}, {12, 12}}) {
+					work.add(() -> {
+						for (int dx = -3; dx <= 3; dx++) {
+							for (int dz = -3; dz <= 3; dz++) {
+								boolean ring = Math.max(Math.abs(dx), Math.abs(dz)) == 3;
+								level.setBlock(new BlockPos(ox + c[0] + dx, oy + 1, oz + c[1] + dz), ring ? b(Blocks.SEA_LANTERN)
+										: Blocks.CONCRETE.pick(DyeColor.YELLOW).defaultBlockState(), Block.UPDATE_CLIENTS);
+							}
+						}
+					});
+				}
+			}
+			case CRYSTAL, THRESHOLD, HEART -> {
 				// Crystal spires from the floor and the ceiling: amethyst, ruby and purple glass.
 				BlockState[] crystal = {b(Blocks.AMETHYST_BLOCK), b(ModBlocks.RUBY_BLOCK), Blocks.STAINED_GLASS.pick(DyeColor.PURPLE).defaultBlockState(),
 						Blocks.STAINED_GLASS.pick(DyeColor.MAGENTA).defaultBlockState()};
@@ -374,7 +402,8 @@ public final class RiftRoom {
 			double z = center.getZ() + (random.nextDouble() * 2 - 1) * half;
 			double y = center.getY() + 1 + random.nextDouble() * (HEIGHT - 2);
 			switch (theme) {
-				case CRYSTAL, THRESHOLD -> {
+				case SKYDOCK -> level.sendParticles(ParticleTypes.CLOUD, true, false, x, center.getY() + 12, z, 1, 1.0, 0.2, 1.0, 0.01);
+				case CRYSTAL, THRESHOLD, HEART -> {
 					level.sendParticles(ParticleTypes.END_ROD, true, false, x, y, z, 1, 0.1, 0.1, 0.1, 0.01);
 					level.sendParticles(RiftFx.dust(random.nextBoolean() ? 0xC27BFF : 0xFF3D6E, 1.2F), true, false, x, y, z, 1, 0.3, 0.3, 0.3, 0);
 				}

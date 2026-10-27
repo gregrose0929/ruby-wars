@@ -106,6 +106,46 @@ nastier. If the Core is destroyed, it's game over.
   the "Reach wave 5 in Co-op Horde" goal (a star for Ruby Wars). Nothing else from Horde
   carries over.
 
+## Ruby Rift
+
+A co-op roguelike for 1-4 players (the RUBY RIFT card in the game picker, H, or
+`/play rift`). Each run is a descent through three acts of freshly built rooms; after
+every room you pick a relic that changes how you play for the rest of the run.
+
+- **The Threshold.** You start in a crystal hall. Press J for the **Altar of Echoes**
+  (below), then step into the portal (or wait for the countdown) to begin.
+- **The map.** Each act is a branching map of 7 floors and a boss. Before each room
+  the team votes on where to go: Fight, Elite (tougher, better relics), Treasure (a
+  Legendary on offer), Merchant (spend the team's gold), Mystery (a choice with a
+  catch), Campfire (everyone healed and back up) or Tank Assault (everyone in a tank,
+  against enemy Rift Tanks). Rooms come in five looks: Crystal Caverns, Molten Forge,
+  Frozen Vault, Overgrown Lab, and each act's boss arena.
+- **Relics** (pick 1 of 3 after each room; J reopens the choice). Commons are simple
+  but huge (never reload, every shot fires twice, double health...). Rares add a
+  mechanic: chain lightning, napalm that makes burning enemies explode, cryo rounds
+  that freeze and shatter, a pocket tank drone, a drop turret, ricochets that home in,
+  blink, a shadow clone wearing your skin, mirror guard, bullet time, leeches...
+  Legendaries change the run: Ruby Avatar (twice your size, stomp), Orbital Strike,
+  Necromancer, Black Hole Rounds, Midas Touch, Time Loop, Arsenal, Phoenix, Ruby
+  Golem. Cursed ones are massive with a real cost (Glass Cannon, Berserker, Blood
+  Ammo). Relics with an element (Shock, Fire, Frost, Explosive, Ruby) make later
+  offers lean that way, and two teammates with different elements can be offered a
+  **Bond** relic for the whole team (Plasma Storm, Shatterbomb, Ruby Conduit,
+  Frostfire, Tank Platoon).
+- **Bosses.** Act 1: the Juggernaut Mech (minigun, rocket barrage, ground slam; hit it
+  hard while it's overheated). Act 2: the Rift Gunship over the open Sky Dock (AA guns
+  on the pads, a Skyhammer each). Act 3: the Ruby Titan, shielded by four Ruby Pylons:
+  break them first.
+- **Going down.** A teammate crouches next to you to bring you back (Field Medic:
+  instantly). The team gets one Second Wind per run; if everyone's down, the run ends.
+- **Between runs** you earn **Rift Shards** (two a room, three an elite, ten a boss,
+  more with Heat). At the **Altar of Echoes** spend them on loadouts (Engineer,
+  Demolitionist, Sniper, Medic: each starts with a relic) and on new relics for the
+  pool (Headhunter, Thunderclap, Glacier Shield, Cluster Grenades, Phoenix, Ruby
+  Golem). **Heat** 1-5 makes runs harder for more shards (win at a Heat to unlock the
+  next). The **Daily Rift** is the same run for everyone today, with a leaderboard
+  (on the hub's Records board too).
+
 ## Profile, cosmetics and leaderboards
 
 Press **I** for your profile: lifetime stats across every mode (party game wins and
@@ -653,7 +693,7 @@ so you don't need to start a season to test weapons.
 
 ## Commands
 
-Everyone: `/hub`, `/play rubywars|horde` (switch games; same as H), `/play horde easy|normal|hard`, `/horde shop`, `/horde ready`,
+Everyone: `/hub`, `/play rubywars|horde|rift` (switch games; same as H), `/play horde easy|normal|hard`, `/horde shop`, `/horde ready`,
 `/play gungame|hideseek|infection|ctf|koth|tanks|air|skyrace|build|rush` (party games), `/rubywars` (status), `/rubywars heart`, `/rubywars bounties`, `/rubywars trust <player>`,
 `/rubywars untrust <player>`, `/rubywars champions`, `/rubywars raid` (practice raid on your
 base, once a day), `/duel guns|vehicles|planes <player> [kills]` (1v1 test duel; see above),

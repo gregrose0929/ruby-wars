@@ -212,9 +212,21 @@ public final class AutoTest {
 			log("threshold: {}", dev.rubymod.game.rift.Rift.debugState());
 			shot(mc, "rift-threshold");
 		});
+		// The Altar of Echoes: some shards, a loadout and a relic unlocked.
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.Stats.get(me(server)).riftShards = 120;
+			dev.rubymod.game.rift.RiftChoices.handle(me(server), "loadout", "demolitionist");
+			dev.rubymod.game.rift.RiftChoices.handle(me(server), "unlock", "thunderclap");
+		}));
+		then(20, mc -> dev.rubymod.client.rift.RiftClient.reopen());
+		then(30, mc -> {
+			log("altar: screen {}", mc.gui.screen());
+			shot(mc, "rift-altar");
+			mc.gui.setScreen(null);
+		});
 		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
 		then(30, mc -> {
-			log("vote: {} | screen {}", dev.rubymod.game.rift.Rift.debugState(), mc.gui.screen());
+			log("vote: {} | screen {} | inventory {}", dev.rubymod.game.rift.Rift.debugState(), mc.gui.screen(), inventorySummary(mc));
 			shot(mc, "rift-map");
 		});
 		then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
@@ -262,6 +274,21 @@ public final class AutoTest {
 			var b = dev.rubymod.game.rift.Rift.debugState();
 			log("picked: {}", b);
 		}));
+		// A tank room.
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "tank")));
+		then(220, mc -> {
+			log("tank room: {} riding {}", dev.rubymod.game.rift.Rift.debugState(), mc.player.getVehicle());
+			shot(mc, "rift-tank");
+		});
+		then(120, mc -> {
+			log("tank fight: {}", dev.rubymod.game.rift.Rift.debugState());
+			shot(mc, "rift-tank2");
+		});
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+		then(60, mc -> {
+			log("tank cleared: {} riding {}", dev.rubymod.game.rift.Rift.debugState(), mc.player.getVehicle());
+			net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("pick", riftFirstOffer()));
+		});
 		// The boss.
 		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "boss")));
 		then(200, mc -> onServer(mc, server -> {
@@ -283,7 +310,51 @@ public final class AutoTest {
 		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
 		then(30, mc -> shot(mc, "rift-boss-dying"));
 		then(80, mc -> {
-			log("after the boss: {}", dev.rubymod.game.rift.Rift.debugState());
+			log("after the boss: {} | screen {}", dev.rubymod.game.rift.Rift.debugState(), mc.gui.screen());
+			shot(mc, "rift-actclear");
+		});
+		// Act 2: the Gunship.
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "act2"));
+		});
+		then(260, mc -> onServer(mc, server -> {
+			var me = me(server);
+			me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 255, false, false));
+			log("gunship: {}", dev.rubymod.game.rift.Rift.debugState());
+		}));
+		then(60, mc -> {
+			var heli = mc.level.getEntitiesOfClass(dev.rubymod.entity.AircraftEntity.class, mc.player.getBoundingBox().inflate(80));
+			if (!heli.isEmpty()) {
+				var to = heli.get(0).position().subtract(mc.player.getEyePosition());
+				mc.player.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+				mc.player.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+			}
+		});
+		then(5, mc -> shot(mc, "rift-gunship"));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+		then(80, mc -> log("gunship down: {}", dev.rubymod.game.rift.Rift.debugState()));
+		// Act 3: the Ruby Titan.
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "act3"));
+		});
+		then(260, mc -> onServer(mc, server -> {
+			var me = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) me.level();
+			me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 255, false, false));
+			log("titan: {}", dev.rubymod.game.rift.Rift.debugState());
+			level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, me.getBoundingBox().inflate(80),
+					e -> dev.rubymod.game.rift.JuggernautMech.isBoss(e)).stream().findFirst().ifPresent(b ->
+					me.teleportTo(level, b.getX() + 10, b.getY() + 3, b.getZ() + 14, java.util.Set.of(), 145, 10, true));
+		}));
+		then(40, mc -> shot(mc, "rift-titan"));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+		then(20, mc -> log("pylons broken: {}", dev.rubymod.game.rift.Rift.debugState()));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+		then(40, mc -> shot(mc, "rift-titan-dying"));
+		then(80, mc -> {
+			log("after the titan: {}", dev.rubymod.game.rift.Rift.debugState());
 			shot(mc, "rift-victory");
 		});
 		then(20, mc -> {

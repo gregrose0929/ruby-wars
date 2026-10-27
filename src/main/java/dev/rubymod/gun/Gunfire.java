@@ -221,7 +221,10 @@ public final class Gunfire {
 		float damage = stats.damage() * (headshot ? stats.headshot() : 1.0F);
 		boolean rift = dev.rubymod.game.rift.Rift.playing(shooter);
 		if (rift) {
-			damage = RelicEffects.damage(shooter, target, damage);
+			damage = RelicEffects.damage(shooter, target, damage, headshot);
+			if (headshot) {
+				RelicEffects.headshot(shooter);
+			}
 		}
 		float healthBefore = target instanceof LivingEntity living ? living.getHealth() : 0;
 		target.setInvulnerableTime(0);

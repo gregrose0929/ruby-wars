@@ -679,7 +679,7 @@ public final class Hub {
 			case "horde_title" -> Component.literal("CO-OP HORDE").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD);
 			case "party_title" -> Component.literal("PARTY GAMES").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
 			case "board_party" -> partyBoard();
-			case "board_records" -> recordsBoard();
+			case "board_records" -> recordsBoard(server);
 			case "party_info" -> Component.literal("9 quick games to play together\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(partyPlaying() + " playing now").withStyle(ChatFormatting.GOLD));
 			case "horde_info" -> Component.literal("Survive the waves together!\n").withStyle(ChatFormatting.WHITE)
@@ -730,7 +730,7 @@ public final class Hub {
 	}
 
 	/** Leaderboard: Horde waves, Sky Race times, most party kills. */
-	private static Component recordsBoard() {
+	private static Component recordsBoard(MinecraftServer server) {
 		MutableComponent text = Component.literal("\u2605 RECORDS \u2605\n").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
 		var horde = Stats.top(java.util.Comparator.comparingInt((Stats.Record r) -> r.hordeBestWave).reversed(), 3, r -> r.hordeBestWave > 0);
 		text.append(Component.literal("Co-op Horde\n").withStyle(ChatFormatting.GREEN));
@@ -747,6 +747,19 @@ public final class Hub {
 		}
 		for (Stats.Record r : race) {
 			text.append(Component.literal("  " + Stats.raceTime(r.skyBest) + "  " + r.name + "\n").withStyle(ChatFormatting.WHITE));
+		}
+		var rift = Stats.top(java.util.Comparator.comparingInt((Stats.Record r) -> r.riftWins * 100 + r.riftBestFloor).reversed(), 3, r -> r.riftRuns > 0);
+		text.append(Component.literal("Ruby Rift\n").withStyle(ChatFormatting.LIGHT_PURPLE));
+		if (rift.isEmpty()) {
+			text.append(Component.literal("  nobody yet\n").withStyle(ChatFormatting.GRAY));
+		}
+		for (Stats.Record r : rift) {
+			text.append(Component.literal("  " + (r.riftWins > 0 ? r.riftWins + " wins" : "floor " + r.riftBestFloor) + "  " + r.name + "\n")
+					.withStyle(ChatFormatting.WHITE));
+		}
+		var daily = dev.rubymod.game.rift.RiftMeta.dailyTop(server, 1);
+		if (!daily.isEmpty()) {
+			text.append(Component.literal("Today's Daily Rift\n  " + daily.get(0) + "\n").withStyle(ChatFormatting.LIGHT_PURPLE));
 		}
 		var kills = Stats.top(java.util.Comparator.comparingInt((Stats.Record r) -> r.partyKills).reversed(), 1, r -> r.partyKills > 0);
 		text.append(Component.literal("Most party kills\n").withStyle(ChatFormatting.RED));

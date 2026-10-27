@@ -15,7 +15,7 @@ public final class RiftMap {
 	public enum Type {
 		FIGHT("Fight", "minecraft:iron_sword"), ELITE("Elite", "minecraft:wither_skeleton_skull"), TREASURE("Treasure", "minecraft:chest"),
 		SHOP("Merchant", "minecraft:emerald"), EVENT("Mystery", "minecraft:enchanted_book"), REST("Campfire", "minecraft:campfire"),
-		BOSS("Boss", "minecraft:nether_star");
+		TANK("Tank Assault", "rubymod:tank"), BOSS("Boss", "minecraft:nether_star");
 
 		public final String title;
 		public final String icon;
@@ -35,7 +35,7 @@ public final class RiftMap {
 		public final RiftRoom.Theme theme;
 		public final List<Integer> next = new ArrayList<>();
 
-		Node(int id, int floor, int col, int cols, Type type, RiftRoom.Theme theme) {
+		public Node(int id, int floor, int col, int cols, Type type, RiftRoom.Theme theme) {
 			this.id = id;
 			this.floor = floor;
 			this.col = col;
@@ -71,13 +71,17 @@ public final class RiftMap {
 		return at.next.stream().map(this::node).toList();
 	}
 
-	public static RiftMap generate(RandomSource random) {
+	/** Which act this map is (1-3: each ends with a different boss). */
+	public int act = 1;
+
+	public static RiftMap generate(RandomSource random, int act) {
 		RiftMap map = new RiftMap();
+		map.act = act;
 		RiftRoom.Theme[] themes = RiftRoom.Theme.normal();
 		for (int f = 0; f < FLOORS; f++) {
 			int cols = f == 0 ? 2 : 2 + random.nextInt(3);
 			for (int c = 0; c < cols; c++) {
-				Type type = pick(random, f);
+				Type type = pick(random, f + (act - 1) * 2);
 				map.nodes.add(new Node(map.nodes.size(), f, c, cols, type, themes[random.nextInt(themes.length)]));
 			}
 			// Some floors always have something: treasure halfway, a campfire before the boss.
@@ -89,7 +93,8 @@ public final class RiftMap {
 				replace(map, map.floor(f).get(random.nextInt(map.floor(f).size())), Type.REST);
 			}
 		}
-		map.nodes.add(new Node(map.nodes.size(), FLOORS, 0, 1, Type.BOSS, RiftRoom.Theme.FOUNDRY));
+		map.nodes.add(new Node(map.nodes.size(), FLOORS, 0, 1, Type.BOSS, act == 1 ? RiftRoom.Theme.FOUNDRY : act == 2 ? RiftRoom.Theme.SKYDOCK
+				: RiftRoom.Theme.HEART));
 		// Links: each room to the nearest one or two on the next floor; every room reachable.
 		for (int f = 0; f < FLOORS; f++) {
 			List<Node> from = map.floor(f);
@@ -133,6 +138,9 @@ public final class RiftMap {
 			return Type.FIGHT;
 		}
 		int r = random.nextInt(100);
+		if (r < 10 && floor >= 2) {
+			return Type.TANK;
+		}
 		if (r < 44) {
 			return Type.FIGHT;
 		} else if (r < 60 && floor >= 2) {

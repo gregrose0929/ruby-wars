@@ -46,7 +46,7 @@ public final class RiftEnemies {
 		}
 	}
 
-	private static final Kind TROOPER = new Kind(null, "Rift Trooper", 3, 2);
+	static final Kind TROOPER = new Kind(null, "Rift Trooper", 3, 2);
 
 	private RiftEnemies() {
 	}
@@ -100,7 +100,7 @@ public final class RiftEnemies {
 		}
 		mob.setPersistenceRequired();
 		if (mob.getType() == EntityTypes.SLIME || mob.getType() == EntityTypes.MAGMA_CUBE) {
-			((net.minecraft.world.entity.monster.cubemob.Slime) mob).setSize(3, true);
+			((net.minecraft.world.entity.monster.cubemob.AbstractCubeMob) mob).setSize(3, true);
 		}
 		if (kind.type() == EntityTypes.ZOMBIE && kind.name().equals("Frozen Husk")) {
 			mob.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.ICE));
@@ -109,8 +109,11 @@ public final class RiftEnemies {
 		}
 		mob.setDropChance(EquipmentSlot.HEAD, 0);
 		mob.setDropChance(EquipmentSlot.MAINHAND, 0);
-		scale(mob, Attributes.MAX_HEALTH, toughness * (twist != null ? 4.0 : 1.0));
-		scale(mob, Attributes.ATTACK_DAMAGE, Math.min(2.5, 0.8 + toughness * 0.2) * (twist != null ? 1.4 : 1.0));
+		scale(mob, Attributes.MAX_HEALTH, toughness * (twist != null ? 4.0 : 1.0) * (RiftMeta.heat >= 1 ? 1.3 : 1.0));
+		scale(mob, Attributes.ATTACK_DAMAGE, Math.min(2.5, 0.8 + toughness * 0.2) * (twist != null ? 1.4 : 1.0) * (RiftMeta.heat >= 4 ? 1.4 : 1.0));
+		if (RiftMeta.heat >= 4) {
+			mob.addEffect(new MobEffectInstance(MobEffects.SPEED, -1, 0, false, false));
+		}
 		AttributeInstance follow = mob.getAttribute(Attributes.FOLLOW_RANGE);
 		if (follow != null) {
 			follow.setBaseValue(64);

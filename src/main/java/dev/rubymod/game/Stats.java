@@ -50,6 +50,10 @@ public final class Stats {
 		public int riftRuns;
 		public int riftBestFloor;
 		public int riftWins;
+		public int riftShards;
+		public Set<String> riftUnlocks = new HashSet<>();
+		public String riftLoadout = "soldier";
+		public int riftHeatUnlocked;
 		public int seasonsWon;
 		public Set<String> unlocked = new HashSet<>();
 		public String hat = "";

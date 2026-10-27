@@ -49,8 +49,8 @@ import net.minecraft.world.phys.Vec3;
  * health): it stops dead, its core glows, and everything hits hard. Under a third it
  * goes berserk. When it dies it comes apart in a chain of explosions.
  */
-public final class JuggernautMech {
-	private static final String BOSS_TAG = Rift.TAG + "_boss";
+public final class JuggernautMech implements RiftBoss {
+	static final String BOSS_TAG = Rift.TAG + "_boss";
 
 	/** One block of the body: block, size, offset from the feet (before turning), whether it's a leg (they walk). */
 	private record Part(BlockState block, float sx, float sy, float sz, float ox, float oy, float oz, int leg) {
@@ -168,15 +168,18 @@ public final class JuggernautMech {
 				new Quaternionf());
 	}
 
-	boolean dead() {
+	@Override
+	public boolean dead() {
 		return done;
 	}
 
-	String debug() {
+	@Override
+	public String debug() {
 		return "t" + t + " overheats " + overheats + (overheat > 0 ? " HOT" : "") + (berserk ? " berserk" : "") + (dying >= 0 ? " dying" : "");
 	}
 
-	void remove(ServerLevel level) {
+	@Override
+	public void remove(ServerLevel level) {
 		Entity h = level.getEntity(heart);
 		if (h != null) {
 			h.discard();
@@ -190,7 +193,8 @@ public final class JuggernautMech {
 		bar.removeAllPlayers();
 	}
 
-	void tick(ServerLevel level, List<ServerPlayer> targets) {
+	@Override
+	public void tick(ServerLevel level, List<ServerPlayer> targets) {
 		t++;
 		Entity e = level.getEntity(heart);
 		if (dying >= 0) {
@@ -431,8 +435,4 @@ public final class JuggernautMech {
 		}
 	}
 
-	/** Called if someone damages the boss: an overheated Mech takes big hits (the core's exposed). */
-	static float damageTaken(LivingEntity e, float amount, JuggernautMech mech) {
-		return amount;
-	}
 }

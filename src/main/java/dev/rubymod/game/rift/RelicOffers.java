@@ -14,7 +14,51 @@ final class RelicOffers {
 	private RelicOffers() {
 	}
 
+	/** Bond relics the team could take right now: two elements on two teammates (or on you, playing alone). */
+	static List<Relic> bonds(Rift.Runner r) {
+		List<Relic> out = new ArrayList<>();
+		java.util.Collection<Rift.Runner> team = Rift.RUNNERS.values();
+		if (pair(team, Relic.Element.SHOCK, Relic.Element.FIRE)) {
+			out.add(Relic.PLASMA_STORM);
+		}
+		if (pair(team, Relic.Element.FROST, Relic.Element.EXPLOSIVE)) {
+			out.add(Relic.SHATTERBOMB);
+		}
+		if (pair(team, Relic.Element.SHOCK, Relic.Element.RUBY)) {
+			out.add(Relic.RUBY_CONDUIT);
+		}
+		if (pair(team, Relic.Element.FROST, Relic.Element.FIRE)) {
+			out.add(Relic.FROSTFIRE);
+		}
+		if (team.stream().filter(x -> x.has(Relic.POCKET_TANK)).count() >= 2) {
+			out.add(Relic.TANK_PLATOON);
+		}
+		out.removeIf(r::has);
+		return out;
+	}
+
+	private static boolean pair(java.util.Collection<Rift.Runner> team, Relic.Element a, Relic.Element b) {
+		for (Rift.Runner x : team) {
+			for (Rift.Runner y : team) {
+				if ((x != y || team.size() == 1) && x.relics.stream().anyMatch(rl -> rl.element == a && rl.tier != Relic.Tier.BOND)
+						&& y.relics.stream().anyMatch(rl -> rl.element == b && rl.tier != Relic.Tier.BOND)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	static List<Relic> offer(Rift.Runner r, RiftMap.Type room, RandomSource random) {
+		List<Relic> out = offerPlain(r, room, random);
+		List<Relic> bonds = bonds(r);
+		if (!bonds.isEmpty() && out.size() == 3 && random.nextFloat() < 0.45F) {
+			out.set(2, bonds.get(random.nextInt(bonds.size())));
+		}
+		return out;
+	}
+
+	private static List<Relic> offerPlain(Rift.Runner r, RiftMap.Type room, RandomSource random) {
 		List<Relic> out = new ArrayList<>();
 		for (int i = 0; i < 3; i++) {
 			Relic.Tier tier = switch (room) {
@@ -55,6 +99,9 @@ final class RelicOffers {
 			if (relic.tier != tier || (r != null && r.has(relic)) || already.contains(relic)) {
 				continue;
 			}
+			if (relic.locked && (r == null || !Rift.unlocked(r.id, relic.id()))) {
+				continue;
+			}
 			int weight = 1;
 			if (r != null && relic.element != Relic.Element.NONE) {
 				long same = r.relics.stream().filter(x -> x.element == relic.element).count();
@@ -86,6 +133,7 @@ final class RelicOffers {
 			case RARE -> 100;
 			case LEGENDARY -> 220;
 			case CURSED -> 80;
+			case BOND -> 160;
 		};
 	}
 }

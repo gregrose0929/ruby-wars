@@ -85,19 +85,28 @@ public final class RiftClient {
 			Minecraft mc = Minecraft.getInstance();
 			if (p.kind().equals("close")) {
 				lastScreen = null;
-				if (mc.gui.screen() instanceof RiftMapScreen || mc.gui.screen() instanceof RelicScreen) {
+				if (mc.gui.screen() instanceof RiftMapScreen || mc.gui.screen() instanceof RelicScreen || mc.gui.screen() instanceof ThresholdScreen) {
 					mc.gui.setScreen(null);
 				}
 				return;
 			}
 			lastScreen = p;
-			open(p);
+			// The Altar opens when you ask (J), or refreshes if it's already open.
+			if (!p.kind().equals("threshold") || mc.gui.screen() instanceof ThresholdScreen) {
+				open(p);
+			}
 		});
 	}
 
 	static void open(MorePayloads.RiftScreen p) {
 		Minecraft mc = Minecraft.getInstance();
-		if (p.kind().equals("map")) {
+		if (p.kind().equals("threshold")) {
+			if (mc.gui.screen() instanceof ThresholdScreen t) {
+				t.update(p.lines());
+			} else {
+				mc.gui.setScreen(new ThresholdScreen(p.lines()));
+			}
+		} else if (p.kind().equals("map")) {
 			if (mc.gui.screen() instanceof RiftMapScreen map) {
 				map.update(p.lines());
 			} else {
@@ -208,7 +217,7 @@ public final class RiftClient {
 			}
 			if (lastScreen != null && mc.gui.screen() == null) {
 				String hint = "Press J to " + (lastScreen.kind().equals("map") ? "choose the next room" : lastScreen.kind().equals("shop")
-						? "open the shop" : "choose your relic");
+						? "open the shop" : lastScreen.kind().equals("threshold") ? "open the Altar of Echoes" : "choose your relic");
 				boolean blink = (now / 500) % 2 == 0;
 				g.centeredText(font, hint, w / 2, h - 72, blink ? 0xFFFFC02E : 0xFFFF3D6E);
 			}
@@ -220,6 +229,7 @@ public final class RiftClient {
 			case "RARE" -> 0xFF4FA8FF;
 			case "LEGENDARY" -> 0xFFFFC02E;
 			case "CURSED" -> 0xFFB04CFF;
+			case "BOND" -> 0xFF2EE6C8;
 			default -> 0xFFB8C4D0;
 		};
 	}

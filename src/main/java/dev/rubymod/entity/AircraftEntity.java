@@ -991,6 +991,12 @@ public class AircraftEntity extends Mob {
 	}
 
 	/** A Co-op Horde enemy gunship: a helicopter circling {@code center} (Horde aims and fires its weapons). */
+	/** Change where a drone circles (the Rift Gunship drops lower when it's hurt). */
+	public void setOrbit(Vec3 center, double radius) {
+		droneCenter = center;
+		droneRadius = radius;
+	}
+
 	public static AircraftEntity gunship(ServerLevel level, Vec3 center, double radius) {
 		AircraftEntity heli = new AircraftEntity(ModEntities.ATTACK_HELI, level);
 		heli.snapTo(center.x + radius, center.y, center.z, 180, 0);
