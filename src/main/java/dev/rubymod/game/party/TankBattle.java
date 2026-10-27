@@ -44,15 +44,10 @@ public class TankBattle extends PartyGame {
 		return 150;
 	}
 
-	private boolean built;
-
-	/** The vehicle arena is big: build it once per server start (rounds don't change it much). */
+	/** A fresh arena every round (craters filled, walls back up), built a little at a time. */
 	@Override
 	protected void build(ServerLevel level) {
-		if (!built && !dev.rubymod.game.Arenas.built(id)) {
-			built = true;
-			later(() -> Duels.ArenaBuilder.build(level, Duels.Mode.VEHICLES, center()));
-		}
+		Duels.ArenaBuilder.buildQueued(level, Duels.Mode.VEHICLES, center(), this::later);
 	}
 
 	@Override

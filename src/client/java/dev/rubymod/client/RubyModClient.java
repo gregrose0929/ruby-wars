@@ -163,6 +163,10 @@ public class RubyModClient implements ClientModInitializer {
 			ClientState.raidAt = System.currentTimeMillis();
 		});
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.BountySync.TYPE, (payload, context) -> ClientState.bounties = payload.lines());
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.RaceMap.TYPE, (payload, context) -> {
+			ClientState.race = payload;
+			ClientState.raceAt = System.currentTimeMillis();
+		});
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.CombatTagged.TYPE, (payload, context) ->
 				ClientState.combatUntil = System.currentTimeMillis() + payload.seconds() * 1000L);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.MapSync.TYPE, (payload, context) -> ClientState.map = payload);

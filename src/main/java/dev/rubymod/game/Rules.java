@@ -117,7 +117,19 @@ public final class Rules {
 		if (!GameConfig.get().friendlyFire && Squads.same(a.getUUID(), v.getUUID())) {
 			return false;
 		}
-		return phase().pvp();
+		if (phase().pvp()) {
+			return true;
+		}
+		// Build phase: fight anywhere outside the bases, but nobody can be hurt inside one (or shoot out of one).
+		if ((phase() == Phase.BUILD || phase() == Phase.LOBBY) && Hub.inRubyWarsWorld(a) && Hub.inRubyWarsWorld(v)) {
+			return !inBase(a) && !inBase(v);
+		}
+		return false;
+	}
+
+	/** Standing on anyone's claimed land. */
+	public static boolean inBase(Player player) {
+		return SeasonData.get().claimAt(dim(player.level()), player.getBlockX(), player.getBlockZ()) != null;
 	}
 
 	public static boolean isEliminated(UUID player) {

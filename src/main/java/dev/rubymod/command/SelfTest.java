@@ -137,7 +137,16 @@ public final class SelfTest {
 		claim.trusted.clear();
 		data.phase = Phase.WAR;
 		check("protection: claims open on Battle Day", Rules.canBuild(bravo, level, inside));
-		check("pvp: players can't hurt each other in the build phase", runAs(Phase.BUILD, () -> !Rules.canHurt(alpha, bravo)));
+		var alphaWas = alpha.position();
+		var bravoWas = bravo.position();
+		alpha.setPos(base.getX() + 150.5, base.getY() + 1, base.getZ() + 0.5);
+		bravo.setPos(base.getX() + 153.5, base.getY() + 1, base.getZ() + 0.5);
+		check("pvp: build phase: players can fight outside the bases", runAs(Phase.BUILD, () -> Rules.canHurt(alpha, bravo)));
+		bravo.setPos(inside.getX() + 0.5, inside.getY(), inside.getZ() + 0.5);
+		check("pvp: build phase: nobody can be hurt inside a base", runAs(Phase.BUILD, () -> !Rules.canHurt(alpha, bravo)));
+		check("pvp: build phase: nobody can shoot out of a base", runAs(Phase.BUILD, () -> !Rules.canHurt(bravo, alpha)));
+		alpha.setPos(alphaWas.x, alphaWas.y, alphaWas.z);
+		bravo.setPos(bravoWas.x, bravoWas.y, bravoWas.z);
 		check("pvp: players can hurt each other in Open War", runAs(Phase.WAR, () -> Rules.canHurt(alpha, bravo)));
 		check("pvp: no PvP during Lockdown", runAs(Phase.LOCKDOWN, () -> !Rules.canHurt(alpha, bravo)));
 
@@ -496,7 +505,7 @@ public final class SelfTest {
 					&& alpha.blockPosition().closerThan(home, 2) && bravo.level() == level);
 			check("duels: and get their own inventory back", alpha.getInventory().countItem(ModItems.RUBY) == 5
 					&& alpha.getInventory().countItem(ModItems.ARR_RIFLE) == 0 && bravo.getInventory().countItem(net.minecraft.world.item.Items.BREAD) == 3);
-			check("duels: no PvP outside the duel in the build phase again", !Rules.canHurt(alpha, bravo));
+			check("duels: the duel's PvP rules end with it", dev.rubymod.game.Duels.canHurt(alpha, bravo) == null);
 
 			dev.rubymod.game.Duels.startForTest(alpha, bravo, dev.rubymod.game.Duels.Mode.VEHICLES, 10);
 			// (Fake players can't ride, so check the tanks are waiting at the spawns; the client test rides one.)

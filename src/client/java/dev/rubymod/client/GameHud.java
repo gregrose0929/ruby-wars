@@ -139,7 +139,7 @@ public class GameHud implements HudElement {
 	}
 
 	private void drawHeart(GuiGraphicsExtractor g, Font font) {
-		if (ClientState.hud == null || ClientState.phase() == Phase.LOBBY) {
+		if (ClientState.hud == null || ClientState.phase() == Phase.LOBBY || !ClientState.inRubyWarsWorld()) {
 			return;
 		}
 		int hp = ClientState.hud.heartHp();
@@ -160,7 +160,7 @@ public class GameHud implements HudElement {
 		if (e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
 			return;
 		}
-		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY ? 24 : 4;
+		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY && ClientState.inRubyWarsWorld() ? 24 : 4;
 		panel(g, 4, y, 96, y + 30);
 		g.item(new ItemStack(dev.rubymod.registry.ModItems.RUBY), 6, y + 1);
 		g.text(font, String.format(java.util.Locale.ROOT, "%,d", e.bank()), 24, y + 5, 0xFFFF5A82);

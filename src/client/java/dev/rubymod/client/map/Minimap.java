@@ -50,8 +50,28 @@ public class Minimap implements HudElement {
 		g.outline(x0 - 1, y0 - 1, SIZE + 2, SIZE + 2, 0xFF3A4048);
 		float scale = SIZE / (float) SPAN;
 		g.enableScissor(x0, y0, x0 + SIZE, y0 + SIZE);
+		MorePayloads.RaceMap race = ClientState.race;
+		if (race != null && System.currentTimeMillis() - ClientState.raceAt < 1000) {
+			// Sky Race: the rings (the next one big and green), and the other racers.
+			var rings = race.rings();
+			for (int i = 0; i + 1 < rings.size(); i += 2) {
+				int rx = Mth.clamp(x0 + Math.round((rings.get(i) - px) * scale + SIZE / 2.0F), x0 + 2, x0 + SIZE - 3);
+				int rz = Mth.clamp(y0 + Math.round((rings.get(i + 1) - pz) * scale + SIZE / 2.0F), y0 + 2, y0 + SIZE - 3);
+				boolean isNext = i / 2 == race.next();
+				int r = isNext ? 3 : 2;
+				g.fill(rx - r, rz - r, rx + r, rz + r, 0xFF101010);
+				g.fill(rx - r + 1, rz - r + 1, rx + r - 1, rz + r - 1, isNext ? 0xFF40FF60 : 0xFFFF9030);
+			}
+			var racers = race.racers();
+			for (int i = 0; i + 1 < racers.size(); i += 2) {
+				int rx = Mth.clamp(x0 + Math.round((racers.get(i) - px) * scale + SIZE / 2.0F), x0 + 2, x0 + SIZE - 3);
+				int rz = Mth.clamp(y0 + Math.round((racers.get(i + 1) - pz) * scale + SIZE / 2.0F), y0 + 2, y0 + SIZE - 3);
+				g.fill(rx - 2, rz - 2, rx + 2, rz + 2, 0xFF101010);
+				g.fill(rx - 1, rz - 1, rx + 1, rz + 1, 0xFF55D8FF);
+			}
+		}
 		MorePayloads.MapSync map = ClientState.map;
-		if (map != null) {
+		if (map != null && ClientState.inRubyWarsWorld()) {
 			for (MorePayloads.ClaimInfo c : map.claims()) {
 				int color = c.relation() == 0 ? 0xFF5BE37D : c.relation() == 1 ? 0xFF55AAFF : 0xFFFF5050;
 				int cx = x0 + Math.round((c.x() - c.radius() - px) * scale + SIZE / 2.0F);

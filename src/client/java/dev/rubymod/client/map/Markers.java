@@ -25,7 +25,7 @@ public class Markers implements HudElement {
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker delta) {
 		Minecraft mc = Minecraft.getInstance();
 		MorePayloads.MapSync map = ClientState.map;
-		if (mc.player == null || map == null) {
+		if (mc.player == null || map == null || !ClientState.inRubyWarsWorld()) {
 			return;
 		}
 		Camera camera = mc.gameRenderer.mainCamera();

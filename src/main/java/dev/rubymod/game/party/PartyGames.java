@@ -66,7 +66,18 @@ public final class PartyGames {
 
 	public static void tick(MinecraftServer server) {
 		// All the games share ~10 ms a tick for building arenas.
+		// Arenas someone is waiting on come first; the rest get a few milliseconds each.
 		PartyGame.budgetEnd = System.nanoTime() + 10_000_000L;
+		for (PartyGame game : ALL) {
+			if (!game.players.isEmpty()) {
+				buildSome(game, 10_000_000L);
+			}
+		}
+		for (PartyGame game : ALL) {
+			if (game.players.isEmpty()) {
+				buildSome(game, 3_000_000L);
+			}
+		}
 		for (PartyGame game : ALL) {
 			game.attach(server);
 			try {
@@ -74,6 +85,14 @@ public final class PartyGames {
 			} catch (RuntimeException e) {
 				crashed(game, e);
 			}
+		}
+	}
+
+	private static void buildSome(PartyGame game, long sliceNanos) {
+		try {
+			game.runWork(sliceNanos);
+		} catch (RuntimeException e) {
+			crashed(game, e);
 		}
 	}
 

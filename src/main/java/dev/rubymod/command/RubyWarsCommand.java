@@ -113,6 +113,14 @@ public final class RubyWarsCommand {
 					return 0;
 				}))
 				.then(Commands.literal("training").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
+					// It flattens a huge area where you stand: never in the hub, the game arenas or the Ruby Wars map.
+					var level = c.getSource().getLevel();
+					if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD
+							|| level.getChunkSource().getGenerator() instanceof dev.rubymod.world.WarzoneGenerator) {
+						c.getSource().sendFailure(Component.literal("The training ground can only be built in a separate test world, "
+								+ "not on the Ruby Wars map, the hub or a game arena (it flattens everything around you)."));
+						return 0;
+					}
 					dev.rubymod.game.TrainingGround.build(c.getSource().getLevel(), net.minecraft.core.BlockPos.containing(c.getSource().getPosition()));
 					return ok(c, "Training ground built: gun range to the west, vehicle yard to the east, airfield to the south.");
 				}))

@@ -72,6 +72,10 @@ public final class GameEvents {
 			}
 		});
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+			// Always daytime, in every world.
+			var quiet = server.createCommandSourceStack().withSuppressedOutput();
+			server.getCommands().performPrefixedCommand(quiet, "gamerule advance_time false");
+			server.getCommands().performPrefixedCommand(quiet, "time set day");
 			GameConfig.load();
 			SeasonData.load(server);
 			dev.rubymod.industry.Grid.load(server);
@@ -130,6 +134,7 @@ public final class GameEvents {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
 				for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+					safeZoneNotice(player);
 					var id = Horde.playing(player) ? Horde.TEAM : player.getUUID();
 					Net.send(player, new Payloads.Economy(dev.rubymod.industry.Grid.rubies(id), dev.rubymod.industry.Grid.charge(id),
 							dev.rubymod.industry.Grid.capacity(id), dev.rubymod.industry.Grid.producedPerSecond(id),
@@ -472,6 +477,23 @@ public final class GameEvents {
 	private static String ownerName(Level level, BlockPos pos) {
 		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ());
 		return claim == null ? "someone" : claim.ownerName;
+	}
+
+	/** Who was standing in a base last second (build phase: safe inside, fair game outside). */
+	private static final java.util.Map<java.util.UUID, Boolean> IN_BASE = new java.util.HashMap<>();
+
+	private static void safeZoneNotice(ServerPlayer player) {
+		Phase phase = Rules.phase();
+		if ((phase != Phase.BUILD && phase != Phase.LOBBY) || !Hub.inRubyWarsWorld(player) || player.isSpectator()) {
+			IN_BASE.remove(player.getUUID());
+			return;
+		}
+		boolean in = Rules.inBase(player);
+		Boolean was = IN_BASE.put(player.getUUID(), in);
+		if (was != null && was != in) {
+			player.sendOverlayMessage(in ? Component.literal("\u2714 In a base: nobody can hurt you here").withStyle(ChatFormatting.GREEN)
+					: Component.literal("\u2694 Outside the bases: players can fight you here!").withStyle(ChatFormatting.GOLD));
+		}
 	}
 
 	private static void deny(Player player, String message) {

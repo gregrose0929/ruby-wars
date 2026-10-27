@@ -11,8 +11,8 @@ Design doc: https://claude.ai/code/artifact/7412ee76-bb2f-47f6-8045-6372edb0be5d
 1. **Lobby.** Players join. An admin runs `/rubywars start`.
 2. **Build phase (14 days).** Everyone gets a Ruby Heart, a pistol, and some ammo.
    Place the Heart to claim the land around it (49x49 blocks at tier 1). Nobody
-   else can build, break, or open things in your claim, PvP is off, and explosions
-   can't damage claims. Mine Ruby Ore (rarer than diamonds, below Y 0), and spend
+   else can build, break, or open things in your claim, nobody can be hurt inside a
+   claim, and explosions can't damage claims. Outside the claims you can fight. Mine Ruby Ore (rarer than diamonds, below Y 0), and spend
    rubies at an Armory.
 3. **Battle Day.**
    - **Lockdown (15 min):** claims open, defenses switch on, PvP still off.
@@ -97,7 +97,8 @@ nastier. If the Core is destroyed, it's game over.
 - **Special waves:** every 5th wave brings Brutes (ravagers), waves 4, 9, 14... are fog
   waves (darkness closes in, but enemies glow), and waves 7, 12, 17... are air raids:
   an enemy gunship circles the Core: shoot it down with flak, a SAM site or Skyhammers
-  (if the team has none, everyone gets a Skyhammer).
+  (if the team has none, everyone gets a Skyhammer). You're warned (siren and a big
+  title) when the wave before it is cleared, and again 15 seconds before it arrives.
 - Join mid-game any time: you get the starting kit, and the team bank is yours too.
   The best wave (and who reached it) shows on the hub sign. Reaching wave 5 completes
   the "Reach wave 5 in Co-op Horde" goal (a star for Ruby Wars). Nothing else from Horde
@@ -136,7 +137,7 @@ its players are sent back to the hub and the error is logged; the server keeps r
 AI bots fill in where a game supports them. They strafe, duck into cover to patch up
 when they're hurt, and use the right weapon for the job: in Gun Game they climb the
 weapon ladder too (and can win), in Capture the Flag they join both teams (half attack
-and carry flags, half defend), in King of the Hill they fight for the zone, and in Ruby
+and carry flags, half defend; they're easier shots than the others), in King of the Hill they fight for the zone, and in Ruby
 Rush they land 15 seconds in with a random gun.
 
 | Game | `/play` | Players | What it is |
@@ -146,8 +147,8 @@ Rush they land 15 seconds in with a random gun.
 | Infection | `infection` | 2+ | One zombie (fast, strong) at the start; anyone caught becomes a zombie. Survivors have a pistol and shotgun and must last 4 minutes. Wild zombies wander in. |
 | Capture the Flag | `ctf` | 1+ (teams, bots fill in) | Red vs Blue. 20 seconds to build sandbag defenses, then grab their flag and bring it to yours. Dropped flags: your team walks over it to send it home. First to 3. |
 | King of the Hill | `koth` | 1+ (bots fill in) | Score a point a second while you're the only one in the gold zone; it moves every minute. First to 75. |
-| Tank Battle | `tanks` | 2+ (teams) | Red vs Blue in tanks on the vehicle arena; a fresh tank 5 seconds after you're knocked out. First team to 10. |
-| Sky Race | `skyrace` | 1+ | Jetpack through 12 rings in the sky, twice around. Land on the glowing pads to refuel. The record time is kept. |
+| Tank Battle | `tanks` | 2+ (teams) | Red vs Blue in tanks on the vehicle arena (rebuilt fresh every round); a fresh tank 5 seconds after you're knocked out. First team to 10. |
+| Sky Race | `skyrace` | 1+ | Fly through 12 rings in the sky, twice around, in 3 minutes. Rounds take turns: jetpacks (land on the glowing pads to refuel) and elytras (jump off the launch tower; the elytra opens by itself, rockets for speed; land and you're put back at your last ring). The minimap shows the rings (next one green) and the other racers. Records are kept for each. |
 | Build Battle | `build` | 2+ | Same theme for everyone, 5 minutes in creative on your own plot (blocks and wands only), then rate every build 1 to 5 stars. |
 | Ruby Rush | `rush` | 1+ (bots fill in) | A battle royale on Rush Island (a quarter-size copy of the Ruby Wars Map in its own world). Float down, loot crates, stay inside the closing red zone. No respawns; last one standing wins. |
 

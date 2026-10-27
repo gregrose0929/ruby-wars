@@ -194,6 +194,7 @@ public class CaptureTheFlag extends PartyGame {
 			return;
 		}
 		bot.setWeapon(ModItems.ARR_RIFLE);
+		bot.setEasy();
 		bot.setCustomName(Component.literal(teamName(team) + " Bot").withStyle(team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE));
 		bot.addTag(tag());
 		level().addFreshEntity(bot);
@@ -254,7 +255,7 @@ public class CaptureTheFlag extends PartyGame {
 
 	@Override
 	protected void onDowned(ServerPlayer victim, Part part, Entity killer) {
-		part.respawnIn = 100;
+		part.respawnIn = 60;
 		for (int flag = 0; flag < 2; flag++) {
 			if (victim.getUUID().equals(carrier[flag])) {
 				drop(victim, flag, victim.position());
@@ -277,7 +278,7 @@ public class CaptureTheFlag extends PartyGame {
 			players.get(k.getUUID()).kills++;
 		}
 		if (phase == Phase.PLAYING) {
-			botRespawns.add(new int[] {roundTicks + 120, bot[0], bot[1]});
+			botRespawns.add(new int[] {roundTicks + 200, bot[0], bot[1]});
 		}
 	}
 

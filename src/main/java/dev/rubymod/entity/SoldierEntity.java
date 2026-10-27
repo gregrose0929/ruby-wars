@@ -82,6 +82,8 @@ public class SoldierEntity extends PathfinderMob {
 	private net.minecraft.world.item.Item botWeapon;
 	/** Practice and party bots fight smarter: they strafe and duck into cover to heal. */
 	private boolean smart;
+	/** A gentler bot: misses more, hits softer, pauses longer between bursts (Capture the Flag). */
+	private boolean easy;
 	private int strafeIn;
 	private int coverTicks;
 	private int coverCooldown;
@@ -197,6 +199,10 @@ public class SoldierEntity extends PathfinderMob {
 
 	public void setSmart() {
 		smart = true;
+	}
+
+	public void setEasy() {
+		easy = true;
 	}
 
 	public int partyTeam() {
@@ -537,7 +543,7 @@ public class SoldierEntity extends PathfinderMob {
 		burst++;
 		if (burst >= 3) {
 			burst = 0;
-			cooldown = 26 + random.nextInt(10);
+			cooldown = 26 + random.nextInt(10) + (easy ? 30 : 0);
 		} else {
 			cooldown = 3;
 		}
@@ -545,6 +551,10 @@ public class SoldierEntity extends PathfinderMob {
 
 	/** One bullet (or pellet): spread grows with distance; blocked by walls; tracers drawn. */
 	private void shoot(ServerLevel level, LivingEntity target, Vec3 from, Vec3 aim, double spreadPer10, float damage) {
+		if (easy) {
+			spreadPer10 *= 2.2;
+			damage *= 0.5F;
+		}
 		var random = getRandom();
 		Vec3 spread = new Vec3(random.nextGaussian(), random.nextGaussian(), random.nextGaussian()).scale(spreadPer10 * aim.distanceTo(from) / 10.0);
 		Vec3 end = aim.add(spread);

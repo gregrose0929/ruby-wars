@@ -932,6 +932,27 @@ public final class Duels {
 		private ArenaBuilder() {
 		}
 
+		/** Where the block work goes: done right away (null), or handed to a party game's build queue. */
+		private static java.util.function.Consumer<Runnable> sink;
+
+		/** Build a little at a time through the given queue (no server freeze, even for the big vehicle arena). */
+		public static void buildQueued(ServerLevel level, Mode mode, BlockPos c, java.util.function.Consumer<Runnable> queue) {
+			sink = queue;
+			try {
+				build(level, mode, c);
+			} finally {
+				sink = null;
+			}
+		}
+
+		private static void run(Runnable task) {
+			if (sink != null) {
+				sink.accept(task);
+			} else {
+				task.run();
+			}
+		}
+
 		public static void build(ServerLevel level, Mode mode, BlockPos c) {
 			int r = switch (mode) {
 				case GUNS -> mode.half + 4;
@@ -942,7 +963,9 @@ public final class Duels {
 			int span = mode == Mode.PLANES ? mode.spawnZ + 80 : r;
 			for (int cx = (c.getX() - r) >> 4; cx <= (c.getX() + r) >> 4; cx++) {
 				for (int cz = (c.getZ() - span) >> 4; cz <= (c.getZ() + span) >> 4; cz++) {
-					level.getChunk(cx, cz);
+					int fcx = cx;
+					int fcz = cz;
+					run(() -> level.getChunk(fcx, fcz));
 				}
 			}
 			switch (mode) {
@@ -954,30 +977,35 @@ public final class Duels {
 
 		/** Restore flat ground (craters filled, debris cleared) over a rectangle. */
 		private static void flatten(ServerLevel level, BlockPos c, int x1, int z1, int x2, int z2, int clearHeight, BlockState floor) {
-			BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
 			BlockState dirt = Blocks.DIRT.defaultBlockState();
 			for (int x = x1; x <= x2; x++) {
-				for (int z = z1; z <= z2; z++) {
-					for (int y = GROUND - 3; y <= GROUND + clearHeight; y++) {
-						BlockState want = y < GROUND ? dirt : y == GROUND ? floor : Blocks.AIR.defaultBlockState();
-						p.set(c.getX() + x, y, c.getZ() + z);
-						if (level.getBlockState(p) != want) {
-							level.setBlock(p, want, FLAGS);
+				int fx = x;
+				run(() -> {
+					BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+					for (int z = z1; z <= z2; z++) {
+						for (int y = GROUND - 3; y <= GROUND + clearHeight; y++) {
+							BlockState want = y < GROUND ? dirt : y == GROUND ? floor : Blocks.AIR.defaultBlockState();
+							p.set(c.getX() + fx, y, c.getZ() + z);
+							if (level.getBlockState(p) != want) {
+								level.setBlock(p, want, FLAGS);
+							}
 						}
 					}
-				}
+				});
 			}
 		}
 
 		/** Fill a box given relative to the arena centre (y relative to the ground surface). */
 		private static void box(ServerLevel level, BlockPos c, int x1, int y1, int z1, int x2, int y2, int z2, BlockState state) {
-			for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
-				for (int y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
-					for (int z = Math.min(z1, z2); z <= Math.max(z1, z2); z++) {
-						level.setBlock(new BlockPos(c.getX() + x, GROUND + y, c.getZ() + z), state, FLAGS);
+			run(() -> {
+				for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+					for (int y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+						for (int z = Math.min(z1, z2); z <= Math.max(z1, z2); z++) {
+							level.setBlock(new BlockPos(c.getX() + x, GROUND + y, c.getZ() + z), state, FLAGS);
+						}
 					}
 				}
-			}
+			});
 		}
 
 		/** The same box and its mirror on the other side (rotated 180 degrees about the centre). */

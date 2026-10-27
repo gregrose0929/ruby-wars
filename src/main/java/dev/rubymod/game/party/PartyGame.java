@@ -301,11 +301,13 @@ public abstract class PartyGame {
 		return !work.isEmpty();
 	}
 
-	private void runWork() {
+	/** Build for up to sliceNanos (within this tick's shared budget). */
+	void runWork(long sliceNanos) {
 		if (work.isEmpty()) {
 			return;
 		}
-		while (!work.isEmpty() && System.nanoTime() < budgetEnd) {
+		long end = Math.min(budgetEnd, System.nanoTime() + sliceNanos);
+		while (!work.isEmpty() && System.nanoTime() < end) {
 			work.poll().run();
 		}
 		if (work.isEmpty()) {
@@ -346,7 +348,6 @@ public abstract class PartyGame {
 		if (server == null) {
 			return;
 		}
-		runWork();
 		if (phase == Phase.IDLE) {
 			return;
 		}

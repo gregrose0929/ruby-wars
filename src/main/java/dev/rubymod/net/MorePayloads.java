@@ -212,6 +212,21 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: the Sky Race minimap: ring x,z pairs, the next ring, other racers' x,z pairs. */
+	public record RaceMap(List<Integer> rings, int next, List<Integer> racers) implements CustomPacketPayload {
+		public static final Type<RaceMap> TYPE = new Type<>(RubyMod.id("race_map"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, RaceMap> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), RaceMap::rings,
+				ByteBufCodecs.VAR_INT, RaceMap::next,
+				ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), RaceMap::racers,
+				RaceMap::new);
+
+		@Override
+		public Type<RaceMap> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: buy this from the Horde Armory. */
 	public record HordeBuy(String id) implements CustomPacketPayload {
 		public static final Type<HordeBuy> TYPE = new Type<>(RubyMod.id("horde_buy"));
@@ -358,5 +373,6 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(ProfileSync.TYPE, ProfileSync.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(CosmeticSelect.TYPE, CosmeticSelect.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HordeBuy.TYPE, HordeBuy.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(RaceMap.TYPE, RaceMap.CODEC);
 	}
 }

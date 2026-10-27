@@ -544,6 +544,15 @@ public final class Horde {
 		return b.toString();
 	}
 
+	/** A big warning (title, siren, chat) that the next wave brings the gunship. */
+	private static void warnGunship(MinecraftServer server, String detail) {
+		for (ServerPlayer p : players(server)) {
+			Alerts.title(p, "\u26A0 GUNSHIP INCOMING", detail, ChatFormatting.DARK_RED);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 1.0F, 1.0F);
+			p.sendSystemMessage(Component.literal("\u26A0 " + detail).withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		}
+	}
+
 	private static boolean teamHasAntiAir(MinecraftServer server, ServerLevel arena) {
 		for (ServerPlayer p : players(server)) {
 			if (has(p, ModItems.SKYHAMMER)) {
@@ -778,6 +787,9 @@ public final class Horde {
 				if (timer < 15 * 20 && timer % 10 == 0) {
 					flares(arena);
 				}
+				if (timer == 15 * 20 && airRaid(wave + 1)) {
+					warnGunship(server, "The gunship is 15 seconds away. Get your anti-air ready!");
+				}
 				if (timer <= 0) {
 					startWave(server, arena, wave + 1);
 				}
@@ -918,6 +930,9 @@ public final class Horde {
 					+ (unlocked.isEmpty() ? "" : "New at the Armory: " + unlocked + ". ") + "The next wave comes from the " + directionNames()
 					+ " in 90 seconds. ").withStyle(ChatFormatting.GREEN).append(shopButton()).append(" ").append(readyButton()));
 			f.ready = false;
+		}
+		if (airRaid(wave + 1)) {
+			warnGunship(server, "Next wave: an enemy GUNSHIP! Get flak, a SAM site or Skyhammers at the Armory.");
 		}
 		HordeShop.syncAll(server, false);
 		fogWave = false;

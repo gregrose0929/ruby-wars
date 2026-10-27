@@ -53,7 +53,7 @@ public class GunGame extends PartyGame {
 
 	@Override
 	protected void build(ServerLevel level) {
-		later(() -> Duels.ArenaBuilder.build(level, Duels.Mode.GUNS, center()));
+		Duels.ArenaBuilder.buildQueued(level, Duels.Mode.GUNS, center(), this::later);
 	}
 
 	private static String weaponName(int level) {

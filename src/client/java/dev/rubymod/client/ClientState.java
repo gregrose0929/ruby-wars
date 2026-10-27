@@ -8,6 +8,15 @@ import dev.rubymod.net.Payloads;
 /** What the server last told this client, for the HUD. */
 public final class ClientState {
 	public static Payloads.HudSync hud;
+	/** The Sky Race minimap (only while racing), and when it last came. */
+	public static dev.rubymod.net.MorePayloads.RaceMap race;
+	public static long raceAt;
+
+	/** In the Ruby Wars world itself (not the hub, Horde or a party game), where Hearts, claims and waypoints mean something. */
+	public static boolean inRubyWarsWorld() {
+		var level = net.minecraft.client.Minecraft.getInstance().level;
+		return level != null && level.dimension() == net.minecraft.world.level.Level.OVERWORLD;
+	}
 	/** System time (ms) when the last HudSync arrived, to count the timer down smoothly between packets. */
 	public static long hudReceivedAt;
 

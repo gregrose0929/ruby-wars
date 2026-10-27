@@ -124,7 +124,10 @@ public final class AutoTest {
 		if (withBuddy) {
 			then(10, mc -> onServer(mc, server -> dev.rubymod.game.party.PartyGames.addTestPlayer(pg(id), partyBuddy(server))));
 		}
-		then(10, mc -> onServer(mc, server -> pg(id).skipLobby()));
+		// A fresh test world builds every arena first: keep skipping the lobby until the round is on.
+		for (int i = 0; i < 20; i++) {
+			then(i == 0 ? 10 : 40, mc -> onServer(mc, server -> pg(id).skipLobby()));
+		}
 		then(60, mc -> {
 			log("{} started: {}", id, pg(id).debugState());
 			shot(mc, "party-" + id + "-start");
@@ -144,6 +147,8 @@ public final class AutoTest {
 		});
 		then(40, mc -> log("{} left: player in {}", id, mc.player.level().dimension().identifier()));
 	}
+
+	private static net.minecraft.core.BlockPos tankMark;
 
 	private static long maxTickMs(net.minecraft.server.MinecraftServer server) {
 		long max = 0;
@@ -330,10 +335,31 @@ public final class AutoTest {
 		}
 		if (only.isEmpty() || only.equals("tanks")) {
 			partyMode("tanks", true, () -> {
+				for (int i = 0; i < 8; i++) {
+					then(100, mc -> onServer(mc, server -> {
+						log("tanks building: {} | slowest tick {} ms", pg("tanks").debugState(), maxTickMs(server));
+						pg("tanks").skipLobby();
+					}));
+				}
 				then(160, mc -> {
 					log("tanks: riding {} | {}", mc.player.getVehicle(), pg("tanks").debugState());
 					shot(mc, "party-tanks-ride");
 				});
+				// A crater in the arena: the next round's rebuild should fill it, without freezing the server.
+				then(5, mc -> onServer(mc, server -> {
+					var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+					var p = new net.minecraft.core.BlockPos(me(server).getBlockX() + 20, dev.rubymod.game.Duels.GROUND + 1, me(server).getBlockZ() + 20);
+					level.setBlock(p.below(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+					level.setBlock(p.above(), net.minecraft.world.level.block.Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+					tankMark = p;
+					maxTickMs(server);
+					pg("tanks").queueBuild();
+				}));
+				then(200, mc -> onServer(mc, server -> {
+					var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+					log("tanks rebuilt: crater filled {}, gold gone {}, slowest tick {} ms",
+							!level.getBlockState(tankMark.below()).isAir(), level.getBlockState(tankMark.above()).isAir(), maxTickMs(server));
+				}));
 			});
 		}
 		if (only.isEmpty() || only.equals("skyrace")) {
@@ -357,6 +383,21 @@ public final class AutoTest {
 				then(20, mc -> {
 					log("skyrace after the course: {}", pg("skyrace").debugState());
 					shot(mc, "party-skyrace-finish");
+				});
+				// The next round is an elytra race (run the clock out on this one).
+				then(5, mc -> onServer(mc, server -> pg("skyrace").fastForward(3 * 60 * 20 - 1)));
+				then(260, mc -> onServer(mc, server -> {
+					log("skyrace before round 2: {}", pg("skyrace").debugState());
+					pg("skyrace").skipLobby();
+				}));
+				then(60, mc -> {
+					log("round 2: {} chest {}", pg("skyrace").debugState(), mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST));
+					shot(mc, "party-skyrace-tower");
+				});
+				then(60, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~-8 180 10"));
+				then(25, mc -> {
+					log("off the tower: fall flying {}, minimap race data {}", mc.player.isFallFlying(), ClientState.race != null);
+					shot(mc, "party-skyrace-glide");
 				});
 			});
 		}
