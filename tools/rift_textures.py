@@ -7,6 +7,7 @@ Deterministic (fixed seeds), so re-running gives the same pictures.
 """
 import os
 import random
+import re
 
 from PIL import Image
 
@@ -31,7 +32,58 @@ def vein_color(t, hot, mid, edge):
     return tuple(clamp(edge[i] + (mid[i] - edge[i]) * k) for i in range(3))
 
 
-# ----- Guns: obsidian and ruby bodies, glowing veins on the emissive layer -----
+# ----- Guns: mostly black and gunmetal grey, a few parts glowing ruby -----
+
+GLOW = (255, 50, 105)
+
+
+MODELS = os.path.join(os.path.dirname(__file__), '..', 'src', 'client', 'java', 'dev', 'rubymod', 'client', 'model', 'GunModels.java')
+METHODS = {'arr_rifle': 'arrRifle', 'service_pistol': 'servicePistol', 'combat_shotgun': 'combatShotgun',
+           'longshot_sniper': 'longshotSniper', 'ruby_blaster': 'rubyBlaster', 'rocket_launcher': 'rocketLauncher',
+           'skyhammer': 'skyhammer', 'lancer': 'lancer'}
+# Which parts glow: 'part' = all of it, 'part:0,2' = those boxes, 'part:small2' = its two smallest boxes.
+GLOWING = {
+    'arr_rifle': ['mag_std', 'mag_ext', 'muzzle_device', 'irons', 'bolt'],
+    'service_pistol': ['mag_std:1', 'mag_ext:2', 'hammer', 'slide:small3'],
+    'combat_shotgun': ['pump', 'mag_std:small2', 'body:small2'],
+    'longshot_sniper': ['mag_std', 'mag_ext', 'bolt', 'muzzle_device', 'scope:small4'],
+    'ruby_blaster': ['mag_std', 'mag_ext', 'body:small3'],
+    'rocket_launcher': ['rocket', 'body:2,3,7'],
+    'skyhammer': ['rocket', 'body:2,3,21,22,23,24,25'],
+    'lancer': ['rocket', 'body:2,3,8', 'clu:2,3,5'],
+}
+# Left exactly as they were: the muzzle flash and the brass.
+KEEP = ('flash', 'casing')
+
+
+def boxes(name):
+    """{part: [(u, v, w, h, d), ...]} read from the gun's model code."""
+    src = open(MODELS, encoding='utf-8').read()
+    m = re.search(r'LayerDefinition ' + METHODS[name] + r'\(\)(.*?)LayerDefinition\.create', src, re.S)
+    segs = re.split(r'addOrReplaceChild\(\s*"(\w+)"', m.group(1))
+    out = {}
+    num = r'(-?[\d.]+)F?'
+    for i in range(1, len(segs), 2):
+        found = re.findall(r'texOffs\((\d+), (\d+)\)\.addBox\(' + ', '.join([num] * 6), segs[i + 1])
+        out[segs[i]] = [(int(f[0]), int(f[1]), int(float(f[5])), int(float(f[6])), int(float(f[7]))) for f in found]
+    return out
+
+
+def net(box):
+    """The pixels a box's unfolded net covers."""
+    u, v, w, h, d = box
+    return [(x, y) for y in range(v, v + d + h) for x in range(u, u + 2 * d + 2 * w)]
+
+
+def pick(parts, spec):
+    part, _, which = spec.partition(':')
+    bs = parts.get(part, [])
+    if not which:
+        return bs
+    if which.startswith('small'):
+        return sorted(bs, key=lambda b: b[2] * b[3] * b[4])[:int(which[5:])]
+    return [bs[int(i)] for i in which.split(',') if int(i) < len(bs)]
+
 
 def gun(name):
     base = Image.open(os.path.join(ROOT, 'entity', 'gun', name + '.png')).convert('RGBA')
@@ -44,47 +96,32 @@ def gun(name):
     op = body.load()
     gp = glow.load()
     og = old_glow.load()
-    opaque = []
+    # The body: the same shading, as black and gunmetal grey.
     for y in range(h):
         for x in range(w):
             r, g, b, a = bp[x, y]
             if a == 0:
                 continue
-            opaque.append((x, y))
-            L = lum(r, g, b)
-            sat = max(r, g, b) - min(r, g, b)
-            if sat > 28:
-                # Coloured furniture (olive, tan, red): deep ruby.
-                op[x, y] = (clamp(70 + L * 0.85), clamp(L * 0.12), clamp(24 + L * 0.28), a)
-            else:
-                # Gunmetal: obsidian with a violet sheen.
-                op[x, y] = (clamp(14 + L * 0.32), clamp(9 + L * 0.2), clamp(24 + L * 0.48), a)
-            gr, gg, gb, ga = og[x, y]
-            if ga > 0:
-                # The old glowing bits (sights, lamps): ruby-hot.
-                gp[x, y] = (255, clamp(60 + lum(gr, gg, gb) * 0.5), clamp(110 + lum(gr, gg, gb) * 0.3), ga)
-    rnd = random.Random(hash(name) & 0xFFFF)
-    solid = set(opaque)
-    # The edges of each part's net glow faintly (so every edge of the model has a line of light).
-    for (x, y) in opaque:
-        edge = any((x + dx, y + dy) not in solid for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-        if edge and rnd.random() < 0.6:
-            gp[x, y] = (230, 30, 90, 170)
-    # Molten veins running over it.
-    for _ in range(max(6, len(opaque) // 160)):
-        x, y = rnd.choice(opaque)
-        dx, dy = rnd.choice([(1, 0), (0, 1), (-1, 0), (0, -1)])
-        length = rnd.randint(5, 14)
-        for i in range(length):
-            if (x, y) not in solid:
-                break
-            t = 1 - abs(i - length / 2) / (length / 2)
-            c = vein_color(t, (255, 225, 240), (255, 60, 110), (170, 20, 70))
-            gp[x, y] = c + (255,)
-            if rnd.random() < 0.3:
-                dx, dy = rnd.choice([(1, 0), (0, 1), (-1, 0), (0, -1)])
-            x += dx
-            y += dy
+            v = 14 + lum(r, g, b) * 0.4
+            op[x, y] = (clamp(v), clamp(v + 1), clamp(v + 4), a)
+            if og[x, y][3] > 0:
+                gp[x, y] = GLOW + (og[x, y][3],)
+    parts = boxes(name)
+    # A few whole parts glow ruby (magazine, sights, muzzle...), keeping the original shading.
+    for spec in GLOWING[name]:
+        for box in pick(parts, spec):
+            for (x, y) in net(box):
+                if x >= w or y >= h or bp[x, y][3] == 0:
+                    continue
+                k = 0.7 + lum(*bp[x, y][:3]) / 255 * 0.6
+                gp[x, y] = (clamp(GLOW[0] * k), clamp(GLOW[1] * k + 15), clamp(GLOW[2] * k + 15), 255)
+                op[x, y] = (24, 6, 12, bp[x, y][3])
+    for part in KEEP:
+        for box in parts.get(part, []):
+            for (x, y) in net(box):
+                if x < w and y < h:
+                    op[x, y] = bp[x, y]
+                    gp[x, y] = og[x, y]
     body.save(os.path.join(ROOT, 'entity', 'gun', name + '_rift.png'))
     glow.save(os.path.join(ROOT, 'entity', 'gun', name + '_rift_glow.png'))
 

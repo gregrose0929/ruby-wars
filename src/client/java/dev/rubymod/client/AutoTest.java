@@ -1044,6 +1044,28 @@ public final class AutoTest {
 			riftScript();
 			return;
 		}
+		if (mode.equals("riftguns")) {
+			// Each Rift gun skin in the hand, against the sky and against stone.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "gamemode creative @a");
+				command(mc, "tp @p ~ ~ ~ 0 0");
+			});
+			then(100, mc -> log("world ready"));
+			String[] guns = {"arr_rifle", "service_pistol", "combat_shotgun", "longshot_sniper", "ruby_blaster", "rocket_launcher", "skyhammer", "lancer"};
+			for (String gun : guns) {
+				then(10, mc -> command(mc, "item replace entity @p weapon.mainhand with rubymod:" + gun + "[custom_model_data={strings:[\"rift\"]}]"));
+				then(30, mc -> shot(mc, "riftgun-" + gun));
+				then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT));
+				then(25, mc -> shot(mc, "riftgun-" + gun + "-3p"));
+				then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("villagetour")) {
 			// Villages and ruins on the Ruby Wars map (run on a world made with that map type).
 			then(0, mc -> {
