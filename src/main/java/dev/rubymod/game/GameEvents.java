@@ -62,7 +62,7 @@ public final class GameEvents {
 	public static void register() {
 		// No hostile mobs (config: hostileMobs); raid soldiers, guards and animals are unaffected.
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-			if (Cosmetics.strayHat(entity)) {
+			if (Cosmetics.strayHat(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world)) {
 				entity.discard();
 				return;
 			}

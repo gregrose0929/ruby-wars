@@ -17,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 /** All the party games, and the hooks the rest of the mod calls into. */
 public final class PartyGames {
 	public static final List<PartyGame> ALL = List.of(
+			new FreeRoam(),
 			new GunGame(),
 			new HideAndSeek(),
 			new Infection(),

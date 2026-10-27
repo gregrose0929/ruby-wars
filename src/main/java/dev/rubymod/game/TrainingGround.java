@@ -44,9 +44,8 @@ public final class TrainingGround {
 
 	public static void build(ServerLevel level, BlockPos origin) {
 		MinecraftServer server = level.getServer();
-		List<String> cmds = new ArrayList<>();
+		List<String> cmds = layout(true, 8);
 		int ox = origin.getX();
-		int oy = origin.getY();
 		int oz = origin.getZ();
 
 		clearOldEntities(level, origin);
@@ -62,28 +61,6 @@ public final class TrainingGround {
 			}
 		}
 
-		// Flatten: clear the air, lay a grass floor on dirt.
-		for (int z = MIN_Z; z <= MAX_Z; z += 8) {
-			int z2 = Math.min(MAX_Z, z + 7);
-			cmds.add(fill(MIN_X, 0, z, MAX_X, HEIGHT, z2, "air"));
-			cmds.add(fill(MIN_X, -4, z, MAX_X, -2, z2, "dirt"));
-			cmds.add(fill(MIN_X, -1, z, MAX_X, -1, z2, "grass_block"));
-		}
-
-		// Spawn pad.
-		cmds.add(fill(-5, -1, -5, 5, -1, 5, "smooth_stone"));
-		cmds.add(fill(-1, -1, -1, 1, -1, 1, "red_concrete"));
-		label(cmds, 0, 3.2, 0, "RUBY WARS TRAINING", "red", 2.0);
-		label(cmds, -8, 2, 0, "<- GUN RANGE", "white", 1.2);
-		label(cmds, 8, 2, 0, "VEHICLE YARD ->", "white", 1.2);
-		label(cmds, 0, 2, 7, "AIRFIELD (south)", "white", 1.2);
-		label(cmds, 0, 2.4, -4, "Tip: /rubywars kit gives you everything, /rubywars rearm refills your aircraft", "gray", 0.6);
-
-		buildGunRange(cmds);
-		buildVehicleYard(cmds);
-		buildAirfield(cmds);
-		buildIndustryYard(cmds);
-
 		cmds.add("setworldspawn ~ ~ ~");
 		CommandSourceStack source = server.createCommandSourceStack().withLevel(level).withPosition(Vec3.atBottomCenterOf(origin))
 				.withSuppressedOutput();
@@ -91,12 +68,60 @@ public final class TrainingGround {
 			server.getCommands().performPrefixedCommand(source, cmd);
 		}
 
-		// Target drones (they come back 30 seconds after being shot down).
+		drones(level, origin);
+		// The commands above run on the next tick; stock the machines (and let the chunks go) a bit later.
+		PENDING.add(new Pending(level, origin, chunkX1, chunkX2, chunkZ1, chunkZ2, level.getGameTime() + 40));
+	}
+
+	/** The chunks the ground covers: {minX, maxX, minZ, maxZ} chunk coordinates around an origin. */
+	public static int[] chunks(BlockPos origin) {
+		return new int[] {(origin.getX() + MIN_X) >> 4, (origin.getX() + MAX_X) >> 4, (origin.getZ() + MIN_Z) >> 4, (origin.getZ() + MAX_Z) >> 4};
+	}
+
+	/**
+	 * Every command that lays out the ground, relative to the origin (run them with the
+	 * origin as the command position). {@code strip}: how many rows each flattening fill
+	 * covers (smaller = gentler on a running server). Free Roam uses it too (training = false).
+	 */
+	public static List<String> layout(boolean training, int strip) {
+		List<String> cmds = new ArrayList<>();
+		// Flatten: clear the air, lay a grass floor on dirt (and fill in deep craters).
+		for (int z = MIN_Z; z <= MAX_Z; z += strip) {
+			int z2 = Math.min(MAX_Z, z + strip - 1);
+			cmds.add(fill(MIN_X, 0, z, MAX_X, HEIGHT, z2, "air"));
+			if (!training) {
+				cmds.add(fill(MIN_X, -10, z, MAX_X, -5, z2, "stone"));
+			}
+			cmds.add(fill(MIN_X, -4, z, MAX_X, -2, z2, "dirt"));
+			cmds.add(fill(MIN_X, -1, z, MAX_X, -1, z2, "grass_block"));
+		}
+
+		// Spawn pad.
+		cmds.add(fill(-5, -1, -5, 5, -1, 5, "smooth_stone"));
+		cmds.add(fill(-1, -1, -1, 1, -1, 1, "red_concrete"));
+		label(cmds, 0, 3.2, 0, training ? "RUBY WARS TRAINING" : "RUBY WARS FREE ROAM", "red", 2.0);
+		label(cmds, -8, 2, 0, "<- GUN RANGE", "white", 1.2);
+		label(cmds, 8, 2, 0, "VEHICLE YARD ->", "white", 1.2);
+		label(cmds, 0, 2, 7, "AIRFIELD (south)", "white", 1.2);
+		label(cmds, 0, 2, -7, "INDUSTRY YARD (north)", "white", 1.2);
+		label(cmds, 0, 2.4, -4, training ? "Tip: /rubywars kit gives you everything, /rubywars rearm refills your aircraft"
+				: "Grab anything from the chests at the gun range. Ammo refills itself. Park aircraft on the yellow pad to rearm.", "gray", 0.6);
+
+		buildGunRange(cmds);
+		buildVehicleYard(cmds);
+		buildAirfield(cmds);
+		buildIndustryYard(cmds);
+		return cmds;
+	}
+
+	/** Target drones over the airfield (they come back 30 seconds after being shot down). */
+	public static void drones(ServerLevel level, BlockPos origin) {
+		int ox = origin.getX();
+		int oy = origin.getY();
+		int oz = origin.getZ();
 		drone(level, new Vec3(ox, oy + 50, oz + 560), 45);
 		drone(level, new Vec3(ox - 20, oy + 80, oz + 620), 70);
 		drone(level, new Vec3(ox - 45, oy + 45, oz + 380), 40);
-		// The commands above run on the next tick; stock the machines (and let the chunks go) a bit later.
-		PENDING.add(new Pending(level, origin, chunkX1, chunkX2, chunkZ1, chunkZ2, level.getGameTime() + 40));
 	}
 
 	private record Pending(ServerLevel level, BlockPos origin, int x1, int x2, int z1, int z2, long at) {
@@ -105,7 +130,7 @@ public final class TrainingGround {
 	private static final List<Pending> PENDING = new ArrayList<>();
 
 	private static void finish(Pending p) {
-		stockIndustryYard(p.level(), p.origin());
+		stock(p.level(), p.origin());
 		for (int cx = p.x1(); cx <= p.x2(); cx++) {
 			for (int cz = p.z1(); cz <= p.z2(); cz++) {
 				p.level().setChunkForced(cx, cz, false);
@@ -142,6 +167,9 @@ public final class TrainingGround {
 			if (r.level().getGameTime() < r.at()) {
 				return false;
 			}
+			if (!dev.rubymod.game.party.FreeRoam.keeps(r.level(), r.center())) {
+				return true; // Free Roam closed (or reset) in the meantime
+			}
 			drone(r.level(), r.center(), r.radius());
 			return true;
 		});
@@ -175,6 +203,13 @@ public final class TrainingGround {
 				"rubymod:air_strike_flare*4", "rubymod:mortar_shell*16"));
 		chest(cmds, -42, -4, "Launchers", List.of("rubymod:skyhammer", "rubymod:aa_missile*8", "rubymod:lancer", "rubymod:at_missile*8",
 				"rubymod:c4*8", "rubymod:at_mine*8"));
+		chest(cmds, -46, -4, "Traps and Defenses", List.of("rubymod:claymore*8", "rubymod:landmine*8", "rubymod:barbed_wire*32",
+				"rubymod:sentry_turret*2", "rubymod:mortar*2", "rubymod:mortar_shell*16", "rubymod:flak_cannon", "rubymod:sam_site",
+				"rubymod:missile_silo", "rubymod:cruise_missile*2", "rubymod:radar_station", "rubymod:missile_interceptor",
+				"rubymod:blast_door*4", "rubymod:holo_camo*4", "rubymod:camo_net*16", "rubymod:sandbags*64"));
+		chest(cmds, -50, -4, "Vehicles", List.of("rubymod:jeep*2", "rubymod:tank*2", "rubymod:fighter_jet", "rubymod:attack_jet",
+				"rubymod:attack_heli", "rubymod:bomber", "rubymod:heavy_aa_gun*2", "rubymod:railgun", "rubymod:jetpack*2",
+				"rubymod:ruby_sword*2", "rubymod:ruby_helmet", "rubymod:ruby_chestplate", "rubymod:ruby_leggings", "rubymod:ruby_boots"));
 
 		// Lanes with targets at four distances.
 		int[] distances = {10, 25, 50, 80};
@@ -391,7 +426,7 @@ public final class TrainingGround {
 	}
 
 	/** Fuel, the pillbox Blueprint and building blocks for the industry yard (needs the blocks placed first). */
-	private static void stockIndustryYard(ServerLevel level, BlockPos origin) {
+	public static void stock(ServerLevel level, BlockPos origin) {
 		for (int x : new int[] {-32, -30}) {
 			if (level.getBlockEntity(origin.offset(x, 0, -24)) instanceof dev.rubymod.industry.MachineBlockEntity gen) {
 				gen.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL_BLOCK, 64));
@@ -420,11 +455,11 @@ public final class TrainingGround {
 
 	// ----- Command helpers (all coordinates relative to the origin) -----
 
-	private static String fill(int x1, int y1, int z1, int x2, int y2, int z2, String block) {
+	public static String fill(int x1, int y1, int z1, int x2, int y2, int z2, String block) {
 		return "fill ~" + x1 + " ~" + y1 + " ~" + z1 + " ~" + x2 + " ~" + y2 + " ~" + z2 + " " + block;
 	}
 
-	private static void label(List<String> cmds, double x, double y, double z, String text, String color, double scale) {
+	public static void label(List<String> cmds, double x, double y, double z, String text, String color, double scale) {
 		cmds.add("summon text_display ~" + x + " ~" + y + " ~" + z + " {billboard:\"center\",text:{text:\"" + text + "\",color:\"" + color
 				+ "\",bold:true},background:1342177280,transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:["
 				+ scale + "f," + scale + "f," + scale + "f]}}");

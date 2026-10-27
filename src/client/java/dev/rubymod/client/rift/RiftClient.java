@@ -99,6 +99,15 @@ public final class RiftClient {
 	}
 
 	static void open(MorePayloads.RiftScreen p) {
+		// A broken screen is logged and skipped: it must never drop the player from the run.
+		try {
+			openScreen(p);
+		} catch (RuntimeException e) {
+			dev.rubymod.RubyMod.LOGGER.error("Ruby Rift screen {} failed", p.kind(), e);
+		}
+	}
+
+	private static void openScreen(MorePayloads.RiftScreen p) {
 		Minecraft mc = Minecraft.getInstance();
 		if (p.kind().equals("threshold")) {
 			if (mc.gui.screen() instanceof ThresholdScreen t) {

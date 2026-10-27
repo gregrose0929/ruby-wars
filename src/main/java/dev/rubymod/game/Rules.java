@@ -68,7 +68,7 @@ public final class Rules {
 
 	/** Can a weapon or explosion break the block at pos right now? */
 	public static boolean canWeaponBreak(Level level, BlockPos pos, BlockState state) {
-		if (dev.rubymod.game.rift.Rift.protects(level, pos)) {
+		if (dev.rubymod.game.rift.Rift.protects(level, pos) || dev.rubymod.game.party.FreeRoam.protects(level, pos)) {
 			return false;
 		}
 		if (state.is(ModBlocks.RUBY_HEART) || state.getBlock().defaultDestroyTime() < 0) {

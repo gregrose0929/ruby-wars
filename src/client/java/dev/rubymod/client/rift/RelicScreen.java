@@ -43,16 +43,21 @@ public class RelicScreen extends Screen {
 		List<Card> list = new ArrayList<>();
 		for (String line : lines) {
 			String[] f = line.split("[|]", -1);
-			if (f[0].equals("title")) {
-				heading = f.length > 1 ? f[1] : "";
-			} else if (f[0].equals("gold")) {
-				gold = Integer.parseInt(f[1]);
-			} else if (kind.equals("event") || f[0].equals("heal")) {
-				if (f.length >= 4) {
-					list.add(new Card(f[0], f[1], f[0].equals("heal") ? "SERVICE" : "EVENT", "NONE", f[3], f[2], f.length > 4 ? Integer.parseInt(f[4]) : -1));
+			// "title|..." and "gold|N" are two-field headers; an event choice can also be called "gold".
+			try {
+				if (f[0].equals("title") && f.length <= 2) {
+					heading = f.length > 1 ? f[1] : "";
+				} else if (f[0].equals("gold") && f.length == 2) {
+					gold = Integer.parseInt(f[1]);
+				} else if (kind.equals("event") || f[0].equals("heal")) {
+					if (f.length >= 4) {
+						list.add(new Card(f[0], f[1], f[0].equals("heal") ? "SERVICE" : "EVENT", "NONE", f[3], f[2], f.length > 4 ? Integer.parseInt(f[4]) : -1));
+					}
+				} else if (f.length >= 7) {
+					list.add(new Card(f[0], f[1], f[2], f[3], f[4], f[5], Integer.parseInt(f[6])));
 				}
-			} else if (f.length >= 7) {
-				list.add(new Card(f[0], f[1], f[2], f[3], f[4], f[5], Integer.parseInt(f[6])));
+			} catch (NumberFormatException e) {
+				// A line we can't read is skipped, never a crash.
 			}
 		}
 		cards = list;

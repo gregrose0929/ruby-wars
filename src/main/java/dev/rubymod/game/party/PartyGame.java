@@ -280,6 +280,8 @@ public abstract class PartyGame {
 		if (level() == null) {
 			return;
 		}
+		// A build still underway (the one at server start) is replaced, not doubled.
+		work.clear();
 		queueing = true;
 		try {
 			build(level());

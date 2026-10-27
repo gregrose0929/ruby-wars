@@ -150,6 +150,108 @@ public final class AutoTest {
 
 	private static net.minecraft.core.BlockPos tankMark;
 
+	private static String freeRoamCounts(net.minecraft.server.MinecraftServer server) {
+		var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+		var box = new net.minecraft.world.phys.AABB(-100400, -64, -400, -99600, 400, 1100);
+		var all = level.getEntities((net.minecraft.world.entity.Entity) null, box, e -> !(e instanceof net.minecraft.world.entity.player.Player));
+		java.util.Map<String, Integer> n = new java.util.TreeMap<>();
+		for (var e : all) {
+			String k = net.minecraft.world.entity.EntityType.getKey(e.getType()).getPath();
+			if (e instanceof net.minecraft.world.entity.item.ItemEntity item) {
+				k += ":" + item.getItem().getItem() + "@" + e.blockPosition().toShortString();
+			}
+			n.merge(k, 1, Integer::sum);
+		}
+		return n.toString();
+	}
+
+	private static void freeRoamWhere(net.minecraft.server.MinecraftServer server, String at) {
+		var me = me(server);
+		var level = (net.minecraft.server.level.ServerLevel) me.level();
+		var feet = me.blockPosition();
+		log("{}: me at {} in {} ({}, hp {}, vehicle {}) | below {} | column {}", at, feet, level.dimension().identifier(), me.gameMode.getGameModeForPlayer(),
+				me.getHealth(), me.getVehicle(), level.getBlockState(feet.below()), level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, feet.getX(), feet.getZ()));
+	}
+
+	private static void freeRoamScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "execute as @p run play freeroam");
+		});
+		for (int i = 0; i < 30; i++) {
+			then(40, mc -> log("free roam: {} | building {}", pg("freeroam").debugState(), mc.player.blockPosition()));
+		}
+		then(20, mc -> onServer(mc, server -> log("after build: {}", freeRoamCounts(server))));
+		then(5, mc -> shot(mc, "fr-spawn"));
+		then(5, mc -> command(mc, "execute in rubymod:arena run tp @p -99996.5 65 -1.5 0 20"));
+		then(40, mc -> shot(mc, "fr-button"));
+		then(1, mc -> onServer(mc, server -> freeRoamWhere(server, "fr-button")));
+		then(5, mc -> command(mc, "execute in rubymod:arena run tp @p -100040 65 4 160 10"));
+		then(60, mc -> shot(mc, "fr-chests"));
+		then(1, mc -> onServer(mc, server -> freeRoamWhere(server, "fr-chests")));
+		then(5, mc -> command(mc, "execute in rubymod:arena run tp @p -99963 67 -10 0 10"));
+		then(60, mc -> shot(mc, "fr-yard"));
+		then(1, mc -> onServer(mc, server -> freeRoamWhere(server, "fr-yard")));
+		then(5, mc -> command(mc, "execute in rubymod:arena run tp @p -99966 70 92 0 10"));
+		then(80, mc -> shot(mc, "fr-apron"));
+		then(1, mc -> onServer(mc, server -> freeRoamWhere(server, "fr-apron")));
+		then(5, mc -> command(mc, "execute in rubymod:arena run tp @p -100000 65 0 0 0"));
+		// Ammo refills itself.
+		then(40, mc -> onServer(mc, server -> {
+			var me = me(server);
+			for (int i = 0; i < me.getInventory().getContainerSize(); i++) {
+				var st = me.getInventory().getItem(i);
+				if (st.is(dev.rubymod.registry.ModItems.HEAVY_AMMO)) {
+					st.setCount(3);
+				}
+			}
+		}));
+		then(60, mc -> onServer(mc, server -> log("heavy ammo after refill: {}", me(server).getInventory().countItem(dev.rubymod.registry.ModItems.HEAVY_AMMO))));
+		// Wreck the place: tanks gone, a crater, blocks on the runway.
+		then(5, mc -> onServer(mc, server -> {
+			var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+			for (var e : level.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(-100100, 0, -100, -99900, 200, 200),
+					e -> e instanceof dev.rubymod.entity.VehicleEntity)) {
+				e.discard();
+			}
+			for (int x = -3; x <= 3; x++) {
+				for (int z = 8; z <= 14; z++) {
+					level.setBlock(new net.minecraft.core.BlockPos(-100000 + x, 64, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+					level.setBlock(new net.minecraft.core.BlockPos(-100000 + x, 63, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+				}
+			}
+			var button = new net.minecraft.core.BlockPos(-99996, 66, 4);
+			log("wrecked: {} | button breakable by weapons? {}", freeRoamCounts(server),
+					dev.rubymod.game.Rules.canWeaponBreak(level, button, level.getBlockState(button)));
+		}));
+		then(5, mc -> command(mc, "execute in rubymod:arena run tp @p -100000 65 -6 0 30"));
+		then(30, mc -> shot(mc, "fr-wrecked"));
+		then(1, mc -> onServer(mc, server -> freeRoamWhere(server, "fr-wrecked")));
+		then(5, mc -> onServer(mc, server -> log("press: handled {}", pg("freeroam").onUseBlock(me(server), new net.minecraft.core.BlockPos(-99996, 67, 4),
+				net.minecraft.world.item.ItemStack.EMPTY, new net.minecraft.core.BlockPos(-99996, 67, 4)))));
+		then(10, mc -> onServer(mc, server -> log("press again: handled {}", pg("freeroam").onUseBlock(me(server), new net.minecraft.core.BlockPos(-99996, 66, 4),
+				net.minecraft.world.item.ItemStack.EMPTY, new net.minecraft.core.BlockPos(-99996, 66, 4)))));
+		then(50, mc -> shot(mc, "fr-countdown"));
+		for (int i = 0; i < 20; i++) {
+			then(40, mc -> onServer(mc, server -> log("resetting: {} | slowest tick {} ms", pg("freeroam").debugState(), maxTickMs(server))));
+		}
+		then(40, mc -> onServer(mc, server -> {
+			var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+			log("after reset: {} | ground at crater {} | me at {}", freeRoamCounts(server),
+					level.getBlockState(new net.minecraft.core.BlockPos(-100000, 64, 10)), me(server).blockPosition());
+		}));
+		then(5, mc -> command(mc, "execute in rubymod:arena run tp @p -99963 67 -10 0 10"));
+		then(60, mc -> shot(mc, "fr-yard-after"));
+		then(1, mc -> onServer(mc, server -> freeRoamWhere(server, "fr-yard-after")));
+		then(5, mc -> command(mc, "execute as @p run hub"));
+		then(60, mc -> onServer(mc, server -> log("left: {} | {}", pg("freeroam").debugState(), me(server).level().dimension().identifier())));
+		// Back in: no rebuild, straight into play, everything where it was.
+		then(5, mc -> command(mc, "execute as @p run play freeroam"));
+		then(60, mc -> onServer(mc, server -> log("rejoined: {} | {}", pg("freeroam").debugState(), freeRoamCounts(server))));
+		then(5, mc -> command(mc, "execute as @p run hub"));
+	}
+
 	private static String riftOpenNode() {
 		var screen = dev.rubymod.client.rift.RiftClient.lastScreen;
 		if (screen != null && screen.kind().equals("map")) {
@@ -1042,6 +1144,14 @@ public final class AutoTest {
 		}
 		if (mode.equals("rift")) {
 			riftScript();
+			return;
+		}
+		if (mode.equals("freeroam")) {
+			freeRoamScript();
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
 			return;
 		}
 		if (mode.equals("riftguns")) {
