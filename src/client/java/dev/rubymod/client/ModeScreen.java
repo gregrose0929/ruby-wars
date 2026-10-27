@@ -41,6 +41,8 @@ public class ModeScreen extends Screen {
 	private static final int[] DIFFICULTY_COLORS = {0xFF3FC85A, 0xFFD8A030, 0xFFE0303A};
 	private final List<int[]> rows = new ArrayList<>();
 	private final List<String> rowIds = new ArrayList<>();
+	/** Each party row's Bots button (null: that game has no bots), and its game id. */
+	private final List<int[]> botButtons = new ArrayList<>();
 
 	public ModeScreen() {
 		super(Component.literal("Choose a game"));
@@ -143,12 +145,13 @@ public class ModeScreen extends Screen {
 		g.text(font, "PARTY GAMES", rightX + 2, top, 0xFFC080FF, true);
 		rows.clear();
 		rowIds.clear();
+		botButtons.clear();
 		List<String[]> party = new ArrayList<>();
 		if (info != null) {
 			for (String line : info.modes()) {
 				if (line.startsWith("game:")) {
-					String[] f = line.split("[|]", 5);
-					if (f.length == 5) {
+					String[] f = line.split("[|]", 6);
+					if (f.length >= 5) {
 						party.add(f);
 					}
 				}
@@ -170,12 +173,33 @@ public class ModeScreen extends Screen {
 			int textY = y + (rowH - 2) / 2 - (rowH >= 22 ? 8 : 4);
 			g.text(font, f[1], rightX + 22, textY, 0xFFFFFFFF, false);
 			String s = here ? "You're here" : f[2];
+			// Room for the Bots button at the end of the row.
+			int reserve = f.length == 6 && !f[5].equals("-") ? font.width("Bots: OFF") + 10 : 0;
 			if (rowH >= 22) {
-				g.text(font, font.plainSubstrByWidth(s, colW - 26), rightX + 22, textY + 10, here ? 0xFF7CF59A : 0xFF9AA4AE, false);
+				g.text(font, font.plainSubstrByWidth(s, colW - 26 - reserve), rightX + 22, textY + 10, here ? 0xFF7CF59A : 0xFF9AA4AE, false);
 			} else {
 				int tw = font.width(f[1]) + 6;
-				g.text(font, font.plainSubstrByWidth(s, colW - 26 - tw), rightX + 22 + tw, textY, here ? 0xFF7CF59A : 0xFF9AA4AE, false);
+				g.text(font, font.plainSubstrByWidth(s, colW - 26 - tw - reserve), rightX + 22 + tw, textY, here ? 0xFF7CF59A : 0xFF9AA4AE, false);
 			}
+			// Bots on/off, at the right end of the row.
+			int[] botButton = null;
+			if (f.length == 6 && !f[5].equals("-")) {
+				boolean on = f[5].equals("on");
+				int bw2 = font.width("Bots: OFF") + 6;
+				int bx2 = rightX + colW - bw2 - 3;
+				int bh = Math.min(12, rowH - 6);
+				int by2 = y + (rowH - 2 - bh) / 2;
+				botButton = new int[] {bx2, by2, bw2, bh};
+				boolean overBots = mouseX >= bx2 && mouseX < bx2 + bw2 && mouseY >= by2 && mouseY < by2 + bh;
+				g.fill(bx2, by2, bx2 + bw2, by2 + bh, on ? (overBots ? 0xFF3FA055 : 0xD02E7A40) : (overBots ? 0xFF6A5060 : 0xD0403440));
+				g.outline(bx2, by2, bw2, bh, on ? 0xFF7CF59A : 0xFF9AA4AE);
+				g.centeredText(font, on ? "Bots: ON" : "Bots: OFF", bx2 + bw2 / 2, by2 + (bh - 8) / 2, 0xFFFFFFFF);
+				if (overBots) {
+					tooltip = on ? "Bots join this game. Click to turn them off (someone playing alone still gets bots)."
+							: "No bots unless you're playing alone. Click to turn bots on.";
+				}
+			}
+			botButtons.add(botButton);
 			rows.add(new int[] {rightX, y, colW, rowH - 2});
 			rowIds.add(f[0]);
 		}
@@ -217,6 +241,13 @@ public class ModeScreen extends Screen {
 		for (int i = 0; i < cards.length; i++) {
 			if (inside(event, cards[i]) && !here(MAIN.get(i).id()) && !pickDifficulty(MAIN.get(i))) {
 				go(MAIN.get(i).id());
+				return true;
+			}
+		}
+		for (int i = 0; i < botButtons.size(); i++) {
+			if (inside(event, botButtons.get(i))) {
+				// Stays open: the server sends the picker back with the new setting.
+				ClientPlayNetworking.send(new MorePayloads.ModeSelect("bots:" + rowIds.get(i).substring("game:".length())));
 				return true;
 			}
 		}

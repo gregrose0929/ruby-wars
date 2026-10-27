@@ -785,6 +785,34 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("botswitch")) {
+			// Party bots: off by default with 2+ players, a switch in the game picker.
+			then(120, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect("")));
+			then(20, mc -> mc.gui.setScreen(new ModeScreen()));
+			then(30, mc -> {
+				log("picker lines: {}", ModeScreen.info.modes().stream().filter(l -> l.startsWith("game:")).map(l -> l.substring(l.lastIndexOf('|'))).toList());
+				shot(mc, "bots-picker");
+				mc.gui.setScreen(null);
+			});
+			then(5, mc -> command(mc, "execute as @p run play gungame"));
+			then(10, mc -> onServer(mc, server -> dev.rubymod.game.party.PartyGames.addTestPlayer(pg("gungame"), partyBuddy(server))));
+			for (int i = 0; i < 20; i++) {
+				then(40, mc -> onServer(mc, server -> pg("gungame").skipLobby()));
+			}
+			then(60, mc -> log("two players, bots off: {}", pg("gungame").debugState()));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect("bots:gungame")));
+			then(20, mc -> {
+				mc.gui.setScreen(new ModeScreen());
+				log("after the switch: {}", ModeScreen.info.modes().stream().filter(l -> l.startsWith("game:gungame")).toList());
+			});
+			then(20, mc -> {
+				shot(mc, "bots-on");
+				mc.gui.setScreen(null);
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("hordebase")) {
 			// Co-op Horde as base defense: the battlefield, the Armory, walls the horde smashes.
 			then(0, mc -> {

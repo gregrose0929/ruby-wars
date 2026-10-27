@@ -59,6 +59,11 @@ public class RubyRush extends PartyGame {
 	}
 
 	@Override
+	protected boolean hasBots() {
+		return true;
+	}
+
+	@Override
 	protected ServerLevel level() {
 		return server.getLevel(RUSH);
 	}
@@ -181,7 +186,7 @@ public class RubyRush extends PartyGame {
 			spawn(p, players.get(p.getUUID()));
 		}
 		// AI rushers (to make four) land 15 seconds in, once everyone's on the ground.
-		botsLeft = Math.max(0, 4 - activeCount());
+		botsLeft = useBots() ? Math.max(0, 4 - activeCount()) : 0;
 		titleAll("RUBY RUSH", "Loot the chests. Stay in the zone. Be the last one!", ChatFormatting.RED);
 	}
 

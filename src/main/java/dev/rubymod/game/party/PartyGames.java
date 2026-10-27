@@ -56,8 +56,23 @@ public final class PartyGames {
 		return p != null ? p : TEST_PLAYERS.get(id);
 	}
 
+	/** Which games have bots switched on: world/rubywars/party_bots.txt. */
+	private static java.nio.file.Path botsFile;
+
 	public static void reset(MinecraftServer server) {
 		TEST_PLAYERS.clear();
+		botsFile = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("rubywars").resolve("party_bots.txt");
+		List<String> on = new ArrayList<>();
+		try {
+			if (java.nio.file.Files.exists(botsFile)) {
+				on = java.nio.file.Files.readAllLines(botsFile);
+			}
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the party bot settings", e);
+		}
+		for (PartyGame game : ALL) {
+			game.botsOn = on.contains(game.id);
+		}
 		for (PartyGame game : ALL) {
 			game.attach(server);
 			game.reset();
@@ -226,9 +241,40 @@ public final class PartyGames {
 	public static List<String> lines() {
 		List<String> lines = new ArrayList<>();
 		for (PartyGame game : ALL) {
-			lines.add("game:" + game.id + "|" + game.title + "|" + game.status() + "|" + game.icon + "|" + game.about);
+			lines.add("game:" + game.id + "|" + game.title + "|" + game.status() + "|" + game.icon + "|" + game.about + "|"
+					+ (game.hasBots() ? game.botsOn ? "on" : "off" : "-"));
 		}
 		return lines;
+	}
+
+	/** The game picker's Bots button: switch bots on or off for a game (from its next round). */
+	public static void toggleBots(ServerPlayer player, String id) {
+		PartyGame game = byId(id);
+		if (game == null || !game.hasBots()) {
+			return;
+		}
+		game.botsOn = !game.botsOn;
+		List<String> on = new ArrayList<>();
+		for (PartyGame g : ALL) {
+			if (g.botsOn) {
+				on.add(g.id);
+			}
+		}
+		try {
+			java.nio.file.Files.createDirectories(botsFile.getParent());
+			java.nio.file.Files.write(botsFile, on);
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the party bot settings", e);
+		}
+		var message = net.minecraft.network.chat.Component.literal(player.getName().getString() + " turned bots " + (game.botsOn ? "ON" : "OFF") + " for "
+				+ game.title + (game.botsOn ? "." : " (a player on their own still gets bots).") + " It starts next round.")
+				.withStyle(net.minecraft.ChatFormatting.YELLOW);
+		player.sendSystemMessage(message);
+		for (ServerPlayer p : game.online()) {
+			if (p != player) {
+				p.sendSystemMessage(message);
+			}
+		}
 	}
 
 	/** For autotests: a fake player joins a game. */

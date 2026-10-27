@@ -191,7 +191,9 @@ public final class GameEvents {
 				LookInfo.answer(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ModeSelect.TYPE, (payload, context) -> {
 			ServerPlayer player = context.player();
-			if (!payload.mode().isEmpty()) {
+			if (payload.mode().startsWith("bots:")) {
+				dev.rubymod.game.party.PartyGames.toggleBots(player, payload.mode().substring(5));
+			} else if (!payload.mode().isEmpty()) {
 				String error = Hub.go(player, payload.mode());
 				if (error != null) {
 					player.sendSystemMessage(Component.literal(error).withStyle(ChatFormatting.RED));

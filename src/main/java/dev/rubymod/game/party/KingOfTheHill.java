@@ -44,6 +44,11 @@ public class KingOfTheHill extends PartyGame {
 	}
 
 	@Override
+	protected boolean hasBots() {
+		return true;
+	}
+
+	@Override
 	protected BlockPos center() {
 		return new BlockPos(-55000, GROUND + 1, 0);
 	}
@@ -123,7 +128,7 @@ public class KingOfTheHill extends PartyGame {
 		for (ServerPlayer p : online()) {
 			spawn(p, players.get(p.getUUID()));
 		}
-		int wanted = Math.max(0, 3 - activeCount());
+		int wanted = useBots() ? Math.max(0, 3 - activeCount()) : 0;
 		for (int i = 0; i < wanted; i++) {
 			spawnZoneBot();
 		}
@@ -186,7 +191,7 @@ public class KingOfTheHill extends PartyGame {
 		if (spawnLater > 0 && roundTicks >= spawnLater) {
 			spawnLater = -1;
 			long bots = spawned.stream().filter(id -> level.getEntity(id) instanceof SoldierEntity s && s.isAlive()).count();
-			for (long i = bots; i < Math.max(0, 3 - activeCount()); i++) {
+			for (long i = bots; useBots() && i < Math.max(0, 3 - activeCount()); i++) {
 				spawnZoneBot();
 			}
 		}

@@ -567,6 +567,19 @@ public abstract class PartyGame {
 		return list;
 	}
 
+	/** Bots switched on for this game in the game picker (saved). Off, only a lone player gets bots. */
+	boolean botsOn;
+
+	/** This game can fill in with bots. */
+	protected boolean hasBots() {
+		return false;
+	}
+
+	/** Bring bots in this round: switched on, or someone's playing alone. */
+	protected boolean useBots() {
+		return botsOn || activeCount() <= 1;
+	}
+
 	protected int activeCount() {
 		return (int) players.values().stream().filter(p -> !p.watching).count();
 	}

@@ -47,6 +47,11 @@ public class GunGame extends PartyGame {
 	}
 
 	@Override
+	protected boolean hasBots() {
+		return true;
+	}
+
+	@Override
 	protected BlockPos center() {
 		return new BlockPos(-40000, GROUND + 1, 0);
 	}
@@ -74,7 +79,7 @@ public class GunGame extends PartyGame {
 		for (ServerPlayer p : online()) {
 			spawn(p, players.get(p.getUUID()));
 		}
-		int wanted = Math.max(0, 3 - activeCount());
+		int wanted = useBots() ? Math.max(0, 3 - activeCount()) : 0;
 		for (int i = 0; i < wanted; i++) {
 			spawnGunBot(i, 0);
 		}

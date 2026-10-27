@@ -134,7 +134,9 @@ background when the server starts. Your own things stay saved in the hub's save.
 Different people can play different games at the same time. If a game ever hits a bug,
 its players are sent back to the hub and the error is logged; the server keeps running.
 
-AI bots fill in where a game supports them. They strafe, duck into cover to patch up
+AI bots fill in where a game supports them (Gun Game, Capture the Flag, King of the Hill,
+Ruby Rush), but only when you're playing alone or someone switches them on with the
+"Bots: ON/OFF" button next to the game in the game picker (H). The setting is saved. They strafe, duck into cover to patch up
 when they're hurt, and use the right weapon for the job: in Gun Game they climb the
 weapon ladder too (and can win), in Capture the Flag they join both teams (half attack
 and carry flags, half defend; they're easier shots than the others), in King of the Hill they fight for the zone, and in Ruby

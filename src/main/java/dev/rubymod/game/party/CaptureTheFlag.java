@@ -56,6 +56,11 @@ public class CaptureTheFlag extends PartyGame {
 	}
 
 	@Override
+	protected boolean hasBots() {
+		return true;
+	}
+
+	@Override
 	protected BlockPos center() {
 		return new BlockPos(-60000, GROUND + 1, 0);
 	}
@@ -154,7 +159,7 @@ public class CaptureTheFlag extends PartyGame {
 		bots.clear();
 		botRespawns.clear();
 		// Fill both teams to at least two (and even) with bots: half attack, half defend.
-		int want = Math.max(2, Math.max(teamIds(0).size(), teamIds(1).size()));
+		int want = useBots() ? Math.max(2, Math.max(teamIds(0).size(), teamIds(1).size())) : 0;
 		for (int team = 0; team < 2; team++) {
 			int add = Math.min(3, want - teamIds(team).size());
 			for (int i = 0; i < add; i++) {
