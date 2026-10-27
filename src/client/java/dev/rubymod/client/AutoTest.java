@@ -1154,6 +1154,56 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("riftgunmen")) {
+			// One gunman of each rank, 14 blocks away, 10 seconds each: how much damage do they do?
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "gamemode survival @a");
+				command(mc, "difficulty normal");
+				command(mc, "tp @p ~ ~ ~ 0 5");
+			});
+			then(300, mc -> log("world ready"));
+			for (int act = 1; act <= 3; act++) {
+				int a = act;
+				float[] taken = new float[1];
+				int[] hits = new int[1];
+				net.minecraft.world.entity.Mob[] gunman = new net.minecraft.world.entity.Mob[1];
+				then(5, mc -> onServer(mc, server -> {
+					var me = me(server);
+					me.setHealth(me.getMaxHealth());
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					gunman[0] = dev.rubymod.game.rift.RiftEnemies.testGunman(level, me.blockPosition().south(14), a);
+					level.addFreshEntity(gunman[0]);
+					gunman[0].setTarget(me);
+				}));
+				for (int t = 0; t < 200; t++) {
+					int tick = t;
+					then(1, mc -> onServer(mc, server -> {
+						var me = me(server);
+						gunman[0].setTarget(me);
+						float lost = me.getMaxHealth() - me.getHealth();
+						if (lost > 0) {
+							taken[0] += lost;
+							hits[0]++;
+							me.setHealth(me.getMaxHealth());
+						}
+					}));
+					if (a == 1 && t == 15) {
+						then(0, mc -> shot(mc, "gunman-laser"));
+					}
+				}
+				then(1, mc -> onServer(mc, server -> {
+					log("act {}: {} ({} hp) did {} damage ({} hits) in 10 s", a, gunman[0].getCustomName().getString(), gunman[0].getMaxHealth(),
+							taken[0], hits[0]);
+					gunman[0].discard();
+				}));
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("riftthemes")) {
 			// Each level's glow color on a rifle, with the sword and a grenade in the hotbar.
 			then(0, mc -> {

@@ -84,6 +84,15 @@ public class SoldierEntity extends PathfinderMob {
 	private boolean smart;
 	/** A gentler bot: misses more, hits softer, pauses longer between bursts (Capture the Flag). */
 	private boolean easy;
+	/** How a softened gunman shoots (Ruby Rift's early floors): see {@link #soften}. */
+	private float spreadScale = 1.0F;
+	private float damageScale = 1.0F;
+	private int burstSize = 3;
+	private int restExtra;
+	/** Ticks of aiming (with a red laser showing where) before each burst; 0: none. */
+	private int aimDelay;
+	private int aimTicks;
+	private LivingEntity aimTarget;
 	private int strafeIn;
 	private int coverTicks;
 	private int coverCooldown;
@@ -203,6 +212,19 @@ public class SoldierEntity extends PathfinderMob {
 
 	public void setEasy() {
 		easy = true;
+	}
+
+	/**
+	 * A gentler gunman: shots spread {@code spread} times as wide and hit {@code damage}
+	 * times as hard, bursts of {@code burst}, {@code rest} more ticks between them, and
+	 * {@code aim} ticks of aiming (a red laser warns the target) before each burst.
+	 */
+	public void soften(float spread, float damage, int burst, int rest, int aim) {
+		spreadScale = spread;
+		damageScale = damage;
+		burstSize = burst;
+		restExtra = rest;
+		aimDelay = aim;
 	}
 
 	public int partyTeam() {
@@ -520,6 +542,19 @@ public class SoldierEntity extends PathfinderMob {
 			}
 			return;
 		}
+		// Aiming first (softened gunmen): a red laser shows who's about to be shot.
+		if (aimDelay > 0 && burst == 0) {
+			if (aimTarget != target) {
+				aimTarget = target;
+				aimTicks = 0;
+			}
+			if (aimTicks++ < aimDelay) {
+				if (aimTicks % 2 == 0) {
+					laser(level, from, aim);
+				}
+				return;
+			}
+		}
 		var random = getRandom();
 		if (botWeapon == ModItems.COMBAT_SHOTGUN) {
 			for (int i = 0; i < 6; i++) {
@@ -541,11 +576,28 @@ public class SoldierEntity extends PathfinderMob {
 		shoot(level, target, from, aim, 0.035, shotDamage());
 		level.playSound(null, getX(), getY(), getZ(), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.HOSTILE, 1.0F, 0.95F + random.nextFloat() * 0.1F);
 		burst++;
-		if (burst >= 3) {
+		if (burst >= burstSize) {
 			burst = 0;
-			cooldown = 26 + random.nextInt(10) + (easy ? 30 : 0);
+			aimTicks = 0;
+			cooldown = 26 + random.nextInt(10) + (easy ? 30 : 0) + restExtra;
 		} else {
 			cooldown = 3;
+		}
+	}
+
+	/** A thin red line from the muzzle toward the target (stopped by walls): "you're being aimed at". */
+	private void laser(ServerLevel level, Vec3 from, Vec3 to) {
+		HitResult hit = level.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+		Vec3 end = hit.getType() == HitResult.Type.MISS ? to : hit.getLocation();
+		Vec3 step = end.subtract(from);
+		// Stops short of the target, so it doesn't fill their screen.
+		double len = step.length();
+		step = step.scale(Math.max(0, len - 2.0) / Math.max(len, 0.01));
+		int n = (int) Math.min(48, step.length() * 2);
+		var dust = new net.minecraft.core.particles.DustParticleOptions(0xFF2020, 0.8F);
+		for (int i = 1; i <= n; i++) {
+			Vec3 p = from.add(step.scale(i / (double) n));
+			level.sendParticles(dust, true, false, p.x, p.y, p.z, 1, 0, 0, 0, 0);
 		}
 	}
 
@@ -555,6 +607,8 @@ public class SoldierEntity extends PathfinderMob {
 			spreadPer10 *= 2.2;
 			damage *= 0.5F;
 		}
+		spreadPer10 *= spreadScale;
+		damage *= damageScale;
 		var random = getRandom();
 		Vec3 spread = new Vec3(random.nextGaussian(), random.nextGaussian(), random.nextGaussian()).scale(spreadPer10 * aim.distanceTo(from) / 10.0);
 		Vec3 end = aim.add(spread);

@@ -48,6 +48,34 @@ public final class RiftEnemies {
 
 	static final Kind TROOPER = new Kind(null, "Rift Trooper", 3, 2);
 
+	/**
+	 * How dangerous the gunmen are: 0 Rift Recruit (act 1), 1 Rift Trooper (act 2),
+	 * 2 Rift Commando (act 3, full strength). Bloodthirst Heat and up: one rank higher.
+	 */
+	static int gunmanRank() {
+		return Math.min(2, Rift.act - 1 + (RiftMeta.heat >= 4 ? 1 : 0));
+	}
+
+	/** For autotests: a gunman as act {@code act} would bring one. */
+	public static Mob testGunman(ServerLevel level, BlockPos at, int act) {
+		int was = Rift.act;
+		Rift.act = act;
+		try {
+			return create(level, TROOPER, at, at, 1.0, null);
+		} finally {
+			Rift.act = was;
+		}
+	}
+
+	/** The most gunmen one wave brings at each rank. */
+	static int maxGunmen() {
+		return switch (gunmanRank()) {
+			case 0 -> 2;
+			case 1 -> 4;
+			default -> 99;
+		};
+	}
+
 	private RiftEnemies() {
 	}
 
@@ -86,8 +114,25 @@ public final class RiftEnemies {
 	/** Make one (null if it couldn't be made). */
 	static Mob create(ServerLevel level, Kind kind, BlockPos at, BlockPos objective, double toughness, Twist twist) {
 		Mob mob;
+		String name = kind.name();
+		double healthScale = 1.0;
 		if (kind.type() == null) {
 			SoldierEntity s = SoldierEntity.raider(level, at, objective, SoldierEntity.RIFLEMAN, RAID_ID);
+			if (s != null) {
+				switch (gunmanRank()) {
+					case 0 -> {
+						// Misses a lot, half a heart a bullet, two-round bursts after a second of aiming (with a laser).
+						s.soften(2.4F, 0.5F, 2, 30, 22);
+						name = "Rift Recruit";
+						healthScale = 0.7;
+					}
+					case 1 -> {
+						s.soften(1.5F, 0.75F, 3, 12, 10);
+						name = "Rift Trooper";
+					}
+					default -> name = "Rift Commando";
+				}
+			}
 			mob = s;
 		} else {
 			mob = kind.type().create(level, EntitySpawnReason.EVENT);
@@ -109,7 +154,7 @@ public final class RiftEnemies {
 		}
 		mob.setDropChance(EquipmentSlot.HEAD, 0);
 		mob.setDropChance(EquipmentSlot.MAINHAND, 0);
-		scale(mob, Attributes.MAX_HEALTH, toughness * (twist != null ? 4.0 : 1.0) * (RiftMeta.heat >= 1 ? 1.3 : 1.0));
+		scale(mob, Attributes.MAX_HEALTH, toughness * healthScale * (twist != null ? 4.0 : 1.0) * (RiftMeta.heat >= 1 ? 1.3 : 1.0));
 		scale(mob, Attributes.ATTACK_DAMAGE, Math.min(2.5, 0.8 + toughness * 0.2) * (twist != null ? 1.4 : 1.0) * (RiftMeta.heat >= 4 ? 1.4 : 1.0));
 		if (RiftMeta.heat >= 4) {
 			mob.addEffect(new MobEffectInstance(MobEffects.SPEED, -1, 0, false, false));
@@ -120,7 +165,6 @@ public final class RiftEnemies {
 		}
 		mob.setHealth(mob.getMaxHealth());
 		ChatFormatting color = ChatFormatting.RED;
-		String name = kind.name();
 		if (twist != null) {
 			AttributeInstance size = mob.getAttribute(Attributes.SCALE);
 			if (size != null) {

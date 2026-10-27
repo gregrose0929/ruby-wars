@@ -709,8 +709,16 @@ public final class Rift {
 			}
 			budget /= 2;
 		}
+		int gunmen = 0;
 		while (budget > 0) {
 			RiftEnemies.Kind kind = RiftEnemies.pick(node.theme, random);
+			// Early on, only a couple of gunmen at a time.
+			if (kind == RiftEnemies.TROOPER && gunmen >= RiftEnemies.maxGunmen()) {
+				continue;
+			}
+			if (kind == RiftEnemies.TROOPER) {
+				gunmen++;
+			}
 			PENDING.add(new Pending(spawns.get(i++ % spawns.size()), kind, null, new int[] {30 + random.nextInt(40)}));
 			budget -= kind.cost();
 		}
