@@ -45,6 +45,8 @@ public final class GunModel extends Model<GunModel.Pose> {
 	public static class Pose {
 		/** Ruby Rift reskin. */
 		public boolean rift;
+		/** The Rift glow's color (ARGB; the level's color). */
+		public int riftColor = -1;
 		public List<String> attachments = List.of();
 		public boolean loaded = true;
 		public boolean casingOnly;
@@ -91,6 +93,21 @@ public final class GunModel extends Model<GunModel.Pose> {
 	public static boolean isRift(net.minecraft.world.item.ItemStack stack) {
 		var cmd = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA);
 		return cmd != null && cmd.strings().contains("rift");
+	}
+
+	/**
+	 * The color a Rift weapon glows (set by the server for the level the team is in; the
+	 * Ruby Heart's pulses).
+	 */
+	public static int riftColor(net.minecraft.world.item.ItemStack stack) {
+		var cmd = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA);
+		Integer c = cmd == null ? null : cmd.getColor(0);
+		int rgb = c == null ? 0xFF3264 : c & 0xFFFFFF;
+		if (cmd != null && cmd.strings().contains("pulse")) {
+			float k = 0.55F + 0.45F * (float) Math.sin(net.minecraft.util.Util.getMillis() / 220.0);
+			rgb = (int) ((rgb >> 16 & 255) * k) << 16 | (int) ((rgb >> 8 & 255) * k) << 8 | (int) ((rgb & 255) * k);
+		}
+		return 0xFF000000 | rgb;
 	}
 	public final Map<String, float[]> anchors;
 	private final ModelPart mag;
@@ -249,7 +266,8 @@ public final class GunModel extends Model<GunModel.Pose> {
 		float s = 1.0F / U;
 		pose.scale(-s, -s, s);
 		collector.submitModel(this, state, pose, RenderTypes.entityCutout(state.rift ? riftTexture : texture), light, overlay, outline);
-		collector.submitModel(this, state, pose, RenderTypes.eyes(state.rift ? riftGlow : glow), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
+		collector.submitModel(this, state, pose, RenderTypes.eyes(state.rift ? riftGlow : glow), 0xF000F0, OverlayTexture.NO_OVERLAY,
+				state.rift ? state.riftColor : -1, null, 0);
 		pose.popPose();
 	}
 }

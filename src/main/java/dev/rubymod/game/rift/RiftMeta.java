@@ -261,16 +261,38 @@ public final class RiftMeta {
 		}
 	}
 
-	/** Rift weapons look the part: glowing reskins (picked by the "rift" custom model data). */
-	static void riftify(ServerPlayer p) {
+	/**
+	 * The color Rift weapons glow in each level: Crystal Caverns amethyst, Molten Forge
+	 * lava orange, Frozen Vault ice blue, Overgrown Lab toxic green, Mech Foundry hazard
+	 * yellow, Sky Dock electric blue, the Ruby Heart a pulsing crimson, the Threshold ruby.
+	 */
+	static int glowColor(RiftRoom.Theme theme) {
+		return switch (theme) {
+			case CRYSTAL -> 0xB450FF;
+			case FORGE -> 0xFF8C1A;
+			case FROST -> 0x5CE8FF;
+			case LAB -> 0x6BFF4A;
+			case FOUNDRY -> 0xFFD21A;
+			case SKYDOCK -> 0x3D8BFF;
+			case HEART -> 0xFF1F4F;
+			case THRESHOLD -> 0xFF3264;
+		};
+	}
+
+	/**
+	 * Rift weapons look the part: glowing reskins (picked by the "rift" custom model data),
+	 * their glowing parts in the color of the level ({@code theme}).
+	 */
+	static void riftify(ServerPlayer p, RiftRoom.Theme theme) {
+		var look = new net.minecraft.world.item.component.CustomModelData(List.of(), List.of(),
+				theme == RiftRoom.Theme.HEART ? List.of("rift", "pulse") : List.of("rift"), List.of(glowColor(theme)));
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
 			boolean weapon = s.getItem() instanceof GunItem || s.is(ModItems.RUBY_SWORD) || s.is(ModItems.FRAG_GRENADE) || s.is(ModItems.ROCKET_LAUNCHER)
 					|| s.is(ModItems.SKYHAMMER) || s.is(ModItems.LANCER);
-			if (weapon && !s.has(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA)) {
-				s.set(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA,
-						new net.minecraft.world.item.component.CustomModelData(List.of(), List.of(), List.of("rift"), List.of()));
+			if (weapon && !look.equals(s.get(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA))) {
+				s.set(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA, look);
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 {
 	"parent": "minecraft:item/generated",
 	"textures": {
-		"layer0": "rubymod:item/frag_grenade_rift"
+		"layer0": "rubymod:item/frag_grenade_rift",
+		"layer1": "rubymod:item/frag_grenade_rift_band"
 	}
 }

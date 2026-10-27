@@ -35,6 +35,8 @@ def vein_color(t, hot, mid, edge):
 # ----- Guns: mostly black and gunmetal grey, a few parts glowing ruby -----
 
 GLOW = (255, 50, 105)
+# The glowing parts are drawn white and tinted in game with the color of the level you're in.
+WHITE = (255, 255, 255)
 
 
 MODELS = os.path.join(os.path.dirname(__file__), '..', 'src', 'client', 'java', 'dev', 'rubymod', 'client', 'model', 'GunModels.java')
@@ -105,7 +107,7 @@ def gun(name):
             v = 14 + lum(r, g, b) * 0.4
             op[x, y] = (clamp(v), clamp(v + 1), clamp(v + 4), a)
             if og[x, y][3] > 0:
-                gp[x, y] = GLOW + (og[x, y][3],)
+                gp[x, y] = WHITE + (og[x, y][3],)
     parts = boxes(name)
     # A few whole parts glow ruby (magazine, sights, muzzle...), keeping the original shading.
     for spec in GLOWING[name]:
@@ -113,9 +115,9 @@ def gun(name):
             for (x, y) in net(box):
                 if x >= w or y >= h or bp[x, y][3] == 0:
                     continue
-                k = 0.7 + lum(*bp[x, y][:3]) / 255 * 0.6
-                gp[x, y] = (clamp(GLOW[0] * k), clamp(GLOW[1] * k + 15), clamp(GLOW[2] * k + 15), 255)
-                op[x, y] = (24, 6, 12, bp[x, y][3])
+                v = clamp(170 + lum(*bp[x, y][:3]) / 255 * 120)
+                gp[x, y] = (v, v, v, 255)
+                op[x, y] = (16, 16, 18, bp[x, y][3])
     for part in KEEP:
         for box in parts.get(part, []):
             for (x, y) in net(box):
@@ -129,10 +131,13 @@ def gun(name):
 # ----- Items: the Rift sword and grenade -----
 
 def sword():
+    """The hilt (dark gunmetal) and the blade (white, tinted with the level's color in game)."""
     im = Image.open(os.path.join(ROOT, 'item', 'ruby_sword.png')).convert('RGBA')
     p = im.load()
     out = Image.new('RGBA', im.size)
+    blade = Image.new('RGBA', im.size)
     o = out.load()
+    bl = blade.load()
     for y in range(16):
         for x in range(16):
             r, g, b, a = p[x, y]
@@ -140,20 +145,22 @@ def sword():
                 continue
             L = lum(r, g, b)
             if r > g + 40 and r > b + 20:
-                # The blade: neon ruby, white-hot along the edge.
-                t = min(1, L / 140)
-                o[x, y] = vein_color(t, (255, 235, 245), (255, 40, 110), (150, 0, 60)) + (a,)
+                # Brightest along the edge.
+                v = clamp(150 + min(1, L / 140) * 105)
+                bl[x, y] = (v, v, v, a)
             else:
-                # The hilt: obsidian with a violet glint.
-                o[x, y] = (clamp(20 + L * 0.3), clamp(10 + L * 0.15), clamp(36 + L * 0.5), a)
+                o[x, y] = (clamp(16 + L * 0.35), clamp(17 + L * 0.35), clamp(20 + L * 0.38), a)
     out.save(os.path.join(ROOT, 'item', 'ruby_sword_rift.png'))
+    blade.save(os.path.join(ROOT, 'item', 'ruby_sword_rift_blade.png'))
 
 
 def grenade():
     im = Image.open(os.path.join(ROOT, 'item', 'frag_grenade.png')).convert('RGBA')
     p = im.load()
     out = Image.new('RGBA', im.size)
+    band = Image.new('RGBA', im.size)
     o = out.load()
+    bd = band.load()
     for y in range(16):
         for x in range(16):
             r, g, b, a = p[x, y]
@@ -161,10 +168,12 @@ def grenade():
                 continue
             L = lum(r, g, b)
             if y in (8, 9):
-                o[x, y] = (255, clamp(80 + L * 0.4), clamp(140 + L * 0.3), a)
+                v = clamp(200 + L * 0.2)
+                bd[x, y] = (v, v, v, a)
             else:
-                o[x, y] = (clamp(18 + L * 0.35), clamp(10 + L * 0.2), clamp(30 + L * 0.55), a)
+                o[x, y] = (clamp(16 + L * 0.35), clamp(17 + L * 0.35), clamp(20 + L * 0.38), a)
     out.save(os.path.join(ROOT, 'item', 'frag_grenade_rift.png'))
+    band.save(os.path.join(ROOT, 'item', 'frag_grenade_rift_band.png'))
 
 
 # ----- Blocks: dark stone split by glowing veins -----

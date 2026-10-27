@@ -425,7 +425,7 @@ public final class Rift {
 			Runner r = RUNNERS.get(p.getUUID());
 			RelicEffects.tick(p, r, level);
 			if (ticks % 20 == 0) {
-				RiftMeta.riftify(p);
+				RiftMeta.riftify(p, room == null ? RiftRoom.Theme.THRESHOLD : room.theme);
 			}
 		}
 		RelicEffects.tickWorld(level);

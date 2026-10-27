@@ -179,6 +179,7 @@ public final class GunView {
 		GunModel.Pose gp = new GunModel.Pose();
 		gp.attachments = stack.getOrDefault(ModComponents.ATTACHMENTS, List.<String>of());
 		gp.rift = GunModel.isRift(stack);
+		gp.riftColor = GunModel.riftColor(stack);
 		gp.loaded = stack.getItem() instanceof GunItem || launcherCooldown <= 0.0F;
 		float sinceShot = (ms - lastShotAt) / 1000.0F;
 		float cycle = cycleTime(stack);

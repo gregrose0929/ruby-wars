@@ -1154,6 +1154,34 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("riftthemes")) {
+			// Each level's glow color on a rifle, with the sword and a grenade in the hotbar.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "gamemode creative @a");
+				command(mc, "tp @p ~ ~ ~ 0 0");
+			});
+			then(400, mc -> log("world ready"));
+			String[][] themes = {{"threshold", "16724580", ""}, {"crystal", "11817215", ""}, {"forge", "16747546", ""}, {"frost", "6088959", ""},
+					{"lab", "7077706", ""}, {"foundry", "16765466", ""}, {"skydock", "4033535", ""}, {"heart", "16719695", ",\"pulse\""}};
+			for (String[] t : themes) {
+				String data = "[custom_model_data={strings:[\"rift\"" + t[2] + "],colors:[" + t[1] + "]}]";
+				then(10, mc -> {
+					command(mc, "item replace entity @p hotbar.1 with rubymod:ruby_sword" + data);
+					command(mc, "item replace entity @p hotbar.2 with rubymod:frag_grenade" + data);
+					command(mc, "item replace entity @p hotbar.3 with rubymod:service_pistol" + data);
+					command(mc, "item replace entity @p weapon.mainhand with rubymod:arr_rifle" + data);
+				});
+				then(30, mc -> shot(mc, "theme-" + t[0]));
+			}
+			then(5, mc -> command(mc, "item replace entity @p weapon.mainhand with rubymod:ruby_sword[custom_model_data={strings:[\"rift\"],colors:[11817215]}]"));
+			then(30, mc -> shot(mc, "theme-sword"));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("riftguns")) {
 			// Each Rift gun skin in the hand, against the sky and against stone.
 			then(0, mc -> {
