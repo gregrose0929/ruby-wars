@@ -32,11 +32,13 @@ import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Sky Race: fly through a loop of rings in the sky, twice around. Rounds take turns:
- * jetpacks (land on a glowing pad, or the ground, to refuel) and elytras (jump off the
- * launch tower; the elytra opens by itself, rockets for speed, touch the ground and
- * you're put back at your last ring). Fastest time wins; the best time ever is kept
- * for each. Three minutes a race, and a minimap shows the rings and everyone racing.
+ * Sky Race: twice around a loop of 12 rings. Rounds take turns: jetpacks (land on a
+ * glowing pad, or the ground, to refuel), elytras (jump off the launch tower; the elytra
+ * opens by itself, rockets for speed, touch the ground and you're put back at your last
+ * ring) and boats (an ice track on the ground below, through a gate under each ring; fall
+ * out and you're put back at your last gate in a new boat). Fastest time wins; the best
+ * time ever is kept for each. Three minutes a race, and a minimap shows the rings and
+ * everyone racing.
  */
 public class SkyRace extends PartyGame {
 	private static final int RINGS = 12;
@@ -47,8 +49,15 @@ public class SkyRace extends PartyGame {
 	private static final int ROUND_TICKS = 3 * 60 * 20;
 	/** Elytra rounds launch from up here (above the jetpack start). */
 	private static final int TOWER = 30;
-	/** This round is an elytra race (they take turns with jetpack races). */
-	private boolean elytra;
+	private static final int JETPACK = 0;
+	private static final int ELYTRA = 1;
+	private static final int BOAT = 2;
+	/** This round's race: jetpacks, elytras or boats (they take turns). */
+	private int mode = JETPACK;
+	/** Boat races: each player's boat, and ticks until they're put in it. */
+	private final Map<UUID, UUID> boats = new HashMap<>();
+	private final Map<UUID, Integer> boardIn = new HashMap<>();
+	private final Map<UUID, Integer> outOfBoat = new HashMap<>();
 	private final Map<UUID, Integer> grounded = new HashMap<>();
 	private final Map<UUID, Integer> next = new HashMap<>();
 	private final Map<UUID, Vec3> lastPos = new HashMap<>();
@@ -58,7 +67,7 @@ public class SkyRace extends PartyGame {
 	private String bestName = "";
 
 	public SkyRace() {
-		super("skyrace", "Sky Race", "Fly through the rings in the sky: jetpack and elytra rounds. Fastest time wins!", "rubymod:jetpack", 1, false, false, false);
+		super("skyrace", "Sky Race", "Race through the rings: jetpack, elytra and ice boat rounds. Fastest time wins!", "rubymod:jetpack", 1, false, false, false);
 	}
 
 	@Override
@@ -70,6 +79,12 @@ public class SkyRace extends PartyGame {
 		double a = Math.toRadians(15 + i * 360.0 / RINGS);
 		BlockPos c = center();
 		return new Vec3(c.getX() + 0.5 + Math.cos(a) * 50, GROUND + HEIGHTS[i], c.getZ() + 0.5 + Math.sin(a) * 34);
+	}
+
+	/** Where this round's checkpoint i is: the sky ring, or (boat races) the gate on the ice track under it. */
+	private Vec3 gate(int i) {
+		Vec3 r = ring(i);
+		return mode == BOAT ? new Vec3(r.x, GROUND + 1.5, r.z) : r;
 	}
 
 	/** The way through a ring (toward the next one, around the loop). */
@@ -85,6 +100,7 @@ public class SkyRace extends PartyGame {
 	}
 
 	private void course(ServerLevel level) {
+		iceTrack(level);
 		for (int i = 0; i < RINGS; i++) {
 			Vec3 c = ring(i);
 			Vec3 t = through(i);
@@ -98,8 +114,8 @@ public class SkyRace extends PartyGame {
 					level.setBlock(pos, deg % 30 == 0 ? Blocks.SEA_LANTERN.defaultBlockState() : a, 3);
 				}
 			}
-			// A refuel pad under every other ring.
-			if (i % 2 == 1) {
+			// A refuel pad under every other ring (not down on the ice track).
+			if (i % 2 == 1 && c.y - 8 > GROUND + 2) {
 				BlockPos pad = BlockPos.containing(c.x, c.y - 8, c.z);
 				for (int dx = -1; dx <= 1; dx++) {
 					for (int dz = -1; dz <= 1; dz++) {
@@ -121,16 +137,76 @@ public class SkyRace extends PartyGame {
 		}
 	}
 
+	/**
+	 * The boat track: an oval of packed ice following the rings' loop, with a low red and
+	 * white wall each side and lantern posts at every gate.
+	 */
+	private void iceTrack(ServerLevel level) {
+		BlockState ice = Blocks.PACKED_ICE.defaultBlockState();
+		BlockState red = Blocks.CONCRETE.pick(DyeColor.RED).defaultBlockState();
+		BlockState white = Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState();
+		BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState();
+		BlockState air = Blocks.AIR.defaultBlockState();
+		for (int x = -58; x <= 58; x++) {
+			for (int z = -42; z <= 42; z++) {
+				double d = Math.sqrt((x / 50.0) * (x / 50.0) + (z / 34.0) * (z / 34.0));
+				if (d < 0.6) {
+					continue;
+				}
+				double off = Math.sqrt(x * x + z * z) * (1 - 1 / d);
+				double a = Math.abs(off);
+				if (a <= 4.6) {
+					set(level, x, 0, z, ice);
+					set(level, x, 1, z, air);
+				} else if (a <= 5.8) {
+					set(level, x, 0, z, grass);
+					set(level, x, 1, z, ((x + z) / 3 & 1) == 0 ? red : white);
+				}
+			}
+		}
+		BlockPos c = center();
+		for (int i = 0; i < RINGS; i++) {
+			Vec3 g = ring(i);
+			Vec3 t = through(i);
+			Vec3 side = new Vec3(-t.z, 0, t.x);
+			for (int s : new int[] {-1, 1}) {
+				Vec3 post = new Vec3(g.x, 0, g.z).add(side.scale(s * 5.3));
+				int px = (int) Math.floor(post.x) - c.getX();
+				int pz = (int) Math.floor(post.z) - c.getZ();
+				for (int y = 1; y <= 3; y++) {
+					set(level, px, y, pz, y == 3 ? Blocks.SEA_LANTERN.defaultBlockState() : i % 2 == 0 ? Blocks.CONCRETE.pick(DyeColor.ORANGE).defaultBlockState()
+							: white);
+				}
+			}
+		}
+	}
+
+	/** Boat races start on the track below the jetpack platform, behind a barrier across it. */
+	private Vec3 boatStart() {
+		BlockPos c = center();
+		return new Vec3(c.getX() + 50.5, GROUND + 1, c.getZ() - 1.5);
+	}
+
 	private Vec3 groundStart() {
 		BlockPos c = center();
 		return new Vec3(c.getX() + 50.5, GROUND + 6, c.getZ() + 0.5);
 	}
 
 	private Vec3 startPos() {
-		return elytra ? groundStart().add(0, TOWER, 0) : groundStart();
+		return mode == ELYTRA ? groundStart().add(0, TOWER, 0) : mode == BOAT ? boatStart() : groundStart();
 	}
 
 	private void cage(boolean up) {
+		if (mode == BOAT) {
+			// A barrier across the track just ahead of the boats.
+			BlockPos c = center();
+			for (int x = 44; x <= 57; x++) {
+				for (int y = 1; y <= 2; y++) {
+					set(level(), x, y, 2, up ? Blocks.BARRIER.defaultBlockState() : Blocks.AIR.defaultBlockState());
+				}
+			}
+			return;
+		}
 		Vec3 s = startPos();
 		BlockPos sp = BlockPos.containing(s.x, s.y, s.z);
 		for (int dx = -4; dx <= 4; dx++) {
@@ -160,7 +236,7 @@ public class SkyRace extends PartyGame {
 	@Override
 	protected String roundStatus() {
 		if (roundTicks < START_TICKS) {
-			return (elytra ? "Elytra race" : "Jetpack race") + ": get ready...";
+			return (mode == ELYTRA ? "Elytra race" : mode == BOAT ? "Boat race" : "Jetpack race") + ": get ready...";
 		}
 		return finished.size() + "/" + activeCount() + " finished  •  " + time(timeLeft()) + " left"
 				+ (bestTicks > 0 ? "  •  Record " + time(bestTicks) + " (" + bestName + ")" : "");
@@ -168,7 +244,10 @@ public class SkyRace extends PartyGame {
 
 	@Override
 	protected void startRound() {
-		elytra = !elytra && roundsPlayed++ > 0; // jetpacks first, then they take turns
+		mode = roundsPlayed++ % 3; // jetpacks, then elytras, then boats, and round again
+		boats.clear();
+		boardIn.clear();
+		outOfBoat.clear();
 		loadBest();
 		next.clear();
 		lastPos.clear();
@@ -184,6 +263,13 @@ public class SkyRace extends PartyGame {
 	@Override
 	protected void spawn(ServerPlayer player, Part part) {
 		Vec3 s = startPos();
+		if (mode == BOAT) {
+			int n = next.getOrDefault(player.getUUID(), 0);
+			Vec3 at = roundTicks < START_TICKS || n == 0 ? s.add(player.getRandom().nextInt(7) - 3, 0, -player.getRandom().nextInt(3) * 2) : gate((n - 1) % RINGS);
+			putInBoat(player, at, n == 0 ? 0 : (float) Math.toDegrees(Math.atan2(-through((n - 1) % RINGS).x, through((n - 1) % RINGS).z)));
+			next.putIfAbsent(player.getUUID(), 0);
+			return;
+		}
 		if (roundTicks < START_TICKS) {
 			teleport(player, s.x + player.getRandom().nextInt(5) - 2, s.y, s.z + player.getRandom().nextInt(5) - 2, 0);
 		} else {
@@ -194,7 +280,7 @@ public class SkyRace extends PartyGame {
 		}
 		ready(player);
 		clearPlayer(player);
-		if (elytra) {
+		if (mode == ELYTRA) {
 			ItemStack wings = new ItemStack(net.minecraft.world.item.Items.ELYTRA);
 			wings.set(net.minecraft.core.component.DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE);
 			player.setItemSlot(EquipmentSlot.CHEST, wings);
@@ -217,10 +303,13 @@ public class SkyRace extends PartyGame {
 
 	@Override
 	protected void tickRound() {
+		if (mode == BOAT) {
+			boardBoats();
+		}
 		if (roundTicks < START_TICKS) {
 			if (roundTicks % 20 == 0) {
-				titleAll(String.valueOf((START_TICKS - roundTicks) / 20), elytra ? "ELYTRA RACE: jump off and glide. Right-click rockets to speed up!"
-						: "JETPACK RACE: hold Space to fly. Through every ring, twice around!", ChatFormatting.YELLOW);
+				titleAll(String.valueOf((START_TICKS - roundTicks) / 20), mode == ELYTRA ? "ELYTRA RACE: jump off and glide. Rockets = speed!"
+						: mode == BOAT ? "BOAT RACE: W to go, A and D to steer!" : "JETPACK RACE: hold Space to fly!", ChatFormatting.YELLOW);
 			}
 			return;
 		}
@@ -236,13 +325,13 @@ public class SkyRace extends PartyGame {
 				continue;
 			}
 			int n = next.getOrDefault(p.getUUID(), 0);
-			if (elytra && elytraHelp(p, n)) {
+			if (mode == ELYTRA && elytraHelp(p, n) || mode == BOAT && boatHelp(p, n)) {
 				continue;
 			}
 			Vec3 now = p.position().add(0, 0.9, 0);
 			Vec3 prev = lastPos.put(p.getUUID(), now);
 			int ri = n % RINGS;
-			Vec3 c = ring(ri);
+			Vec3 c = gate(ri);
 			Vec3 t = through(ri);
 			if (prev != null) {
 				double before = prev.subtract(c).dot(t);
@@ -282,7 +371,7 @@ public class SkyRace extends PartyGame {
 								: ChatFormatting.AQUA));
 				sendMap(p, n % RINGS);
 				// Show this player where the next ring is.
-				Vec3 r = ring(n % RINGS);
+				Vec3 r = gate(n % RINGS);
 				level.sendParticles(p, new DustParticleOptions(0x40FF60, 2.5F), true, true, r.x, r.y, r.z, 16, RADIUS * 0.5, RADIUS * 0.5, RADIUS * 0.5, 0);
 			}
 		}
@@ -331,10 +420,72 @@ public class SkyRace extends PartyGame {
 			return false;
 		}
 		grounded.remove(p.getUUID());
-		Vec3 at = n == 0 ? startPos() : ring((n - 1) % RINGS).add(0, 3, 0);
+		Vec3 at = n == 0 ? startPos() : gate((n - 1) % RINGS).add(0, 3, 0);
 		teleport(p, at.x, at.y, at.z, p.getYRot());
 		lastPos.remove(p.getUUID());
 		p.sendOverlayMessage(Component.literal("Back to your last ring: glide on!").withStyle(ChatFormatting.YELLOW));
+		return true;
+	}
+
+	/** A fresh boat at {@code at} (the old one goes), and the player climbs in a moment later. */
+	private void putInBoat(ServerPlayer player, Vec3 at, float yaw) {
+		ServerLevel level = level();
+		if (player.getVehicle() != null) {
+			player.stopRiding();
+		}
+		UUID old = boats.remove(player.getUUID());
+		if (old != null && level.getEntity(old) instanceof Entity e) {
+			e.discard();
+		}
+		teleport(player, at.x, at.y, at.z, yaw);
+		ready(player);
+		clearPlayer(player);
+		Entity boat = net.minecraft.world.entity.EntityTypes.OAK_BOAT.create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT);
+		if (boat != null) {
+			boat.snapTo(at.x, at.y, at.z, yaw, 0);
+			boat.addTag(tag());
+			level.addFreshEntity(boat);
+			spawned.add(boat.getUUID());
+			boats.put(player.getUUID(), boat.getUUID());
+			boardIn.put(player.getUUID(), 5);
+		}
+		outOfBoat.remove(player.getUUID());
+	}
+
+	private void boardBoats() {
+		for (var it = boardIn.entrySet().iterator(); it.hasNext();) {
+			var entry = it.next();
+			int left = entry.getValue() - 1;
+			if (left > 0) {
+				entry.setValue(left);
+				continue;
+			}
+			it.remove();
+			ServerPlayer p = server.getPlayerList().getPlayer(entry.getKey());
+			UUID boatId = boats.get(entry.getKey());
+			if (p != null && boatId != null && level().getEntity(boatId) instanceof Entity boat) {
+				p.startRiding(boat);
+			}
+		}
+	}
+
+	/** Boat races: out of your boat for a couple of seconds (or it broke)? Back at your last gate in a new one. True if moved. */
+	private boolean boatHelp(ServerPlayer p, int n) {
+		if (boardIn.containsKey(p.getUUID()) || p.getVehicle() instanceof net.minecraft.world.entity.vehicle.boat.AbstractBoat) {
+			outOfBoat.remove(p.getUUID());
+			return false;
+		}
+		if (outOfBoat.merge(p.getUUID(), 1, Integer::sum) < 40) {
+			if (outOfBoat.get(p.getUUID()) == 1) {
+				p.sendOverlayMessage(Component.literal("Get back in your boat (right-click it)!").withStyle(ChatFormatting.YELLOW));
+			}
+			return false;
+		}
+		int last = (n + RINGS - 1) % RINGS;
+		Vec3 at = n == 0 ? startPos() : gate(last);
+		putInBoat(p, at, n == 0 ? 0 : (float) Math.toDegrees(Math.atan2(-through(last).x, through(last).z)));
+		lastPos.remove(p.getUUID());
+		p.sendOverlayMessage(Component.literal("Back on the track in a new boat!").withStyle(ChatFormatting.YELLOW));
 		return true;
 	}
 
@@ -361,7 +512,7 @@ public class SkyRace extends PartyGame {
 	}
 
 	private Path bestFile() {
-		return server.getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve(elytra ? "skyrace_elytra_best.txt" : "skyrace_best.txt");
+		return server.getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve(mode == ELYTRA ? "skyrace_elytra_best.txt" : mode == BOAT ? "skyrace_boat_best.txt" : "skyrace_best.txt");
 	}
 
 	private void loadBest() {

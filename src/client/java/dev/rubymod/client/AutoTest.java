@@ -399,6 +399,28 @@ public final class AutoTest {
 					log("off the tower: fall flying {}, minimap race data {}", mc.player.isFallFlying(), ClientState.race != null);
 					shot(mc, "party-skyrace-glide");
 				});
+				// Then a boat race on the ice track.
+				then(5, mc -> onServer(mc, server -> pg("skyrace").fastForward(3 * 60 * 20 - 1)));
+				then(260, mc -> onServer(mc, server -> pg("skyrace").skipLobby()));
+				then(70, mc -> {
+					log("round 3: {} riding {}", pg("skyrace").debugState(), mc.player.getVehicle());
+					shot(mc, "party-skyrace-boats");
+				});
+				then(60, mc -> {
+					log("go: at {}", mc.player.position());
+					mc.options.keyUp.setDown(true);
+				});
+				then(100, mc -> {
+					log("after 5s of W: at {} riding {} | {}", mc.player.position(), mc.player.getVehicle(), pg("skyrace").debugState());
+					shot(mc, "party-skyrace-boating");
+					mc.options.keyUp.setDown(false);
+					mc.options.keyShift.setDown(true);
+				});
+				then(10, mc -> {
+					mc.options.keyShift.setDown(false);
+					log("climbed out: riding {}", mc.player.getVehicle());
+				});
+				then(60, mc -> log("2s later: riding {} at {}", mc.player.getVehicle(), mc.player.position()));
 			});
 		}
 		if (only.isEmpty() || only.equals("build")) {
