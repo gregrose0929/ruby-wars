@@ -25,6 +25,13 @@ public class ModComponents {
 			DataComponentType.<List<String>>builder().persistent(Codec.STRING.listOf())
 					.networkSynchronized(ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list())).build());
 
+	/** A fused weapon's traits (names of {@link dev.rubymod.gun.Trait} values), and "LEGEND:<name>" for a named legendary. */
+	public static final DataComponentType<List<String>> TRAITS = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("traits"),
+			DataComponentType.<List<String>>builder().persistent(Codec.STRING.listOf())
+					.networkSynchronized(ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list())).build());
+
 	/** A Field Radio's channel (1-8). */
 	public static final DataComponentType<Integer> RADIO_CHANNEL = Registry.register(
 			BuiltInRegistries.DATA_COMPONENT_TYPE,

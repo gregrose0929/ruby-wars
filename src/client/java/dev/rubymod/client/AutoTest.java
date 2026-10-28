@@ -1311,6 +1311,112 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("fusion")) {
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 30; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				for (String w : new String[] {"ruby_minigun", "dragons_breath", "rocket_launcher"}) {
+					me.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(
+							net.minecraft.resources.Identifier.parse("rubymod:" + w))));
+				}
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			then(100, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:REST")));
+			for (int i = 0; i < 25; i++) {
+				then(20, mc -> {});
+			}
+			then(40, mc -> {
+				log("arsenal: {}", dev.rubymod.client.rift.RiftClient.lastScreen == null ? null : dev.rubymod.client.rift.RiftClient.lastScreen.lines());
+				dev.rubymod.client.rift.RiftClient.reopen();
+			});
+			then(20, mc -> shot(mc, "fusion-arsenal"));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", "arm:fuse")));
+			then(30, mc -> {
+				log("fusions: {}", dev.rubymod.client.rift.RiftClient.lastScreen.lines());
+				shot(mc, "fusion-list");
+			});
+			then(5, mc -> {
+				String pick = dev.rubymod.client.rift.RiftClient.lastScreen.lines().get(1).split("[|]")[0];
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", pick));
+				log("fusing {}", pick);
+			});
+			then(30, mc -> {
+				for (int i = 0; i < 36; i++) {
+					var st = mc.player.getInventory().getItem(i);
+					if (st.has(dev.rubymod.registry.ModComponents.TRAITS)) {
+						log("fused: slot {} {} traits {} stats {}", i, st.getHoverName().getString(), st.get(dev.rubymod.registry.ModComponents.TRAITS),
+								((dev.rubymod.gun.GunItem) st.getItem()).stats(st));
+					}
+				}
+				shot(mc, "fusion-done");
+			});
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:FIGHT"));
+			});
+			for (int i = 0; i < 25; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 4, false, false));
+				for (int i = 0; i < 36; i++) {
+					if (me.getInventory().getItem(i).has(dev.rubymod.registry.ModComponents.TRAITS)) {
+						var st = me.getInventory().getItem(i).copy();
+						me.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+						me.getInventory().setItem(0, st);
+					}
+				}
+				me.getInventory().setSelectedSlot(0);
+				dev.rubymod.game.rift.Rift.testSkip(server, "spawn");
+			}));
+			then(2, mc -> mc.player.getInventory().setSelectedSlot(0));
+			for (int t = 0; t < 120; t++) {
+				int tick = t;
+				then(1, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					var near = level.getEntities((net.minecraft.world.entity.Entity) null, me.getBoundingBox().inflate(30),
+							e -> dev.rubymod.game.rift.Rift.isEnemy(e) && e.isAlive());
+					near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(me)));
+					if (!near.isEmpty()) {
+						var to = near.get(0).getBoundingBox().getCenter().subtract(me.getEyePosition());
+						me.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+						me.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+					}
+					me.clearFire();
+					var stack = me.getInventory().getItem(0);
+					if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+						dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+					}
+				}));
+				if (t == 40) {
+					then(0, mc -> {
+						var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+						mc.player.setYRot(sp.getYRot());
+						mc.player.setXRot(sp.getXRot());
+						shot(mc, "fusion-fire");
+						log("firing: {}", dev.rubymod.game.rift.Rift.debugState());
+					});
+				}
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("relics2")) {
 			then(0, mc -> {
 				command(mc, "time set noon");

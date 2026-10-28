@@ -39,7 +39,7 @@ public class GunItem extends Item {
 
 	/** Stats for this particular gun, including its attachments. */
 	public GunStats stats(ItemStack stack) {
-		return Attachment.apply(stats, stack.getOrDefault(ModComponents.ATTACHMENTS, List.<String>of()));
+		return Trait.apply(Attachment.apply(stats, stack.getOrDefault(ModComponents.ATTACHMENTS, List.<String>of())), stack);
 	}
 
 	public static int ammo(ItemStack stack) {
@@ -96,6 +96,13 @@ public class GunItem extends Item {
 	@SuppressWarnings("deprecation")
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
 		GunStats stats = stats(stack);
+		String legend = Trait.legendary(stack);
+		if (legend != null) {
+			builder.accept(Component.literal("\u2605 Legendary fusion: +50% damage").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		}
+		for (Trait t : Trait.of(stack)) {
+			builder.accept(Component.literal("\u2726 " + t.title + ": " + t.about).withColor(t.color & 0xFFFFFF));
+		}
 		builder.accept(Component.literal("Ammo: " + ammo(stack) + " / " + stats.magazine()).withStyle(ChatFormatting.GOLD));
 		for (String name : stack.getOrDefault(ModComponents.ATTACHMENTS, List.<String>of())) {
 			Attachment attachment = Attachment.valueOf(name);

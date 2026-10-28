@@ -1,6 +1,7 @@
 package dev.rubymod.gun;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -73,7 +74,13 @@ public final class Gunfire {
 		}
 
 		boolean rift = dev.rubymod.game.rift.Rift.playing(player);
-		int interval = stats.special() == GunStats.Special.SPINUP ? dev.rubymod.game.rift.RiftWeapons.spinInterval(player) : stats.fireInterval();
+		// Fused traits for this shot (read by the bullets and the hits it makes).
+		CURRENT = Trait.of(stack);
+		PIERCED = 0;
+		dev.rubymod.game.rift.RiftWeapons.armed(player, CURRENT);
+		int interval = stats.special() == GunStats.Special.SPINUP ? dev.rubymod.game.rift.RiftWeapons.spinInterval(player)
+				: CURRENT.contains(Trait.SPINUP) ? Math.max(1, Math.round(stats.fireInterval() * dev.rubymod.game.rift.RiftWeapons.spinInterval(player) / 6.0F))
+				: stats.fireInterval();
 		NEXT_SHOT.put(player.getUUID(), now + (rift ? Math.max(1, Math.round(interval * RelicEffects.fireIntervalScale(player))) : interval));
 		SpawnShield.clear(player);
 		boolean infinite = rift && RelicEffects.infiniteAmmo(player);
@@ -99,12 +106,19 @@ public final class Gunfire {
 		Vec3 eye = player.getEyePosition();
 		dev.rubymod.game.Duels.onShot(player, stats.pellets());
 		int volleys = rift ? RelicEffects.shotMultiplier(player) : 1;
-		int bounces = (stats.special() == GunStats.Special.BOUNCE ? 1 : 0) + (rift ? RelicEffects.extraBounces(player) : 0);
+		int bounces = (stats.special() == GunStats.Special.BOUNCE ? 1 : 0) + (rift ? RelicEffects.extraBounces(player) : 0)
+				+ (CURRENT.contains(Trait.BOUNCE) ? 2 : 0);
 		for (int v = 0; v < volleys; v++) {
 			for (int i = 0; i < stats.pellets(); i++) {
 				Vec3 dir = withSpread(player.getLookAngle(), spread + v * 1.2F, player.getRandom());
+				if (CURRENT.contains(Trait.HOMING)) {
+					dir = dev.rubymod.game.rift.RiftWeapons.homing(level, player, eye, dir);
+				}
 				trace(level, player, stats, eye, dir, stats.range(), bounces);
 			}
+		}
+		if (rift && !CURRENT.isEmpty()) {
+			dev.rubymod.game.rift.RiftWeapons.traitShot(level, player, stats, CURRENT);
 		}
 		if (rift) {
 			RelicEffects.onShot(level, player, stack);
@@ -145,6 +159,14 @@ public final class Gunfire {
 		if (entityHit != null) {
 			hitPos = entityHit.location();
 			hitEntity(level, shooter, stats, entityHit.entity(), hitPos, entityHit.eyeY());
+			// Pierce: on through, into whatever's behind it (up to 3).
+			if (CURRENT.contains(Trait.PIERCE) && PIERCED < 3 && dev.rubymod.game.rift.Rift.playing(shooter)) {
+				PIERCED++;
+				Vec3 beyond = hitPos.add(dir.scale(entityHit.entity().getBbWidth() + 0.7));
+				drawTracer(level, start, hitPos, stats);
+				trace(level, shooter, stats, beyond, dir, range - start.distanceTo(beyond), bounces);
+				return;
+			}
 		} else if (blockHit.getType() == HitResult.Type.BLOCK) {
 			hitPos = blockHit.getLocation();
 			BlockPos pos = blockHit.getBlockPos();
@@ -261,6 +283,9 @@ public final class Gunfire {
 		boolean killed = wasAlive && !target.isAlive();
 		if (rift && killed) {
 			RelicEffects.overkill(shooter, target, damage - healthBefore);
+		}
+		if (rift && !CURRENT.isEmpty() && target instanceof net.minecraft.world.entity.LivingEntity living) {
+			dev.rubymod.game.rift.RiftWeapons.traitHit(level, shooter, living, damage, CURRENT, headshot);
 		}
 		Bounties.onGunHit(shooter, target, headshot);
 		level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, hitPos.x, hitPos.y, hitPos.z, 1, 0.1, 0.1, 0.1, 0.0);
@@ -437,6 +462,10 @@ public final class Gunfire {
 			}
 		}
 	}
+
+	/** The traits of the gun being fired right now, and how many enemies this shot has pierced. */
+	private static List<Trait> CURRENT = List.of();
+	private static int PIERCED;
 
 	/** Drop a pending reload (the Ruby Chakram came back to your hand first). */
 	public static void forgetReload(ServerPlayer player) {

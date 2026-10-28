@@ -181,11 +181,14 @@ public class RelicScreen extends Screen {
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c.icon())));
 			float bob = (float) Math.sin(now / 350.0 + i) * 2;
 			g.pose().pushMatrix();
-			g.pose().translate(x + cardW / 2.0F - 20, y + 8 + bob);
-			g.pose().scale(2.5F, 2.5F);
+			// Short cards (two rows of them): a smaller icon, so the name fits above the button.
+			boolean compact = cardH < 140;
+			float iconScale = compact ? 1.6F : 2.5F;
+			g.pose().translate(x + cardW / 2.0F - 8 * iconScale, y + (compact ? 4 : 8) + bob);
+			g.pose().scale(iconScale, iconScale);
 			g.item(stack, 0, 0);
 			g.pose().popMatrix();
-			int ty = y + 52;
+			int ty = y + (compact ? 33 : 52);
 			// Tier and element.
 			String tierText = c.tier().equals("EVENT") || c.tier().equals("SERVICE") ? "" : pretty(c.tier()).toUpperCase();
 			int el = elementColor(c.element());
@@ -200,6 +203,9 @@ public class RelicScreen extends Screen {
 			}
 			// Name and what it does.
 			for (FormattedCharSequence line : font.split(Component.literal(c.title()).withStyle(net.minecraft.ChatFormatting.BOLD), cardW - 10)) {
+				if (ty > y + cardH - 32) {
+					break;
+				}
 				g.centeredText(font, line, x + cardW / 2, ty, 0xFFFFFFFF);
 				ty += 10;
 			}

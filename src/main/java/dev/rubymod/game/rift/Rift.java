@@ -1242,11 +1242,13 @@ public final class Rift {
 		}
 		r.event = List.of();
 		if (option.startsWith(RiftArsenal.PREFIX)) {
-			RiftArsenal.give(player, option);
+			RiftArsenal.give(player, r, option);
 		} else {
 			RiftEvents.resolve(player, r, option);
 		}
-		Net.send(player, new MorePayloads.RiftScreen("close", List.of()));
+		if (r.event.isEmpty()) {
+			Net.send(player, new MorePayloads.RiftScreen("close", List.of()));
+		}
 	}
 
 	// ----- The way onward -----

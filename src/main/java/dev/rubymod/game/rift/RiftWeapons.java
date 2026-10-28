@@ -117,11 +117,135 @@ public final class RiftWeapons {
 		return p.getEyePosition().add(look.scale(out)).add(right.scale(0.25)).add(0, -0.2, 0);
 	}
 
-	/** A weapon hit: coloured damage number; every few hits it also sets off the shooter's relics. */
+	/** A weapon hit: coloured damage number; every few hits it also sets off the shooter's relics and its fused traits. */
 	private static void hit(ServerPlayer p, LivingEntity e, float damage, int color, boolean relics) {
 		RelicEffects.hurt(p, e, damage, color);
 		if (relics && e.isAlive()) {
 			RelicEffects.onHit(p, e, damage);
+		}
+		List<dev.rubymod.gun.Trait> traits = ARMED.getOrDefault(p.getUUID(), List.of());
+		if (relics && !traits.isEmpty()) {
+			traitHit((ServerLevel) p.level(), p, e, damage, traits, false);
+		}
+	}
+
+	// ----- Fused traits -----
+
+	/** The traits of each player's weapon (the exotic ones hit later, after the shot). */
+	private static final Map<UUID, List<dev.rubymod.gun.Trait>> ARMED = new HashMap<>();
+	private static final Map<UUID, Integer> SHOTS = new HashMap<>();
+
+	public static void armed(ServerPlayer p, List<dev.rubymod.gun.Trait> traits) {
+		if (traits.isEmpty()) {
+			ARMED.remove(p.getUUID());
+		} else {
+			ARMED.put(p.getUUID(), traits);
+		}
+	}
+
+	/** Homing: bend a shot toward the nearest enemy close to where it's going. */
+	public static Vec3 homing(ServerLevel level, ServerPlayer p, Vec3 eye, Vec3 dir) {
+		LivingEntity best = null;
+		double bestDot = Math.cos(Math.toRadians(14));
+		for (LivingEntity e : enemies(level, eye.add(dir.scale(16)), 18, null)) {
+			Vec3 to = e.getBoundingBox().getCenter().subtract(eye).normalize();
+			double d = to.dot(dir);
+			if (d > bestDot) {
+				bestDot = d;
+				best = e;
+			}
+		}
+		return best == null ? dir : best.getBoundingBox().getCenter().subtract(eye).normalize();
+	}
+
+	/** The shot traits that add something to the shot itself: Slam, Rail, Grenadier. */
+	public static void traitShot(ServerLevel level, ServerPlayer p, GunStats stats, List<dev.rubymod.gun.Trait> traits) {
+		int n = SHOTS.merge(p.getUUID(), 1, Integer::sum);
+		if (traits.contains(dev.rubymod.gun.Trait.SLAM)) {
+			Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
+			Vec3 at = p.position().add(look.scale(2.0));
+			RiftFx.ring(level, at.add(0, 0.2, 0), 2.2, RiftFx.dust(0xFF3D6E, 1.2F), 16);
+			for (LivingEntity e : enemies(level, at, 2.8, null)) {
+				RelicEffects.hurt(p, e, Math.max(3, stats.damage() * stats.pellets() * 0.6F), 0xFFFF3D6E);
+				e.setDeltaMovement(look.x * 0.5, 0.4, look.z * 0.5);
+			}
+			if (n % 3 == 0) {
+				level.playSound(null, p.blockPosition(), SoundEvents.MACE_SMASH_GROUND, SoundSource.PLAYERS, 0.5F, 1.2F);
+			}
+		}
+		if (traits.contains(dev.rubymod.gun.Trait.RAIL) && n % 5 == 0) {
+			CHARGES.add(new Charge(p.getUUID(), level.getGameTime() + 4, Math.max(14, stats.damage() * stats.pellets() * 3), 90));
+		}
+		if (traits.contains(dev.rubymod.gun.Trait.GRENADE) && n % 4 == 0) {
+			bouncer(level, p, stats.scaled(Math.max(1, 12 / Math.max(1, stats.damage()))));
+		}
+	}
+
+	/** The hit traits: on every hit, from every fused weapon. */
+	public static void traitHit(ServerLevel level, ServerPlayer p, LivingEntity target, float damage, List<dev.rubymod.gun.Trait> traits, boolean headshot) {
+		if (RelicEffects.inEffect) {
+			return;
+		}
+		Vec3 at = target.getBoundingBox().getCenter();
+		for (dev.rubymod.gun.Trait t : traits) {
+			switch (t) {
+				case IGNITE -> {
+					target.igniteForSeconds(4);
+					level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 4, 0.2, 0.3, 0.2, 0.02);
+				}
+				case BLAST -> RelicEffects.blast(level, p, at, 2.2, Math.max(3, damage * 0.5F), 0xFFFFD040, false);
+				case CHAIN -> {
+					List<LivingEntity> near = enemies(level, target.position(), 7, target);
+					near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(target)));
+					for (int i = 0; i < Math.min(2, near.size()); i++) {
+						RiftFx.arc(level, at, near.get(i).getBoundingBox().getCenter(), 0xFF66E0FF);
+						RelicEffects.hurt(p, near.get(i), Math.max(2, damage * 0.5F), 0xFF66E0FF);
+					}
+				}
+				case VORTEX -> {
+					for (LivingEntity e : enemies(level, target.position(), 5, target)) {
+						if (!JuggernautMech.isBoss(e)) {
+							Vec3 in = target.position().subtract(e.position()).normalize().scale(0.5);
+							e.setDeltaMovement(in.x, 0.15, in.z);
+							e.needsSync = true;
+						}
+					}
+					level.sendParticles(ParticleTypes.REVERSE_PORTAL, at.x, at.y, at.z, 12, 0.4, 0.4, 0.4, 0.3);
+				}
+				case RETURN -> {
+					LivingEntity next = null;
+					double best = 10 * 10;
+					for (LivingEntity e : enemies(level, target.position(), 10, target)) {
+						if (e.distanceToSqr(target) < best) {
+							best = e.distanceToSqr(target);
+							next = e;
+						}
+					}
+					if (next != null) {
+						RiftFx.line(level, at, next.getBoundingBox().getCenter(), RiftFx.dust(0xFF3D6E, 1.0F), 0.4);
+						RelicEffects.hurt(p, next, damage * 0.7F, 0xFFFF3D6E);
+					}
+				}
+				case FAN -> {
+					if (headshot) {
+						fanRicochet(level, p, target, damage);
+					}
+				}
+				case SKYHUNTER -> {
+					if (!target.onGround() && (target.isNoGravity() || target.getType() == EntityTypes.GHAST
+							|| target instanceof dev.rubymod.entity.AircraftEntity || target.getType() == EntityTypes.BLAZE || target.getType() == EntityTypes.VEX
+							|| target.getType() == EntityTypes.BREEZE || target.getType() == EntityTypes.PHANTOM)) {
+						RelicEffects.hurt(p, target, damage, 0xFF66E0FF);
+					}
+				}
+				case ARMOR -> {
+					if (JuggernautMech.isBoss(target) || target instanceof net.minecraft.world.entity.Mob m && RiftEnemies.twistOf(m) != null) {
+						RelicEffects.hurt(p, target, damage * 0.6F, 0xFFB8C4D0);
+					}
+				}
+				default -> {
+				}
+			}
 		}
 	}
 
