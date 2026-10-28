@@ -310,7 +310,7 @@ public class GameHud implements HudElement {
 		} else {
 			return;
 		}
-		boolean creative = player.isCreative();
+		boolean creative = player.isCreative() || dev.rubymod.client.rift.RiftClient.active();
 		int pw = 124;
 		int ph = 44;
 		int x = w - pw - 4;

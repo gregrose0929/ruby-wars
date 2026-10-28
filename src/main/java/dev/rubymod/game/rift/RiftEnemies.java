@@ -170,7 +170,6 @@ public final class RiftEnemies {
 			if (size != null) {
 				size.setBaseValue(1.6);
 			}
-			mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, -1, 0, false, false));
 			switch (twist) {
 				case SWIFT -> mob.addEffect(new MobEffectInstance(MobEffects.SPEED, -1, 1, false, false));
 				case ARMORED -> mob.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, -1, 1, false, false));

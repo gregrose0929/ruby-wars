@@ -102,7 +102,7 @@ public class RiftMapScreen extends Screen {
 			case "TREASURE" -> "minecraft:chest";
 			case "SHOP" -> "minecraft:emerald";
 			case "EVENT" -> "minecraft:enchanted_book";
-			case "REST" -> "minecraft:campfire";
+			case "REST" -> "rubymod:arr_rifle";
 			case "BOSS" -> "minecraft:nether_star";
 			case "TANK" -> "rubymod:tank";
 			default -> "minecraft:iron_sword";
@@ -115,7 +115,7 @@ public class RiftMapScreen extends Screen {
 			case "TREASURE" -> "Treasure";
 			case "SHOP" -> "Merchant";
 			case "EVENT" -> "Mystery";
-			case "REST" -> "Campfire";
+			case "REST" -> "Arsenal";
 			case "BOSS" -> "BOSS";
 			case "TANK" -> "Tank Assault";
 			default -> "Fight";
@@ -126,9 +126,9 @@ public class RiftMapScreen extends Screen {
 		return switch (type) {
 			case "ELITE" -> "Tougher monsters and a glowing elite. Better relics.";
 			case "TREASURE" -> "A free relic, and one of the three is Legendary.";
-			case "SHOP" -> "Spend the team's gold on relics or healing.";
+			case "SHOP" -> "Spend the team's gold on relics (or new stock).";
 			case "EVENT" -> "Something strange. A choice with a catch.";
-			case "REST" -> "A campfire: everyone healed and back on their feet.";
+			case "REST" -> "The Arsenal: pick a new weapon, and downed teammates get back up.";
 			case "BOSS" -> "The end of this act, and something huge waiting there.";
 			case "TANK" -> "Everyone in a tank, against enemy Rift Tanks.";
 			default -> "Monsters. Clear the room for gold and a relic.";
@@ -241,7 +241,7 @@ public class RiftMapScreen extends Screen {
 		}
 		// Legend.
 		int ly = height - 22;
-		g.centeredText(font, "⚔ Fight   ⛟ Tank   ☠ Elite   ❖ Treasure   ◆ Merchant   ? Mystery   ♨ Campfire   ★ Boss", width / 2, ly + 8,
+		g.centeredText(font, "⚔ Fight   ⛟ Tank   ☠ Elite   ❖ Treasure   ◆ Merchant   ? Mystery   ⚒ Arsenal   ★ Boss", width / 2, ly + 8,
 				0xFF8A7A9A);
 		if (hovered != null) {
 			List<Component> tip = new ArrayList<>();

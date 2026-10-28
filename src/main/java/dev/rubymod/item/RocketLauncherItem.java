@@ -47,14 +47,14 @@ public class RocketLauncherItem extends Item {
 		if (player.getCooldowns().isOnCooldown(launcher)) {
 			return;
 		}
-		if (!player.isCreative() && player.getInventory().countItem(ModItems.ROCKET) == 0) {
+		if (!dev.rubymod.gun.Gunfire.freeAmmo(player) && player.getInventory().countItem(ModItems.ROCKET) == 0) {
 			player.sendSystemMessage(Component.literal("No rockets! Buy some at the Armory."), true);
 			return;
 		}
 		ServerLevel level = (ServerLevel) player.level();
 		level.addFreshEntity(RocketEntity.fire(level, player));
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), dev.rubymod.registry.ModSounds.ROCKET_LAUNCH, SoundSource.PLAYERS, 1.5F, 1.0F);
-		if (!player.isCreative()) {
+		if (!dev.rubymod.gun.Gunfire.freeAmmo(player)) {
 			for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
 				ItemStack s = player.getInventory().getItem(i);
 				if (s.is(ModItems.ROCKET)) {

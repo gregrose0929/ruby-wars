@@ -323,6 +323,11 @@ public final class Gunfire {
 
 	// ----- Reloading -----
 
+	/** No ammo needed: creative, or anywhere in Ruby Rift (magazines still empty and reload). */
+	public static boolean freeAmmo(net.minecraft.world.entity.player.Player player) {
+		return player.isCreative() || dev.rubymod.game.rift.Rift.playing(player);
+	}
+
 	public static void startReload(ServerPlayer player) {
 		if (RELOADS.containsKey(player.getUUID())) {
 			return;
@@ -335,7 +340,7 @@ public final class Gunfire {
 		if (GunItem.ammo(stack) >= stats.magazine()) {
 			return;
 		}
-		if (!player.isCreative() && player.getInventory().countItem(stats.ammo().item()) == 0) {
+		if (!freeAmmo(player) && player.getInventory().countItem(stats.ammo().item()) == 0) {
 			player.sendSystemMessage(Component.literal("Out of ammo! Craft or buy ")
 					.append(Component.translatable(stats.ammo().item().getDescriptionId())), true);
 			return;
@@ -372,7 +377,7 @@ public final class Gunfire {
 	private static void finishReload(ServerPlayer player, ItemStack stack, GunStats stats) {
 		int current = GunItem.ammo(stack);
 		int needed = stats.magazine() - current;
-		int taken = player.isCreative() ? needed : takeAmmo(player, stats.ammo(), needed);
+		int taken = freeAmmo(player) ? needed : takeAmmo(player, stats.ammo(), needed);
 		stack.set(ModComponents.AMMO, current + taken);
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), dev.rubymod.registry.ModSounds.BOLT, SoundSource.PLAYERS, 0.9F, 1.0F);
 		Net.send(player, new Payloads.ReloadState(0));

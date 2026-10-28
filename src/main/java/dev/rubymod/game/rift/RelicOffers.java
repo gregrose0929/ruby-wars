@@ -67,12 +67,13 @@ final class RelicOffers {
 				case ELITE -> roll(random, 0, 55, 22, 23);
 				default -> roll(random, 38, 52, 0, 10);
 			};
-			Relic pick = pick(r, tier, out, random);
+			java.util.function.Predicate<Relic> owned = x -> r != null && r.has(x);
+			Relic pick = pick(r, tier, out, random, owned);
 			if (pick == null) {
-				pick = pick(r, Relic.Tier.RARE, out, random);
+				pick = pick(r, Relic.Tier.RARE, out, random, owned);
 			}
 			if (pick == null) {
-				pick = pick(r, Relic.Tier.COMMON, out, random);
+				pick = pick(r, Relic.Tier.COMMON, out, random, owned);
 			}
 			if (pick != null) {
 				out.add(pick);
@@ -93,10 +94,10 @@ final class RelicOffers {
 		return Relic.Tier.CURSED;
 	}
 
-	private static Relic pick(Rift.Runner r, Relic.Tier tier, List<Relic> already, RandomSource random) {
+	private static Relic pick(Rift.Runner r, Relic.Tier tier, List<Relic> already, RandomSource random, java.util.function.Predicate<Relic> owned) {
 		List<Relic> pool = new ArrayList<>();
 		for (Relic relic : Relic.values()) {
-			if (relic.tier != tier || (r != null && r.has(relic)) || already.contains(relic)) {
+			if (relic.tier != tier || owned.test(relic) || already.contains(relic)) {
 				continue;
 			}
 			if (relic.locked && (r == null || !Rift.unlocked(r.id, relic.id()))) {
@@ -114,12 +115,13 @@ final class RelicOffers {
 		return pool.isEmpty() ? null : pool.get(random.nextInt(pool.size()));
 	}
 
-	/** The merchant's stock: two commons, a rare or two, and sometimes a legendary. */
-	static List<Relic> shopStock(RandomSource random) {
+	/** The merchant's stock: two commons, a rare or two, and sometimes a legendary; never one the whole team already has. */
+	static List<Relic> shopStock(RandomSource random, java.util.Collection<Rift.Runner> team) {
 		List<Relic> out = new ArrayList<>();
+		java.util.function.Predicate<Relic> owned = x -> !team.isEmpty() && team.stream().allMatch(m -> m.has(x));
 		for (Relic.Tier t : new Relic.Tier[] {Relic.Tier.COMMON, Relic.Tier.COMMON, Relic.Tier.RARE, Relic.Tier.RARE,
 				random.nextFloat() < 0.4F ? Relic.Tier.LEGENDARY : Relic.Tier.CURSED}) {
-			Relic r = pick(null, t, out, random);
+			Relic r = pick(null, t, out, random, owned);
 			if (r != null) {
 				out.add(r);
 			}

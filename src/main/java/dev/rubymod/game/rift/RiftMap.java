@@ -14,7 +14,7 @@ import net.minecraft.util.RandomSource;
 public final class RiftMap {
 	public enum Type {
 		FIGHT("Fight", "minecraft:iron_sword"), ELITE("Elite", "minecraft:wither_skeleton_skull"), TREASURE("Treasure", "minecraft:chest"),
-		SHOP("Merchant", "minecraft:emerald"), EVENT("Mystery", "minecraft:enchanted_book"), REST("Campfire", "minecraft:campfire"),
+		SHOP("Merchant", "minecraft:emerald"), EVENT("Mystery", "minecraft:enchanted_book"), REST("Arsenal", "rubymod:arr_rifle"),
 		TANK("Tank Assault", "rubymod:tank"), BOSS("Boss", "minecraft:nether_star");
 
 		public final String title;
@@ -84,7 +84,7 @@ public final class RiftMap {
 				Type type = pick(random, f + (act - 1) * 2);
 				map.nodes.add(new Node(map.nodes.size(), f, c, cols, type, themes[random.nextInt(themes.length)]));
 			}
-			// Some floors always have something: treasure halfway, a campfire before the boss.
+			// Some floors always have something: treasure halfway, the Arsenal before the boss.
 			List<Node> here = map.floor(f);
 			if (f == 3 && here.stream().noneMatch(n -> n.type == Type.TREASURE)) {
 				replace(map, here.get(random.nextInt(here.size())), Type.TREASURE);

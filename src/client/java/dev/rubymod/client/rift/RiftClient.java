@@ -48,6 +48,41 @@ public final class RiftClient {
 		return hud != null && !hud.header().isEmpty();
 	}
 
+	/** The RELICS panel left of the inventory: icons framed in their tier's colour, hover for the description. */
+	private static void drawInventoryRelics(net.minecraft.client.gui.screens.Screen screen, GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
+		if (!active() || hud.relics().isEmpty()) {
+			return;
+		}
+		var font = Minecraft.getInstance().font;
+		int cols = 4;
+		int rows = (hud.relics().size() + cols - 1) / cols;
+		int pw = cols * 20 + 8;
+		int x0 = Math.max(4, (screen.width - 176) / 2 - pw - 6);
+		int y0 = (screen.height - 166) / 2;
+		g.fill(x0, y0, x0 + pw, y0 + 16 + rows * 20, 0xE0100810);
+		g.outline(x0, y0, pw, 16 + rows * 20, 0xFFFF3D6E);
+		g.text(font, "RELICS", x0 + 5, y0 + 4, 0xFFFF3D6E, false);
+		java.util.List<net.minecraft.network.chat.Component> tip = null;
+		int i = 0;
+		for (String r : hud.relics()) {
+			String[] f = r.split("[|]", -1);
+			if (f.length < 4) {
+				continue;
+			}
+			int x = x0 + 4 + (i % cols) * 20;
+			int y = y0 + 14 + (i / cols) * 20;
+			g.outline(x, y, 18, 18, tierColor(f[2]));
+			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[1]))), x + 1, y + 1);
+			if (mouseX >= x && mouseX < x + 18 && mouseY >= y && mouseY < y + 18) {
+				tip = RelicScreen.tooltip(f[3], f[2], "NONE", f.length > 4 ? f[4] : "");
+			}
+			i++;
+		}
+		if (tip != null) {
+			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
+		}
+	}
+
 	static boolean hasRelic(String id) {
 		if (!active()) {
 			return false;
@@ -62,6 +97,12 @@ public final class RiftClient {
 
 	public static void register() {
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.RiftHud.TYPE, (p, c) -> hud = p);
+		// Your relics beside the inventory (E), with what each one does on hover.
+		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, sw, sh) -> {
+			if (screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen) {
+				net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterExtract(screen).register(RiftClient::drawInventoryRelics);
+			}
+		});
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.DamageNumber.TYPE, (p, c) -> {
 			NUMBERS.add(new Number(new Vec3(p.x(), p.y(), p.z()), p.amount(), p.color(), System.currentTimeMillis()));
 			if (NUMBERS.size() > 60) {

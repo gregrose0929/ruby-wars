@@ -93,7 +93,7 @@ public class LockOnLauncherItem extends Item {
 		if (player.getCooldowns().isOnCooldown(stack)) {
 			return;
 		}
-		if (!player.isCreative() && player.getInventory().countItem(ammo()) == 0) {
+		if (!dev.rubymod.gun.Gunfire.freeAmmo(player) && player.getInventory().countItem(ammo()) == 0) {
 			player.sendOverlayMessage(Component.literal("No " + Component.translatable(ammo().getDescriptionId()).getString() + "s!"));
 			return;
 		}
@@ -117,7 +117,7 @@ public class LockOnLauncherItem extends Item {
 		}
 		level.addFreshEntity(missile);
 		level.playSound(null, player.getX(), player.getY(), player.getZ(), dev.rubymod.registry.ModSounds.ROCKET_LAUNCH, SoundSource.PLAYERS, 1.5F, 1.0F);
-		if (!player.isCreative()) {
+		if (!dev.rubymod.gun.Gunfire.freeAmmo(player)) {
 			for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
 				ItemStack s = player.getInventory().getItem(i);
 				if (s.is(ammo())) {

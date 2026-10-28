@@ -1204,6 +1204,141 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("riftfixes")) {
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			then(200, mc -> onServer(mc, server -> {
+				var level = (net.minecraft.server.level.ServerLevel) me(server).level();
+				long glowing = level.getEntities((net.minecraft.world.entity.Entity) null, me(server).getBoundingBox().inflate(80),
+						e -> e.entityTags().contains(dev.rubymod.game.rift.Rift.TAG) && e instanceof net.minecraft.world.entity.LivingEntity l
+								&& l.hasEffect(net.minecraft.world.effect.MobEffects.GLOWING)).size();
+				log("fight start: {} | glowing {}", dev.rubymod.game.rift.Rift.debugState(), glowing);
+			}));
+			// Free ammo: empty the gun, no ammo in the bag, reload.
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				for (int i = 0; i < me.getInventory().getContainerSize(); i++) {
+					var st = me.getInventory().getItem(i);
+					if (st.getItem() instanceof dev.rubymod.gun.GunItem && me.getInventory().getSelectedSlot() != i) {
+						continue;
+					}
+					if (st.getItem() instanceof dev.rubymod.gun.GunItem) {
+						st.set(dev.rubymod.registry.ModComponents.AMMO, 0);
+					}
+				}
+				for (int k = 0; k < me.getInventory().getContainerSize(); k++) {
+					var st = me.getInventory().getItem(k);
+					if (st.is(dev.rubymod.registry.ModItems.LIGHT_AMMO) || st.is(dev.rubymod.registry.ModItems.HEAVY_AMMO)) {
+						st.setCount(0);
+					}
+				}
+				log("held {} ammo {} | reserve heavy {} light {}", me.getMainHandItem(), dev.rubymod.gun.GunItem.ammo(me.getMainHandItem()),
+						me.getInventory().countItem(dev.rubymod.registry.ModItems.HEAVY_AMMO), me.getInventory().countItem(dev.rubymod.registry.ModItems.LIGHT_AMMO));
+				dev.rubymod.gun.Gunfire.startReload(me);
+				try {
+					var f = dev.rubymod.gun.Gunfire.class.getDeclaredField("RELOADS");
+					f.setAccessible(true);
+					log("reloading? {} | free ammo {} | slot {}", ((java.util.Map<?, ?>) f.get(null)).get(me.getUUID()), dev.rubymod.gun.Gunfire.freeAmmo(me),
+							me.getInventory().getSelectedSlot());
+				} catch (ReflectiveOperationException e) {
+					log("no field {}", e);
+				}
+			}));
+			for (int k = 0; k < 20; k++) {
+				then(10, mc -> onServer(mc, server -> log("reload tick: time {} avg tick {} ms max {} ms ammo {} slot {} held {}", me(server).level().getGameTime(), server.getAverageTickTimeNanos() / 1_000_000, maxTickMs(server), dev.rubymod.gun.GunItem.ammo(me(server).getMainHandItem()),
+						me(server).getInventory().getSelectedSlot(), me(server).getMainHandItem())));
+			}
+			then(20, mc -> onServer(mc, server -> log("after reload: ammo {}", dev.rubymod.gun.GunItem.ammo(me(server).getMainHandItem()))));
+			// More max health: arrives full.
+			then(5, mc -> onServer(mc, server -> {
+				log("health before {} / {}", me(server).getHealth(), me(server).getMaxHealth());
+				dev.rubymod.game.rift.Rift.testSkip(server, "titan_blood");
+			}));
+			then(10, mc -> onServer(mc, server -> log("health after {} / {}", me(server).getHealth(), me(server).getMaxHealth())));
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
+			});
+			then(20, mc -> shot(mc, "riftfix-inventory"));
+			then(5, mc -> mc.gui.setScreen(null));
+			// The merchant.
+			then(5, mc -> onServer(mc, server -> {
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			then(100, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:SHOP")));
+			for (int i = 0; i < 20; i++) {
+				then(20, mc -> {});
+			}
+			then(200, mc -> {
+				log("shop: {} | screen {} | last {}", dev.rubymod.game.rift.Rift.debugState(), mc.gui.screen(),
+						dev.rubymod.client.rift.RiftClient.lastScreen == null ? null : dev.rubymod.client.rift.RiftClient.lastScreen.lines());
+				dev.rubymod.client.rift.RiftClient.reopen();
+			});
+			then(30, mc -> shot(mc, "riftfix-shop"));
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:REST"));
+			});
+			for (int i = 0; i < 20; i++) {
+				then(20, mc -> {});
+			}
+			then(200, mc -> {
+				log("arsenal: {} | screen {} | last {}", dev.rubymod.game.rift.Rift.debugState(), mc.gui.screen(),
+						dev.rubymod.client.rift.RiftClient.lastScreen == null ? null : dev.rubymod.client.rift.RiftClient.lastScreen.lines());
+				shot(mc, "riftfix-arsenal");
+			});
+			then(5, mc -> {
+				var lines = dev.rubymod.client.rift.RiftClient.lastScreen.lines();
+				String pick = lines.get(1).split("[|]")[0];
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", pick));
+				log("picked {}", pick);
+			});
+			then(40, mc -> {
+				log("inventory now: {}", inventorySummary(mc));
+				shot(mc, "riftfix-picked");
+			});
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("titan")) {
+			// Straight to the act 3 boss with a Ruby Golem and Necromancer: does the Titan stay?
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			then(200, mc -> onServer(mc, server -> {
+				dev.rubymod.game.rift.Rift.testSkip(server, "ruby_golem");
+				dev.rubymod.game.rift.Rift.testSkip(server, "necromancer");
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			then(100, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "act3")));
+			for (int i = 0; i < 70; i++) {
+				then(20, mc -> onServer(mc, server -> log("titan: {} | at {}", dev.rubymod.game.rift.Rift.debugState(), me(server).blockPosition())));
+			}
+			then(5, mc -> shot(mc, "titan"));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("starter")) {
 			// Start a season, place a Heart: the starter base appears and the drill fills the bank.
 			net.minecraft.core.BlockPos[] heart = new net.minecraft.core.BlockPos[1];

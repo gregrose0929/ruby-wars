@@ -75,7 +75,7 @@ public final class RiftMeta {
 
 	public static final String[] HEAT = {"No Heat", "Hardened", "Elite Swarm", "No Respite", "Bloodthirst", "Apex"};
 	public static final String[] HEAT_ABOUT = {"The Rift as it is.", "Monsters have 30% more health.", "Every fight ends with an elite.",
-			"No healing after rooms (campfires heal half).", "Monsters hit 40% harder and move faster.", "Bosses have 50% more health."};
+			"No healing after rooms (the Arsenal revives at half health).", "Monsters hit 40% harder and move faster.", "Bosses have 50% more health."};
 
 	/** The team's Heat for the next run, and whether it's the Daily Rift. */
 	static int heat;

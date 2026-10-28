@@ -48,6 +48,9 @@ import net.minecraft.world.phys.Vec3;
 public final class RubyTitan implements RiftBoss {
 	private static final String PYLON_TAG = Rift.TAG + "_pylon";
 	private final UUID titan;
+	/** The Titan itself (to tell why it's gone, if it goes without dying). */
+	private Mob titanRef;
+	private final java.util.Map<UUID, Mob> pylonRefs = new java.util.HashMap<>();
 	private final RiftRoom room;
 	private final List<UUID> pylons = new ArrayList<>();
 	private final List<UUID> pylonLooks = new ArrayList<>();
@@ -92,6 +95,7 @@ public final class RubyTitan implements RiftBoss {
 		level.addFreshEntity(golem);
 		Rift.MOBS.add(golem.getUUID());
 		RubyTitan boss = new RubyTitan(golem.getUUID(), room, players);
+		boss.titanRef = golem;
 		// Ruby crystals growing out of its shoulders and back.
 		float[][] spots = {{-1.6F, 6.6F, -0.4F}, {1.0F, 6.8F, -0.5F}, {-0.3F, 6.0F, -1.4F}, {-1.2F, 4.6F, -1.3F}, {0.7F, 5.2F, -1.4F}};
 		for (float[] s : spots) {
@@ -144,6 +148,7 @@ public final class RubyTitan implements RiftBoss {
 		level.addFreshEntity(core);
 		Rift.MOBS.add(core.getUUID());
 		pylons.add(core.getUUID());
+		pylonRefs.put(core.getUUID(), core);
 		Display.BlockDisplay look = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
 		if (look != null) {
 			look.snapTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
@@ -195,7 +200,14 @@ public final class RubyTitan implements RiftBoss {
 		// Pylons: the ones broken go (with their crystal); the rest beam into the Titan.
 		for (int i = pylons.size() - 1; i >= 0; i--) {
 			Entity p = level.getEntity(pylons.get(i));
+			// Not found but never removed: its chunk is still loading, it's there.
+			if (p == null && pylonRefs.get(pylons.get(i)) instanceof Mob ref && !ref.isRemoved()) {
+				continue;
+			}
 			if (p == null || !p.isAlive()) {
+				Mob ref = pylonRefs.get(pylons.get(i));
+				dev.rubymod.RubyMod.LOGGER.info("Ruby Pylon down at tick {}: found {} | removed {} health {} at {}", t, p,
+						ref == null ? "?" : ref.getRemovalReason(), ref == null ? -1 : ref.getHealth(), ref == null ? null : ref.position());
 				Entity look = i < pylonLooks.size() ? level.getEntity(pylonLooks.get(i)) : null;
 				if (look != null) {
 					level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, ModBlocks.RUBY_BLOCK.defaultBlockState()), look.getX(), look.getY() + 1.5,
@@ -214,7 +226,13 @@ public final class RubyTitan implements RiftBoss {
 			}
 		}
 		Entity e = level.getEntity(titan);
+		if (e == null && titanRef != null && !titanRef.isRemoved()) {
+			return; // still loading in: it's there
+		}
 		if (!(e instanceof Mob golem) || !golem.isAlive()) {
+			dev.rubymod.RubyMod.LOGGER.info("Ruby Titan down at tick {}: found {} | removed {} health {} at {} | room {}", t, e,
+					titanRef == null ? "?" : titanRef.getRemovalReason(), titanRef == null ? -1 : titanRef.getHealth(),
+					titanRef == null ? null : titanRef.position(), room.center);
 			dying = 0;
 			for (ServerPlayer p : Rift.players(level.getServer())) {
 				dev.rubymod.game.Alerts.title(p, "THE TITAN FALLS", "The Rift is breaking apart!", ChatFormatting.GOLD);

@@ -22,7 +22,7 @@ import net.minecraft.world.item.ItemStack;
 public class ThresholdScreen extends Screen {
 	private static final String[] HEAT = {"No Heat", "Hardened", "Elite Swarm", "No Respite", "Bloodthirst", "Apex"};
 	private static final String[] HEAT_ABOUT = {"The Rift as it is.", "Monsters have 30% more health.", "Every fight ends with an elite.",
-			"No healing after rooms (campfires heal half).", "Monsters hit 40% harder and move faster.", "Bosses have 50% more health."};
+			"No healing after rooms (the Arsenal revives at half health).", "Monsters hit 40% harder and move faster.", "Bosses have 50% more health."};
 
 	private int shards;
 	private int heat;

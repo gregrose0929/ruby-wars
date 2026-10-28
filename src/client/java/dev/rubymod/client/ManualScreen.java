@@ -40,7 +40,7 @@ public class ManualScreen extends Screen {
 					"Pick Easy, Normal or Hard when you start (H). Reaching wave 5 counts as a Ruby Wars goal."),
 			new Page("Ruby Rift",
 					"A co-op roguelike for 1-4: fight room to room through three acts, and after every room pick 1 of 3 relics.",
-					"Vote on the map where to go next: fights, elites, treasure, the merchant, mysteries, campfires, tank assaults.",
+					"Vote on the map where to go next: fights, elites, treasure, the merchant, mysteries, the Arsenal (new weapons), tank assaults.",
 					"Relics change how you play: lightning, napalm, ice, drones, clones, black holes... Two elements on two teammates can make a Bond relic.",
 					"Bosses: the Juggernaut Mech, the Rift Gunship, the Ruby Titan (break its pylons first).",
 					"Between runs, Rift Shards buy loadouts and new relics at the Altar of Echoes (J in the Threshold). Heat makes it harder for more.",

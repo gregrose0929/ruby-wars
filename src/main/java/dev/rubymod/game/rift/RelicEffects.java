@@ -471,6 +471,7 @@ public final class RelicEffects {
 		AttributeInstance health = p.getAttribute(Attributes.MAX_HEALTH);
 		AttributeInstance scale = p.getAttribute(Attributes.SCALE);
 		if (health != null) {
+			float before = p.getMaxHealth();
 			double extra = 0;
 			if (r.has(Relic.TITAN_BLOOD)) {
 				extra += 20;
@@ -487,6 +488,9 @@ public final class RelicEffects {
 			}
 			if (p.getHealth() > p.getMaxHealth()) {
 				p.setHealth(p.getMaxHealth());
+			} else if (p.getMaxHealth() > before) {
+				// New hearts arrive full.
+				p.heal(p.getMaxHealth() - before);
 			}
 		}
 		if (scale != null) {
@@ -544,7 +548,6 @@ public final class RelicEffects {
 					size.setBaseValue(1.4);
 				}
 				golem.setCustomName(Component.literal(p.getName().getString() + "'s Ruby Golem").withStyle(ChatFormatting.RED));
-				golem.addEffect(new MobEffectInstance(MobEffects.GLOWING, -1, 0, false, false));
 				golem.addTag(Rift.TAG);
 				level.addFreshEntity(golem);
 				ALLIES.put(golem.getUUID(), new Ally(Long.MAX_VALUE, p.getUUID(), false));
@@ -1022,7 +1025,6 @@ public final class RelicEffects {
 		}
 		mob.snapTo(dead.getX(), dead.getY(), dead.getZ(), dead.getYRot(), 0);
 		mob.setCustomName(Component.literal("Risen " + (dead.getCustomName() == null ? "" : dead.getCustomName().getString())).withStyle(ChatFormatting.GREEN));
-		mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, -1, 0, false, false));
 		mob.setPersistenceRequired();
 		mob.addTag(Rift.TAG);
 		level.addFreshEntity(mob);
@@ -1045,7 +1047,6 @@ public final class RelicEffects {
 		mannequin.setPermanentlyInvulnerable(true);
 		mannequin.setNoGravity(true);
 		mannequin.setCustomName(Component.literal("Shadow of " + p.getName().getString()).withStyle(ChatFormatting.DARK_PURPLE));
-		mannequin.addEffect(new MobEffectInstance(MobEffects.GLOWING, -1, 0, false, false));
 		mannequin.addTag(Rift.TAG);
 		level.addFreshEntity(mannequin);
 		ALLIES.put(mannequin.getUUID(), new Ally(now(level) + 200, p.getUUID(), true));

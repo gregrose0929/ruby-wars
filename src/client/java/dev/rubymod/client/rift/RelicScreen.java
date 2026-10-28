@@ -49,9 +49,9 @@ public class RelicScreen extends Screen {
 					heading = f.length > 1 ? f[1] : "";
 				} else if (f[0].equals("gold") && f.length == 2) {
 					gold = Integer.parseInt(f[1]);
-				} else if (kind.equals("event") || f[0].equals("heal")) {
+				} else if (kind.equals("event") || f[0].equals("heal") || f[0].equals("restock")) {
 					if (f.length >= 4) {
-						list.add(new Card(f[0], f[1], f[0].equals("heal") ? "SERVICE" : "EVENT", "NONE", f[3], f[2], f.length > 4 ? Integer.parseInt(f[4]) : -1));
+						list.add(new Card(f[0], f[1], kind.equals("event") ? "EVENT" : "SERVICE", "NONE", f[3], f[2], f.length > 4 ? Integer.parseInt(f[4]) : -1));
 					}
 				} else if (f.length >= 7) {
 					list.add(new Card(f[0], f[1], f[2], f[3], f[4], f[5], Integer.parseInt(f[6])));
@@ -144,6 +144,8 @@ public class RelicScreen extends Screen {
 			boolean legendary = c.tier().equals("LEGENDARY");
 			boolean cursed = c.tier().equals("CURSED");
 			boolean cantAfford = c.price() > 0 && kind.equals("shop") && gold < c.price();
+			// -2: a relic you already have (the merchant still sells it to teammates).
+			boolean owned = c.price() == -2;
 			// Body: dark, tinted by the tier.
 			g.fill(x, y, x + cardW, y + cardH, 0xF8100A12);
 			// Glow behind the icon.
@@ -204,21 +206,47 @@ public class RelicScreen extends Screen {
 				ty += 10;
 			}
 			// The button.
-			String label = kind.equals("shop") ? (cantAfford ? "◆ " + c.price() : "BUY  ◆ " + c.price()) : kind.equals("event") ? "CHOOSE" : "TAKE IT";
+			String label = owned ? "OWNED" : kind.equals("shop") ? (cantAfford ? "◆ " + c.price() : "BUY  ◆ " + c.price())
+					: kind.equals("event") ? "CHOOSE" : "TAKE IT";
 			int by = y + cardH - 20;
-			int btn = cantAfford ? 0xC0602020 : hover ? 0xFF000000 | tier & 0xFFFFFF : 0xB0000000 | tier & 0xFFFFFF;
+			int btn = owned ? 0xC0303038 : cantAfford ? 0xC0602020 : hover ? 0xFF000000 | tier & 0xFFFFFF : 0xB0000000 | tier & 0xFFFFFF;
 			g.fill(x + 8, by, x + cardW - 8, by + 14, btn);
-			g.centeredText(font, label, x + cardW / 2, by + 3, cantAfford ? 0xFFFF9090 : 0xFF101010);
-			if (delay >= 1) {
+			g.centeredText(font, label, x + cardW / 2, by + 3, owned ? 0xFF9AA4AE : cantAfford ? 0xFFFF9090 : 0xFF101010);
+			if (delay >= 1 && !owned) {
 				boxes.add(new int[] {x, y, cardW, cardH, i});
 			}
 		}
 		String foot = kind.equals("shop") ? "Buy as many as the team's gold allows. Press Esc when you're done, then step into the portal."
 				: kind.equals("event") ? "Choose wisely." : "Relics last the whole run. Press Esc to look around first (J brings this back).";
 		g.centeredText(font, foot, width / 2, height - 14, 0xFF8A7A9A);
-		if (hoverCard != null && hoverCard.tier().equals("CURSED")) {
-			g.setComponentTooltipForNextFrame(font, List.of(Component.literal("Cursed: huge power, a real cost.").withColor(0xB04CFF)), mouseX, mouseY);
+		// Hover a card: everything it does, in full.
+		if (hoverCard != null) {
+			g.setComponentTooltipForNextFrame(font, tooltip(hoverCard.title(), hoverCard.tier(), hoverCard.element(), hoverCard.about()), mouseX, mouseY);
 		}
+	}
+
+	/** A relic's full description as tooltip lines: name, tier and element, what it does. */
+	static List<Component> tooltip(String title, String tier, String element, String about) {
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.literal(title).withColor(tierColor(tier) & 0xFFFFFF).withStyle(net.minecraft.ChatFormatting.BOLD));
+		if (!tier.equals("EVENT") && !tier.equals("SERVICE")) {
+			lines.add(Component.literal(pretty(tier) + (elementColor(element) != 0 ? "  •  " + pretty(element) : "")).withColor(0x9AA4AE));
+		}
+		StringBuilder line = new StringBuilder();
+		for (String word : about.split(" ")) {
+			if (line.length() > 0 && line.length() + word.length() > 42) {
+				lines.add(Component.literal(line.toString()).withColor(0xEDE6F2));
+				line.setLength(0);
+			}
+			line.append(line.length() > 0 ? " " : "").append(word);
+		}
+		if (line.length() > 0) {
+			lines.add(Component.literal(line.toString()).withColor(0xEDE6F2));
+		}
+		if (tier.equals("CURSED")) {
+			lines.add(Component.literal("Cursed: huge power, a real cost.").withColor(0xB04CFF));
+		}
+		return lines;
 	}
 
 	@Override

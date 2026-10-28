@@ -1572,10 +1572,6 @@ public final class Horde {
 					}
 				}
 			}
-			if (left <= 4 && toSpawn == 0 && bosses == 0) {
-				// The last few glow, so nobody hunts for a hidden spider.
-				mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, false, false));
-			}
 		}
 		// Keep the cache standing (explosions nearby can't knock it out).
 		if (!arena.getBlockState(c).is(ModBlocks.RUBY_BLOCK)) {
