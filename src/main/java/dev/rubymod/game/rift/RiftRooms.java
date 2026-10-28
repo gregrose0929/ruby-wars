@@ -63,6 +63,11 @@ final class RiftRooms {
 	/** Guardians freed this act: each one comes along into every room. */
 	static int guardians;
 
+	/** Gold stolen in this Vault Heist. */
+	static int loot() {
+		return type == RiftMap.Type.HEIST ? loot : 0;
+	}
+
 	static boolean active() {
 		return type != null;
 	}

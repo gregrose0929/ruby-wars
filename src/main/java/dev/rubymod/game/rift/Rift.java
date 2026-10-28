@@ -558,6 +558,8 @@ public final class Rift {
 		}
 		map = RiftMap.generate(RandomSource.create(seed), act);
 		RiftRooms.guardians = 0;
+		KEYS.clear();
+		FACED.clear();
 		node = null;
 		for (ServerPlayer p : players(server)) {
 			RiftMeta.kit(p, RUNNERS.get(p.getUUID()));
@@ -576,7 +578,8 @@ public final class Rift {
 			act++;
 			map = RiftMap.generate(RandomSource.create(seed + act * 104729L), act);
 			for (ServerPlayer p : players(server)) {
-				Alerts.title(p, "ACT " + act, act == 2 ? "Deeper: the Sky Dock awaits" : "The bottom of the Rift: the Ruby Heart", ChatFormatting.LIGHT_PURPLE);
+				Alerts.title(p, act >= 4 ? "THE HEART OF THE RIFT" : "ACT " + act, act >= 4 ? "The secret act: the Ruby Sovereign waits"
+						: "Deeper: " + map.boss.title + " waits at the bottom", ChatFormatting.LIGHT_PURPLE);
 				p.level().playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.7F, 0.9F);
 			}
 			for (Runner r : RUNNERS.values()) {
@@ -604,6 +607,7 @@ public final class Rift {
 			}
 		}
 		lines.add("votes|" + String.join(",", votes.entrySet().stream().map(e -> e.getKey() + ":" + e.getValue()).toList()));
+		lines.add("keys|" + String.join(",", KEYS));
 		for (ServerPlayer p : players(server)) {
 			Net.send(p, new MorePayloads.RiftScreen("map", lines));
 		}
@@ -719,6 +723,9 @@ public final class Rift {
 				wave = 0;
 				waveStartTicks = ticks;
 				waves = 0;
+				if (map.boss != RiftBosses.Boss.SOVEREIGN) {
+					FACED.add(map.boss);
+				}
 				boss = RiftBosses.spawn(map.boss, level, room, RUNNERS.size(), node.floor);
 				String[] intro = {map.boss.title.toUpperCase(), map.boss.tip};
 				BAR.setVisible(false);
@@ -921,7 +928,7 @@ public final class Rift {
 				}
 				MOBS.clear();
 				RiftMutations.clear();
-				if (act < 3) {
+				if (act < 3 || act == 3 && KEYS.size() >= 3) {
 					actCleared(server, level);
 				} else {
 					victory(server);
@@ -983,6 +990,26 @@ public final class Rift {
 		}
 	}
 
+	/** The Rift Keys found this run (flame, gold, life): all three open the secret fourth act. */
+	static final java.util.Set<String> KEYS = new java.util.LinkedHashSet<>();
+	/** The bosses this run has fought (the finale brings back their echoes). */
+	static final List<RiftBosses.Boss> FACED = new ArrayList<>();
+
+	static void grantKey(MinecraftServer server, String id, String name) {
+		if (!KEYS.add(id)) {
+			return;
+		}
+		for (ServerPlayer p : players(server)) {
+			Alerts.title(p, "RIFT KEY: " + name.toUpperCase(), KEYS.size() + " of 3" + (KEYS.size() == 3 ? ": the Heart of the Rift will open!" : ""),
+					ChatFormatting.LIGHT_PURPLE);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.VAULT_OPEN_SHUTTER, SoundSource.PLAYERS, 1.0F, 1.0F);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.6F, 1.4F);
+			RiftFx.beam((ServerLevel) p.level(), p.position(), 16, ParticleTypes.END_ROD, 0xFFC27BFF);
+			p.sendSystemMessage(Component.literal("\u2726 Rift Key found: " + name + " (" + KEYS.size() + "/3). "
+					+ (KEYS.size() == 3 ? "Beat the act 3 boss to open the Heart of the Rift!" : "Find all three to open a secret act.")).withStyle(ChatFormatting.LIGHT_PURPLE));
+		}
+	}
+
 	/** This room's Burning Elites (they burn, and fire can't touch them). */
 	private static final java.util.Set<UUID> BURNING = new java.util.HashSet<>();
 
@@ -1022,7 +1049,9 @@ public final class Rift {
 		for (ServerPlayer p : players(server)) {
 			Runner r = RUNNERS.get(p.getUUID());
 			p.setHealth(p.getMaxHealth());
-			Alerts.title(p, "ACT " + act + " CLEARED!", "+100 gold  \u2022  choose a Legendary relic", ChatFormatting.GOLD);
+			Alerts.title(p, act == 3 ? "THE HEART OF THE RIFT OPENS" : "ACT " + act + " CLEARED!",
+					act == 3 ? "All three keys turn... one more battle waits" : "+100 gold  \u2022  choose a Legendary relic", act == 3 ? ChatFormatting.LIGHT_PURPLE
+							: ChatFormatting.GOLD);
 			RiftFx.screen(p, "flash", 0xFFFFC02E, 25);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 1.0F);
 			r.offer = RelicOffers.offer(r, RiftMap.Type.BOSS, random);
@@ -1045,6 +1074,12 @@ public final class Rift {
 		RiftObjectives.clear(level);
 		int bonus = (node.burning ? 100 : node.type == RiftMap.Type.ELITE || node.type == RiftMap.Type.TANK || jobDone ? 60 : 30) + RiftRooms.bonusGold();
 		BURNING.clear();
+		if (node.burning) {
+			grantKey(server, "flame", "Key of Flame");
+		}
+		if (RiftRooms.loot() >= 100) {
+			grantKey(server, "gold", "Key of Gold");
+		}
 		RiftMap.Type special = RiftRooms.active() ? RiftRooms.rewardTier() : null;
 		String specialTitle = RiftRooms.rewardTitle();
 		RiftRooms.clear(level);
@@ -1654,7 +1689,8 @@ public final class Rift {
 		fireworks(level, room.portal, 12);
 		for (ServerPlayer p : players(server)) {
 			Runner r = RUNNERS.get(p.getUUID());
-			Alerts.title(p, "RIFT CONQUERED!", "The Ruby Titan has fallen. You win!", ChatFormatting.GOLD);
+			Alerts.title(p, act >= 4 ? "TRUE VICTORY!" : "RIFT CONQUERED!", act >= 4 ? "The Ruby Sovereign has fallen. The Rift is yours!"
+					: "The " + map.boss.title + " has fallen. You win!", ChatFormatting.GOLD);
 			RiftFx.screen(p, "flash", 0xFFFFC02E, 30);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 1.0F);
 			p.sendSystemMessage(Component.literal("====== VICTORY: " + r.kills + " kills, " + r.relics.size() + " relics ======")
@@ -1730,7 +1766,9 @@ public final class Rift {
 	private static void syncHud(MinecraftServer server) {
 		String where = state == State.STAGING ? "THE THRESHOLD" + (RiftMeta.heat > 0 ? "  \u2022  HEAT " + RiftMeta.heat : "")
 				+ (RiftMeta.daily ? "  \u2022  DAILY" : "") : node == null ? "RUBY RIFT"
-				: "ACT " + act + "  \u2022  FLOOR " + (node.floor + 1) + "/" + (RiftMap.FLOORS + 1) + "  \u2022  " + node.theme.title.toUpperCase();
+				: act >= 4 ? "THE HEART OF THE RIFT" + (KEYS.isEmpty() ? "" : "  \u2022  KEYS " + KEYS.size() + "/3")
+						: "ACT " + act + "  \u2022  FLOOR " + (node.floor + 1) + "/" + (RiftMap.FLOORS + 1) + "  \u2022  " + node.theme.title.toUpperCase()
+								+ (KEYS.isEmpty() ? "" : "  \u2022  KEYS " + KEYS.size() + "/3");
 		List<String> team = new ArrayList<>();
 		for (Runner r : RUNNERS.values()) {
 			ServerPlayer p = server.getPlayerList().getPlayer(r.id);
@@ -1895,6 +1933,17 @@ public final class Rift {
 					testSkip(server, "boss");
 					return;
 				}
+				if (what.equals("killboss") && boss != null) {
+					LivingEntity b = boss.body(level(server));
+					if (b != null) {
+						b.discard();
+					}
+					return;
+				}
+				if (what.startsWith("key:")) {
+					grantKey(server, what.substring(4), "Key of " + what.substring(4));
+					return;
+				}
 				if (what.startsWith("charm:")) {
 					for (ServerPlayer p : players(server)) {
 						RiftCharms.give(p, RiftCharms.Charm.valueOf(what.substring(6)));
@@ -1910,6 +1959,7 @@ public final class Rift {
 							sendOffer(p, rn, "Test offer");
 						} else if (what.equals("nooffer")) {
 							rn.offer = List.of();
+							rn.event = List.of();
 						} else if (what.equals("do:blink")) {
 							RelicEffects.ability(p, "blink");
 						} else {

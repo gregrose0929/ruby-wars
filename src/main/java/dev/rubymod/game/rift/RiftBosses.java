@@ -23,7 +23,9 @@ public final class RiftBosses {
 		MIRROR_KNIGHT(2, "Mirror Knight", "A knight of polished steel that copies your relics. Don't shoot its Mirror Stance: shots bounce back.",
 				RiftRoom.Theme.FROST, "minecraft:diamond_sword", "It copies your relics. Hold fire when the mirror's up!"),
 		STORM_WYRM(3, "Storm Wyrm", "A flying serpent that calls down lightning and dives. Hit it hard while it lies stunned.", RiftRoom.Theme.SKYDOCK,
-				"minecraft:trident", "Dodge the dive, then hit it while it's stunned!");
+				"minecraft:trident", "Dodge the dive, then hit it while it's stunned!"),
+		SOVEREIGN(4, "Ruby Sovereign", "The secret heart of the Rift (all three Rift Keys): echoes of every boss you beat, then the Sovereign itself.",
+				RiftRoom.Theme.HEART, "minecraft:sculk_catalyst", "Echoes first, then the Sovereign. Jump its shockwaves!");
 
 		public final int act;
 		public final String title;
@@ -64,6 +66,7 @@ public final class RiftBosses {
 			case HIVE_QUEEN -> HiveQueen.spawn(level, room, players);
 			case MIRROR_KNIGHT -> MirrorKnight.spawn(level, room, players);
 			case STORM_WYRM -> StormWyrm.spawn(level, room, players);
+			case SOVEREIGN -> RiftFinale.spawn(level, room, players, Rift.FACED);
 		};
 	}
 }

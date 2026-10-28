@@ -88,6 +88,19 @@ public final class RiftMap {
 		RiftMap map = new RiftMap();
 		map.act = act;
 		map.boss = RiftBosses.pick(act, random);
+		if (act >= 4) {
+			// The Heart of the Rift: one last stop (a Spring, the Arsenal, the Merchant), then the end.
+			Type[] stops = {Type.SPRING, Type.REST, Type.SHOP};
+			for (int c = 0; c < LANES; c++) {
+				map.nodes.add(new Node(map.nodes.size(), 0, c, LANES, stops[c], RiftRoom.Theme.HEART));
+			}
+			Node end = new Node(map.nodes.size(), 1, 1, LANES, Type.BOSS, map.boss.theme);
+			map.nodes.add(end);
+			for (int c = 0; c < LANES; c++) {
+				map.nodes.get(c).next.add(end.id);
+			}
+			return map;
+		}
 		RiftRoom.Theme[] themes = RiftRoom.Theme.normal();
 		for (int f = 0; f < FLOORS; f++) {
 			for (int c = 0; c < LANES; c++) {

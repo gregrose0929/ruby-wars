@@ -40,7 +40,8 @@ public class ManualScreen extends Screen {
 					"Pick Easy, Normal or Hard when you start (H). Reaching wave 5 counts as a Ruby Wars goal."),
 			new Page("Ruby Rift",
 					"A co-op roguelike for 1-4: fight room to room through three acts, and after every room pick 1 of 3 relics.",
-					"Vote on the map where to go next: fights, elites, treasure, the merchant, mysteries, the Arsenal (new weapons), tank assaults.",
+					"The map has three lanes: Safe (shops, Springs, rescues), Middle (a mix and the treasure) and Danger (elites, heists, the best loot).",
+					"Find the three Rift Keys (beat a Burning Elite, steal 100 gold in a Vault Heist, take one at a Ruby Spring) to open a secret fourth act.",
 					"Relics change how you play: lightning, napalm, ice, drones, clones, black holes... Two elements on two teammates can make a Bond relic.",
 					"COMBOS: some pairs of relics switch on a bonus power by themselves (cards that would complete one say COMBO!). "
 							+ "At the Arsenal, fuse two weapons; 12 pairs make a named legendary with its own special move.",

@@ -40,6 +40,9 @@ final class RiftSpring {
 		if (r.relics.stream().anyMatch(r::canCombine)) {
 			out.add(PREFIX + "relic|Strengthen a Relic|One of your relics gains a star. You choose which.|minecraft:nether_star");
 		}
+		if (!Rift.KEYS.contains("life")) {
+			out.add(PREFIX + "key|Take the Key of Life|A Rift Key, instead of a gift. Find all three (flame, gold, life) to open a secret act.|minecraft:trial_key");
+		}
 		if (!temperable(p).isEmpty()) {
 			out.add(PREFIX + "temper|Temper a Weapon|One of your weapons gains a random new power. You choose which weapon.|minecraft:anvil");
 		}
@@ -90,6 +93,8 @@ final class RiftSpring {
 			level.playSound(null, p.blockPosition(), SoundEvents.GENERIC_DRINK.value(), SoundSource.PLAYERS, 1.0F, 1.0F);
 			level.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 0.8F, 1.4F);
 			dev.rubymod.game.Alerts.title(p, "REFRESHED", "The Spring heals you", ChatFormatting.GREEN);
+		} else if (id.equals("key")) {
+			Rift.grantKey(level.getServer(), "life", "Key of Life");
 		} else if (id.equals("relic")) {
 			List<String> lines = new ArrayList<>();
 			lines.add("title|Which relic gains a star?");

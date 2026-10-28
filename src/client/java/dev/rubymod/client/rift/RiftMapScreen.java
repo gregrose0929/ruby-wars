@@ -28,6 +28,8 @@ public class RiftMapScreen extends Screen {
 
 	/** The act's boss: id, name, what it is. */
 	private String bossName = "";
+	/** Rift Keys found this run. */
+	private List<String> keys = List.of();
 	private String bossAbout = "";
 
 	private List<Node> nodes = new ArrayList<>();
@@ -46,6 +48,10 @@ public class RiftMapScreen extends Screen {
 		votes.clear();
 		for (String line : lines) {
 			String[] f = line.split("[|]", -1);
+			if (f[0].equals("keys")) {
+				keys = f.length > 1 && !f[1].isEmpty() ? List.of(f[1].split(",")) : List.of();
+				continue;
+			}
 			if (f[0].equals("boss") && f.length >= 4) {
 				bossName = f[2];
 				bossAbout = f[3];
@@ -191,6 +197,25 @@ public class RiftMapScreen extends Screen {
 		}
 		g.centeredText(font, "◆ THE RIFT ◆" + (bossName.isEmpty() ? "" : "   Boss: " + bossName.toUpperCase()), width / 2, 8, 0xFFFF3D6E);
 		g.centeredText(font, "Click a glowing room to vote for it. The most votes wins.", width / 2, 20, 0xFFB8A8C8);
+		// The Rift Keys: three slots, lit as they're found.
+		{
+			String[] names = {"flame", "gold", "life"};
+			int[] colors = {0xFFFF7A2E, 0xFFFFC02E, 0xFF6EE38A};
+			int kx = width - 64;
+			g.text(font, "KEYS", kx - 28, 9, 0xFFC27BFF, true);
+			for (int i = 0; i < 3; i++) {
+				boolean got = keys.contains(names[i]);
+				g.fill(kx + i * 18, 6, kx + i * 18 + 14, 20, got ? 0xFF000000 | colors[i] : 0x80202020);
+				g.outline(kx + i * 18, 6, 14, 14, got ? 0xFFFFFFFF : 0xFF504050);
+				g.centeredText(font, got ? "\u2726" : "?", kx + i * 18 + 7, 9, got ? 0xFF201008 : 0xFF706070);
+			}
+			if (mouseX >= kx - 30 && mouseX < kx + 54 && mouseY >= 4 && mouseY < 22) {
+				g.setComponentTooltipForNextFrame(font, List.of(Component.literal("Rift Keys: " + keys.size() + "/3").withColor(0xC27BFF),
+						Component.literal("Flame: beat a Burning Elite.").withColor(0xFF7A2E), Component.literal("Gold: steal 100+ gold in a Vault Heist.")
+								.withColor(0xFFC02E), Component.literal("Life: take it at a Ruby Spring (instead of a gift).").withColor(0x6EE38A),
+						Component.literal("All three open a secret fourth act.").withColor(0xE0E0E0)), mouseX, mouseY);
+			}
+		}
 		// The three lanes, named at the bottom.
 		{
 			int span = Math.min(width - 160, 300);

@@ -1432,6 +1432,103 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("finale")) {
+			// All three keys, the act 3 boss, the Heart of the Rift, the echoes and the Sovereign.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(40, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 15; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+				for (String r : new String[] {"quick_hands", "twin_barrels", "headhunter", "chain_lightning", "key:flame", "key:gold", "key:life"}) {
+					dev.rubymod.game.rift.Rift.testSkip(server, r);
+				}
+				var stack = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.ARR_RIFLE);
+				stack.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+				me(server).getInventory().setItem(0, stack);
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			then(60, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+					dev.rubymod.game.rift.Rift.testSkip(server, "act3");
+				});
+			});
+			String[] last = {""};
+			for (int t = 0; t < 7000; t++) {
+				int tick = t;
+				then(1, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					String st = dev.rubymod.game.rift.Rift.debugState();
+					String phase = st.substring(0, st.indexOf(' ')) + " " + dev.rubymod.game.rift.Rift.bossDebug().split(" ")[0];
+					if (!phase.equals(last[0])) {
+						last[0] = phase;
+						log("finale t{}: {} | {}", tick, st.length() > 120 ? st.substring(0, 120) : st, dev.rubymod.game.rift.Rift.bossDebug());
+					}
+					if (me.getHealth() < 12) {
+						me.setHealth(me.getMaxHealth());
+					}
+					if (st.startsWith("FIGHT") && tick % 100 == 0 && dev.rubymod.game.rift.Rift.bossDebug().contains("titan")) {
+						// (The bot can't plan around pylons: the Titan and its echo are skipped.)
+						dev.rubymod.game.rift.Rift.testSkip(server, "killboss");
+					}
+					var held = me.getInventory().getItem(0);
+					if (held.getItem() instanceof dev.rubymod.gun.GunItem && dev.rubymod.gun.GunItem.ammo(held) <= 0) {
+						held.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+					}
+					if (st.startsWith("FIGHT")) {
+						aimAtNearest(server);
+						me.clearFire();
+						me.getInventory().setSelectedSlot(0);
+						var stack = me.getInventory().getItem(0);
+						if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+							dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+						}
+					} else if (st.startsWith("CALM") && tick % 100 == 0) {
+						// Done here: through the portal.
+						dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+						var c = dev.rubymod.game.rift.Rift.roomCenter();
+						if (c != null) {
+							me.teleportTo(c.x, c.y + 0.2, c.z);
+						}
+					}
+				}));
+				if (t % 100 == 50) {
+					then(0, mc -> {
+						var st = dev.rubymod.game.rift.Rift.debugState();
+						if (st.startsWith("VOTE")) {
+							net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode()));
+						}
+						if (!(mc.gui.screen() instanceof dev.rubymod.client.rift.RiftMapScreen) || !st.startsWith("VOTE")) {
+							mc.gui.setScreen(null);
+						}
+					});
+				}
+				if (t % 600 == 300) {
+					then(0, mc -> {
+						var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+						mc.player.setYRot(sp.getYRot());
+						mc.player.setXRot(sp.getXRot());
+						shot(mc, "finale-" + tick);
+					});
+				}
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("bosses")) {
 			// The three new bosses, fought one after another.
 			then(0, mc -> {
