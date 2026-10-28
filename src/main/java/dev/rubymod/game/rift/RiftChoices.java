@@ -23,7 +23,7 @@ public final class RiftChoices {
 			case "buy" -> Rift.buy(player, id);
 			case "event" -> Rift.event(player, id);
 			case "ability" -> RelicEffects.ability(player, id);
-			case "loadout", "unlock", "heat", "daily" -> RiftMeta.choose(player, kind, id);
+			case "loadout", "unlock", "heat", "daily", "pick_ability" -> RiftMeta.choose(player, kind.equals("pick_ability") ? "ability" : kind, id);
 			default -> {
 			}
 		}

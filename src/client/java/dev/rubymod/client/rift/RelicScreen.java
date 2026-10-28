@@ -22,8 +22,11 @@ import net.minecraft.world.item.ItemStack;
  * gold with a sweep of light; Cursed ones flicker purple. Cards rise in one by one.
  */
 public class RelicScreen extends Screen {
-	/** id, title, tier, element, icon, about, price ("" where it doesn't apply). */
-	private record Card(String id, String title, String tier, String element, String icon, String about, int price) {
+	/** id, title, tier, element, icon, about, price ("" where it doesn't apply), and the stars it combines to (0: a new relic). */
+	private record Card(String id, String title, String tier, String element, String icon, String about, int price, int combine) {
+		Card(String id, String title, String tier, String element, String icon, String about, int price) {
+			this(id, title, tier, element, icon, about, price, 0);
+		}
 	}
 
 	final String kind;
@@ -54,7 +57,7 @@ public class RelicScreen extends Screen {
 						list.add(new Card(f[0], f[1], kind.equals("event") ? "EVENT" : "SERVICE", "NONE", f[3], f[2], f.length > 4 ? Integer.parseInt(f[4]) : -1));
 					}
 				} else if (f.length >= 7) {
-					list.add(new Card(f[0], f[1], f[2], f[3], f[4], f[5], Integer.parseInt(f[6])));
+					list.add(new Card(f[0], f[1], f[2], f[3], f[4], f[5], Integer.parseInt(f[6]), f.length > 7 ? Integer.parseInt(f[7]) : 0));
 				}
 			} catch (NumberFormatException e) {
 				// A line we can't read is skipped, never a crash.
@@ -153,7 +156,10 @@ public class RelicScreen extends Screen {
 			g.fillGradient(x + 1, y + 1, x + cardW - 1, y + 50, glowA << 24 | tier & 0xFFFFFF, 0x00000000);
 			// The frame: shimmering gold for Legendary, flickering purple for Cursed.
 			int frame = tier;
-			if (legendary) {
+			if (c.combine() > 0) {
+				// Combining: a gold frame that pulses.
+				frame = (now / 200 + i) % 2 == 0 ? 0xFFFFE680 : 0xFFFFB020;
+			} else if (legendary) {
 				float sh = (float) (0.5 + 0.5 * Math.sin(now / 160.0));
 				frame = sh > 0.5F ? 0xFFFFE680 : 0xFFFFC02E;
 			} else if (cursed && (now / 90 + i) % 7 == 0) {
@@ -206,8 +212,8 @@ public class RelicScreen extends Screen {
 				ty += 10;
 			}
 			// The button.
-			String label = owned ? "OWNED" : kind.equals("shop") ? (cantAfford ? "◆ " + c.price() : "BUY  ◆ " + c.price())
-					: kind.equals("event") ? "CHOOSE" : "TAKE IT";
+			String label = owned ? "OWNED" : kind.equals("shop") ? (cantAfford ? "◆ " + c.price() : (c.combine() > 0 ? "COMBINE  ◆ " : "BUY  ◆ ") + c.price())
+					: kind.equals("event") ? "CHOOSE" : c.combine() > 0 ? "COMBINE" : "TAKE IT";
 			int by = y + cardH - 20;
 			int btn = owned ? 0xC0303038 : cantAfford ? 0xC0602020 : hover ? 0xFF000000 | tier & 0xFFFFFF : 0xB0000000 | tier & 0xFFFFFF;
 			g.fill(x + 8, by, x + cardW - 8, by + 14, btn);

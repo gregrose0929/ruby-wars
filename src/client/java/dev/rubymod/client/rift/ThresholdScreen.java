@@ -30,6 +30,7 @@ public class ThresholdScreen extends Screen {
 	private boolean daily;
 	private List<String> dailyTop = List.of();
 	private final List<String[]> loadouts = new ArrayList<>();
+	private final List<String[]> abilities = new ArrayList<>();
 	private final List<String[]> relics = new ArrayList<>();
 	private final List<int[]> buttons = new ArrayList<>();
 	private final List<String[]> actions = new ArrayList<>();
@@ -42,6 +43,7 @@ public class ThresholdScreen extends Screen {
 
 	void update(List<String> lines) {
 		loadouts.clear();
+		abilities.clear();
 		relics.clear();
 		for (String line : lines) {
 			String[] f = line.split("[|]", -1);
@@ -56,6 +58,7 @@ public class ThresholdScreen extends Screen {
 					dailyTop = f.length > 2 && !f[2].isEmpty() ? List.of(f[2].split(";")) : List.of();
 				}
 				case "loadout" -> loadouts.add(f);
+				case "ability" -> abilities.add(f);
 				case "relic" -> relics.add(f);
 				default -> {
 				}
@@ -103,7 +106,8 @@ public class ThresholdScreen extends Screen {
 		// Loadouts.
 		g.text(font, "LOADOUT", x1, top, 0xFFFF3D6E, true);
 		int y = top + 12;
-		int rowH = Math.max(26, Math.min(36, (height - top - 30) / Math.max(1, loadouts.size())));
+		int abilityRows = (abilities.size() + 1) / 2;
+		int rowH = Math.max(25, Math.min(36, (height - top - 30 - 16 - abilityRows * 15) / Math.max(1, loadouts.size())));
 		List<Component> tip = null;
 		for (String[] l : loadouts) {
 			if (mouseX >= x1 && mouseX < x1 + colW - 60 && mouseY >= y && mouseY < y + rowH - 3) {
@@ -119,6 +123,21 @@ public class ThresholdScreen extends Screen {
 			String label = selected ? "SELECTED" : locked ? "◆ " + l[5] : "SELECT";
 			button(g, x1 + colW - 58, y + 2, 54, 10, label, locked ? 0xFFFFC02E : 0xFFFF3D6E, selected, mouseX, mouseY, "loadout", l[1]);
 			y += rowH;
+		}
+		// Abilities (Z in the Rift).
+		y += 2;
+		g.text(font, "ABILITY  (Z)", x1, y, 0xFFFFC02E, true);
+		y += 11;
+		int bw = (colW - 4) / 2;
+		for (int i = 0; i < abilities.size(); i++) {
+			String[] a = abilities.get(i);
+			int bx = x1 + (i % 2) * (bw + 4);
+			int by = y + (i / 2) * 15;
+			boolean on = a.length > 5 && a[5].equals("selected");
+			button(g, bx, by, bw, 13, a[2], 0xFFFFC02E, on, mouseX, mouseY, "pick_ability", a[1]);
+			if (mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 13) {
+				tip = List.of(Component.literal(a[2]).withColor(0xFFC02E), Component.literal(a[4]).withColor(0xE0D8E8));
+			}
 		}
 		// Relics to unlock.
 		g.text(font, "NEW RELICS", x2, top, 0xFF4FA8FF, true);

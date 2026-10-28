@@ -65,7 +65,8 @@ public final class RelicEffects {
 	public static final class State {
 		int hits;
 		long orbitalAt;
-		boolean airJumped;
+		/** Mid-air jumps used since last on the ground. */
+		int airJumps;
 		long blinkAt;
 		boolean bulletTimeUsed;
 		double fallFrom = Double.NaN;
@@ -75,6 +76,13 @@ public final class RelicEffects {
 		int tankCooldown;
 		int turretCooldown;
 		boolean phoenixUsed;
+		/** Abilities: untouchable mid-Dash, no fall damage after a Grapple, Overdrive running. */
+		long untouchableUntil;
+		long noFallUntil;
+		long overdriveUntil;
+		/** Bottomless Mag: shots in a row (spinning up), and when the last one was. */
+		int spin;
+		long lastShot;
 		int thunder;
 		int still;
 		boolean iceShield;
@@ -112,14 +120,19 @@ public final class RelicEffects {
 		dev.rubymod.game.Alerts.title(p, "PHOENIX", "Back from the flames (once an act)", ChatFormatting.GOLD);
 	}
 
-	/** Headhunter: a headshot puts two bullets back in the gun. */
-	public static void headshot(ServerPlayer p) {
-		if (!has(p, Relic.HEADHUNTER)) {
+	/** Headhunter: a headshot arcs into the nearest other enemy for most of the damage. */
+	public static void headshot(ServerPlayer p, Entity target, float damage) {
+		if (!has(p, Relic.HEADHUNTER) || inEffect || !(p.level() instanceof ServerLevel level)) {
 			return;
 		}
-		ItemStack gun = p.getMainHandItem();
-		if (gun.getItem() instanceof GunItem g) {
-			gun.set(dev.rubymod.registry.ModComponents.AMMO, Math.min(g.stats(gun).magazine(), GunItem.ammo(gun) + 2));
+		Vec3 from = target.getBoundingBox().getCenter();
+		List<LivingEntity> near = enemiesNear(level, from, 10, target);
+		near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(target)));
+		for (int i = 0; i < Math.min(lv(p, Relic.HEADHUNTER), near.size()); i++) {
+			LivingEntity next = near.get(i);
+			RiftFx.arc(level, from, next.getEyePosition(), 0xFFFFD040);
+			level.sendParticles(ParticleTypes.CRIT, next.getX(), next.getEyeY(), next.getZ(), 12, 0.2, 0.2, 0.2, 0.3);
+			hurt(p, next, damage * 0.75F, 0xFFFFD040);
 		}
 	}
 
@@ -164,6 +177,12 @@ public final class RelicEffects {
 		return run != null && run.has(r);
 	}
 
+	/** 0 without the relic; its stars (1-3) with it. */
+	private static int lv(ServerPlayer p, Relic r) {
+		Rift.Runner run = runner(p);
+		return run == null ? 0 : run.level(r);
+	}
+
 	private static long now(ServerLevel level) {
 		return level.getGameTime();
 	}
@@ -171,7 +190,21 @@ public final class RelicEffects {
 	// ----- Guns -----
 
 	public static float fireIntervalScale(ServerPlayer p) {
-		return has(p, Relic.QUICK_HANDS) ? 0.5F : 1.0F;
+		float scale = switch (lv(p, Relic.QUICK_HANDS)) {
+			case 0 -> 1.0F;
+			case 1 -> 0.5F;
+			case 2 -> 0.4F;
+			default -> 0.33F;
+		};
+		if (RiftAbilities.overdriven(p)) {
+			scale *= 0.5F;
+		}
+		Rift.Runner r = runner(p);
+		if (r != null && r.has(Relic.BOTTOMLESS_MAG)) {
+			// Spinning up: 2% faster every shot in a row, up to twice as fast (more with stars).
+			scale *= Math.max(1.0F / (1 + r.level(Relic.BOTTOMLESS_MAG) * 0.5F + 0.5F), 1.0F - r.fx.spin * 0.02F);
+		}
+		return scale;
 	}
 
 	public static boolean infiniteAmmo(ServerPlayer p) {
@@ -179,11 +212,12 @@ public final class RelicEffects {
 	}
 
 	public static int shotMultiplier(ServerPlayer p) {
-		return has(p, Relic.TWIN_BARRELS) ? 2 : 1;
+		return 1 + lv(p, Relic.TWIN_BARRELS);
 	}
 
 	public static int extraBounces(ServerPlayer p) {
-		return has(p, Relic.RICOCHET) ? 3 : 0;
+		int l = lv(p, Relic.RICOCHET);
+		return l == 0 ? 0 : 1 + 2 * l;
 	}
 
 	/** Ricochet Rounds: after a bounce, bend toward the nearest enemy it can see. */
@@ -205,17 +239,20 @@ public final class RelicEffects {
 			return dmg;
 		}
 		if (headshot && r.has(Relic.HEADHUNTER)) {
-			dmg *= 3;
+			dmg *= 3 + r.level(Relic.HEADHUNTER);
+		}
+		if (RiftAbilities.overdriven(p)) {
+			dmg *= 1.5F;
 		}
 		if (r.has(Relic.GLASS_CANNON)) {
-			dmg *= 3;
+			dmg *= 2 + r.level(Relic.GLASS_CANNON);
 		}
 		if (r.has(Relic.BLOOD_AMMO)) {
-			dmg *= 2.5F;
+			dmg *= 2.5F + r.level(Relic.BLOOD_AMMO);
 		}
 		if (r.has(Relic.BERSERKER)) {
 			float missing = 1 - p.getHealth() / p.getMaxHealth();
-			dmg *= 1 + 3 * missing;
+			dmg *= 1 + (2 + r.level(Relic.BERSERKER)) * missing;
 		}
 		return dmg;
 	}
@@ -224,6 +261,16 @@ public final class RelicEffects {
 		Rift.Runner r = runner(p);
 		if (r == null) {
 			return;
+		}
+		if (r.has(Relic.BOTTOMLESS_MAG)) {
+			long now = level.getGameTime();
+			r.fx.spin = now - r.fx.lastShot <= 12 ? r.fx.spin + 1 : 0;
+			r.fx.lastShot = now;
+			if (r.fx.spin >= 25 && r.fx.spin % 3 == 0) {
+				// Spun all the way up: the barrel glows.
+				Vec3 muzzle = p.getEyePosition().add(p.getLookAngle().scale(1.0));
+				level.sendParticles(ParticleTypes.SMALL_FLAME, muzzle.x, muzzle.y - 0.2, muzzle.z, 2, 0.05, 0.05, 0.05, 0.01);
+			}
 		}
 		if (r.has(Relic.BLOOD_AMMO) && p.getHealth() > 2) {
 			p.setHealth(p.getHealth() - 0.5F);
@@ -242,6 +289,7 @@ public final class RelicEffects {
 
 	/** Overkill: what a killing shot didn't need goes on into the next enemy. */
 	public static void overkill(ServerPlayer p, Entity target, float excess) {
+		excess *= Math.max(1, lv(p, Relic.OVERKILL));
 		if (excess < 1 || !has(p, Relic.OVERKILL) || !(p.level() instanceof ServerLevel level)) {
 			return;
 		}
@@ -281,7 +329,7 @@ public final class RelicEffects {
 		if (r.has(Relic.CHAIN_LIGHTNING)) {
 			List<LivingEntity> near = enemiesNear(level, target.position(), 7, target);
 			near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(target)));
-			for (int i = 0; i < Math.min(3, near.size()); i++) {
+			for (int i = 0; i < Math.min(1 + 2 * r.level(Relic.CHAIN_LIGHTNING), near.size()); i++) {
 				LivingEntity e = near.get(i);
 				RiftFx.arc(level, target.getBoundingBox().getCenter(), e.getBoundingBox().getCenter(), 0xFF66E0FF);
 				hurt(p, e, Math.max(3, amount * 0.6F), 0xFF66E0FF);
@@ -294,8 +342,8 @@ public final class RelicEffects {
 			}
 		}
 		if (r.has(Relic.NAPALM)) {
-			target.igniteForSeconds(5);
-			PATCHES.add(new Patch(new Vec3(target.getX(), Math.floor(target.getY()) + 0.05, target.getZ()), now(level) + 80, p.getUUID()));
+			target.igniteForSeconds(3 + 2 * r.level(Relic.NAPALM));
+			PATCHES.add(new Patch(new Vec3(target.getX(), Math.floor(target.getY()) + 0.05, target.getZ()), now(level) + 40 + 40 * r.level(Relic.NAPALM), p.getUUID()));
 		}
 		if (r.has(Relic.CRYO) && !boss) {
 			Frozen f = FROZEN.get(target.getUUID());
@@ -304,17 +352,18 @@ public final class RelicEffects {
 			} else {
 				int chill = CHILL.merge(target.getUUID(), 1, Integer::sum);
 				level.sendParticles(ParticleTypes.SNOWFLAKE, target.getX(), target.getY() + 1, target.getZ(), 6, 0.3, 0.5, 0.3, 0.02);
-				if (chill >= 3) {
+				if (chill >= 4 - r.level(Relic.CRYO)) {
 					CHILL.remove(target.getUUID());
 					freeze(level, target);
 				}
 			}
 		}
-		if (r.has(Relic.MIDAS) && !boss && target instanceof Mob mob && level.getRandom().nextFloat() < (RiftEnemies.twistOf(mob) != null ? 0.03F : 0.08F)) {
+		if (r.has(Relic.MIDAS) && !boss && target instanceof Mob mob
+				&& level.getRandom().nextFloat() < (RiftEnemies.twistOf(mob) != null ? 0.03F : 0.08F) * r.level(Relic.MIDAS)) {
 			statue(level, p, mob);
 			return;
 		}
-		if (r.has(Relic.THUNDERCLAP) && ++r.fx.thunder % 4 == 0) {
+		if (r.has(Relic.THUNDERCLAP) && ++r.fx.thunder % (5 - r.level(Relic.THUNDERCLAP)) == 0) {
 			var bolt = EntityTypes.LIGHTNING_BOLT.create(level, EntitySpawnReason.EVENT);
 			if (bolt != null) {
 				bolt.snapTo(target.getX(), target.getY(), target.getZ(), 0, 0);
@@ -326,7 +375,7 @@ public final class RelicEffects {
 				hurt(p, e, 6, 0xFF66E0FF);
 			}
 		}
-		if (r.has(Relic.BLACK_HOLE) && ++r.fx.hits % 10 == 0) {
+		if (r.has(Relic.BLACK_HOLE) && ++r.fx.hits % (13 - 3 * r.level(Relic.BLACK_HOLE)) == 0) {
 			blackHole(level, p, target.position().add(0, 1, 0));
 		}
 	}
@@ -337,11 +386,14 @@ public final class RelicEffects {
 			return;
 		}
 		Vec3 at = victim.getBoundingBox().getCenter();
+		if (r.has(Relic.BLOOD_AMMO)) {
+			p.heal(1.0F);
+		}
 		if (r.has(Relic.DOMINO)) {
-			blast(level, p, at, 3.5, 9, 0xFFFFD040, false);
+			blast(level, p, at, 3.0 + 0.75 * r.level(Relic.DOMINO), 5 + 4 * r.level(Relic.DOMINO), 0xFFFFD040, false);
 		}
 		if (r.has(Relic.NAPALM) && victim.isOnFire()) {
-			blast(level, p, at, 3.0, 8, 0xFFFF7A2E, false);
+			blast(level, p, at, 3.0, 4 + 4 * r.level(Relic.NAPALM), 0xFFFF7A2E, false);
 			level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 30, 0.6, 0.6, 0.6, 0.12);
 		}
 		if (r.has(Relic.PLASMA_STORM) && victim.isOnFire()) {
@@ -354,7 +406,7 @@ public final class RelicEffects {
 		if (r.has(Relic.RUBY_SIPHON)) {
 			for (ServerPlayer mate : Rift.players(level.getServer())) {
 				if (!mate.isSpectator()) {
-					mate.heal(2);
+					mate.heal(2 * r.level(Relic.RUBY_SIPHON));
 					RiftFx.line(level, at, mate.position().add(0, 1, 0), RiftFx.dust(0xFF3D6E, 0.8F), 0.6);
 					level.sendParticles(ParticleTypes.HEART, mate.getX(), mate.getY() + 2.1, mate.getZ(), 1, 0.2, 0.1, 0.2, 0);
 				}
@@ -362,7 +414,7 @@ public final class RelicEffects {
 		}
 		if (r.has(Relic.LEECH_SWARM)) {
 			List<LivingEntity> near = enemiesNear(level, victim.position(), 9, victim);
-			for (int i = 0; i < Math.min(3, near.size()); i++) {
+			for (int i = 0; i < Math.min(2 + r.level(Relic.LEECH_SWARM), near.size()); i++) {
 				LivingEntity e = near.get(i);
 				RiftFx.line(level, at, e.getBoundingBox().getCenter(), RiftFx.dust(0x7A0010, 1.0F), 0.35);
 				hurt(p, e, 5, 0xFFB00020);
@@ -370,10 +422,10 @@ public final class RelicEffects {
 			}
 		}
 		if (r.has(Relic.NECROMANCER) && victim instanceof Mob mob && !FROZEN.containsKey(victim.getUUID())) {
-			raise(level, p, mob);
+			raise(level, p, mob, 600 * r.level(Relic.NECROMANCER));
 		}
-		if (r.has(Relic.SHADOW_CLONE) && level.getRandom().nextFloat() < 0.25F
-				&& ALLIES.values().stream().filter(a -> a.isClone() && a.owner().equals(p.getUUID())).count() < 2) {
+		if (r.has(Relic.SHADOW_CLONE) && level.getRandom().nextFloat() < 0.15F + 0.1F * r.level(Relic.SHADOW_CLONE)
+				&& ALLIES.values().stream().filter(a -> a.isClone() && a.owner().equals(p.getUUID())).count() < 1 + r.level(Relic.SHADOW_CLONE)) {
 			clone(level, p);
 		}
 	}
@@ -384,7 +436,10 @@ public final class RelicEffects {
 		if (r == null) {
 			return true;
 		}
-		if (source.is(DamageTypes.FALL) && (r.has(Relic.ROCKET_BOOTS) || r.has(Relic.RUBY_AVATAR))) {
+		if (source.is(DamageTypes.FALL) && (r.has(Relic.ROCKET_BOOTS) || r.has(Relic.RUBY_AVATAR) || victim.level().getGameTime() < r.fx.noFallUntil)) {
+			return false;
+		}
+		if (victim.level().getGameTime() < r.fx.untouchableUntil || RiftAbilities.domeBlocks(victim, source)) {
 			return false;
 		}
 		if (r.fx.iceShield && amount > 0 && victim.level() instanceof ServerLevel level) {
@@ -403,7 +458,7 @@ public final class RelicEffects {
 				&& (source.getDirectEntity() != attacker || source.is(dev.rubymod.registry.ModDamage.BULLET)) && victim.level() instanceof ServerLevel level) {
 			RiftFx.line(level, victim.getEyePosition(), shooter.getBoundingBox().getCenter(), RiftFx.dust(0xFFFFFF, 1.0F), 0.4);
 			level.playSound(null, victim.blockPosition(), SoundEvents.SHIELD_BLOCK.value(), SoundSource.PLAYERS, 1.0F, 1.3F);
-			hurt(victim, shooter, amount * 2, 0xFFFFFFFF);
+			hurt(victim, shooter, amount * (1 + r.level(Relic.MIRROR_GUARD)), 0xFFFFFFFF);
 			return false;
 		}
 		return true;
@@ -416,15 +471,16 @@ public final class RelicEffects {
 			return;
 		}
 		r.fx.bulletTimeUsed = true;
+		int ticks = 60 + 40 * r.level(Relic.BULLET_TIME);
 		for (UUID id : Rift.MOBS) {
 			if (level.getEntity(id) instanceof LivingEntity e) {
-				e.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 100, 5, false, true));
-				e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 2, false, true));
+				e.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, ticks, 5, false, true));
+				e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, ticks, 2, false, true));
 			}
 		}
-		victim.addEffect(new MobEffectInstance(MobEffects.SPEED, 100, 1, false, false));
+		victim.addEffect(new MobEffectInstance(MobEffects.SPEED, ticks, 1, false, false));
 		for (ServerPlayer p : Rift.players(level.getServer())) {
-			RiftFx.screen(p, "slowmo", 0xFF66E0FF, 100);
+			RiftFx.screen(p, "slowmo", 0xFF66E0FF, ticks);
 		}
 		level.playSound(null, victim.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.0F, 0.5F);
 		victim.sendOverlayMessage(Component.literal("BULLET TIME").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
@@ -437,8 +493,10 @@ public final class RelicEffects {
 		if (r == null || p.isSpectator() || !(p.level() instanceof ServerLevel level)) {
 			return;
 		}
-		if (kind.equals("jump") && r.has(Relic.ROCKET_BOOTS) && !p.onGround() && !r.fx.airJumped) {
-			r.fx.airJumped = true;
+		if (kind.equals("active")) {
+			RiftAbilities.use(p, r);
+		} else if (kind.equals("jump") && r.has(Relic.ROCKET_BOOTS) && !p.onGround() && r.fx.airJumps < r.level(Relic.ROCKET_BOOTS)) {
+			r.fx.airJumps++;
 			Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
 			p.setDeltaMovement(p.getDeltaMovement().multiply(1, 0, 1).add(look.scale(0.35)).add(0, 0.85, 0));
 			p.needsSync = true;
@@ -448,12 +506,13 @@ public final class RelicEffects {
 		} else if (kind.equals("blink") && r.has(Relic.BLINK) && now(level) >= r.fx.blinkAt) {
 			Vec3 eye = p.getEyePosition();
 			Vec3 look = p.getLookAngle();
-			var hit = level.clip(new ClipContext(eye, eye.add(look.scale(8)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
-			Vec3 to = hit.getType() == HitResult.Type.MISS ? eye.add(look.scale(8)) : hit.getLocation().subtract(look.scale(0.6));
+			double reach = 4 + 4 * r.level(Relic.BLINK);
+			var hit = level.clip(new ClipContext(eye, eye.add(look.scale(reach)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
+			Vec3 to = hit.getType() == HitResult.Type.MISS ? eye.add(look.scale(reach)) : hit.getLocation().subtract(look.scale(0.6));
 			Vec3 from = p.position();
 			p.teleportTo(to.x, to.y - p.getEyeHeight() + 0.2, to.z);
 			p.resetFallDistance();
-			r.fx.blinkAt = now(level) + 50;
+			r.fx.blinkAt = now(level) + 60 - 15 * r.level(Relic.BLINK);
 			RiftFx.line(level, from.add(0, 1, 0), p.position().add(0, 1, 0), ParticleTypes.REVERSE_PORTAL, 0.3);
 			level.sendParticles(ParticleTypes.PORTAL, from.x, from.y + 1, from.z, 30, 0.3, 0.6, 0.3, 0.5);
 			level.sendParticles(RiftFx.dust(0xC27BFF, 1.5F), p.getX(), p.getY() + 1, p.getZ(), 20, 0.4, 0.6, 0.4, 0);
@@ -474,7 +533,7 @@ public final class RelicEffects {
 			float before = p.getMaxHealth();
 			double extra = 0;
 			if (r.has(Relic.TITAN_BLOOD)) {
-				extra += 20;
+				extra += 10 + 10 * r.level(Relic.TITAN_BLOOD);
 			}
 			if (r.has(Relic.RUBY_AVATAR)) {
 				extra += 20;
@@ -534,18 +593,23 @@ public final class RelicEffects {
 			r.fx.turret.addAll(model(level, r.fx.turretAt, 0, TURRET));
 		}
 		if (r.has(Relic.GRAVITY_GRENADES)) {
-			p.getInventory().add(new ItemStack(ModItems.FRAG_GRENADE, 4));
+			p.getInventory().add(new ItemStack(ModItems.FRAG_GRENADE, 2 + 2 * r.level(Relic.GRAVITY_GRENADES)));
 		}
 		if (r.has(Relic.CLUSTER_GRENADES)) {
-			p.getInventory().add(new ItemStack(ModItems.FRAG_GRENADE, 3));
+			p.getInventory().add(new ItemStack(ModItems.FRAG_GRENADE, 1 + 2 * r.level(Relic.CLUSTER_GRENADES)));
 		}
-		if (r.has(Relic.RUBY_GOLEM)) {
+		for (int g = 0; g < (r.level(Relic.RUBY_GOLEM) >= 3 ? 2 : r.has(Relic.RUBY_GOLEM) ? 1 : 0); g++) {
 			Mob golem = EntityTypes.IRON_GOLEM.create(level, EntitySpawnReason.EVENT);
 			if (golem != null) {
-				golem.snapTo(p.getX() + 2, p.getY(), p.getZ() + 1, p.getYRot(), 0);
+				golem.snapTo(p.getX() + (g == 0 ? 2 : -2), p.getY(), p.getZ() + 1, p.getYRot(), 0);
 				AttributeInstance size = golem.getAttribute(Attributes.SCALE);
 				if (size != null) {
-					size.setBaseValue(1.4);
+					size.setBaseValue(r.level(Relic.RUBY_GOLEM) >= 2 ? 1.8 : 1.4);
+				}
+				AttributeInstance hp = golem.getAttribute(Attributes.MAX_HEALTH);
+				if (hp != null && r.level(Relic.RUBY_GOLEM) >= 2) {
+					hp.setBaseValue(hp.getBaseValue() * 1.6);
+					golem.setHealth(golem.getMaxHealth());
 				}
 				golem.setCustomName(Component.literal(p.getName().getString() + "'s Ruby Golem").withStyle(ChatFormatting.RED));
 				golem.addTag(Rift.TAG);
@@ -565,7 +629,7 @@ public final class RelicEffects {
 		}
 		State s = r.fx;
 		if (p.onGround()) {
-			s.airJumped = false;
+			s.airJumps = 0;
 		}
 		// Ruby Avatar: land from a jump to stomp.
 		if (r.has(Relic.RUBY_AVATAR)) {
@@ -587,7 +651,7 @@ public final class RelicEffects {
 			boolean moved = s.lastPos != null && s.lastPos.distanceToSqr(p.position()) > 0.003;
 			s.lastPos = p.position();
 			s.still = moved ? 0 : s.still + 1;
-			if (s.still == 20 && !s.iceShield) {
+			if (s.still == 30 - 8 * r.level(Relic.GLACIER_SHIELD) && !s.iceShield) {
 				s.iceShield = true;
 				level.playSound(null, p.blockPosition(), SoundEvents.GLASS_PLACE, SoundSource.PLAYERS, 0.8F, 1.6F);
 			}
@@ -622,7 +686,7 @@ public final class RelicEffects {
 				target = nearestEnemy(level, p.position(), 40, null, false);
 			}
 			if (target != null) {
-				s.orbitalAt = now(level) + 240;
+				s.orbitalAt = now(level) + 300 - 60 * r.level(Relic.ORBITAL_STRIKE);
 				STRIKES.add(new Strike(new Vec3(target.getX(), Math.floor(target.getY()) + 0.1, target.getZ()), now(level) + 25, p.getUUID()));
 				level.playSound(null, target.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.2F, 2.0F);
 			}
@@ -640,7 +704,7 @@ public final class RelicEffects {
 			move(level, s.tank, at, facing);
 			if (target != null && --s.tankCooldown <= 0) {
 				boolean platoon = r.has(Relic.TANK_PLATOON);
-				s.tankCooldown = platoon ? 22 : 45;
+				s.tankCooldown = (platoon ? 22 : 45) / r.level(Relic.POCKET_TANK);
 				Vec3 muzzle = at.add(0, 0.5, 0);
 				Vec3 hit = target.getBoundingBox().getCenter();
 				RiftFx.line(level, muzzle, hit, ParticleTypes.SMOKE, 0.5);
@@ -656,11 +720,11 @@ public final class RelicEffects {
 				float facing = (float) Math.toDegrees(Math.atan2(-(target.getX() - s.turretAt.x), target.getZ() - s.turretAt.z));
 				move(level, s.turret, s.turretAt, facing);
 				if (--s.turretCooldown <= 0) {
-					s.turretCooldown = 6;
+					s.turretCooldown = Math.max(2, 7 - 2 * r.level(Relic.DROP_TURRET));
 					Vec3 muzzle = s.turretAt.add(0, 1.0, 0);
 					RiftFx.line(level, muzzle, target.getBoundingBox().getCenter(), ParticleTypes.CRIT, 0.7);
 					level.playSound(null, BlockPos.containing(muzzle), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.PLAYERS, 0.35F, 1.4F);
-					hurt(p, target, 3.5F, 0xFFB8C4D0);
+					hurt(p, target, 2.5F + r.level(Relic.DROP_TURRET), 0xFFB8C4D0);
 				}
 			}
 		}
@@ -811,9 +875,12 @@ public final class RelicEffects {
 				continue;
 			}
 			it.remove();
-			for (int k = 0; k < 4; k++) {
-				double a = k * Math.PI / 2 + 0.4;
-				BOMBLETS.add(new Bomblet(e.getValue().at().add(Math.cos(a) * 2.6, 0, Math.sin(a) * 2.6), t + 6 + k * 3, e.getValue().owner()));
+			ServerPlayer thrower = server.getPlayerList().getPlayer(e.getValue().owner());
+			int n = thrower == null ? 4 : 2 + 2 * Math.max(1, lv(thrower, Relic.CLUSTER_GRENADES));
+			for (int k = 0; k < n; k++) {
+				double a = k * Math.PI * 2 / n + 0.4;
+				double reach = 2.6 + (k % 2) * 0.8 * (n > 4 ? 1 : 0);
+				BOMBLETS.add(new Bomblet(e.getValue().at().add(Math.cos(a) * reach, 0, Math.sin(a) * reach), t + 6 + k * 3, e.getValue().owner()));
 			}
 		}
 		for (Iterator<Bomblet> it = BOMBLETS.iterator(); it.hasNext();) {
@@ -919,8 +986,9 @@ public final class RelicEffects {
 		RiftFx.ring(level, at.add(0, 0.3, 0), 4.5, RiftFx.dust(0xFF3D6E, 1.8F), 36);
 		level.playSound(null, p.blockPosition(), SoundEvents.MACE_SMASH_GROUND_HEAVY, SoundSource.PLAYERS, 1.0F, 0.7F);
 		RiftFx.shake(p, 1.2F, 10);
-		for (LivingEntity e : enemiesNear(level, at, 5, null)) {
-			hurt(p, e, 14, 0xFFFF3D6E);
+		int stars = Math.max(1, lv(p, Relic.RUBY_AVATAR));
+		for (LivingEntity e : enemiesNear(level, at, stars >= 3 ? 10 : 5, null)) {
+			hurt(p, e, 14 * stars, 0xFFFF3D6E);
 			e.setDeltaMovement(e.getDeltaMovement().add(e.position().subtract(at).normalize().scale(0.8)).add(0, 0.6, 0));
 		}
 	}
@@ -1016,7 +1084,7 @@ public final class RelicEffects {
 	}
 
 	/** Necromancer: the fallen get back up, on your side, for 30 seconds. */
-	private static void raise(ServerLevel level, ServerPlayer p, Mob dead) {
+	private static void raise(ServerLevel level, ServerPlayer p, Mob dead, int ticks) {
 		@SuppressWarnings("unchecked")
 		EntityType<? extends Mob> type = (EntityType<? extends Mob>) dead.getType();
 		Mob mob = type.create(level, EntitySpawnReason.EVENT);
@@ -1028,7 +1096,7 @@ public final class RelicEffects {
 		mob.setPersistenceRequired();
 		mob.addTag(Rift.TAG);
 		level.addFreshEntity(mob);
-		ALLIES.put(mob.getUUID(), new Ally(now(level) + 600, p.getUUID(), false));
+		ALLIES.put(mob.getUUID(), new Ally(now(level) + ticks, p.getUUID(), false));
 		level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, mob.getX(), mob.getY() + 1, mob.getZ(), 30, 0.3, 0.6, 0.3, 0.05);
 		level.playSound(null, mob.blockPosition(), SoundEvents.ZOMBIE_VILLAGER_CURE, SoundSource.PLAYERS, 0.5F, 1.4F);
 	}
@@ -1173,7 +1241,7 @@ public final class RelicEffects {
 	}
 
 	/** The enemy under your crosshair. */
-	private static LivingEntity aimed(ServerLevel level, ServerPlayer p, double range) {
+	static LivingEntity aimed(ServerLevel level, ServerPlayer p, double range) {
 		Vec3 eye = p.getEyePosition();
 		Vec3 end = eye.add(p.getLookAngle().scale(range));
 		var block = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));

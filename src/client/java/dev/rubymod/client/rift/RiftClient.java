@@ -50,12 +50,13 @@ public final class RiftClient {
 
 	/** The RELICS panel left of the inventory: icons framed in their tier's colour, hover for the description. */
 	private static void drawInventoryRelics(net.minecraft.client.gui.screens.Screen screen, GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
-		if (!active() || hud.relics().isEmpty()) {
+		java.util.List<String> owned = relicLines();
+		if (!active() || owned.isEmpty()) {
 			return;
 		}
 		var font = Minecraft.getInstance().font;
 		int cols = 4;
-		int rows = (hud.relics().size() + cols - 1) / cols;
+		int rows = (owned.size() + cols - 1) / cols;
 		int pw = cols * 20 + 8;
 		int x0 = Math.max(4, (screen.width - 176) / 2 - pw - 6);
 		int y0 = (screen.height - 166) / 2;
@@ -64,7 +65,7 @@ public final class RiftClient {
 		g.text(font, "RELICS", x0 + 5, y0 + 4, 0xFFFF3D6E, false);
 		java.util.List<net.minecraft.network.chat.Component> tip = null;
 		int i = 0;
-		for (String r : hud.relics()) {
+		for (String r : owned) {
 			String[] f = r.split("[|]", -1);
 			if (f.length < 4) {
 				continue;
@@ -83,6 +84,27 @@ public final class RiftClient {
 		}
 	}
 
+	/** Your relics (the HUD list without the ability line). */
+	static java.util.List<String> relicLines() {
+		return hud == null ? java.util.List.of() : hud.relics().stream().filter(x -> !x.startsWith("@")).toList();
+	}
+
+	/** "@ability|id|title|icon|ticks left|cooldown", or null. */
+	static String[] abilityLine() {
+		if (hud == null) {
+			return null;
+		}
+		for (String x : hud.relics()) {
+			if (x.startsWith("@ability|")) {
+				return x.split("[|]", -1);
+			}
+		}
+		return null;
+	}
+
+	/** When the last HUD arrived (the ability cooldown counts down from it). */
+	static long hudAt;
+
 	static boolean hasRelic(String id) {
 		if (!active()) {
 			return false;
@@ -96,7 +118,10 @@ public final class RiftClient {
 	}
 
 	public static void register() {
-		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.RiftHud.TYPE, (p, c) -> hud = p);
+		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.RiftHud.TYPE, (p, c) -> {
+			hud = p;
+			hudAt = System.currentTimeMillis();
+		});
 		// Your relics beside the inventory (E), with what each one does on hover.
 		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((client, screen, sw, sh) -> {
 			if (screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen) {
@@ -250,7 +275,7 @@ public final class RiftClient {
 			int x = w - 22;
 			int ry = 6;
 			int n = 0;
-			for (String r : hud.relics()) {
+			for (String r : relicLines()) {
 				String[] f = r.split("[|]");
 				if (f.length < 3) {
 					continue;
@@ -266,6 +291,27 @@ public final class RiftClient {
 					ry = 6;
 					x -= 20;
 				}
+			}
+			// Your ability (Z): icon, name, and a cooldown sweep; it flashes when it's ready.
+			String[] ab = abilityLine();
+			if (ab != null && ab.length >= 6) {
+				int left = Math.max(0, Integer.parseInt(ab[4]) - (int) ((now - hudAt) / 50));
+				int max = Math.max(1, Integer.parseInt(ab[5]));
+				boolean ready = left == 0;
+				int ax = w / 2 - 91 - 66;
+				int ay = h - 22;
+				g.fill(ax, ay, ax + 62, ay + 20, 0xD0100810);
+				int edge = ready ? ((now / 300) % 2 == 0 ? 0xFFFFC02E : 0xFFFF3D6E) : 0xFF403040;
+				g.outline(ax, ay, 62, 20, edge);
+				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(ab[3]))), ax + 2, ay + 2);
+				if (!ready) {
+					int cover = (int) (16 * left / (float) max);
+					g.fill(ax + 2, ay + 2 + 16 - cover, ax + 18, ay + 18, 0xA0000000);
+				}
+				g.text(font, "[Z]", ax + 21, ay + 2, ready ? 0xFFFFC02E : 0xFF8A7A9A, false);
+				String label = ready ? "READY" : (left + 19) / 20 + "s";
+				g.text(font, label, ax + 21, ay + 11, ready ? 0xFF7CF59A : 0xFFB8A8C8, false);
+				g.text(font, font.plainSubstrByWidth(ab[2], 60), ax + 1, ay - 9, 0xFFEDE6F2, true);
 			}
 			// What to do next, in a pill above the hotbar.
 			if (lastScreen != null && mc.gui.screen() == null) {

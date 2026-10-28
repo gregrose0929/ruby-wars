@@ -66,6 +66,12 @@ public final class GameEvents {
 				entity.discard();
 				return;
 			}
+			// No baby slimes in the Rift: a slime that dies there stays dead.
+			if (entity instanceof net.minecraft.world.entity.monster.cubemob.AbstractCubeMob && !entity.entityTags().contains(dev.rubymod.game.rift.Rift.TAG)
+					&& dev.rubymod.game.rift.Rift.protects(world, entity.blockPosition())) {
+				entity.discard();
+				return;
+			}
 			// Nothing drops in the Rift (no loot, no experience).
 			if ((entity instanceof net.minecraft.world.entity.item.ItemEntity || entity instanceof net.minecraft.world.entity.ExperienceOrb)
 					&& dev.rubymod.game.rift.Rift.protects(world, entity.blockPosition())) {

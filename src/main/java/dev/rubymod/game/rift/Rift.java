@@ -97,6 +97,9 @@ public final class Rift {
 		RelicEffects.State fx = new RelicEffects.State();
 		/** Event rooms: this runner's options (and whether they've chosen). */
 		List<String> event = List.of();
+		/** The active ability (Z), and when it's ready again. */
+		RiftAbilities.Ability ability = RiftAbilities.Ability.DASH;
+		long abilityReadyAt;
 
 		Runner(UUID id, String name) {
 			this.id = id;
@@ -105,6 +108,18 @@ public final class Rift {
 
 		boolean has(Relic r) {
 			return relics.contains(r);
+		}
+
+		/** Relics combined: how many stars (2 or 3); 1 for an ordinary one. */
+		final Map<Relic, Integer> levels = new HashMap<>();
+
+		/** 0 without it; 1, 2 or 3 with it. */
+		int level(Relic r) {
+			return has(r) ? levels.getOrDefault(r, 1) : 0;
+		}
+
+		boolean canCombine(Relic r) {
+			return has(r) && level(r) < r.maxLevel();
 		}
 	}
 
@@ -240,6 +255,7 @@ public final class Rift {
 	public static void join(ServerPlayer player) {
 		MinecraftServer server = player.level().getServer();
 		Runner r = new Runner(player.getUUID(), player.getName().getString());
+		r.ability = RiftAbilities.Ability.byId(RiftMeta.rec(player).riftAbility);
 		RUNNERS.put(player.getUUID(), r);
 		BAR.addPlayer(player);
 		if (state == State.IDLE) {
@@ -323,6 +339,7 @@ public final class Rift {
 		}
 		removePortal(level);
 		RelicEffects.clearWorld(level);
+		RiftAbilities.clear();
 		RiftTanks.clear(level);
 		state = State.IDLE;
 		map = null;
@@ -417,6 +434,7 @@ public final class Rift {
 		secondWind = true;
 		timeLoopUsed = false;
 		seed = level.getRandom().nextLong();
+		dropBoss(level);
 		clearMobs(level);
 		removePortal(level);
 		room = RiftRoom.build(WORK, level, THRESHOLD, RiftRoom.Theme.THRESHOLD, RiftMap.Type.REST, seed);
@@ -452,6 +470,7 @@ public final class Rift {
 			}
 		}
 		RelicEffects.tickWorld(level);
+		RiftAbilities.tick(level);
 		if (portalOpen) {
 			tickPortal(server, level);
 		}
@@ -499,7 +518,8 @@ public final class Rift {
 			default -> {
 			}
 		}
-		if (ticks % 10 == 0) {
+		if (ticks % 10 == 0 || hudSoon) {
+			hudSoon = false;
 			syncHud(server);
 		}
 	}
@@ -602,6 +622,7 @@ public final class Rift {
 		clearMobs(level);
 		removePortal(level);
 		RelicEffects.clearWorld(level);
+		RiftAbilities.clear();
 		RiftTanks.clear(level);
 		slot = 1 - slot;
 		room = RiftRoom.build(WORK, level, SLOTS[slot], pick.theme, pick.type, seed + pick.id * 7919L);
@@ -673,6 +694,9 @@ public final class Rift {
 					intro = new String[] {"RUBY TITAN", "Break the four pylons to bring its shield down!"};
 				}
 				BAR.setVisible(false);
+				if (boss != null) {
+					RiftMutations.roll(level, boss, RiftMeta.heat, level.getRandom());
+				}
 				if (RiftMeta.heat >= 5) {
 					for (UUID id : MOBS) {
 						if (level.getEntity(id) instanceof LivingEntity e && RiftBoss.isBoss(e)) {
@@ -807,7 +831,7 @@ public final class Rift {
 				continue;
 			}
 			if (ticks % 20 == 0) {
-				if (!room.inside(mob.position())) {
+				if (!room.inside(mob.position()) && !RiftBoss.isBoss(mob)) {
 					BlockPos back = room.spawns.get(level.getRandom().nextInt(room.spawns.size()));
 					mob.teleportTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5);
 				}
@@ -835,8 +859,10 @@ public final class Rift {
 		}
 		if (boss != null) {
 			boss.tick(level, targets);
+			RiftMutations.tick(level, boss, targets, ticks);
 			if (boss.dead()) {
 				boss = null;
+				RiftMutations.clear();
 				if (act < 3) {
 					actCleared(server, level);
 				} else {
@@ -1011,7 +1037,7 @@ public final class Rift {
 		List<String> lines = new ArrayList<>();
 		lines.add("title|" + title);
 		for (Relic relic : r.offer) {
-			lines.add(relic.line(-1));
+			lines.add(relic.line(-1, r.has(relic) ? r.level(relic) + 1 : 0));
 		}
 		Net.send(p, new MorePayloads.RiftScreen("offer", lines));
 	}
@@ -1022,8 +1048,13 @@ public final class Rift {
 		lines.add("gold|" + gold);
 		Runner me = RUNNERS.get(p.getUUID());
 		for (Map.Entry<Relic, Integer> e : SHOP.entrySet()) {
-			// -2: you have it already (shown as OWNED).
-			lines.add(e.getKey().line(me != null && me.has(e.getKey()) ? -2 : e.getValue()));
+			// Yours already: buy another copy to combine them, or OWNED (-2) once it can't go higher.
+			Relic relic = e.getKey();
+			if (me != null && me.has(relic)) {
+				lines.add(me.canCombine(relic) ? relic.line(e.getValue(), me.level(relic) + 1) : relic.line(-2));
+			} else {
+				lines.add(relic.line(e.getValue()));
+			}
 		}
 		lines.add("restock|Restock|New relics on the merchant's shelves.|minecraft:emerald|" + RESTOCK_PRICE);
 		Net.send(p, new MorePayloads.RiftScreen("shop", lines));
@@ -1049,9 +1080,37 @@ public final class Rift {
 		Net.send(p, new MorePayloads.RiftScreen("close", List.of()));
 	}
 
+	/** A second copy of a relic you have: the two fuse into one with another star. */
+	private static void combine(ServerPlayer p, Runner r, Relic relic) {
+		int level = r.level(relic) + 1;
+		r.levels.put(relic, level);
+		RelicEffects.apply(p, r);
+		ServerLevel level0 = (ServerLevel) p.level();
+		Vec3 at = p.position();
+		// Two copies spiral together and fuse in a flash.
+		for (int i = 0; i < 24; i++) {
+			double a = i * Math.PI / 6;
+			double rad = 2.2 - i * 0.08;
+			for (int side = 0; side < 2; side++) {
+				double aa = a + side * Math.PI;
+				level0.sendParticles(RiftFx.dust(relic.tier.color, 1.3F), true, false, at.x + Math.cos(aa) * rad, at.y + 0.3 + i * 0.07, at.z + Math.sin(aa) * rad,
+						1, 0, 0, 0, 0);
+			}
+		}
+		RiftFx.burst(level0, at.add(0, 2, 0), 0xFFFFE680, 50, 0.9);
+		RiftFx.beam(level0, at, 18, ParticleTypes.END_ROD, 0xFFFFE680);
+		RiftFx.screen(p, "relic:" + relic.icon, 0xFFFFE680, 50);
+		level0.playSound(null, p.blockPosition(), SoundEvents.SMITHING_TABLE_USE, SoundSource.PLAYERS, 1.0F, 0.8F);
+		level0.playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.7F, 1.4F);
+		Alerts.title(p, "COMBINED!", relic.title(level) + ": " + relic.upgrade(level), ChatFormatting.GOLD);
+	}
+
 	/** Gain a relic, with all the flash it deserves. */
 	static void give(ServerPlayer p, Runner r, Relic relic) {
 		if (r.has(relic)) {
+			if (r.canCombine(relic)) {
+				combine(p, r, relic);
+			}
 			return;
 		}
 		if (relic.tier == Relic.Tier.BOND) {
@@ -1114,7 +1173,7 @@ public final class Rift {
 		} else {
 			Relic relic = Relic.byId(id);
 			Integer price = relic == null ? null : SHOP.get(relic);
-			if (price == null || r.has(relic)) {
+			if (price == null || r.has(relic) && !r.canCombine(relic)) {
 				return;
 			}
 			if (gold < price) {
@@ -1390,7 +1449,17 @@ public final class Rift {
 
 	// ----- Endings -----
 
+	/** The boss (and its health bar) gone: the run ended or moved on without killing it. */
+	private static void dropBoss(ServerLevel level) {
+		RiftMutations.clear();
+		if (boss != null) {
+			boss.remove(level);
+			boss = null;
+		}
+	}
+
 	private static void defeat(MinecraftServer server) {
+		dropBoss(level(server));
 		state = State.OVER;
 		timer = 12 * 20;
 		int floor = node == null ? 1 : node.floor + 1;
@@ -1422,7 +1491,7 @@ public final class Rift {
 		fireworks(level, room.portal, 12);
 		for (ServerPlayer p : players(server)) {
 			Runner r = RUNNERS.get(p.getUUID());
-			Alerts.title(p, "RIFT CONQUERED!", "The Juggernaut Mech is scrap. You win!", ChatFormatting.GOLD);
+			Alerts.title(p, "RIFT CONQUERED!", "The Ruby Titan has fallen. You win!", ChatFormatting.GOLD);
 			RiftFx.screen(p, "flash", 0xFFFFC02E, 30);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 1.0F);
 			p.sendSystemMessage(Component.literal("====== VICTORY: " + r.kills + " kills, " + r.relics.size() + " relics ======")
@@ -1488,6 +1557,13 @@ public final class Rift {
 		}
 	}
 
+	private static boolean hudSoon;
+
+	/** Send everyone's HUD next tick (an ability just went on cooldown). */
+	static void sendHudSoon() {
+		hudSoon = true;
+	}
+
 	private static void syncHud(MinecraftServer server) {
 		String where = state == State.STAGING ? "THE THRESHOLD" + (RiftMeta.heat > 0 ? "  \u2022  HEAT " + RiftMeta.heat : "")
 				+ (RiftMeta.daily ? "  \u2022  DAILY" : "") : node == null ? "RUBY RIFT"
@@ -1501,7 +1577,11 @@ public final class Rift {
 		}
 		for (ServerPlayer p : players(server)) {
 			Runner r = RUNNERS.get(p.getUUID());
-			List<String> relics = r.relics.stream().map(x -> x.id() + "|" + x.icon + "|" + x.tier.name() + "|" + x.title + "|" + x.about).toList();
+			List<String> relics = new ArrayList<>(r.relics.stream().map(x -> x.id() + "|" + x.icon + "|" + x.tier.name() + "|" + x.title(r.level(x)) + "|" + x.about
+					+ (r.level(x) > 1 ? " Combined: " + x.upgrade(r.level(x)) : "")).toList());
+			// Your ability and how long until it's ready: "@ability|id|title|icon|ticks left|cooldown".
+			relics.add("@ability|" + r.ability.id() + "|" + r.ability.title + "|" + r.ability.icon + "|"
+					+ Math.max(0, r.abilityReadyAt - level(server).getGameTime()) + "|" + r.ability.cooldown);
 			Net.send(p, new MorePayloads.RiftHud(where, state == State.STAGING ? RiftMeta.rec(p).riftShards : gold, relics, team));
 		}
 	}

@@ -55,6 +55,11 @@ final class RelicOffers {
 		if (!bonds.isEmpty() && out.size() == 3 && random.nextFloat() < 0.45F) {
 			out.set(2, bonds.get(random.nextInt(bonds.size())));
 		}
+		// Now and then, a second copy of one you have: take it to combine the two (a new relic, or a stronger one?).
+		List<Relic> combinable = r == null ? List.of() : r.relics.stream().filter(r::canCombine).toList();
+		if (!combinable.isEmpty() && !out.isEmpty() && random.nextFloat() < (room == RiftMap.Type.BOSS || room == RiftMap.Type.TREASURE ? 0.6F : 0.35F)) {
+			out.set(random.nextInt(out.size()), combinable.get(random.nextInt(combinable.size())));
+		}
 		return out;
 	}
 
@@ -118,7 +123,7 @@ final class RelicOffers {
 	/** The merchant's stock: two commons, a rare or two, and sometimes a legendary; never one the whole team already has. */
 	static List<Relic> shopStock(RandomSource random, java.util.Collection<Rift.Runner> team) {
 		List<Relic> out = new ArrayList<>();
-		java.util.function.Predicate<Relic> owned = x -> !team.isEmpty() && team.stream().allMatch(m -> m.has(x));
+		java.util.function.Predicate<Relic> owned = x -> !team.isEmpty() && team.stream().allMatch(m -> m.has(x) && !m.canCombine(x));
 		for (Relic.Tier t : new Relic.Tier[] {Relic.Tier.COMMON, Relic.Tier.COMMON, Relic.Tier.RARE, Relic.Tier.RARE,
 				random.nextFloat() < 0.4F ? Relic.Tier.LEGENDARY : Relic.Tier.CURSED}) {
 			Relic r = pick(null, t, out, random, owned);

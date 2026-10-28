@@ -105,7 +105,12 @@ public class RubyModClient implements ClientModInitializer {
 				}
 			}
 			while (autopilotKey.consumeClick()) {
-				Vehicles.toggleAutopilot(client);
+				// In the Rift, Z is your ability; anywhere else, the aircraft autopilot.
+				if (dev.rubymod.client.rift.RiftClient.active() && client.gui.screen() == null) {
+					ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("ability", "active"));
+				} else {
+					Vehicles.toggleAutopilot(client);
+				}
 			}
 			while (flaresKey.consumeClick()) {
 				if (Targeting.piloting(client) != null) {

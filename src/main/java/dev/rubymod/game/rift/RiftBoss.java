@@ -16,6 +16,9 @@ public interface RiftBoss {
 
 	String debug();
 
+	/** The boss itself (the mech's heart, the gunship, the Titan), or null while it's gone. */
+	net.minecraft.world.entity.LivingEntity body(ServerLevel level);
+
 	/** Hurting this right now is pointless (a shield is up). */
 	default boolean shielded(Entity e) {
 		return false;

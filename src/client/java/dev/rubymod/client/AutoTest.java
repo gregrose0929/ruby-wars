@@ -1311,6 +1311,106 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("stage1")) {
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.RiftChoices.handle(me(server), "pick_ability", "nova")));
+			then(20, mc -> dev.rubymod.client.rift.RiftClient.reopen());
+			then(30, mc -> {
+				shot(mc, "stage1-altar");
+				mc.gui.setScreen(null);
+			});
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			then(220, mc -> {
+				command(mc, "effect give @a minecraft:resistance infinite 255 true");
+				log("fight: {}", dev.rubymod.game.rift.Rift.debugState());
+			});
+			// Ruby Nova (Z).
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.RiftChoices.handle(me(server), "ability", "active")));
+			then(2, mc -> shot(mc, "stage1-nova"));
+			then(30, mc -> {
+				log("after nova: {}", dev.rubymod.game.rift.Rift.debugState());
+				shot(mc, "stage1-cooldown");
+			});
+			// Try again at once: still recharging.
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.RiftChoices.handle(me(server), "ability", "active")));
+			// Switch to the Shield Dome mid-run (only allowed at the Threshold: should refuse).
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.RiftChoices.handle(me(server), "pick_ability", "dome")));
+			// Combining: Chain Lightning three times.
+			then(5, mc -> onServer(mc, server -> {
+				for (int k = 0; k < 3; k++) {
+					dev.rubymod.game.rift.Rift.testSkip(server, "chain_lightning");
+				}
+				dev.rubymod.game.rift.Rift.testSkip(server, "quick_hands");
+				dev.rubymod.game.rift.Rift.testSkip(server, "quick_hands");
+			}));
+			then(30, mc -> {
+				log("relics on the HUD: {}", dev.rubymod.client.rift.RiftClient.hud.relics());
+				shot(mc, "stage1-combined");
+			});
+			then(5, mc -> {
+				mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
+			});
+			then(20, mc -> {
+				shot(mc, "stage1-inventory");
+				mc.gui.setScreen(null);
+			});
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+			then(100, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "boss")));
+			for (int i = 0; i < 40; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			then(200, mc -> {
+				log("boss: {}", dev.rubymod.game.rift.Rift.debugState());
+				shot(mc, "stage1-boss");
+			});
+			then(200, mc -> shot(mc, "stage1-boss2"));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("gunship")) {
+			// Straight to the act 2 boss: where does the Gunship fly?
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			then(200, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+			then(100, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "act2")));
+			then(5, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			for (int i = 0; i < 90; i++) {
+				int n = i;
+				then(20, mc -> {
+					String st = dev.rubymod.game.rift.Rift.debugState();
+					if (st.contains("gunship")) {
+						log("gunship: {}", st.substring(st.indexOf("boss ")));
+					}
+					if (n % 15 == 14 && st.contains("gunship")) {
+						shot(mc, "gunship-" + n);
+					}
+				});
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("titan")) {
 			// Straight to the act 3 boss with a Ruby Golem and Necromancer: does the Titan stay?
 			then(0, mc -> {

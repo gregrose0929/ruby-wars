@@ -174,6 +174,11 @@ public final class JuggernautMech implements RiftBoss {
 	}
 
 	@Override
+	public net.minecraft.world.entity.LivingEntity body(ServerLevel level) {
+		return level.getEntity(heart) instanceof net.minecraft.world.entity.LivingEntity e && e.isAlive() ? e : null;
+	}
+
+	@Override
 	public String debug() {
 		return "t" + t + " overheats " + overheats + (overheat > 0 ? " HOT" : "") + (berserk ? " berserk" : "") + (dying >= 0 ? " dying" : "");
 	}
@@ -210,8 +215,8 @@ public final class JuggernautMech implements RiftBoss {
 		lastPos = mob.position();
 		float hp = mob.getHealth() / mob.getMaxHealth();
 		bar.setProgress(Math.max(0, hp));
-		bar.setName(Component.literal(overheat > 0 ? "JUGGERNAUT MECH  •  OVERHEATED! HIT THE CORE!" : berserk ? "JUGGERNAUT MECH  •  BERSERK"
-				: "JUGGERNAUT MECH").withStyle(ChatFormatting.BOLD));
+		bar.setName(Component.literal((overheat > 0 ? "JUGGERNAUT MECH  •  OVERHEATED! HIT THE CORE!" : berserk ? "JUGGERNAUT MECH  •  BERSERK"
+				: "JUGGERNAUT MECH") + RiftMutations.suffix()).withStyle(ChatFormatting.BOLD));
 		bar.setColor(overheat > 0 ? BossEvent.BossBarColor.YELLOW : BossEvent.BossBarColor.RED);
 		for (ServerPlayer p : targets) {
 			bar.addPlayer(p);

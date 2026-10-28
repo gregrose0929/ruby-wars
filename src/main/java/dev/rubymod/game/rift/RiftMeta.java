@@ -126,6 +126,10 @@ public final class RiftMeta {
 			String state = !owns(p, l) ? "locked" : Loadout.byId(r.riftLoadout) == l ? "selected" : "owned";
 			lines.add("loadout|" + l.name().toLowerCase() + "|" + l.title + "|" + l.icon + "|" + l.about + "|" + l.cost + "|" + state);
 		}
+		for (RiftAbilities.Ability a : RiftAbilities.Ability.values()) {
+			lines.add("ability|" + a.id() + "|" + a.title + "|" + a.icon + "|" + a.about + " (" + a.cooldown / 20 + "s to recharge)|"
+					+ (RiftAbilities.Ability.byId(r.riftAbility) == a ? "selected" : "owned"));
+		}
 		for (Relic relic : Relic.values()) {
 			if (relic.locked) {
 				lines.add("relic|" + relic.id() + "|" + relic.title + "|" + relic.icon + "|" + relic.about + "|" + unlockCost(relic) + "|"
@@ -156,6 +160,16 @@ public final class RiftMeta {
 				}
 				r.riftLoadout = l.name().toLowerCase();
 				Stats.markDirty();
+			}
+			case "ability" -> {
+				RiftAbilities.Ability a = RiftAbilities.Ability.byId(id);
+				r.riftAbility = a.id();
+				Stats.markDirty();
+				Rift.Runner runner = Rift.RUNNERS.get(p.getUUID());
+				if (runner != null) {
+					runner.ability = a;
+				}
+				p.level().playSound(null, p.blockPosition(), SoundEvents.ARMOR_EQUIP_DIAMOND.value(), SoundSource.PLAYERS, 1.0F, 1.2F);
 			}
 			case "unlock" -> {
 				Relic relic = Relic.byId(id);

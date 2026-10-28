@@ -7,13 +7,13 @@ package dev.rubymod.game.rift;
  */
 public enum Relic {
 	// ----- Common: simple, but huge -----
-	BOTTOMLESS_MAG(Tier.COMMON, Element.NONE, "Bottomless Mag", "rubymod:heavy_ammo", "You never reload. Ever."),
+	BOTTOMLESS_MAG(Tier.COMMON, Element.NONE, "Bottomless Mag", "rubymod:heavy_ammo", "You never reload, and holding the trigger spins your gun up to double fire rate."),
 	TWIN_BARRELS(Tier.COMMON, Element.NONE, "Twin Barrels", "minecraft:crossbow", "Every shot fires twice."),
 	TITAN_BLOOD(Tier.COMMON, Element.NONE, "Titan Blood", "minecraft:enchanted_golden_apple", "Double max health."),
 	ROCKET_BOOTS(Tier.COMMON, Element.NONE, "Rocket Boots", "minecraft:firework_rocket", "Jump again in mid-air. No fall damage."),
 	QUICK_HANDS(Tier.COMMON, Element.NONE, "Quick Hands", "minecraft:sugar", "Your guns fire twice as fast."),
 	FIELD_MEDIC(Tier.COMMON, Element.NONE, "Field Medic", "minecraft:glistering_melon_slice", "Touch a downed teammate to bring them back instantly."),
-	HEADHUNTER(Tier.COMMON, Element.NONE, "Headhunter", "minecraft:skeleton_skull", "Headshots deal triple damage and put 2 bullets back in your gun.", true),
+	HEADHUNTER(Tier.COMMON, Element.NONE, "Headhunter", "minecraft:skeleton_skull", "Headshots deal 4x damage and arc into the nearest other enemy.", true),
 
 	// ----- Rare: new mechanics -----
 	CHAIN_LIGHTNING(Tier.RARE, Element.SHOCK, "Chain Lightning", "minecraft:lightning_rod", "Every hit arcs to 3 nearby enemies."),
@@ -49,7 +49,7 @@ public enum Relic {
 	// ----- Cursed: massive power, a real cost -----
 	GLASS_CANNON(Tier.CURSED, Element.NONE, "Glass Cannon", "minecraft:glass", "Triple damage. Your max health drops to 3 hearts."),
 	BERSERKER(Tier.CURSED, Element.FIRE, "Berserker", "minecraft:redstone", "The lower your health, the harder you hit (up to 4x)."),
-	BLOOD_AMMO(Tier.CURSED, Element.RUBY, "Blood Ammo", "minecraft:nether_wart", "Infinite ammo and 2.5x damage, but every shot costs health."),
+	BLOOD_AMMO(Tier.CURSED, Element.RUBY, "Blood Ammo", "minecraft:nether_wart", "3.5x damage, but every shot costs health. Kills give a little back."),
 
 	// ----- Bond: two teammates' elements together (the whole team gets it) -----
 	PLASMA_STORM(Tier.BOND, Element.SHOCK, "Plasma Storm", "minecraft:blaze_rod", "Shock + Fire: lightning sets enemies ablaze, and enemies that burn to death throw lightning."),
@@ -119,6 +119,72 @@ public enum Relic {
 
 	/** "id|title|tier|element|icon|about|price" for the screens. */
 	public String line(int price) {
-		return id() + "|" + title + "|" + tier.name() + "|" + element.name() + "|" + icon + "|" + about + "|" + price;
+		return line(price, 0);
+	}
+
+	/**
+	 * The same, as a COMBINE card when {@code combineTo} > 0: the stars it would reach, and
+	 * what combining adds in place of the description.
+	 */
+	public String line(int price, int combineTo) {
+		if (combineTo <= 0) {
+			return line(price, title, about);
+		}
+		return line(price, title + " " + "\u2605".repeat(combineTo), "COMBINE to " + "\u2605".repeat(combineTo) + ": " + upgrade(combineTo)) + "|" + combineTo;
+	}
+
+	private String line(int price, String name, String text) {
+		return id() + "|" + name + "|" + tier.name() + "|" + element.name() + "|" + icon + "|" + text + "|" + price;
+	}
+
+	/** How many times it can be combined (one-off effects and Bonds can't). */
+	public int maxLevel() {
+		return tier == Tier.BOND || this == FIELD_MEDIC || this == TIME_LOOP || this == PHOENIX || this == ARSENAL ? 1 : 3;
+	}
+
+	/** Its name with its stars (two copies combined: two stars). */
+	public String title(int level) {
+		return level > 1 ? title + " " + "\u2605".repeat(level) : title;
+	}
+
+	/** What a combined copy (at {@code level}) does better. */
+	public String upgrade(int level) {
+		boolean three = level >= 3;
+		return switch (this) {
+			case BOTTOMLESS_MAG -> three ? "spins up to triple fire rate." : "spins up to 2.5x fire rate.";
+			case TWIN_BARRELS -> three ? "every shot fires four times." : "every shot fires three times.";
+			case TITAN_BLOOD -> three ? "+20 hearts in all." : "+15 hearts in all.";
+			case ROCKET_BOOTS -> three ? "three mid-air jumps." : "two mid-air jumps.";
+			case QUICK_HANDS -> three ? "guns fire three times as fast." : "guns fire 2.5x as fast.";
+			case HEADHUNTER -> three ? "6x headshots that arc into 3 enemies." : "5x headshots that arc into 2 enemies.";
+			case CHAIN_LIGHTNING -> three ? "arcs to 7 enemies." : "arcs to 5 enemies.";
+			case NAPALM -> three ? "fire burns far longer and the blasts hit much harder." : "fire burns longer and the blasts hit harder.";
+			case CRYO -> three ? "every hit freezes." : "2 hits freeze.";
+			case DOMINO -> three ? "huge, heavy explosions." : "bigger, harder explosions.";
+			case GRAVITY_GRENADES -> three ? "+8 grenades a room." : "+6 grenades a room.";
+			case RUBY_SIPHON -> three ? "each kill heals 3 hearts." : "each kill heals 2 hearts.";
+			case RICOCHET -> three ? "7 bounces." : "5 bounces.";
+			case OVERKILL -> three ? "carries 3x the extra damage." : "carries 2x the extra damage.";
+			case POCKET_TANK -> three ? "fires three times as often." : "fires twice as often.";
+			case DROP_TURRET -> three ? "fires three times as fast and hits harder." : "fires twice as fast.";
+			case BLINK -> three ? "16 blocks, recharges much faster." : "12 blocks, recharges faster.";
+			case SHADOW_CLONE -> three ? "up to 4 clones, much more often." : "up to 3 clones, more often.";
+			case MIRROR_GUARD -> three ? "sends back 4x the damage." : "sends back 3x the damage.";
+			case BULLET_TIME -> three ? "lasts 9 seconds." : "lasts 7 seconds.";
+			case LEECH_SWARM -> three ? "5 leeches a kill." : "4 leeches a kill.";
+			case THUNDERCLAP -> three ? "every 2nd hit." : "every 3rd hit.";
+			case GLACIER_SHIELD -> three ? "grows almost instantly." : "grows twice as fast.";
+			case CLUSTER_GRENADES -> three ? "8 extra explosions, +7 grenades a room." : "6 extra explosions, +5 grenades a room.";
+			case RUBY_AVATAR -> three ? "stomps hit 3x as hard and twice as wide." : "stomps hit twice as hard.";
+			case ORBITAL_STRIKE -> three ? "every 6 seconds." : "every 9 seconds.";
+			case NECROMANCER -> three ? "the risen fight for 90 seconds." : "the risen fight for 60 seconds.";
+			case BLACK_HOLE -> three ? "every 4th hit." : "every 7th hit.";
+			case MIDAS -> three ? "three times as many statues." : "twice as many statues.";
+			case RUBY_GOLEM -> three ? "two golems." : "a bigger, tougher golem.";
+			case GLASS_CANNON -> three ? "5x damage." : "4x damage.";
+			case BERSERKER -> three ? "up to 6x damage." : "up to 5x damage.";
+			case BLOOD_AMMO -> three ? "5.5x damage." : "4.5x damage.";
+			default -> "stronger.";
+		};
 	}
 }

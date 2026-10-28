@@ -53,6 +53,8 @@ public final class Stats {
 		public int riftShards;
 		public Set<String> riftUnlocks = new HashSet<>();
 		public String riftLoadout = "soldier";
+		/** The Rift ability picked at the Altar of Echoes (Z). */
+		public String riftAbility = "dash";
 		public int riftHeatUnlocked;
 		public int seasonsWon;
 		public Set<String> unlocked = new HashSet<>();

@@ -173,6 +173,11 @@ public final class RubyTitan implements RiftBoss {
 	}
 
 	@Override
+	public net.minecraft.world.entity.LivingEntity body(ServerLevel level) {
+		return level.getEntity(titan) instanceof net.minecraft.world.entity.LivingEntity e && e.isAlive() ? e : null;
+	}
+
+	@Override
 	public String debug() {
 		return "titan t" + t + " pylons " + pylons.size() + (regrown ? " regrown" : "") + (dying >= 0 ? " dying" : "");
 	}
@@ -243,7 +248,8 @@ public final class RubyTitan implements RiftBoss {
 		lastPos = golem.position();
 		float hp = golem.getHealth() / golem.getMaxHealth();
 		bar.setProgress(Math.max(0, hp));
-		bar.setName(Component.literal(pylons.isEmpty() ? "RUBY TITAN" : "RUBY TITAN  •  SHIELDED: break the pylons!").withStyle(ChatFormatting.BOLD));
+		bar.setName(Component.literal((pylons.isEmpty() ? "RUBY TITAN" : "RUBY TITAN  •  SHIELDED: break the pylons!") + RiftMutations.suffix())
+				.withStyle(ChatFormatting.BOLD));
 		for (ServerPlayer p : targets) {
 			bar.addPlayer(p);
 		}

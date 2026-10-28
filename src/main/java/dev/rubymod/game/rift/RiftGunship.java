@@ -29,10 +29,12 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Act 2's boss: the Rift Gunship, circling over an open-sky dock. It rakes you with its
- * guns, rains rockets on red circles, and drops troopers in. Everyone gets a Skyhammer,
- * and there are Heavy AA Guns on the pads. Half dead, it calls MAYDAY and drops into a
- * lower, angrier orbit. Shot down, it spirals out in a trail of explosions.
+ * Act 2's boss: the Rift Gunship, over an open-sky dock. It flies a pattern, always inside
+ * the arena: an ORBIT round the dock with the nose on you, a low STRAFE run straight over
+ * someone with its guns blazing, and a HOVER where it stops and rains rockets on red
+ * circles. It drops troopers in too. Everyone gets a Skyhammer, and there are Heavy AA
+ * Guns on the pads. Half dead, it calls MAYDAY: lower, faster, angrier. Shot down, it
+ * spirals out in a trail of explosions.
  */
 public final class RiftGunship implements RiftBoss {
 	private final UUID ship;
@@ -49,6 +51,14 @@ public final class RiftGunship implements RiftBoss {
 	private int dying = -1;
 	private Vec3 lastPos;
 	private boolean done;
+
+	private enum Move { ORBIT, STRAFE, HOVER }
+
+	private Move move = Move.ORBIT;
+	private int moveT;
+	private double angle;
+	private Vec3 strafeTo;
+	private Vec3 hoverAt;
 
 	private RiftGunship(UUID ship, RiftRoom room) {
 		this.ship = ship;
@@ -94,8 +104,15 @@ public final class RiftGunship implements RiftBoss {
 	}
 
 	@Override
+	public net.minecraft.world.entity.LivingEntity body(ServerLevel level) {
+		return level.getEntity(ship) instanceof net.minecraft.world.entity.LivingEntity e && e.isAlive() ? e : null;
+	}
+
+	@Override
 	public String debug() {
-		return "gunship t" + t + (mayday ? " MAYDAY" : "") + (dying >= 0 ? " dying" : "");
+		return "gunship t" + t + " " + move + (mayday ? " MAYDAY" : "") + (dying >= 0 ? " dying" : "")
+				+ (lastPos == null ? "" : String.format(" at %.0f,%.0f,%.0f (%.0f from the middle)", lastPos.x, lastPos.y, lastPos.z,
+						Math.sqrt(lastPos.distanceToSqr(Vec3.atBottomCenterOf(room.center).add(0, lastPos.y - room.center.getY(), 0)))));
 	}
 
 	@Override
@@ -125,13 +142,12 @@ public final class RiftGunship implements RiftBoss {
 		lastPos = heli.position();
 		float hp = heli.getHealth() / heli.getMaxHealth();
 		bar.setProgress(Math.max(0, hp));
-		bar.setName(Component.literal(mayday ? "RIFT GUNSHIP  •  MAYDAY" : "RIFT GUNSHIP").withStyle(ChatFormatting.BOLD));
+		bar.setName(Component.literal((mayday ? "RIFT GUNSHIP  •  MAYDAY" : "RIFT GUNSHIP") + RiftMutations.suffix()).withStyle(ChatFormatting.BOLD));
 		for (ServerPlayer p : targets) {
 			bar.addPlayer(p);
 		}
 		if (!mayday && hp < 0.5F) {
 			mayday = true;
-			heli.setOrbit(Vec3.atBottomCenterOf(room.center).add(0, 15, 0), 14);
 			level.playSound(null, heli.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 3.0F, 0.6F);
 			for (ServerPlayer p : targets) {
 				dev.rubymod.game.Alerts.title(p, "MAYDAY!", "It's diving lower: and angrier", ChatFormatting.RED);
@@ -142,19 +158,25 @@ public final class RiftGunship implements RiftBoss {
 		}
 		ServerPlayer target = nearest(heli, targets);
 		if (target == null) {
+			heli.steer(Vec3.atBottomCenterOf(room.center).add(0, 20, 0), 0.5, null);
 			return;
 		}
-		// Guns: bursts at whoever's closest it can see.
-		if (--gunAt <= 0 && gunAt > -30) {
-			if (gunAt % 2 == 0) {
+		fly(level, heli, target);
+		// Guns: blazing on a strafe run; short bursts while it circles.
+		if (move == Move.STRAFE) {
+			if (t % 2 == 0) {
 				gun(level, heli, target);
 			}
-		} else if (gunAt <= -30) {
-			gunAt = (mayday ? 35 : 60) + level.getRandom().nextInt(30);
+		} else if (--gunAt <= 0 && gunAt > -24) {
+			if (gunAt % 3 == 0) {
+				gun(level, heli, target);
+			}
+		} else if (gunAt <= -24) {
+			gunAt = (mayday ? 40 : 70) + level.getRandom().nextInt(30);
 		}
-		// Rockets on red circles.
-		if (--rocketAt <= 0) {
-			rocketAt = mayday ? 110 : 170;
+		// Rockets on red circles: every hover (and now and then in a MAYDAY orbit).
+		if (move == Move.HOVER && moveT == 15 || mayday && move == Move.ORBIT && --rocketAt <= 0) {
+			rocketAt = 140;
 			rockets.clear();
 			for (ServerPlayer p : targets) {
 				for (int k = 0; k < (mayday ? 4 : 2); k++) {
@@ -194,6 +216,70 @@ public final class RiftGunship implements RiftBoss {
 				Rift.summon(at, true);
 			}
 		}
+	}
+
+	/** Where it flies: orbit, strafe, hover, never outside the arena. */
+	private void fly(ServerLevel level, AircraftEntity heli, ServerPlayer target) {
+		Vec3 c = Vec3.atBottomCenterOf(room.center);
+		double alt = mayday ? 14 : 19;
+		double r = Math.max(8, Math.min(room.half - 6, mayday ? 14 : 18));
+		moveT++;
+		switch (move) {
+			case ORBIT -> {
+				angle += mayday ? 0.03 : 0.022;
+				heli.steer(c.add(Math.cos(angle) * r, alt, Math.sin(angle) * r), mayday ? 0.9 : 0.7, target.getEyePosition());
+				if (moveT > (mayday ? 90 : 130)) {
+					next(level, heli, target);
+				}
+			}
+			case STRAFE -> {
+				heli.steer(strafeTo, mayday ? 1.25 : 1.0, null);
+				if (heli.position().distanceTo(strafeTo) < 3 || moveT > 110) {
+					next(level, heli, target);
+				}
+			}
+			case HOVER -> {
+				heli.steer(hoverAt, 0.55, target.getEyePosition());
+				if (moveT > (mayday ? 70 : 95)) {
+					next(level, heli, target);
+				}
+			}
+		}
+	}
+
+	private void next(ServerLevel level, AircraftEntity heli, ServerPlayer target) {
+		Move[] options = switch (move) {
+			case ORBIT -> new Move[] {Move.STRAFE, Move.HOVER};
+			case STRAFE -> new Move[] {Move.ORBIT, Move.HOVER, Move.STRAFE};
+			case HOVER -> new Move[] {Move.ORBIT, Move.STRAFE};
+		};
+		move = options[level.getRandom().nextInt(options.length)];
+		moveT = 0;
+		Vec3 c = Vec3.atBottomCenterOf(room.center);
+		double alt = mayday ? 14 : 19;
+		if (move == Move.ORBIT) {
+			Vec3 off = heli.position().subtract(c);
+			angle = Math.atan2(off.z, off.x);
+		} else if (move == Move.STRAFE) {
+			// Low and fast, straight over them, out the other side.
+			Vec3 across = target.position().subtract(heli.position()).multiply(1, 0, 1);
+			across = across.lengthSqr() < 1 ? new Vec3(1, 0, 0) : across.normalize();
+			strafeTo = clamp(target.position().add(across.scale(room.half * 0.7)).add(0, alt - 7, 0), c);
+			strafeTo = new Vec3(strafeTo.x, c.y + alt - 7, strafeTo.z);
+			level.playSound(null, heli.blockPosition(), SoundEvents.PHANTOM_SWOOP, SoundSource.HOSTILE, 3.0F, 0.6F);
+			for (ServerPlayer p : Rift.players(level.getServer())) {
+				p.sendOverlayMessage(Component.literal("⚠ STRAFING RUN!").withStyle(ChatFormatting.RED));
+			}
+		} else {
+			double a = level.getRandom().nextDouble() * Math.PI * 2;
+			double r = Math.min(room.half - 8, 12);
+			hoverAt = c.add(Math.cos(a) * r, alt + 2, Math.sin(a) * r);
+		}
+	}
+
+	private Vec3 clamp(Vec3 p, Vec3 c) {
+		double lim = room.half - 4;
+		return new Vec3(Math.max(c.x - lim, Math.min(c.x + lim, p.x)), p.y, Math.max(c.z - lim, Math.min(c.z + lim, p.z)));
 	}
 
 	private static ServerPlayer nearest(Entity from, List<ServerPlayer> targets) {

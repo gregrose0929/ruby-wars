@@ -126,6 +126,10 @@ public class AircraftEntity extends Mob {
 	private boolean droneRespawns;
 	private int bombsLeft;
 	private Entity strikeOwner;
+	/** Scripted flight (the Rift Gunship): fly to {@code steer} at up to {@code steerSpeed}, nose toward {@code steerLook}. */
+	private Vec3 steer;
+	private double steerSpeed;
+	private Vec3 steerLook;
 
 	public AircraftEntity(EntityType<? extends AircraftEntity> type, Level level) {
 		super(type, level);
@@ -357,6 +361,8 @@ public class AircraftEntity extends Mob {
 			flyRotor(pilot, input);
 		} else if (pilot != null) {
 			fly(pilot, input);
+		} else if (steer != null) {
+			steerFly();
 		} else if (strikeTarget != null || droneCenter != null) {
 			autopilot();
 		} else {
@@ -959,7 +965,7 @@ public class AircraftEntity extends Mob {
 		if (getHealth() < getMaxHealth() * 0.3F && tickCount % 3 == 0) {
 			level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 0.8, getZ(), 1, 0.3, 0.1, 0.3, 0.01);
 		}
-		if (strikeTarget != null || droneCenter != null) {
+		if (strikeTarget != null || droneCenter != null || steer != null) {
 			keepChunkLoaded(level);
 		}
 	}
@@ -991,6 +997,40 @@ public class AircraftEntity extends Mob {
 	}
 
 	/** A Co-op Horde enemy gunship: a helicopter circling {@code center} (Horde aims and fires its weapons). */
+	/**
+	 * Scripted flight: glide toward {@code to} (easing in and out, at most {@code speed} a tick),
+	 * turning the nose toward {@code look} (or the way it's going), banking into turns. Null stops it.
+	 */
+	public void steer(Vec3 to, double speed, Vec3 look) {
+		steer = to;
+		steerSpeed = speed;
+		steerLook = look;
+	}
+
+	private void steerFly() {
+		Vec3 to = steer.subtract(position());
+		double distance = to.length();
+		Vec3 want = distance < 0.05 ? Vec3.ZERO : to.scale(Math.min(steerSpeed, distance * 0.12) / distance);
+		Vec3 velocity = getDeltaMovement().lerp(want, 0.12);
+		setDeltaMovement(velocity);
+		setPos(position().add(velocity));
+		// Nose: toward what it's looking at, else where it's going; turned a few degrees a tick.
+		Vec3 face = steerLook != null ? steerLook.subtract(position()) : velocity;
+		float yaw = getYRot();
+		if (face.horizontalDistanceSqr() > 1.0E-4) {
+			float wantYaw = (float) Math.toDegrees(Mth.atan2(-face.x, face.z));
+			yaw += Mth.clamp(Mth.wrapDegrees(wantYaw - yaw), -7.0F, 7.0F);
+			setYRot(yaw);
+			yRotO = yaw;
+		}
+		// Bank into sideways motion, dip the nose when going fast.
+		Vec3 right = Vec3.directionFromRotation(0, yaw + 90);
+		float bank = (float) Mth.clamp(velocity.dot(right) * -40, -30, 30);
+		entityData.set(ROLL, entityData.get(ROLL) + (bank - entityData.get(ROLL)) * 0.15F);
+		Vec3 forward = Vec3.directionFromRotation(0, yaw);
+		setXRot((float) Mth.clamp(velocity.dot(forward) * 25, -15, 20));
+	}
+
 	/** Change where a drone circles (the Rift Gunship drops lower when it's hurt). */
 	public void setOrbit(Vec3 center, double radius) {
 		droneCenter = center;
@@ -1009,11 +1049,12 @@ public class AircraftEntity extends Mob {
 	private void autopilot() {
 		Vec3 velocity;
 		if (droneCenter != null) {
-			// Circle the center counter-clockwise, banked.
+			// Circle the center counter-clockwise, banked (steering back onto the circle, so it never drifts away).
 			Vec3 radial = position().subtract(droneCenter).multiply(1, 0, 1);
 			Vec3 tangent = new Vec3(-radial.z, 0, radial.x).normalize();
+			Vec3 inward = radial.lengthSqr() < 1.0E-4 ? Vec3.ZERO : radial.normalize().scale((droneRadius - radial.length()) * 0.08);
 			setYRot((float) Math.toDegrees(Mth.atan2(-tangent.x, tangent.z)));
-			velocity = tangent.scale(speed).add(0, (droneCenter.y - getY()) * 0.05, 0);
+			velocity = tangent.scale(speed).add(inward).add(0, (droneCenter.y - getY()) * 0.05, 0);
 			entityData.set(ROLL, -25.0F);
 		} else {
 			velocity = Vec3.directionFromRotation(0, getYRot()).scale(speed);

@@ -223,7 +223,7 @@ public final class Gunfire {
 		if (rift) {
 			damage = RelicEffects.damage(shooter, target, damage, headshot);
 			if (headshot) {
-				RelicEffects.headshot(shooter);
+				RelicEffects.headshot(shooter, target, damage);
 			}
 		}
 		float healthBefore = target instanceof LivingEntity living ? living.getHealth() : 0;
