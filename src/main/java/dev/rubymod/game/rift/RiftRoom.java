@@ -45,23 +45,63 @@ public final class RiftRoom {
 	}
 
 	public static final int HEIGHT = 17;
+	/**
+	 * The floor plan: the classic box, a round arena, an octagon, a cross of four wings, a
+	 * courtyard (an inner wall with four gaps), or raised platforms in the corners.
+	 */
+	public enum Shape {
+		SQUARE, CIRCLE, OCTAGON, CROSS, COURTYARD, TIERED;
+
+		/** Is (x, z) (from the middle) floor in a room of this size? */
+		boolean contains(int x, int z, int half) {
+			if (Math.abs(x) > half || Math.abs(z) > half) {
+				return false;
+			}
+			return switch (this) {
+				case CIRCLE -> x * x + z * z <= (half + 0.5) * (half + 0.5);
+				case OCTAGON -> Math.abs(x) + Math.abs(z) <= half * 1.45;
+				case CROSS -> Math.abs(x) <= half * 0.5 || Math.abs(z) <= half * 0.5;
+				default -> true;
+			};
+		}
+	}
+
+	/** For autotests: the next big room's shape. */
+	static Shape forceShape;
+
 	public final BlockPos center;
 	public final Theme theme;
 	public final int half;
+	public final Shape shape;
 	public final List<BlockPos> spawns = new ArrayList<>();
 	public final Vec3 entry;
 	public final Vec3 portal;
 
-	RiftRoom(BlockPos center, Theme theme, int half) {
+	RiftRoom(BlockPos center, Theme theme, int half, Shape shape) {
 		this.center = center;
 		this.theme = theme;
 		this.half = half;
+		this.shape = shape;
 		for (int i = 0; i < 10; i++) {
 			double a = Math.PI * 2 * i / 10 + 0.3;
-			spawns.add(center.offset((int) Math.round(Math.cos(a) * (half - 4)), 1, (int) Math.round(Math.sin(a) * (half - 4))));
+			// Out toward the edge, but always on open floor (pulled in where the shape cuts a corner off).
+			for (int r = half - 4; r > 2; r--) {
+				int x = (int) Math.round(Math.cos(a) * r);
+				int z = (int) Math.round(Math.sin(a) * r);
+				if (open(x, z, 2)) {
+					spawns.add(center.offset(x, 1, z));
+					break;
+				}
+			}
 		}
 		this.entry = new Vec3(center.getX() + 0.5, center.getY() + 1, center.getZ() + half - 3.5);
 		this.portal = new Vec3(center.getX() + 0.5, center.getY() + 2, center.getZ() + 0.5);
+	}
+
+	/** Floor at (x, z) from the middle, with {@code margin} blocks of floor all round it. */
+	public boolean open(int x, int z, int margin) {
+		return shape.contains(x - margin, z - margin, half) && shape.contains(x + margin, z - margin, half) && shape.contains(x - margin, z + margin, half)
+				&& shape.contains(x + margin, z + margin, half);
 	}
 
 	public boolean inside(Vec3 p) {
@@ -117,9 +157,15 @@ public final class RiftRoom {
 	/** Queue up building a room at {@code center} (the old one there is replaced). */
 	static RiftRoom build(ArrayDeque<Runnable> work, ServerLevel level, BlockPos center, Theme theme, RiftMap.Type type, long seed) {
 		int half = type == RiftMap.Type.BOSS || type == RiftMap.Type.TANK ? 30 : theme == Theme.THRESHOLD ? 14
-				: type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE ? 22 : 15;
+				: type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE || type == RiftMap.Type.DEFEND || type == RiftMap.Type.HOLD ? 22 : 15;
 		boolean open = theme == Theme.SKYDOCK;
-		RiftRoom room = new RiftRoom(center, theme, half);
+		RandomSource shapes = RandomSource.create(seed ^ 0x5EED);
+		// Bosses and tank fights keep their box; everywhere else picks a floor plan.
+		Shape picked = type == RiftMap.Type.BOSS || type == RiftMap.Type.TANK || theme == Theme.THRESHOLD ? Shape.SQUARE
+				: half >= 20 ? Shape.values()[shapes.nextInt(Shape.values().length)]
+				: new Shape[] {Shape.SQUARE, Shape.CIRCLE, Shape.OCTAGON}[shapes.nextInt(3)];
+		Shape shape = forceShape != null && half == 22 ? forceShape : picked;
+		RiftRoom room = new RiftRoom(center, theme, half, shape);
 		Palette pal = palette(theme);
 		RandomSource random = RandomSource.create(seed);
 		int ox = center.getX();
@@ -141,8 +187,13 @@ public final class RiftRoom {
 			work.add(() -> {
 				BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
 				for (int z = -outer - 2; z <= outer + 2; z++) {
-					boolean beyond = Math.abs(fx) > outer || Math.abs(z) > outer;
-					boolean wall = !beyond && (Math.abs(fx) == outer || Math.abs(z) == outer);
+					// The shape: floor inside it, a wall round its edge, solid rock beyond.
+					boolean in = shape.contains(fx, z, half);
+					boolean edge = !in && (shape.contains(fx + 1, z, half) || shape.contains(fx - 1, z, half) || shape.contains(fx, z + 1, half)
+							|| shape.contains(fx, z - 1, half) || shape.contains(fx + 1, z + 1, half) || shape.contains(fx - 1, z - 1, half)
+							|| shape.contains(fx + 1, z - 1, half) || shape.contains(fx - 1, z + 1, half));
+					boolean beyond = !in && !edge;
+					boolean wall = edge;
 					double r = Math.sqrt(fx * fx + z * z);
 					for (int y = -3; y <= HEIGHT + 1; y++) {
 						BlockState want;
@@ -173,6 +224,11 @@ public final class RiftRoom {
 				}
 			});
 		}
+		if (shape == Shape.COURTYARD) {
+			courtyard(work, level, room, pal);
+		} else if (shape == Shape.TIERED) {
+			tiers(work, level, room, pal);
+		}
 		if (type == RiftMap.Type.TANK) {
 			cover(work, level, room, pal, random);
 			features(work, level, room, random);
@@ -201,8 +257,66 @@ public final class RiftRoom {
 		work.add(() -> level.setBlock(pos, state, Block.UPDATE_CLIENTS));
 	}
 
+	/** Courtyard: an inner wall round the middle, four doorways through it, glowing along the top. */
+	private static void courtyard(ArrayDeque<Runnable> work, ServerLevel level, RiftRoom room, Palette pal) {
+		int ox = room.center.getX();
+		int oy = room.center.getY();
+		int oz = room.center.getZ();
+		int ring = room.half / 2;
+		work.add(() -> {
+			BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+			for (int i = -ring; i <= ring; i++) {
+				for (int[] c : new int[][] {{i, -ring}, {i, ring}, {-ring, i}, {ring, i}}) {
+					if (Math.abs(c[0]) <= 2 || Math.abs(c[1]) <= 2) {
+						continue; // the doorways
+					}
+					for (int y = 1; y <= 4; y++) {
+						level.setBlock(m.set(ox + c[0], oy + y, oz + c[1]), y == 4 ? pal.wallGlow() : pal.wall(), Block.UPDATE_CLIENTS);
+					}
+				}
+			}
+		});
+	}
+
+	/** Raised platforms in the four corners, with ramps up: high ground to fight from. */
+	private static void tiers(ArrayDeque<Runnable> work, ServerLevel level, RiftRoom room, Palette pal) {
+		int ox = room.center.getX();
+		int oy = room.center.getY();
+		int oz = room.center.getZ();
+		int h = room.half;
+		int size = h / 3;
+		for (int[] s : new int[][] {{1, 1}, {-1, 1}, {1, -1}, {-1, -1}}) {
+			work.add(() -> {
+				BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+				for (int a = 0; a < size; a++) {
+					for (int b = 0; b < size; b++) {
+						int x = s[0] * (h - a);
+						int z = s[1] * (h - b);
+						boolean rim = a == size - 1 || b == size - 1;
+						for (int y = 1; y <= 3; y++) {
+							level.setBlock(m.set(ox + x, oy + y, oz + z), y == 3 && rim ? pal.floorGlow() : pal.pillar(), Block.UPDATE_CLIENTS);
+						}
+					}
+				}
+				// A ramp of slabs and blocks down toward the middle.
+				for (int k = 0; k < 3; k++) {
+					int x = s[0] * (h - size - k);
+					for (int w = 0; w < 3; w++) {
+						int z = s[1] * (h - size / 2 - w + 1);
+						for (int y = 1; y <= 2 - k; y++) {
+							level.setBlock(m.set(ox + x, oy + y, oz + z), pal.floor()[0], Block.UPDATE_CLIENTS);
+						}
+					}
+				}
+			});
+		}
+	}
+
 	/** A pillar from floor to ceiling, banded with light ({@code r} 1: 3x3, 0: 1x1). */
 	private static void pillar(ArrayDeque<Runnable> work, ServerLevel level, RiftRoom room, Palette pal, int px, int pz, int r) {
+		if (!room.open(px, pz, r + 1)) {
+			return; // that spot's outside this room's shape
+		}
 		int ox = room.center.getX();
 		int oy = room.center.getY();
 		int oz = room.center.getZ();
@@ -239,7 +353,7 @@ public final class RiftRoom {
 		for (int i = 0; i < n; i++) {
 			int x = random.nextInt(room.half * 2 - 8) - room.half + 4;
 			int z = random.nextInt(room.half * 2 - 10) - room.half + 4;
-			if (Math.abs(x) < 5 && Math.abs(z) < 5 || z > room.half - 7) {
+			if (Math.abs(x) < 5 && Math.abs(z) < 5 || z > room.half - 7 || !room.open(x, z, 1) || !room.open(x + 6, z, 1) && !room.open(x, z + 6, 1)) {
 				continue;
 			}
 			boolean alongX = random.nextBoolean();

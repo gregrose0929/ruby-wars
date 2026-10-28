@@ -105,6 +105,8 @@ public class RiftMapScreen extends Screen {
 			case "REST" -> "rubymod:arr_rifle";
 			case "BOSS" -> "minecraft:nether_star";
 			case "TANK" -> "rubymod:tank";
+			case "DEFEND" -> "minecraft:beacon";
+			case "HOLD" -> "minecraft:target";
 			default -> "minecraft:iron_sword";
 		};
 	}
@@ -118,19 +120,23 @@ public class RiftMapScreen extends Screen {
 			case "REST" -> "Arsenal";
 			case "BOSS" -> "BOSS";
 			case "TANK" -> "Tank Assault";
+			case "DEFEND" -> "Defend the Core";
+			case "HOLD" -> "Hold the Zone";
 			default -> "Fight";
 		};
 	}
 
 	private static String about(String type) {
 		return switch (type) {
-			case "ELITE" -> "Tougher monsters and a glowing elite. Better relics.";
+			case "ELITE" -> "Tougher monsters and a huge elite with a twist. Better relics.";
 			case "TREASURE" -> "A free relic, and one of the three is Legendary.";
 			case "SHOP" -> "Spend the team's gold on relics (or new stock).";
 			case "EVENT" -> "Something strange. A choice with a catch.";
 			case "REST" -> "The Arsenal: pick a new weapon, and downed teammates get back up.";
 			case "BOSS" -> "The end of this act, and something huge waiting there.";
 			case "TANK" -> "Everyone in a tank, against enemy Rift Tanks.";
+			case "DEFEND" -> "Keep the monsters off the ruby core until the last wave. Keep it whole for a better relic.";
+			case "HOLD" -> "Stand in the ring of light to fill it; monsters inside stop it. Full: the room's cleared. Better relic.";
 			default -> "Monsters. Clear the room for gold and a relic.";
 		};
 	}
@@ -241,8 +247,8 @@ public class RiftMapScreen extends Screen {
 		}
 		// Legend.
 		int ly = height - 22;
-		g.centeredText(font, "⚔ Fight   ⛟ Tank   ☠ Elite   ❖ Treasure   ◆ Merchant   ? Mystery   ⚒ Arsenal   ★ Boss", width / 2, ly + 8,
-				0xFF8A7A9A);
+		g.centeredText(font, "⚔ Fight   ⛟ Tank   ☠ Elite   ◈ Defend the Core   ◎ Hold the Zone", width / 2, ly, 0xFF8A7A9A);
+		g.centeredText(font, "❖ Treasure   ◆ Merchant   ? Mystery   ⚒ Arsenal   ★ Boss", width / 2, ly + 10, 0xFF8A7A9A);
 		if (hovered != null) {
 			List<Component> tip = new ArrayList<>();
 			tip.add(Component.literal(title(hovered.type())).withColor(themeColor(hovered.theme()) & 0xFFFFFF));

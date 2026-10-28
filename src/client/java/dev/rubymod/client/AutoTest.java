@@ -1311,6 +1311,114 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("shapes")) {
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "gamemode creative @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			then(220, mc -> {});
+			for (String shape : new String[] {"CIRCLE", "OCTAGON", "CROSS", "COURTYARD", "TIERED"}) {
+				then(5, mc -> onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+					dev.rubymod.game.rift.Rift.testSkip(server, "shape:" + shape);
+				}));
+				then(80, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:FIGHT")));
+				for (int i = 0; i < 25; i++) {
+					then(20, mc -> {});
+				}
+				then(5, mc -> onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+					var me = me(server);
+					me.teleportTo(me.getX(), me.getY() + 12, me.getZ() + 2);
+					me.setXRot(38);
+					me.setYRot(180);
+				}));
+				then(40, mc -> {
+					mc.gui.setScreen(null);
+					mc.player.setXRot(38);
+					mc.player.setYRot(180);
+				});
+				then(10, mc -> {
+					log("shape {}: {}", shape, dev.rubymod.game.rift.Rift.jobLine());
+					onServer(mc, server -> log("plan {}{}", shape, dev.rubymod.game.rift.Rift.floorPlan(server)));
+					shot(mc, "shape-" + shape);
+				});
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("stage2")) {
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			then(220, mc -> {
+				command(mc, "effect give @a minecraft:resistance infinite 255 true");
+				log("first room: {} | {}", dev.rubymod.game.rift.Rift.debugState(), dev.rubymod.game.rift.Rift.jobLine());
+				shot(mc, "stage2-room1");
+			});
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+			then(100, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:DEFEND")));
+			for (int i = 0; i < 25; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			for (int i = 0; i < 6; i++) {
+				int n = i;
+				then(100, mc -> {
+					log("defend: {} | {}", dev.rubymod.game.rift.Rift.debugState(), dev.rubymod.game.rift.Rift.jobLine());
+					if (n == 1 || n == 4) {
+						shot(mc, "stage2-defend" + n);
+					}
+				});
+			}
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+			then(100, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:HOLD")));
+			for (int i = 0; i < 25; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			then(40, mc -> onServer(mc, server -> {
+				var z = dev.rubymod.game.rift.Rift.zonePos();
+				log("hold: zone at {} | {}", z, dev.rubymod.game.rift.Rift.jobLine());
+				if (z != null) {
+					me(server).teleportTo(z.x, z.y, z.z);
+				}
+			}));
+			for (int i = 0; i < 14; i++) {
+				int n = i;
+				then(100, mc -> {
+					onServer(mc, server -> {
+						var z = dev.rubymod.game.rift.Rift.zonePos();
+						if (z != null && me(server).position().distanceTo(z) > 2) {
+							me(server).teleportTo(z.x, z.y, z.z);
+						}
+					});
+					log("hold: {} | {}", dev.rubymod.game.rift.Rift.debugState(), dev.rubymod.game.rift.Rift.jobLine());
+					if (n == 2) {
+						shot(mc, "stage2-hold");
+					}
+				});
+			}
+			then(5, mc -> shot(mc, "stage2-after"));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("stage1")) {
 			then(0, mc -> {
 				command(mc, "time set noon");

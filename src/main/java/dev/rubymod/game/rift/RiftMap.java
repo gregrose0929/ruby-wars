@@ -15,7 +15,8 @@ public final class RiftMap {
 	public enum Type {
 		FIGHT("Fight", "minecraft:iron_sword"), ELITE("Elite", "minecraft:wither_skeleton_skull"), TREASURE("Treasure", "minecraft:chest"),
 		SHOP("Merchant", "minecraft:emerald"), EVENT("Mystery", "minecraft:enchanted_book"), REST("Arsenal", "rubymod:arr_rifle"),
-		TANK("Tank Assault", "rubymod:tank"), BOSS("Boss", "minecraft:nether_star");
+		TANK("Tank Assault", "rubymod:tank"), BOSS("Boss", "minecraft:nether_star"), DEFEND("Defend the Core", "minecraft:beacon"),
+		HOLD("Hold the Zone", "minecraft:target");
 
 		public final String title;
 		public final String icon;
@@ -142,7 +143,8 @@ public final class RiftMap {
 			return Type.TANK;
 		}
 		if (r < 44) {
-			return Type.FIGHT;
+			// A fight; from the second floor, sometimes with a job: defend the core or hold the zone.
+			return r >= 30 && r < 37 ? Type.DEFEND : r >= 37 ? Type.HOLD : Type.FIGHT;
 		} else if (r < 60 && floor >= 2) {
 			return Type.ELITE;
 		} else if (r < 72) {
