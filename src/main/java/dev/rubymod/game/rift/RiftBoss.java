@@ -24,6 +24,10 @@ public interface RiftBoss {
 		return false;
 	}
 
+	/** A hit that the shield stopped (the Mirror Knight sends it back). */
+	default void blocked(net.minecraft.server.level.ServerLevel level, Entity e, net.minecraft.world.damagesource.DamageSource source, float amount) {
+	}
+
 	static boolean isBoss(Entity e) {
 		return e != null && e.entityTags().contains(JuggernautMech.BOSS_TAG);
 	}

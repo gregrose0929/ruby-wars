@@ -157,7 +157,8 @@ public final class RiftRoom {
 	/** Queue up building a room at {@code center} (the old one there is replaced). */
 	static RiftRoom build(ArrayDeque<Runnable> work, ServerLevel level, BlockPos center, Theme theme, RiftMap.Type type, long seed) {
 		int half = type == RiftMap.Type.BOSS || type == RiftMap.Type.TANK ? 30 : theme == Theme.THRESHOLD ? 14
-				: type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE || type == RiftMap.Type.DEFEND || type == RiftMap.Type.HOLD ? 22 : 15;
+				: type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE || type == RiftMap.Type.DEFEND || type == RiftMap.Type.HOLD
+						|| RiftRooms.isNew(type) ? 22 : 15;
 		boolean open = theme == Theme.SKYDOCK;
 		RandomSource shapes = RandomSource.create(seed ^ 0x5EED);
 		// Bosses and tank fights keep their box; everywhere else picks a floor plan.
@@ -232,7 +233,8 @@ public final class RiftRoom {
 		if (type == RiftMap.Type.TANK) {
 			cover(work, level, room, pal, random);
 			features(work, level, room, random);
-		} else if (type == RiftMap.Type.BOSS || type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE) {
+		} else if (type == RiftMap.Type.BOSS || type == RiftMap.Type.FIGHT || type == RiftMap.Type.ELITE || type == RiftMap.Type.GAUNTLET
+				|| type == RiftMap.Type.HEIST || type == RiftMap.Type.DARK) {
 			pillars(work, level, room, pal, random);
 			cover(work, level, room, pal, random);
 			features(work, level, room, random);

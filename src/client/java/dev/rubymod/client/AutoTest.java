@@ -1432,6 +1432,198 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("bosses")) {
+			// The three new bosses, fought one after another.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(40, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 15; i++) {
+				then(20, mc -> {});
+			}
+			boolean look = System.getenv("LOOK") != null;
+			then(5, mc -> onServer(mc, server -> {
+				me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+				for (String r : look ? new String[0] : new String[] {"quick_hands", "twin_barrels", "headhunter", "chain_lightning"}) {
+					dev.rubymod.game.rift.Rift.testSkip(server, r);
+				}
+				var stack = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.ARR_RIFLE);
+				stack.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+				me(server).getInventory().setItem(0, stack);
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			String only = System.getenv("BOSS");
+			for (String b : only != null ? new String[] {only} : new String[] {"HIVE_QUEEN", "MIRROR_KNIGHT", "STORM_WYRM"}) {
+				then(60, mc -> {
+					mc.gui.setScreen(null);
+					onServer(mc, server -> {
+						dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+						dev.rubymod.game.rift.Rift.testSkip(server, "bossfight:" + b);
+					});
+				});
+				for (int i = 0; i < 18; i++) {
+					then(20, mc -> mc.gui.setScreen(null));
+				}
+				then(5, mc -> log("{} start: {} | {}", b, dev.rubymod.game.rift.Rift.bossDebug(), dev.rubymod.game.rift.Rift.debugState()));
+				for (int t = 0; t < 2400; t++) {
+					int tick = t;
+					then(1, mc -> onServer(mc, server -> {
+						var me = me(server);
+						var level = (net.minecraft.server.level.ServerLevel) me.level();
+						if (!dev.rubymod.game.rift.Rift.debugState().startsWith("FIGHT")) {
+							return;
+						}
+						aimAtNearest(server);
+						me.clearFire();
+						me.getInventory().setSelectedSlot(0);
+						var stack = me.getInventory().getItem(0);
+						if (stack.getItem() instanceof dev.rubymod.gun.GunItem g && (!look || tick > 900)) {
+							dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+						}
+						if (me.getHealth() < 12) {
+							me.setHealth(me.getMaxHealth());
+						}
+						if (tick % 400 == 0) {
+							log("{} t{}: {}", b, tick, dev.rubymod.game.rift.Rift.bossDebug());
+						}
+					}));
+					if (look && t % 150 == 120 && t < 900) {
+						// A wide view from off to the side.
+						then(0, mc -> onServer(mc, server -> {
+							var at = dev.rubymod.game.rift.Rift.bossPos(server);
+							var me = me(server);
+							if (at != null) {
+								me.setNoGravity(true);
+								var c = dev.rubymod.game.rift.Rift.roomCenter();
+								me.teleportTo(c.x + 4, c.y + 1, c.z + 4);
+								var to = at.add(0, 1.5, 0).subtract(me.getEyePosition());
+								me.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+								me.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+							}
+						}));
+						then(4, mc -> {
+							var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+							mc.player.setYRot(sp.getYRot());
+							mc.player.setXRot(sp.getXRot());
+						});
+						then(2, mc -> shot(mc, "boss-" + b.toLowerCase() + "-view" + tick));
+						then(1, mc -> onServer(mc, server -> me(server).setNoGravity(false)));
+					}
+					if (t == 140 || t == 700 || t == 1300 || look && t % 150 == 50 && t < 900) {
+						then(0, mc -> {
+							mc.gui.setScreen(null);
+							var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+							mc.player.setYRot(sp.getYRot());
+							mc.player.setXRot(sp.getXRot());
+							shot(mc, "boss-" + b.toLowerCase() + "-" + tick);
+						});
+					}
+				}
+				then(5, mc -> log("{} end: {} | {}", b, dev.rubymod.game.rift.Rift.bossDebug(), dev.rubymod.game.rift.Rift.debugState()));
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("rooms")) {
+			// The four new rooms, one after another.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(40, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 15; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+				var stack = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.ARR_RIFLE);
+				stack.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+				me(server).getInventory().setItem(0, stack);
+				dev.rubymod.game.rift.Rift.testSkip(server, "quick_hands");
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			for (String type : new String[] {"GAUNTLET", "HEIST", "RESCUE", "DARK"}) {
+				then(60, mc -> {
+					mc.gui.setScreen(null);
+					onServer(mc, server -> {
+						dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+						dev.rubymod.game.rift.Rift.testSkip(server, "room:" + type);
+					});
+				});
+				for (int i = 0; i < 15; i++) {
+					then(20, mc -> mc.gui.setScreen(null));
+				}
+				then(5, mc -> log("{} start: {}", type, dev.rubymod.game.rift.Rift.debugState()));
+				for (int t = 0; t < 1350; t++) {
+					int tick = t;
+					then(1, mc -> onServer(mc, server -> {
+						var me = me(server);
+						var level = (net.minecraft.server.level.ServerLevel) me.level();
+						if (!dev.rubymod.game.rift.Rift.debugState().startsWith("FIGHT")) {
+							return;
+						}
+						if (type.equals("HEIST") && tick % 12 == 0) {
+							var rubies = level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, me.getBoundingBox().inflate(40),
+									d -> d.getItemStack().is(dev.rubymod.registry.ModItems.RUBY) || d.getItemStack().is(dev.rubymod.registry.ModBlocks.RUBY_BLOCK.asItem()));
+							rubies.sort(java.util.Comparator.comparingDouble(d -> d.distanceToSqr(me)));
+							if (!rubies.isEmpty()) {
+								var d = rubies.get(0);
+								me.teleportTo(d.getX(), d.getY() - 0.5, d.getZ());
+							}
+						}
+						if (type.equals("RESCUE") && tick % 40 == 0) {
+							var c = dev.rubymod.game.rift.Rift.roomCenter();
+							if (c != null) {
+								me.teleportTo(c.x + 3.2, c.y, c.z);
+							}
+						}
+						aimAtNearest(server);
+						me.clearFire();
+						me.getInventory().setSelectedSlot(0);
+						var stack = me.getInventory().getItem(0);
+						if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+							dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+						}
+						if (me.getHealth() < 10) {
+							me.setHealth(me.getMaxHealth());
+						}
+					}));
+					if (t == 160) {
+						then(0, mc -> {
+							mc.gui.setScreen(null);
+							var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+							mc.player.setYRot(sp.getYRot());
+							mc.player.setXRot(sp.getXRot());
+							shot(mc, "room-" + type.toLowerCase());
+						});
+					}
+					if (t == 600 && type.equals("RESCUE")) {
+						then(0, mc -> shot(mc, "room-rescue-late"));
+					}
+				}
+				then(5, mc -> {
+					log("{} end: {}", type, dev.rubymod.game.rift.Rift.debugState());
+					shot(mc, "room-" + type.toLowerCase() + "-end");
+				});
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("codex")) {
 			// The Codex (empty, then after finding things) and every charm, used in a fight.
 			then(0, mc -> {

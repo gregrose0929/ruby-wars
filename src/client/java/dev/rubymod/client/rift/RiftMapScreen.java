@@ -118,6 +118,10 @@ public class RiftMapScreen extends Screen {
 			case "DEFEND" -> "minecraft:beacon";
 			case "HOLD" -> "minecraft:target";
 			case "SPRING" -> "minecraft:heart_of_the_sea";
+			case "GAUNTLET" -> "minecraft:netherite_sword";
+			case "HEIST" -> "minecraft:gold_block";
+			case "RESCUE" -> "minecraft:iron_bars";
+			case "DARK" -> "minecraft:black_candle";
 			default -> "minecraft:iron_sword";
 		};
 	}
@@ -134,6 +138,10 @@ public class RiftMapScreen extends Screen {
 			case "DEFEND" -> "Defend the Core";
 			case "HOLD" -> "Hold the Zone";
 			case "SPRING" -> "Ruby Spring";
+			case "GAUNTLET" -> "Gauntlet";
+			case "HEIST" -> "Vault Heist";
+			case "RESCUE" -> "Rescue";
+			case "DARK" -> "Lights Out";
 			default -> "Fight";
 		};
 	}
@@ -150,6 +158,10 @@ public class RiftMapScreen extends Screen {
 			case "DEFEND" -> "Keep the monsters off the ruby core until the last wave. Keep it whole for a better relic.";
 			case "HOLD" -> "Stand in the ring of light to fill it; monsters inside stop it. Full: the room's cleared. Better relic.";
 			case "SPRING" -> "A rest stop. Take one gift: heal, give a relic another star, or temper a weapon with a new power.";
+			case "GAUNTLET" -> "Survive 60 seconds of nonstop monsters. 2 gold a kill, and 25 kills earns a better relic.";
+			case "HEIST" -> "Rubies all over a vault: grab them before it seals in 45 seconds, while guards pour in.";
+			case "RESCUE" -> "A Guardian in a cage. Stand by it (with no monsters near) to free it: it fights beside you for the rest of the act.";
+			case "DARK" -> "The lights are out and only the monsters glow. Clear it for a better relic.";
 			default -> "Monsters. Clear the room for gold and a relic.";
 		};
 	}
@@ -283,8 +295,9 @@ public class RiftMapScreen extends Screen {
 		}
 		// Legend.
 		int ly = height - 22;
-		g.centeredText(font, "⚔ Fight   ⛟ Tank   ☠ Elite (in flames: Burning Elite)   ◈ Defend   ◎ Hold", width / 2, ly, 0xFF8A7A9A);
-		g.centeredText(font, "❖ Treasure   ◆ Merchant   ? Mystery   ⚒ Arsenal   ♥ Spring   ★ Boss", width / 2, ly + 10, 0xFF8A7A9A);
+		g.centeredText(font, "Hover any room to see what it is. Rooms in flames are Burning Elites.", width / 2, ly, 0xFF8A7A9A);
+		g.centeredText(font, "Safe: shops, springs, rescues   •   Middle: a mix and the treasure   •   Danger: elites, heists, the best loot", width / 2,
+				ly + 10, 0xFF8A7A9A);
 		if (hovered != null) {
 			List<Component> tip = new ArrayList<>();
 			tip.add(Component.literal(hovered.type().equals("BOSS") && !bossName.isEmpty() ? "BOSS: " + bossName

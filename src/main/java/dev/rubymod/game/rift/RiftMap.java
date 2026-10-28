@@ -16,7 +16,8 @@ public final class RiftMap {
 		FIGHT("Fight", "minecraft:iron_sword"), ELITE("Elite", "minecraft:wither_skeleton_skull"), TREASURE("Treasure", "minecraft:chest"),
 		SHOP("Merchant", "minecraft:emerald"), EVENT("Mystery", "minecraft:enchanted_book"), REST("Arsenal", "rubymod:arr_rifle"),
 		TANK("Tank Assault", "rubymod:tank"), BOSS("Boss", "minecraft:nether_star"), DEFEND("Defend the Core", "minecraft:beacon"),
-		HOLD("Hold the Zone", "minecraft:target"), SPRING("Ruby Spring", "minecraft:heart_of_the_sea");
+		HOLD("Hold the Zone", "minecraft:target"), SPRING("Ruby Spring", "minecraft:heart_of_the_sea"), GAUNTLET("Gauntlet", "minecraft:netherite_sword"),
+		HEIST("Vault Heist", "minecraft:gold_block"), RESCUE("Rescue", "minecraft:iron_bars"), DARK("Lights Out", "minecraft:black_candle");
 
 		public final String title;
 		public final String icon;
@@ -151,21 +152,23 @@ public final class RiftMap {
 		int r = random.nextInt(100);
 		if (lane == 0) {
 			// Safe: mostly plain fights, with the Merchant, Mysteries and Springs along the way.
-			return r < 45 ? Type.FIGHT : r < 52 ? Type.HOLD : r < 70 ? Type.EVENT : r < 84 && floor >= 2 ? Type.SHOP : r < 96 && floor >= 2 ? Type.SPRING
-					: Type.FIGHT;
+			return r < 38 ? Type.FIGHT : r < 44 ? Type.HOLD : r < 60 ? Type.EVENT : r < 72 && floor >= 2 ? Type.SHOP : r < 82 && floor >= 2 ? Type.SPRING
+					: r < 91 ? Type.RESCUE : r < 97 && floor >= 2 ? Type.HEIST : Type.FIGHT;
 		} else if (lane == 1) {
 			// The middle: a bit of everything.
 			if (r < 8 && floor >= 2) {
 				return Type.TANK;
 			}
-			return r < 36 ? Type.FIGHT : r < 44 ? Type.DEFEND : r < 52 ? Type.HOLD : r < 64 && floor >= 2 ? Type.ELITE : r < 78 ? Type.EVENT
-					: r < 86 && floor >= 2 ? Type.SHOP : r < 92 && floor >= 3 ? Type.REST : Type.FIGHT;
+			return r < 26 ? Type.FIGHT : r < 32 ? Type.DEFEND : r < 38 ? Type.HOLD : r < 48 && floor >= 2 ? Type.ELITE : r < 60 ? Type.EVENT
+					: r < 66 && floor >= 2 ? Type.SHOP : r < 71 && floor >= 3 ? Type.REST : r < 79 && floor >= 2 ? Type.GAUNTLET : r < 87 ? Type.RESCUE
+							: r < 95 && floor >= 2 ? Type.DARK : Type.FIGHT;
 		}
 		// Danger: elites and tank assaults (better relics, more gold).
 		if (floor < 2) {
 			return r < 60 ? Type.FIGHT : Type.DEFEND;
 		}
-		return r < 40 ? Type.ELITE : r < 58 ? Type.TANK : r < 72 ? Type.DEFEND : r < 82 ? Type.FIGHT : r < 92 ? Type.EVENT : Type.TREASURE;
+		return r < 32 ? Type.ELITE : r < 46 ? Type.TANK : r < 56 ? Type.GAUNTLET : r < 65 ? Type.HEIST : r < 74 ? Type.DARK : r < 80 ? Type.DEFEND
+				: r < 86 ? Type.FIGHT : r < 94 ? Type.EVENT : Type.TREASURE;
 	}
 
 	/** "boss|ID|name|about", then "id|floor|col|cols|TYPE|THEME|next,ids|state|flags" per room (state: done, here, open, locked; flags: burning). */
