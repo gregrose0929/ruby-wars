@@ -84,7 +84,7 @@ final class RiftArsenal {
 	// ----- Fusion -----
 
 	/** The named legendary fusions: base + donor -> name, and the bonus trait it gets. */
-	private record Legend(Item base, Item donor, String name, Trait bonus) {
+	record Legend(Item base, Item donor, String name, Trait bonus) {
 	}
 
 	private static final List<Legend> LEGENDS = List.of(
@@ -100,6 +100,10 @@ final class RiftArsenal {
 			new Legend(ModItems.TESLA_COILGUN, ModItems.SKYHAMMER, "Thunderbird", Trait.CHAIN),
 			new Legend(ModItems.SERVICE_PISTOL, ModItems.LONGSHOT_SNIPER, "Deadeye", Trait.FAN),
 			new Legend(ModItems.BOUNCER, ModItems.DRAGONS_BREATH, "Firecracker", Trait.CHAIN));
+
+	static List<Legend> legends() {
+		return LEGENDS;
+	}
 
 	private record Fusion(int base, int donor, Trait trait, Legend legend) {
 	}
@@ -154,7 +158,7 @@ final class RiftArsenal {
 	}
 
 	/** The name a fused weapon gets: "Explosive Blazing AR-R Rifle", or a legendary's own. */
-	private static String fusedName(ItemStack base, List<Trait> traits, Legend l) {
+	static String fusedName(ItemStack base, List<Trait> traits, Legend l) {
 		if (l != null) {
 			return l.name();
 		}
@@ -226,6 +230,9 @@ final class RiftArsenal {
 		level.playSound(null, p.blockPosition(), SoundEvents.SMITHING_TABLE_USE, SoundSource.PLAYERS, 1.0F, 0.9F);
 		level.playSound(null, p.blockPosition(), l != null ? SoundEvents.UI_TOAST_CHALLENGE_COMPLETE : SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS,
 				0.8F, 1.2F);
+		if (l != null) {
+			RiftCodex.learn(p, "legend:" + l.name(), l.name());
+		}
 		dev.rubymod.game.Alerts.title(p, l != null ? "LEGENDARY FUSION!" : "FUSED!", name + ": " + t.about, l != null ? ChatFormatting.GOLD
 				: ChatFormatting.AQUA);
 		p.sendSystemMessage(Component.literal("Fused: " + name + ". Hover it in your inventory to see its traits.").withStyle(ChatFormatting.AQUA));

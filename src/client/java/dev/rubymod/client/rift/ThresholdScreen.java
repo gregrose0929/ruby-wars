@@ -98,6 +98,8 @@ public class ThresholdScreen extends Screen {
 		g.centeredText(font, "◆ THE ALTAR OF ECHOES ◆", 0, 0, 0xFFC27BFF);
 		g.pose().popMatrix();
 		g.centeredText(font, "◆ " + shards + " Rift Shards  •  earned every run (deeper, elites, bosses and Heat give more)", width / 2, 24, 0xFFFFC02E);
+		// The Codex: everything you've found.
+		button(g, width - 74, 6, 68, 14, "\u2726 CODEX", 0xFFFFC02E, false, mouseX, mouseY, "codex", "open");
 		int colW = Math.min(170, (width - 32) / 3);
 		int top = 40;
 		int x1 = width / 2 - colW * 3 / 2 - 8;

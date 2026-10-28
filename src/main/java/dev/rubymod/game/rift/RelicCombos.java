@@ -125,6 +125,7 @@ public final class RelicCombos {
 	static void announce(ServerPlayer p, Rift.Runner r, Relic gained) {
 		for (Duo d : Duo.values()) {
 			if ((d.a == gained || d.b == gained) && r.relics.contains(d.a) && r.relics.contains(d.b)) {
+				RiftCodex.learn(p, "duo:" + d.id(), d.title);
 				ServerLevel level = (ServerLevel) p.level();
 				Vec3 at = p.position();
 				// Two streams, one per relic, twisting up into one.

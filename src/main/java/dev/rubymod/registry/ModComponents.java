@@ -32,6 +32,12 @@ public class ModComponents {
 			DataComponentType.<List<String>>builder().persistent(Codec.STRING.listOf())
 					.networkSynchronized(ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list())).build());
 
+	/** A Ruby Rift charm (one use; the name of a RiftCharms.Charm). */
+	public static final DataComponentType<String> CHARM = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("rift_charm"),
+			DataComponentType.<String>builder().persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build());
+
 	/** A Field Radio's channel (1-8). */
 	public static final DataComponentType<Integer> RADIO_CHANNEL = Registry.register(
 			BuiltInRegistries.DATA_COMPONENT_TYPE,

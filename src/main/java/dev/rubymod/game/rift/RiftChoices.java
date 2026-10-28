@@ -8,6 +8,10 @@ public final class RiftChoices {
 	}
 
 	public static void handle(ServerPlayer player, String kind, String id) {
+		if (kind.equals("codex")) {
+			RiftCodex.send(player);
+			return;
+		}
 		if (!Rift.playing(player)) {
 			return;
 		}

@@ -151,8 +151,18 @@ public final class RiftClient {
 			Minecraft mc = Minecraft.getInstance();
 			if (p.kind().equals("close")) {
 				lastScreen = null;
-				if (mc.gui.screen() instanceof RiftMapScreen || mc.gui.screen() instanceof RelicScreen || mc.gui.screen() instanceof ThresholdScreen) {
+				if (mc.gui.screen() instanceof RiftMapScreen || mc.gui.screen() instanceof RelicScreen || mc.gui.screen() instanceof ThresholdScreen
+						|| mc.gui.screen() instanceof CodexScreen) {
 					mc.gui.setScreen(null);
+				}
+				return;
+			}
+			if (p.kind().equals("codex")) {
+				// The Codex opens on its own (it's never "waiting" behind J).
+				if (mc.gui.screen() instanceof CodexScreen codex) {
+					codex.update(p.lines());
+				} else {
+					mc.gui.setScreen(new CodexScreen(p.lines()));
 				}
 				return;
 			}
@@ -332,6 +342,7 @@ public final class RiftClient {
 			case "LEGENDARY" -> 0xFFFFC02E;
 			case "CURSED" -> 0xFFB04CFF;
 			case "BOND" -> 0xFF2EE6C8;
+			case "LEGENDARY_WEAPON" -> 0xFFFFC02E;
 			case "DUO" -> 0xFFFF9A2E;
 			default -> 0xFFB8C4D0;
 		};

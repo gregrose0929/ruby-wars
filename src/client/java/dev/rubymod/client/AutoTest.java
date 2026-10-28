@@ -1432,6 +1432,208 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("codex")) {
+			// The Codex (empty, then after finding things) and every charm, used in a fight.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(140, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("codex", "open")));
+			then(20, mc -> shot(mc, "codex-empty"));
+			then(5, mc -> mc.gui.setScreen(null));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(40, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 20; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+				for (String r : new String[] {"chain_lightning", "napalm", "blink", "hall_of_mirrors", "cryo"}) {
+					dev.rubymod.game.rift.Rift.testSkip(server, r);
+				}
+			}));
+			for (String c : new String[] {"BOTTLED_LIGHTNING", "SHIELD_TONIC", "RAGE_BREW", "FROST_BOMB", "HEALING_GEM", "TIME_STOP", "POCKET_PORTAL",
+					"METEOR_CALL"}) {
+				then(5, mc -> onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "spawn");
+					dev.rubymod.game.rift.Rift.testSkip(server, "charm:" + c);
+				}));
+				then(50, mc -> onServer(mc, server -> {
+					var me = me(server);
+					aimAtNearest(server);
+					var inv = me.getInventory();
+					for (int i = 0; i < inv.getContainerSize(); i++) {
+						var st = inv.getItem(i);
+						if (c.equals(st.get(dev.rubymod.registry.ModComponents.CHARM))) {
+							boolean used = dev.rubymod.game.rift.RiftCharms.use(me, st);
+							log("charm {} used {} | {}", c, used, dev.rubymod.game.rift.Rift.debugState());
+							break;
+						}
+					}
+				}));
+				then(12, mc -> {
+					var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+					mc.player.setYRot(sp.getYRot());
+					mc.player.setXRot(sp.getXRot());
+					shot(mc, "charm-" + c.toLowerCase());
+				});
+			}
+			// A full pouch: the 4th sells.
+			then(5, mc -> onServer(mc, server -> {
+				for (int k = 0; k < 4; k++) {
+					dev.rubymod.game.rift.Rift.testSkip(server, "charm:HEALING_GEM");
+				}
+				log("charms held after 4: {}", me(server).getInventory().countItem(net.minecraft.world.item.Items.GOLDEN_APPLE));
+			}));
+			then(10, mc -> mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)));
+			then(15, mc -> shot(mc, "charm-inventory"));
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("codex", "open"));
+			});
+			then(20, mc -> shot(mc, "codex-relics"));
+			for (int t = 1; t < 5; t++) {
+				int tab = t;
+				then(5, mc -> {
+					if (mc.gui.screen() instanceof dev.rubymod.client.rift.CodexScreen cs) {
+						cs.tab(tab);
+					}
+				});
+				then(10, mc -> shot(mc, "codex-tab" + tab));
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("lanes")) {
+			// The three-lane map, the Ruby Spring's three gifts, and a Burning Elite.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(60, mc -> shot(mc, "lanes-map"));
+			then(5, mc -> {
+				var screen = dev.rubymod.client.rift.RiftClient.lastScreen;
+				if (screen != null) {
+					for (String line : screen.lines()) {
+						log("map line: {}", line);
+					}
+				}
+			});
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 20; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+				for (String r : new String[] {"chain_lightning", "napalm", "quick_hands"}) {
+					dev.rubymod.game.rift.Rift.testSkip(server, r);
+				}
+				me(server).setHealth(6);
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			then(60, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+					dev.rubymod.game.rift.Rift.testSkip(server, "room:SPRING");
+				});
+			});
+			for (int i = 0; i < 15; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> shot(mc, "lanes-spring"));
+			then(5, mc -> {
+				log("spring hp before: {}", mc.player.getHealth());
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", "spr:relic"));
+			});
+			then(20, mc -> shot(mc, "lanes-spring-relic"));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", "spr:back")));
+			then(10, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", "spr:temper")));
+			then(20, mc -> shot(mc, "lanes-spring-temper"));
+			then(5, mc -> {
+				var screen = dev.rubymod.client.rift.RiftClient.lastScreen;
+				String pick = "spr:back";
+				if (screen != null) {
+					for (String line : screen.lines()) {
+						if (line.startsWith("spr:t:")) {
+							pick = line.split("[|]")[0];
+							break;
+						}
+					}
+				}
+				log("temper pick {}", pick);
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", pick));
+			});
+			then(30, mc -> onServer(mc, server -> {
+				var me = me(server);
+				for (int i = 0; i < 9; i++) {
+					var s = me.getInventory().getItem(i);
+					if (!s.isEmpty()) {
+						log("slot {}: {} traits {}", i, s.getHoverName().getString(), s.get(dev.rubymod.registry.ModComponents.TRAITS));
+					}
+				}
+			}));
+			then(10, mc -> shot(mc, "lanes-tempered"));
+			// A Burning Elite.
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:ELITE:burning"));
+			});
+			for (int i = 0; i < 22; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var stack = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.ARR_RIFLE);
+				stack.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+				me.getInventory().setItem(0, stack);
+				log("burning: {}", dev.rubymod.game.rift.Rift.debugState());
+			}));
+			for (int t = 0; t < 600; t++) {
+				int tick = t;
+				then(1, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					aimAtNearest(server);
+					me.clearFire();
+					me.getInventory().setSelectedSlot(0);
+					var stack = me.getInventory().getItem(0);
+					if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+						dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+					}
+					if (me.getHealth() < 10) {
+						me.setHealth(me.getMaxHealth());
+					}
+				}));
+				if (t == 200) {
+					then(0, mc -> {
+						var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+						mc.player.setYRot(sp.getYRot());
+						mc.player.setXRot(sp.getXRot());
+						shot(mc, "lanes-burning");
+					});
+				}
+			}
+			then(40, mc -> {
+				log("after burning: {}", dev.rubymod.game.rift.Rift.debugState());
+				shot(mc, "lanes-burning-reward");
+			});
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("combos")) {
 			// Relic duos, the new Bonds and every legendary's signature, in a real fight.
 			then(0, mc -> {

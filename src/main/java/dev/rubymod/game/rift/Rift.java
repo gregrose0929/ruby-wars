@@ -646,7 +646,7 @@ public final class Rift {
 			Net.send(p, new MorePayloads.RiftScreen("close", List.of()));
 			p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false));
 			RiftFx.screen(p, "flash", 0xFF1A0010, 30);
-			Alerts.title(p, pick.type == RiftMap.Type.BOSS ? "ACT " + act + " BOSS" : pick.type.title.toUpperCase(),
+			Alerts.title(p, pick.type == RiftMap.Type.BOSS ? "ACT " + act + " BOSS" : pick.burning ? "BURNING ELITE" : pick.type.title.toUpperCase(),
 					pick.theme.title, ChatFormatting.LIGHT_PURPLE);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 0.25F, 1.4F);
 		}
@@ -700,17 +700,8 @@ public final class Rift {
 				wave = 0;
 				waveStartTicks = ticks;
 				waves = 0;
-				String[] intro;
-				if (act == 1) {
-					boss = JuggernautMech.spawn(level, room, RUNNERS.size(), node.floor);
-					intro = new String[] {"JUGGERNAUT MECH", "Wait for it to overheat, then hit it with everything!"};
-				} else if (act == 2) {
-					boss = RiftGunship.spawn(level, room, RUNNERS.size());
-					intro = new String[] {"RIFT GUNSHIP", "Skyhammers and the AA guns: shoot it down!"};
-				} else {
-					boss = RubyTitan.spawn(level, room, RUNNERS.size());
-					intro = new String[] {"RUBY TITAN", "Break the four pylons to bring its shield down!"};
-				}
+				boss = RiftBosses.spawn(map.boss, level, room, RUNNERS.size(), node.floor);
+				String[] intro = {map.boss.title.toUpperCase(), map.boss.tip};
 				BAR.setVisible(false);
 				if (boss != null) {
 					RiftMutations.roll(level, boss, RiftMeta.heat, level.getRandom());
@@ -765,7 +756,7 @@ public final class Rift {
 		java.util.Collections.shuffle(spawns, new java.util.Random(random.nextLong()));
 		int i = 0;
 		if (elite) {
-			int count = node.floor >= 5 || RUNNERS.size() >= 3 ? 2 : 1;
+			int count = (node.floor >= 5 || RUNNERS.size() >= 3 ? 2 : 1) + (node.burning ? 1 : 0);
 			for (int e = 0; e < count; e++) {
 				RiftEnemies.Twist twist = RiftEnemies.Twist.values()[random.nextInt(RiftEnemies.Twist.values().length)];
 				RiftEnemies.Kind kind = RiftEnemies.pick(node.theme, random);
@@ -824,6 +815,17 @@ public final class Rift {
 					if (!p.tank()) {
 						level.addFreshEntity(mob);
 					}
+					if (node != null && node.burning && p.twist() != null) {
+						// A Burning Elite: much tougher, wreathed in fire, and fire can't hurt it.
+						var hp = mob.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+						if (hp != null) {
+							hp.setBaseValue(hp.getBaseValue() * 1.7);
+							mob.setHealth(mob.getMaxHealth());
+						}
+						mob.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, -1, 0, false, false));
+						mob.addEffect(new MobEffectInstance(MobEffects.STRENGTH, -1, 0, false, false));
+						BURNING.add(mob.getUUID());
+					}
 					MOBS.add(mob.getUUID());
 					RiftFx.burst(level, at.add(0, 1, 0), p.twist() != null ? p.twist().color : room.theme.color, 18, 0.4);
 					level.playSound(null, p.at(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.HOSTILE, 0.6F, 0.6F);
@@ -864,6 +866,13 @@ public final class Rift {
 				}
 			}
 			RiftEnemies.Twist twist = RiftEnemies.twistOf(mob);
+			if (BURNING.contains(id) && ticks % 2 == 0) {
+				level.sendParticles(ParticleTypes.FLAME, mob.getX(), mob.getY() + mob.getBbHeight() * 0.6, mob.getZ(), 3, mob.getBbWidth() * 0.4,
+						mob.getBbHeight() * 0.35, mob.getBbWidth() * 0.4, 0.02);
+				if (ticks % 6 == 0) {
+					level.sendParticles(ParticleTypes.LAVA, mob.getX(), mob.getY() + mob.getBbHeight(), mob.getZ(), 1, 0.2, 0.1, 0.2, 0);
+				}
+			}
 			if (twist != null && ticks % 4 == 0) {
 				RiftFx.ring(level, mob.position().add(0, 0.1, 0), mob.getBbWidth() * 0.9, RiftFx.dust(twist.color, 1.0F), 10);
 				if (twist == RiftEnemies.Twist.SUMMONER && ticks % 160 == 0 && MOBS.size() < 30) {
@@ -928,6 +937,9 @@ public final class Rift {
 		}
 	}
 
+	/** This room's Burning Elites (they burn, and fire can't touch them). */
+	private static final java.util.Set<UUID> BURNING = new java.util.HashSet<>();
+
 	public static void onMobDeath(LivingEntity e, DamageSource source) {
 		if (!MOBS.remove(e.getUUID())) {
 			return;
@@ -951,6 +963,9 @@ public final class Rift {
 
 	/** An act's boss is down: a Legendary each, everyone healed, and the way to the next act. */
 	private static void actCleared(MinecraftServer server, ServerLevel level) {
+		for (ServerPlayer p : players(server)) {
+			RiftCodex.learn(p, "boss:" + map.boss.name(), map.boss.title);
+		}
 		nextAct = true;
 		bossesKilled++;
 		gold += 100;
@@ -981,7 +996,8 @@ public final class Rift {
 		boolean job = RiftObjectives.kind != RiftObjectives.Kind.NONE;
 		boolean jobDone = job && RiftObjectives.succeeded();
 		RiftObjectives.clear(level);
-		int bonus = node.type == RiftMap.Type.ELITE || node.type == RiftMap.Type.TANK || jobDone ? 60 : 30;
+		int bonus = node.burning ? 100 : node.type == RiftMap.Type.ELITE || node.type == RiftMap.Type.TANK || jobDone ? 60 : 30;
+		BURNING.clear();
 		roomsCleared++;
 		if (node.type == RiftMap.Type.ELITE) {
 			elitesKilled++;
@@ -997,11 +1013,13 @@ public final class Rift {
 		}
 		reviveAll(server, level, 0.5F);
 		fireworks(level, room.portal, 4);
+		RiftCharms.drop(players(server), node.burning || node.type == RiftMap.Type.ELITE ? 0.65F : 0.3F, level.getRandom());
 		RandomSource random = level.getRandom();
 		for (ServerPlayer p : players(server)) {
 			Runner r = RUNNERS.get(p.getUUID());
-			r.offer = RelicOffers.offer(r, jobDone ? RiftMap.Type.ELITE : job ? RiftMap.Type.FIGHT : node.type, random);
-			sendOffer(p, r, node.type == RiftMap.Type.ELITE ? "Elite slain: a better relic" : jobDone ? "Job done: a better relic" : "Choose a relic");
+			r.offer = RelicOffers.offer(r, node.burning ? RiftMap.Type.BOSS : jobDone ? RiftMap.Type.ELITE : job ? RiftMap.Type.FIGHT : node.type, random);
+			sendOffer(p, r, node.burning ? "Burning Elite slain: a Legendary relic" : node.type == RiftMap.Type.ELITE ? "Elite slain: a better relic"
+					: jobDone ? "Job done: a better relic" : "Choose a relic");
 		}
 		state = State.CALM;
 		timer = REWARD_TICKS;
@@ -1021,6 +1039,7 @@ public final class Rift {
 			case TREASURE -> "Treasure!  \u2022  choose a relic, then step into the portal";
 			case SHOP -> "The Rift Merchant  \u2022  J to shop, then step into the portal";
 			case EVENT -> "Something strange...  \u2022  choose, then step into the portal";
+			case SPRING -> "The Ruby Spring  \u2022  take one gift, then step into the portal";
 			default -> "The Arsenal  \u2022  pick a new weapon, then step into the portal";
 		}));
 		RandomSource random = level.getRandom();
@@ -1032,6 +1051,7 @@ public final class Rift {
 					Runner r = RUNNERS.get(p.getUUID());
 					r.offer = RelicOffers.offer(r, RiftMap.Type.TREASURE, random);
 					sendOffer(p, r, "Treasure! One of these is Legendary");
+					RiftCharms.give(p, RiftCharms.Charm.values()[random.nextInt(RiftCharms.Charm.values().length)]);
 				}
 			}
 			case SHOP -> {
@@ -1057,6 +1077,22 @@ public final class Rift {
 					Runner r = RUNNERS.get(p.getUUID());
 					r.event = RiftEvents.options(kind);
 					Net.send(p, new MorePayloads.RiftScreen("event", r.event));
+				}
+				timer = 0;
+			}
+			case SPRING -> {
+				BlockPos at = BlockPos.containing(room.portal).above();
+				level.setBlock(at, net.minecraft.world.level.block.Blocks.WATER_CAULDRON.defaultBlockState()
+						.setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, 3), 3);
+				RiftFx.beam(level, Vec3.atBottomCenterOf(at), 12, ParticleTypes.END_ROD, 0xFFFF3D6E);
+				reviveAll(server, level, RiftMeta.heat >= 3 ? 0.5F : 1.0F);
+				for (ServerPlayer p : players(server)) {
+					Runner r = RUNNERS.get(p.getUUID());
+					r.event = RiftSpring.options(p, r);
+					Net.send(p, new MorePayloads.RiftScreen("event", r.event));
+					Alerts.title(p, "THE RUBY SPRING", "Take one gift", ChatFormatting.LIGHT_PURPLE);
+					p.level().playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 1.2F);
+					RiftFx.ring(level, p.position().add(0, 0.2, 0), 1.6, RiftFx.dust(0xFF3D6E, 1.4F), 24);
 				}
 				timer = 0;
 			}
@@ -1174,6 +1210,7 @@ public final class Rift {
 				Runner m = RUNNERS.get(mate.getUUID());
 				if (mate != p && !m.has(relic)) {
 					m.relics.add(relic);
+					RiftCodex.learn(mate, "relic:" + relic.id(), relic.title);
 					RiftFx.beam((ServerLevel) mate.level(), mate.position(), 10, ParticleTypes.END_ROD, relic.tier.color);
 					RiftFx.screen(mate, "relic:" + relic.icon, relic.tier.color, 40);
 				}
@@ -1181,6 +1218,7 @@ public final class Rift {
 		}
 		r.relics.add(relic);
 		RelicEffects.apply(p, r);
+		RiftCodex.learn(p, "relic:" + relic.id(), relic.title);
 		RelicCombos.announce(p, r, relic);
 		ServerLevel level = (ServerLevel) p.level();
 		Vec3 at = p.position();
@@ -1253,6 +1291,8 @@ public final class Rift {
 		r.event = List.of();
 		if (option.startsWith(RiftArsenal.PREFIX)) {
 			RiftArsenal.give(player, r, option);
+		} else if (option.startsWith(RiftSpring.PREFIX)) {
+			RiftSpring.choose(player, r, option);
 		} else {
 			RiftEvents.resolve(player, r, option);
 		}
@@ -1554,6 +1594,9 @@ public final class Rift {
 	}
 
 	private static void victory(MinecraftServer server) {
+		for (ServerPlayer p : players(server)) {
+			RiftCodex.learn(p, "boss:" + map.boss.name(), map.boss.title);
+		}
 		state = State.OVER;
 		timer = 20 * 20;
 		ServerLevel level = level(server);
@@ -1654,6 +1697,11 @@ public final class Rift {
 					+ Math.max(0, r.abilityReadyAt - level(server).getGameTime()) + "|" + r.ability.cooldown);
 			Net.send(p, new MorePayloads.RiftHud(where, state == State.STAGING ? RiftMeta.rec(p).riftShards : gold, relics, team));
 		}
+	}
+
+	/** Where this room starts (a Pocket Portal goes there). */
+	static Vec3 entry() {
+		return room == null ? null : room.entry;
 	}
 
 	/** For autotests: each runner's active combos and bonds. */
@@ -1771,6 +1819,12 @@ public final class Rift {
 					RiftRoom.forceShape = RiftRoom.Shape.valueOf(what.substring(6));
 					return;
 				}
+				if (what.startsWith("charm:")) {
+					for (ServerPlayer p : players(server)) {
+						RiftCharms.give(p, RiftCharms.Charm.valueOf(what.substring(6)));
+					}
+					return;
+				}
 				// "offer:a,b,c": show these relics as the offer; "nooffer" takes it away. "do:blink", "do:reloaded": as if you did.
 				if (what.startsWith("offer:") || what.equals("nooffer") || what.equals("do:blink") || what.equals("do:reloaded")) {
 					for (ServerPlayer p : players(server)) {
@@ -1790,8 +1844,10 @@ public final class Rift {
 				}
 				// "room:SHOP", "room:REST"...: the next room is one of those.
 				if (what.startsWith("room:") && map != null) {
-					RiftMap.Type type = RiftMap.Type.valueOf(what.substring(5));
+					String[] parts = what.split(":");
+					RiftMap.Type type = RiftMap.Type.valueOf(parts[1]);
 					RiftMap.Node t = new RiftMap.Node(map.nodes.size(), 3, 0, 1, type, RiftRoom.Theme.CRYSTAL);
+					t.burning = parts.length > 2 && parts[2].equals("burning");
 					map.nodes.add(t);
 					RiftMap.Node from = map.visited.isEmpty() ? map.floor(0).get(0) : map.node(map.visited.get(map.visited.size() - 1));
 					from.next.add(t.id);

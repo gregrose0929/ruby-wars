@@ -447,6 +447,12 @@ public final class GameEvents {
 		});
 
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+			if (player.getItemInHand(hand).has(dev.rubymod.registry.ModComponents.CHARM)) {
+				if (player instanceof ServerPlayer sp) {
+					dev.rubymod.game.rift.RiftCharms.use(sp, player.getItemInHand(hand));
+				}
+				return InteractionResult.SUCCESS;
+			}
 			if (level.isClientSide() || player.isSpectator()) {
 				return InteractionResult.PASS;
 			}
@@ -478,6 +484,13 @@ public final class GameEvents {
 		});
 
 		UseItemCallback.EVENT.register((player, level, hand) -> {
+			// A Ruby Rift charm: used up, whatever the item it looks like would normally do.
+			if (player.getItemInHand(hand).has(dev.rubymod.registry.ModComponents.CHARM)) {
+				if (player instanceof ServerPlayer sp) {
+					dev.rubymod.game.rift.RiftCharms.use(sp, player.getItemInHand(hand));
+				}
+				return InteractionResult.SUCCESS;
+			}
 			if (level.isClientSide()) {
 				return InteractionResult.PASS;
 			}

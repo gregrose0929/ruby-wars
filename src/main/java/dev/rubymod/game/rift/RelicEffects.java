@@ -82,6 +82,11 @@ public final class RelicEffects {
 		float charge;
 		long mirrorsAt;
 		boolean pounding;
+		/** Charms: Rage Brew's double damage, a charm's glow, and Meteor Call's second shower. */
+		long rageUntil;
+		long charmAura;
+		int charmColor;
+		long meteorCallAt;
 		/** Where a Ground Pound started (Meteor Drop), and when Gravity Overload can next open a hole. */
 		double poundFrom;
 		long gravityAt;
@@ -267,6 +272,9 @@ public final class RelicEffects {
 		}
 		if (RiftAbilities.overdriven(p)) {
 			dmg *= 1.5F;
+		}
+		if (p.level().getGameTime() < r.fx.rageUntil) {
+			dmg *= 2;
 		}
 		if (r.has(Relic.THE_HUNTED)) {
 			dmg *= 2 + r.level(Relic.THE_HUNTED);
@@ -777,6 +785,7 @@ public final class RelicEffects {
 		if (p.onGround()) {
 			s.airJumps = 0;
 		}
+		RiftCharms.tick(p, r, level);
 		tickSecondWave(level, p, r, s);
 		// Ruby Avatar: land from a jump to stomp.
 		if (r.has(Relic.RUBY_AVATAR)) {
@@ -1173,7 +1182,7 @@ public final class RelicEffects {
 		}
 	}
 
-	private static void freeze(ServerLevel level, LivingEntity target) {
+	static void freeze(ServerLevel level, LivingEntity target) {
 		if (target instanceof Mob mob) {
 			mob.setNoAi(true);
 		}
@@ -1610,7 +1619,7 @@ public final class RelicEffects {
 		}
 	}
 
-	private static void meteors(ServerLevel level, ServerPlayer p) {
+	static void meteors(ServerLevel level, ServerPlayer p) {
 		List<LivingEntity> targets = enemiesNear(level, p.position(), 40, null);
 		java.util.Collections.shuffle(targets, new java.util.Random(level.getRandom().nextLong()));
 		long now = now(level);

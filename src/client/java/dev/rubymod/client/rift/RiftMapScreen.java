@@ -23,8 +23,12 @@ import net.minecraft.world.item.ItemStack;
  * the rooms, and the most votes wins.
  */
 public class RiftMapScreen extends Screen {
-	private record Node(int id, int floor, int col, int cols, String type, String theme, List<Integer> next, String state) {
+	private record Node(int id, int floor, int col, int cols, String type, String theme, List<Integer> next, String state, boolean burning) {
 	}
+
+	/** The act's boss: id, name, what it is. */
+	private String bossName = "";
+	private String bossAbout = "";
 
 	private List<Node> nodes = new ArrayList<>();
 	private final Map<Integer, Integer> votes = new HashMap<>();
@@ -42,6 +46,11 @@ public class RiftMapScreen extends Screen {
 		votes.clear();
 		for (String line : lines) {
 			String[] f = line.split("[|]", -1);
+			if (f[0].equals("boss") && f.length >= 4) {
+				bossName = f[2];
+				bossAbout = f[3];
+				continue;
+			}
 			if (f[0].equals("votes")) {
 				if (f.length > 1 && !f[1].isEmpty()) {
 					for (String v : f[1].split(",")) {
@@ -60,7 +69,8 @@ public class RiftMapScreen extends Screen {
 					next.add(Integer.parseInt(n));
 				}
 			}
-			list.add(new Node(Integer.parseInt(f[0]), Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]), f[4], f[5], next, f[7]));
+			list.add(new Node(Integer.parseInt(f[0]), Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]), f[4], f[5], next, f[7],
+					f.length > 8 && f[8].contains("burning")));
 		}
 		nodes = list;
 	}
@@ -107,6 +117,7 @@ public class RiftMapScreen extends Screen {
 			case "TANK" -> "rubymod:tank";
 			case "DEFEND" -> "minecraft:beacon";
 			case "HOLD" -> "minecraft:target";
+			case "SPRING" -> "minecraft:heart_of_the_sea";
 			default -> "minecraft:iron_sword";
 		};
 	}
@@ -122,6 +133,7 @@ public class RiftMapScreen extends Screen {
 			case "TANK" -> "Tank Assault";
 			case "DEFEND" -> "Defend the Core";
 			case "HOLD" -> "Hold the Zone";
+			case "SPRING" -> "Ruby Spring";
 			default -> "Fight";
 		};
 	}
@@ -137,14 +149,15 @@ public class RiftMapScreen extends Screen {
 			case "TANK" -> "Everyone in a tank, against enemy Rift Tanks.";
 			case "DEFEND" -> "Keep the monsters off the ruby core until the last wave. Keep it whole for a better relic.";
 			case "HOLD" -> "Stand in the ring of light to fill it; monsters inside stop it. Full: the room's cleared. Better relic.";
+			case "SPRING" -> "A rest stop. Take one gift: heal, give a relic another star, or temper a weapon with a new power.";
 			default -> "Monsters. Clear the room for gold and a relic.";
 		};
 	}
 
 	private int[] pos(Node n, int floors) {
 		int top = 34;
-		int bottom = height - 30;
-		int span = Math.min(width - 140, 360);
+		int bottom = height - 66;
+		int span = Math.min(width - 160, 300);
 		int left = (width - span) / 2;
 		double across = n.cols() == 1 ? 0.5 : n.col() / (double) (n.cols() - 1);
 		int x = left + (int) (across * span);
@@ -164,8 +177,19 @@ public class RiftMapScreen extends Screen {
 			int my = height - (int) s;
 			g.fill(mx, my, mx + 1, my + 1, (i % 3 == 0 ? 0x90FF3D6E : 0x70C27BFF));
 		}
-		g.centeredText(font, "◆ THE RIFT ◆", width / 2, 8, 0xFFFF3D6E);
+		g.centeredText(font, "◆ THE RIFT ◆" + (bossName.isEmpty() ? "" : "   Boss: " + bossName.toUpperCase()), width / 2, 8, 0xFFFF3D6E);
 		g.centeredText(font, "Click a glowing room to vote for it. The most votes wins.", width / 2, 20, 0xFFB8A8C8);
+		// The three lanes, named at the bottom.
+		{
+			int span = Math.min(width - 160, 300);
+			int left = (width - span) / 2;
+			String[] lane = {"SAFE", "MIDDLE", "DANGER"};
+			int[] laneColor = {0xFF6EE38A, 0xFFFFC02E, 0xFFFF5050};
+			for (int c = 0; c < 3; c++) {
+				int lx = left + c * span / 2;
+				g.centeredText(font, lane[c], lx, height - 46, laneColor[c]);
+			}
+		}
 		int floors = nodes.stream().mapToInt(Node::floor).max().orElse(1);
 		Map<Integer, Node> byId = new HashMap<>();
 		for (Node n : nodes) {
@@ -215,6 +239,18 @@ public class RiftMapScreen extends Screen {
 				int ring = r + 2 + (int) ((now / 60) % 8);
 				g.outline(p[0] - ring, p[1] - ring, ring * 2, ring * 2, (int) (255 - (now / 60 % 8) * 30) << 24 | 0xFFC02E);
 			}
+			if (n.burning() && !done) {
+				int flick = (int) ((now / 90 + n.id()) % 3);
+				int fire = flick == 0 ? 0xFFFF7A2E : flick == 1 ? 0xFFFFC02E : 0xFFFF3020;
+				g.outline(p[0] - r - 3, p[1] - r - 3, r * 2 + 6, r * 2 + 6, fire);
+				g.outline(p[0] - r - 2, p[1] - r - 2, r * 2 + 4, r * 2 + 4, 0xA0000000 | fire & 0xFFFFFF);
+				for (int k = 0; k < 5; k++) {
+					double rise = ((now / 30.0 + k * 37 + n.id() * 11) % 28);
+					int fx = p[0] - r + (int) ((k * 53 + n.id() * 7) % (r * 2));
+					int fy = p[1] - r - (int) rise;
+					g.fill(fx, fy, fx + 2, fy + 2, (int) (255 * (1 - rise / 28)) << 24 | (k % 2 == 0 ? 0xFF7A2E : 0xFFC02E));
+				}
+			}
 			int bg = done ? 0xE0302830 : here ? 0xF0503010 : open ? (hover ? 0xF0402040 : 0xE0281428) : 0xC0181018;
 			g.fill(p[0] - r, p[1] - r, p[0] + r, p[1] + r, bg);
 			g.outline(p[0] - r, p[1] - r, r * 2, r * 2, done ? 0xFF706070 : here ? 0xFFFFC02E : open ? theme | 0xFF000000 : 0xFF403840);
@@ -247,15 +283,22 @@ public class RiftMapScreen extends Screen {
 		}
 		// Legend.
 		int ly = height - 22;
-		g.centeredText(font, "⚔ Fight   ⛟ Tank   ☠ Elite   ◈ Defend the Core   ◎ Hold the Zone", width / 2, ly, 0xFF8A7A9A);
-		g.centeredText(font, "❖ Treasure   ◆ Merchant   ? Mystery   ⚒ Arsenal   ★ Boss", width / 2, ly + 10, 0xFF8A7A9A);
+		g.centeredText(font, "⚔ Fight   ⛟ Tank   ☠ Elite (in flames: Burning Elite)   ◈ Defend   ◎ Hold", width / 2, ly, 0xFF8A7A9A);
+		g.centeredText(font, "❖ Treasure   ◆ Merchant   ? Mystery   ⚒ Arsenal   ♥ Spring   ★ Boss", width / 2, ly + 10, 0xFF8A7A9A);
 		if (hovered != null) {
 			List<Component> tip = new ArrayList<>();
-			tip.add(Component.literal(title(hovered.type())).withColor(themeColor(hovered.theme()) & 0xFFFFFF));
+			tip.add(Component.literal(hovered.type().equals("BOSS") && !bossName.isEmpty() ? "BOSS: " + bossName
+					: hovered.burning() ? "BURNING ELITE" : title(hovered.type())).withColor(hovered.burning() ? 0xFF7A2E : themeColor(hovered.theme()) & 0xFFFFFF));
 			if (!themeName(hovered.theme()).isEmpty()) {
 				tip.add(Component.literal(themeName(hovered.theme())).withColor(0xA090B0));
 			}
-			tip.add(Component.literal(about(hovered.type())).withColor(0xE0E0E0));
+			tip.add(Component.literal(hovered.type().equals("BOSS") && !bossAbout.isEmpty() ? bossAbout
+					: hovered.burning() ? "Elites wreathed in fire: tougher, and there's one more of them. Beat them for a Legendary relic and 100 gold."
+					: about(hovered.type())).withColor(0xE0E0E0));
+			String laneName = hovered.type().equals("BOSS") ? "" : hovered.col() == 0 ? "Safe lane" : hovered.col() == 1 ? "Middle lane" : "Danger lane";
+			if (!laneName.isEmpty()) {
+				tip.add(Component.literal(laneName).withColor(hovered.col() == 0 ? 0x6EE38A : hovered.col() == 1 ? 0xFFC02E : 0xFF5050));
+			}
 			if (hovered.state().equals("open")) {
 				tip.add(Component.literal("Click to vote").withColor(0xFFC02E));
 			}
