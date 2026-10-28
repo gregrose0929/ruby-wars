@@ -700,32 +700,34 @@ def dragons_breath():
 
 
 def swarm_launcher():
-    ty = 5.0
+    # A compact six-cell pod (kept small so it doesn't fill the first-person view).
+    ty = 3.4
+    h = 1.8
     body = [
-        B(-2.6, ty - 2.6, -6.0, 2.6, ty + 2.6, 10.0, "olive_paint", panels=True, mark=True),   # launch pod
-        B(-2.8, ty - 2.8, 9.0, 2.8, ty + 2.8, 10.2, "black_metal"),                       # front frame
-        B(-2.8, ty - 2.8, -6.6, 2.8, ty + 2.8, -6.0, "black_metal"),                      # rear frame
-        B(-2.0, ty - 2.0, -6.7, 2.0, ty + 2.0, -6.6, "graphite", vents=True),
-        B(-0.5, ty + 2.6, -3.0, 0.5, ty + 3.4, 4.0, "black_metal"),                       # handle
-        B(-1.6, ty + 2.6, -4.6, -0.6, ty + 4.0, -2.4, "black_metal"),                     # targeting box
-        B(-1.5, ty + 2.8, -2.4, -0.7, ty + 3.8, -2.35, "lens"),
-        B(2.6, ty - 1.0, -2.0, 3.0, ty + 1.0, 6.0, "warning"),                            # hazard stripe
-        B(-3.0, ty - 1.0, -2.0, -2.6, ty + 1.0, 6.0, "warning"),
+        B(-h, ty - h, -4.0, h, ty + h, 8.0, "olive_paint", panels=True, mark=True),         # launch pod
+        B(-h - 0.2, ty - h - 0.2, 7.2, h + 0.2, ty + h + 0.2, 8.2, "black_metal"),          # front frame
+        B(-h - 0.2, ty - h - 0.2, -4.5, h + 0.2, ty + h + 0.2, -4.0, "black_metal"),        # rear frame
+        B(-1.3, ty - 1.3, -4.6, 1.3, ty + 1.3, -4.5, "graphite", vents=True),
+        B(-0.4, ty + h, -2.0, 0.4, ty + h + 0.6, 3.0, "black_metal"),                       # handle
+        B(-1.3, ty + h, -3.4, -0.5, ty + h + 1.0, -1.8, "black_metal"),                     # targeting box
+        B(-1.2, ty + h + 0.15, -1.8, -0.6, ty + h + 0.85, -1.75, "lens"),
+        B(h, ty - 0.7, -1.5, h + 0.3, ty + 0.7, 5.0, "warning"),                            # hazard stripe
+        B(-h - 0.3, ty - 0.7, -1.5, -h, ty + 0.7, 5.0, "warning"),
         B(-0.4, -0.2, -0.6, 0.4, 0.2, 1.8, "graphite"),
     ]
     for i in range(3):                                                                    # six tubes, 3 x 2
         for j in range(2):
-            cx = -1.6 + i * 1.6
-            cy = ty - 0.8 + j * 1.6
-            body.append(B(cx - 0.6, cy - 0.6, 10.2, cx + 0.6, cy + 0.6, 10.25, "black_metal", bore=True))
-            body.append(B(cx - 0.25, cy - 0.25, 10.0, cx + 0.25, cy + 0.25, 10.26, "seeker_glow"))
-    grip = R("grip", pivot=(0, ty - 2.6, -0.4), rot=(-12, 0, 0), boxes=[B(-0.9, -4.2, -1.2, 0.9, 0.4, 0.6, "polymer", stipple=True)])
-    trigger = R("trigger", pivot=(0, ty - 2.8, 0.4), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
-    fore = [B(-0.8, ty - 6.0, 5.0, 0.8, ty - 2.6, 6.2, "polymer", stipple=True)]
+            cx = -1.15 + i * 1.15
+            cy = ty - 0.6 + j * 1.2
+            body.append(B(cx - 0.45, cy - 0.45, 8.2, cx + 0.45, cy + 0.45, 8.25, "black_metal", bore=True))
+            body.append(B(cx - 0.2, cy - 0.2, 8.0, cx + 0.2, cy + 0.2, 8.26, "seeker_glow"))
+    grip = R("grip", pivot=(0, ty - h, -0.4), rot=(-12, 0, 0), boxes=[B(-0.9, -4.0, -1.2, 0.9, 0.4, 0.6, "polymer", stipple=True)])
+    trigger = R("trigger", pivot=(0, ty - h - 0.2, 0.4), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
+    fore = [B(-0.8, ty - h - 3.0, 4.0, 0.8, ty - h, 5.2, "polymer", stipple=True)]
     root = P("root", children=[P("body", body + fore), grip, trigger])
     return Gun(root, {
-        "sight": (-1.1, ty + 3.3, -4.6), "red_dot_sight": (-1.1, ty + 3.3, -4.6), "muzzle": (0, ty, 10.6), "eject": (0, ty, -6.8),
-        "hand_r": (0, ty - 4.0, -0.4), "hand_l": (0, ty - 4.6, 5.6), "mag_hand": (0, ty, 10.0), "grip_hand_l": (0, ty - 4.6, 5.6),
+        "sight": (-0.9, ty + h + 0.8, -3.4), "red_dot_sight": (-0.9, ty + h + 0.8, -3.4), "muzzle": (0, ty, 8.6), "eject": (0, ty, -4.8),
+        "hand_r": (0, ty - h - 1.4, -0.4), "hand_l": (0, ty - h - 2.0, 4.6), "mag_hand": (0, ty, 8.0), "grip_hand_l": (0, ty - h - 2.0, 4.6),
     })
 
 

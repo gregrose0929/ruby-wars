@@ -1499,8 +1499,8 @@ public final class AutoTest {
 				then(20, mc -> {});
 			}
 			then(5, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
-			String[] weapons = {"ruby_minigun", "rail_lance", "ruby_chakram", "dragons_breath", "swarm_launcher", "tesla_coilgun", "bouncer", "six_shooter",
-					"ruby_warhammer", "singularity_cannon"};
+			String[] weapons = System.getenv("GUNS") != null ? System.getenv("GUNS").split(",") : new String[] {"ruby_minigun", "rail_lance", "ruby_chakram",
+					"dragons_breath", "swarm_launcher", "tesla_coilgun", "bouncer", "six_shooter", "ruby_warhammer", "singularity_cannon"};
 			for (String w : weapons) {
 				int[] before = new int[1];
 				then(5, mc -> onServer(mc, server -> {
@@ -1552,8 +1552,8 @@ public final class AutoTest {
 							mc.player.setXRot(sp.getXRot());
 						});
 					}
-					if (t == 8) {
-						then(0, mc -> shot(mc, "weapon-" + w));
+					if (t == 8 || System.getenv("GUNS") != null && (t == 4 || t == 20 || t == 35)) {
+						then(0, mc -> shot(mc, "weapon-" + w + (tick == 8 ? "" : "-" + tick)));
 					}
 				}
 				then(40, mc -> onServer(mc, server -> {
