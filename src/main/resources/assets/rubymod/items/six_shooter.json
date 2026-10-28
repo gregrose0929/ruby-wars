@@ -1,0 +1,10 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/six_shooter",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "six_shooter"
+		}
+	}
+}

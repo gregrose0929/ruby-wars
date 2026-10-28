@@ -106,8 +106,12 @@ public final class Rift {
 			this.name = name;
 		}
 
+		/** Gambler's Dice: this room's boosted relic and switched-off one. */
+		Relic boosted;
+		Relic disabled;
+
 		boolean has(Relic r) {
-			return relics.contains(r);
+			return relics.contains(r) && r != disabled;
 		}
 
 		/** Relics combined: how many stars (2 or 3); 1 for an ordinary one. */
@@ -115,11 +119,11 @@ public final class Rift {
 
 		/** 0 without it; 1, 2 or 3 with it. */
 		int level(Relic r) {
-			return has(r) ? levels.getOrDefault(r, 1) : 0;
+			return has(r) ? levels.getOrDefault(r, 1) + (r == boosted ? 1 : 0) : 0;
 		}
 
 		boolean canCombine(Relic r) {
-			return has(r) && level(r) < r.maxLevel();
+			return relics.contains(r) && levels.getOrDefault(r, 1) < r.maxLevel();
 		}
 	}
 
@@ -206,6 +210,11 @@ public final class Rift {
 
 	static Runner runner(Entity e) {
 		return e == null ? null : RUNNERS.get(e.getUUID());
+	}
+
+	/** For autotests: one of the players' allies (golems, clones, the risen)? */
+	public static boolean isAllyEntity(Entity e) {
+		return RelicEffects.isAlly(e);
 	}
 
 	public static boolean isEnemy(Entity e) {
@@ -340,6 +349,7 @@ public final class Rift {
 		removePortal(level);
 		RelicEffects.clearWorld(level);
 		RiftAbilities.clear();
+		RiftWeapons.clear(level);
 		RiftObjectives.clear(level);
 		RiftTanks.clear(level);
 		state = State.IDLE;
@@ -472,6 +482,7 @@ public final class Rift {
 		}
 		RelicEffects.tickWorld(level);
 		RiftAbilities.tick(level);
+		RiftWeapons.tick(level);
 		if (portalOpen) {
 			tickPortal(server, level);
 		}
@@ -624,6 +635,7 @@ public final class Rift {
 		removePortal(level);
 		RelicEffects.clearWorld(level);
 		RiftAbilities.clear();
+		RiftWeapons.clear(level);
 		RiftObjectives.clear(level);
 		RiftTanks.clear(level);
 		slot = 1 - slot;
@@ -1715,6 +1727,13 @@ public final class Rift {
 				}
 			}
 			default -> {
+				if (what.equals("spawn") && room != null && node != null) {
+					// Six of the room's monsters, on the spawn points.
+					for (int k = 0; k < 6; k++) {
+						PENDING.add(new Pending(room.spawns.get(k % room.spawns.size()), RiftEnemies.pick(node.theme, RandomSource.create()), null, new int[] {5 + k}));
+					}
+					return;
+				}
 				if (what.startsWith("shape:")) {
 					RiftRoom.forceShape = RiftRoom.Shape.valueOf(what.substring(6));
 					return;

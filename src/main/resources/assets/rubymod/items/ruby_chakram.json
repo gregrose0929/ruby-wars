@@ -1,0 +1,10 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/ruby_chakram",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "ruby_chakram"
+		}
+	}
+}

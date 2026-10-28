@@ -73,14 +73,27 @@ public final class Gunfire {
 		}
 
 		boolean rift = dev.rubymod.game.rift.Rift.playing(player);
-		NEXT_SHOT.put(player.getUUID(), now + (rift ? Math.max(1, Math.round(stats.fireInterval() * RelicEffects.fireIntervalScale(player)))
-				: stats.fireInterval()));
+		int interval = stats.special() == GunStats.Special.SPINUP ? dev.rubymod.game.rift.RiftWeapons.spinInterval(player) : stats.fireInterval();
+		NEXT_SHOT.put(player.getUUID(), now + (rift ? Math.max(1, Math.round(interval * RelicEffects.fireIntervalScale(player))) : interval));
 		SpawnShield.clear(player);
 		boolean infinite = rift && RelicEffects.infiniteAmmo(player);
 		if (!player.isCreative() && !infinite) {
 			stack.set(ModComponents.AMMO, ammo - 1);
 		}
 
+		if (dev.rubymod.game.rift.RiftWeapons.handles(stats.special())) {
+			// The Rift's exotic weapons fire their own way (beams, blades, flames, missiles...).
+			dev.rubymod.game.rift.RiftWeapons.fire(level, player, stack, stats);
+			if (rift) {
+				RelicEffects.onShot(level, player, stack);
+			}
+			float kick = stats.recoil();
+			Net.send(player, new Payloads.Recoil(kick, (player.getRandom().nextFloat() - 0.5F) * kick * 0.5F));
+			if (ammo - 1 <= 0 && !player.isCreative() && !infinite) {
+				startReload(player);
+			}
+			return;
+		}
 		boolean aiming = GunItem.isAiming(player);
 		float spread = aiming ? stats.aimSpread() : stats.hipSpread();
 		Vec3 eye = player.getEyePosition();
@@ -154,6 +167,18 @@ public final class Gunfire {
 				trace(level, shooter, stats, hitPos.add(normal.scale(0.05)), reflected, range - travelled, bounces - 1);
 				return;
 			}
+			// Split Shot: a bullet that hits a wall bursts into three fragments (fragments, at -1 bounces, don't split again).
+			if (bounces == 0 && dev.rubymod.game.rift.Rift.playing(shooter) && RelicEffects.splitShot(shooter)) {
+				Vec3 normal = Vec3.atLowerCornerOf(blockHit.getDirection().getUnitVec3i());
+				Vec3 reflected = dir.subtract(normal.scale(2 * dir.dot(normal)));
+				drawTracer(level, start, hitPos, stats);
+				level.sendParticles(ParticleTypes.ELECTRIC_SPARK, hitPos.x, hitPos.y, hitPos.z, 8, 0.1, 0.1, 0.1, 0.2);
+				for (int k = 0; k < 3; k++) {
+					Vec3 frag = withSpread(reflected, 18.0F, shooter.getRandom());
+					trace(level, shooter, stats.scaled(RelicEffects.splitDamage(shooter)), hitPos.add(normal.scale(0.05)), frag, 14, -1);
+				}
+				return;
+			}
 		} else {
 			hitPos = end;
 		}
@@ -224,6 +249,9 @@ public final class Gunfire {
 			damage = RelicEffects.damage(shooter, target, damage, headshot);
 			if (headshot) {
 				RelicEffects.headshot(shooter, target, damage);
+				if (stats.special() == GunStats.Special.FAN) {
+					dev.rubymod.game.rift.RiftWeapons.fanRicochet(level, shooter, target, damage);
+				}
 			}
 		}
 		float healthBefore = target instanceof LivingEntity living ? living.getHealth() : 0;
@@ -378,6 +406,9 @@ public final class Gunfire {
 		int current = GunItem.ammo(stack);
 		int needed = stats.magazine() - current;
 		int taken = freeAmmo(player) ? needed : takeAmmo(player, stats.ammo(), needed);
+		if (dev.rubymod.game.rift.Rift.playing(player)) {
+			RelicEffects.onReloaded(player);
+		}
 		stack.set(ModComponents.AMMO, current + taken);
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), dev.rubymod.registry.ModSounds.BOLT, SoundSource.PLAYERS, 0.9F, 1.0F);
 		Net.send(player, new Payloads.ReloadState(0));
@@ -404,6 +435,13 @@ public final class Gunfire {
 			if (viewer != shooter) {
 				level.sendParticles(viewer, particle, false, false, at.x, at.y, at.z, count, spread, spread, spread, speed);
 			}
+		}
+	}
+
+	/** Drop a pending reload (the Ruby Chakram came back to your hand first). */
+	public static void forgetReload(ServerPlayer player) {
+		if (RELOADS.remove(player.getUUID()) != null) {
+			Net.send(player, new Payloads.ReloadState(0));
 		}
 	}
 

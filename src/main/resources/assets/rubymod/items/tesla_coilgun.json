@@ -1,0 +1,10 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/tesla_coilgun",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "tesla_coilgun"
+		}
+	}
+}

@@ -1,0 +1,10 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/rail_lance",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "rail_lance"
+		}
+	}
+}

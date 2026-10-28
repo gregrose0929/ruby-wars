@@ -1,0 +1,10 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/dragons_breath",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "dragons_breath"
+		}
+	}
+}

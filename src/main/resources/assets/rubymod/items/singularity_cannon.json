@@ -1,0 +1,10 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/singularity_cannon",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "singularity_cannon"
+		}
+	}
+}

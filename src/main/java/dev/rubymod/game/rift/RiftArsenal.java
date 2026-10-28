@@ -38,7 +38,17 @@ final class RiftArsenal {
 			new Weapon(ModItems.ROCKET_LAUNCHER, "Rocket Launcher", "Blows whole groups apart."),
 			new Weapon(ModItems.LANCER, "Lancer AT", "Guided missile that wrecks tanks and mechs."),
 			new Weapon(ModItems.SKYHAMMER, "Skyhammer AA", "Locks onto anything that flies: gunships beware."),
-			new Weapon(ModItems.RUBY_SWORD, "Ruby Sword", "For when they get too close."));
+			new Weapon(ModItems.RUBY_SWORD, "Ruby Sword", "For when they get too close."),
+			new Weapon(ModItems.RUBY_MINIGUN, "Ruby Minigun", "Spins up from a stutter to a roar. Hold the trigger."),
+			new Weapon(ModItems.RAIL_LANCE, "Rail Lance", "A heartbeat of charge, then a beam through every enemy in a line."),
+			new Weapon(ModItems.RUBY_CHAKRAM, "Ruby Chakram", "A spinning blade that ricochets through six enemies, then flies home."),
+			new Weapon(ModItems.DRAGONS_BREATH, "Dragon's Breath", "A roaring cone of flame that sets everything alight."),
+			new Weapon(ModItems.SWARM_LAUNCHER, "Swarm Launcher", "Six mini missiles, each picking its own target."),
+			new Weapon(ModItems.TESLA_COILGUN, "Tesla Coilgun", "A crackling beam that jumps from enemy to enemy."),
+			new Weapon(ModItems.BOUNCER, "Bouncer", "Grenades that bounce off walls and burst on anything they touch."),
+			new Weapon(ModItems.SIX_SHOOTER, "Six-Shooter", "Fan the hammer. Headshots ricochet into the next head."),
+			new Weapon(ModItems.RUBY_WARHAMMER, "Ruby Warhammer", "Slam the ground and throw them into the air. Jump first for a bigger slam."),
+			new Weapon(ModItems.SINGULARITY_CANNON, "Singularity Cannon", "A slow orb that drags everything in, then crushes it."));
 
 	private RiftArsenal() {
 	}

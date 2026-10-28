@@ -1311,6 +1311,158 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("relics2")) {
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 30; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				for (String r : new String[] {"lucky_coin", "thorn_armor", "overclock", "venom_rounds", "echo_shot", "ground_pound", "split_shot",
+						"static_charge", "hall_of_mirrors", "meteor_shower", "ruby_dragon", "rewind", "the_hunted", "gamblers_dice", "superconductor",
+						"toxic_inferno", "cryo", "chain_lightning", "napalm"}) {
+					dev.rubymod.game.rift.Rift.testSkip(server, r);
+				}
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			then(100, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "room:FIGHT")));
+			for (int i = 0; i < 30; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+				dev.rubymod.game.rift.Rift.testSkip(server, "spawn");
+			}));
+			for (int t = 0; t < 300; t++) {
+				int tick = t;
+				then(1, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					var near = level.getEntities((net.minecraft.world.entity.Entity) null, me.getBoundingBox().inflate(30),
+							e -> e.entityTags().contains(dev.rubymod.game.rift.Rift.TAG) && e instanceof net.minecraft.world.entity.Mob m && m.isAlive()
+									&& !dev.rubymod.game.rift.Rift.isAllyEntity(e) && dev.rubymod.game.rift.Rift.isEnemy(e));
+					near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(me)));
+					if (!near.isEmpty()) {
+						var to = near.get(0).getBoundingBox().getCenter().subtract(me.getEyePosition());
+						me.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+						me.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+					}
+					me.clearFire();
+					me.setSprinting(tick % 60 < 30);
+					var stack = me.getInventory().getItem(0);
+					me.getInventory().setSelectedSlot(0);
+					if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+						dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+					}
+					if (tick % 100 == 50) {
+						dev.rubymod.game.rift.Rift.testSkip(server, "spawn");
+					}
+				}));
+				if (t == 120 || t == 240) {
+					then(0, mc -> {
+						log("relics2: {} | hp {}", dev.rubymod.game.rift.Rift.debugState(), mc.player.getHealth());
+						shot(mc, "relics2-" + tick);
+					});
+				}
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("weapons")) {
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			then(220, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			for (int i = 0; i < 30; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> command(mc, "effect give @a minecraft:resistance infinite 255 true"));
+			String[] weapons = {"ruby_minigun", "rail_lance", "ruby_chakram", "dragons_breath", "swarm_launcher", "tesla_coilgun", "bouncer", "six_shooter",
+					"ruby_warhammer", "singularity_cannon"};
+			for (String w : weapons) {
+				int[] before = new int[1];
+				then(5, mc -> onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "spawn");
+					var me = me(server);
+					var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse("rubymod:" + w));
+					var stack = new net.minecraft.world.item.ItemStack(item);
+					if (item instanceof dev.rubymod.gun.GunItem g) {
+						stack.set(dev.rubymod.registry.ModComponents.AMMO, g.stats().magazine());
+					}
+					me.getInventory().setItem(0, stack);
+					me.getInventory().setSelectedSlot(0);
+				}));
+				then(2, mc -> mc.player.getInventory().setSelectedSlot(0));
+				then(40, mc -> onServer(mc, server -> {
+					before[0] = (int) server.getLevel(dev.rubymod.game.Duels.ARENA).getEntities((net.minecraft.world.entity.Entity) null,
+							me(server).getBoundingBox().inflate(40), e -> e.entityTags().contains(dev.rubymod.game.rift.Rift.TAG)
+									&& e instanceof net.minecraft.world.entity.Mob).size();
+				}));
+				for (int t = 0; t < 50; t++) {
+					int tick = t;
+					then(1, mc -> onServer(mc, server -> {
+						var me = me(server);
+						var level = (net.minecraft.server.level.ServerLevel) me.level();
+						// Face the nearest monster, then pull the trigger.
+						var near = level.getEntities((net.minecraft.world.entity.Entity) null, me.getBoundingBox().inflate(30),
+								e -> e.entityTags().contains(dev.rubymod.game.rift.Rift.TAG) && e instanceof net.minecraft.world.entity.Mob m && m.isAlive()
+										&& !dev.rubymod.game.rift.Rift.isAllyEntity(e));
+						near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(me)));
+						if (!near.isEmpty()) {
+							var to = near.get(0).getBoundingBox().getCenter().subtract(me.getEyePosition());
+							float yaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z));
+							float pitch = (float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
+							me.setYRot(yaw);
+							me.setXRot(pitch);
+							me.setYHeadRot(yaw);
+						}
+						me.clearFire();
+						me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, 100, 0, false, false));
+						var stack = me.getMainHandItem();
+						if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+							dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+						}
+					}));
+					if (t == 1 || t == 12) {
+						then(0, mc -> {
+							var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+							mc.player.setYRot(sp.getYRot());
+							mc.player.setXRot(sp.getXRot());
+						});
+					}
+					if (t == 8) {
+						then(0, mc -> shot(mc, "weapon-" + w));
+					}
+				}
+				then(40, mc -> onServer(mc, server -> {
+					int after = (int) server.getLevel(dev.rubymod.game.Duels.ARENA).getEntities((net.minecraft.world.entity.Entity) null,
+							me(server).getBoundingBox().inflate(40), e -> e.entityTags().contains(dev.rubymod.game.rift.Rift.TAG)
+									&& e instanceof net.minecraft.world.entity.Mob).size();
+					log("weapon {}: monsters {} -> {} | {}", w, before[0], after, dev.rubymod.game.rift.Rift.debugState());
+				}));
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("shapes")) {
 			then(0, mc -> {
 				command(mc, "time set noon");
@@ -1680,7 +1832,8 @@ public final class AutoTest {
 				command(mc, "tp @p ~ ~ ~ 0 0");
 			});
 			then(100, mc -> log("world ready"));
-			String[] guns = {"arr_rifle", "service_pistol", "combat_shotgun", "longshot_sniper", "ruby_blaster", "rocket_launcher", "skyhammer", "lancer"};
+			String[] guns = System.getenv("GUNS") != null ? System.getenv("GUNS").split(",")
+					: new String[] {"arr_rifle", "service_pistol", "combat_shotgun", "longshot_sniper", "ruby_blaster", "rocket_launcher", "skyhammer", "lancer"};
 			for (String gun : guns) {
 				then(10, mc -> command(mc, "item replace entity @p weapon.mainhand with rubymod:" + gun + "[custom_model_data={strings:[\"rift\"]}]"));
 				then(30, mc -> shot(mc, "riftgun-" + gun));

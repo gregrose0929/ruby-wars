@@ -156,5 +156,15 @@
 	"death.attack.rubymod.headshot.player": "%1$s was headshot by %2$s",
 	"death.attack.rubymod.headshot.item": "%1$s was headshot by %2$s using %3$s",
 	"death.attack.rubymod.turret": "%1$s walked into a sentry turret",
-	"death.attack.rubymod.turret.player": "%1$s was gunned down by %2$s's sentry turret"
+	"death.attack.rubymod.turret.player": "%1$s was gunned down by %2$s's sentry turret",
+	"item.rubymod.ruby_minigun": "Ruby Minigun",
+	"item.rubymod.rail_lance": "Rail Lance",
+	"item.rubymod.ruby_chakram": "Ruby Chakram",
+	"item.rubymod.dragons_breath": "Dragon's Breath",
+	"item.rubymod.swarm_launcher": "Swarm Launcher",
+	"item.rubymod.tesla_coilgun": "Tesla Coilgun",
+	"item.rubymod.bouncer": "Bouncer",
+	"item.rubymod.six_shooter": "Six-Shooter",
+	"item.rubymod.ruby_warhammer": "Ruby Warhammer",
+	"item.rubymod.singularity_cannon": "Singularity Cannon"
 }

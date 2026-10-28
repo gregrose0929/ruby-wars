@@ -86,6 +86,7 @@ public class RelicScreen extends Screen {
 			case "FROST" -> 0xFFA8E8FF;
 			case "EXPLOSIVE" -> 0xFFFFD040;
 			case "RUBY" -> 0xFFFF3D6E;
+			case "POISON" -> 0xFF7AE33A;
 			default -> 0;
 		};
 	}

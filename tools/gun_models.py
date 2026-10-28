@@ -537,6 +537,349 @@ def lancer():
     })
 
 
+
+# ----- Ruby Rift's exotic weapons -----
+
+def annulus(x, y, z0, z1, r, t, mat, cell=0.25, **flags):
+    """A round ring (or, with t >= r, a filled disc) around (x, y), from z0 to z1, built a row at a time: far fewer boxes than round_ring."""
+    boxes = []
+    n = int(math.ceil(r / cell))
+    for j in range(-n, n):
+        yc = (j + 0.5) * cell
+        if abs(yc) >= r:
+            continue
+        wo = math.sqrt(r * r - yc * yc)
+        ri = r - t
+        if ri > 0 and abs(yc) < ri:
+            wi = math.sqrt(ri * ri - yc * yc)
+            boxes.append(B(x - wo, y + j * cell, z0, x - wi, y + (j + 1) * cell, z1, mat, **flags))
+            boxes.append(B(x + wi, y + j * cell, z0, x + wo, y + (j + 1) * cell, z1, mat, **flags))
+        else:
+            boxes.append(B(x - wo, y + j * cell, z0, x + wo, y + (j + 1) * cell, z1, mat, **flags))
+    return boxes
+
+def ruby_minigun():
+    ax = 3.4  # barrel axis height
+    body = [
+        B(-2.2, 0.4, -6.0, 2.2, 6.0, 4.0, "black_metal", panels=True, mark=True),     # receiver housing
+        B(-2.4, 1.0, -5.0, 2.4, 5.4, 3.0, "graphite", vents=True),
+        B(-1.6, 6.0, -4.0, 1.6, 6.6, 2.0, "steel"),                                   # top plate
+        B(-0.5, 6.6, -3.0, 0.5, 8.4, -2.4, "black_metal"),                           # carry handle
+        B(-0.5, 6.6, 1.0, 0.5, 8.4, 1.6, "black_metal"),
+        B(-0.5, 8.4, -3.0, 0.5, 9.0, 1.6, "rubber"),
+        B(-1.8, ax - 1.8, 4.0, 1.8, ax + 1.8, 5.2, "steel_bright"),                  # motor collar
+        B(-1.4, ax - 1.4, 5.2, 1.4, ax + 1.4, 6.0, "ruby_metal"),
+        B(-0.6, ax - 0.6, 5.0, 0.6, ax + 0.6, 6.05, "glow_ruby"),                     # ruby core
+        B(2.4, 0.6, -4.0, 5.4, 4.6, 2.0, "ruby_metal", panels=True),                  # ammo drum (left)
+        B(2.6, 1.2, -3.4, 5.6, 4.0, 1.4, "graphite"),
+        B(5.6, 1.6, -2.8, 5.75, 3.6, 0.8, "glow_ruby"),                               # drum window
+        B(1.6, 3.6, 1.6, 2.6, 4.2, 4.2, "brass"),                                    # feed chute
+        B(-0.4, -0.2, -1.6, 0.4, 0.4, 0.6, "graphite"),                              # trigger guard
+        B(-2.6, 2.0, -8.4, -2.2, 3.6, -2.0, "steel"),                                # side rail
+        B(-1.4, 1.4, -8.0, 1.4, 5.0, -6.0, "graphite"),                              # rear cap
+        B(-0.8, 2.4, -8.1, 0.8, 4.0, -8.0, "glow_ruby_dim"),
+    ]
+    barrels = []
+    for k in range(6):
+        a = k * math.pi / 3
+        bx, by = math.cos(a) * 1.0, math.sin(a) * 1.0
+        barrels += tube(bx, by, 0.0, 15.0, 0.32, "barrel")
+        barrels.append(B(bx - 0.18, by - 0.18, 15.0, bx + 0.18, by + 0.18, 15.05, "black_metal", bore=True))
+    barrels += [
+        *annulus(0, 0, 2.0, 2.6, 1.7, 0.4, "steel"),                                # barrel clamps
+        *annulus(0, 0, 8.0, 8.6, 1.6, 0.35, "steel"),
+        *annulus(0, 0, 13.8, 14.6, 1.7, 0.4, "ruby_metal"),
+        B(-0.3, -0.3, 0.0, 0.3, 0.3, 14.0, "graphite"),                                 # spindle
+    ]
+    spin = R("spin", pivot=(0, ax, 6.0), boxes=barrels)
+    grip = R("grip", pivot=(0, 0.6, -0.4), rot=(-15, 0, 0), boxes=[B(-0.95, -4.4, -1.2, 0.95, 0.4, 0.6, "rubber", stipple=True)])
+    trigger = R("trigger", pivot=(0, 0.4, 0.2), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
+    fore = [B(-0.7, -3.8, 2.6, 0.7, 0.4, 3.8, "rubber", stipple=True)]               # front grip
+    root = P("root", children=[P("body", body + fore), spin, grip, trigger])
+    return Gun(root, {
+        "sight": (0, 9.0, -1.0), "red_dot_sight": (0, 9.0, -1.0), "muzzle": (0, ax, 21.4), "eject": (-2.4, 3.4, 0.0),
+        "hand_r": (0, -1.6, -0.4), "hand_l": (0, -1.6, 3.2), "mag_hand": (4.0, 2.0, -1.0), "grip_hand_l": (0, -1.6, 3.2),
+    }, palette={"glow_ruby": True})
+
+
+def rail_lance():
+    ay = 3.6
+    body = [
+        B(-1.2, 0.6, -5.0, 1.2, 5.2, 4.0, "graphite", panels=True, mark=True),        # receiver
+        B(-1.3, 1.2, -4.0, 1.3, 4.6, 3.0, "white_poly"),
+        B(-1.0, 1.0, -12.0, 1.0, 4.6, -5.0, "white_poly", panels=True),              # stock
+        B(-1.1, 0.4, -12.6, 1.1, 5.0, -12.0, "rubber"),
+        B(-0.6, 2.0, -11.0, 0.6, 3.6, -6.0, "glow_cyan"),                            # stock capacitor
+        # The rails: two long bars with the beam's path open between them.
+        B(-0.9, ay + 0.9, 4.0, 0.9, ay + 1.5, 24.0, "steel_bright"),
+        B(-0.9, ay - 1.5, 4.0, 0.9, ay - 0.9, 24.0, "steel_bright"),
+        B(-1.0, ay + 1.5, 4.0, 1.0, ay + 1.9, 20.0, "graphite"),
+        B(-1.0, ay - 1.9, 4.0, 1.0, ay - 1.5, 20.0, "graphite"),
+        B(-0.25, ay - 0.25, 4.0, 0.25, ay + 0.25, 23.0, "glow_cyan"),                 # charge channel
+        B(1.3, ay - 1.0, 4.0, 1.6, ay + 1.0, 18.0, "graphite", vents=True),           # side heat sinks
+        B(-1.6, ay - 1.0, 4.0, -1.3, ay + 1.0, 18.0, "graphite", vents=True),
+        B(-0.5, ay + 1.9, 23.0, 0.5, ay + 2.6, 24.0, "steel"),                        # muzzle prongs
+        B(-0.5, ay - 2.6, 23.0, 0.5, ay - 1.9, 24.0, "steel"),
+        B(-0.4, -0.2, -0.6, 0.4, 0.2, 1.8, "graphite"),                              # trigger guard
+        B(-0.8, 5.2, -2.0, 0.8, 6.4, 1.6, "black_metal"),                            # scope
+        B(-0.6, 5.4, 1.6, 0.6, 6.2, 1.7, "lens"),
+        B(-0.7, 5.3, -2.1, 0.7, 6.3, -2.0, "lens_clear"),
+    ]
+    for z in (6.0, 9.0, 12.0, 15.0, 18.0, 21.0):                                    # coil rings
+        body += annulus(0, ay, z, z + 0.6, 1.25, 0.3, "ruby_metal")
+    grip = R("grip", pivot=(0, 0.6, -0.4), rot=(-18, 0, 0), boxes=[B(-0.9, -4.4, -1.2, 0.9, 0.4, 0.6, "graphite", stipple=True)])
+    trigger = R("trigger", pivot=(0, 0.6, 0.4), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
+    root = P("root", children=[P("body", body), grip, trigger])
+    return Gun(root, {
+        "sight": (0, 5.85, -2.0), "red_dot_sight": (0, 5.85, -2.0), "muzzle": (0, ay, 24.2), "eject": (-1.4, 3.6, 1.0),
+        "hand_r": (0, -1.6, -0.4), "hand_l": (0, ay - 2.0, 10.0), "mag_hand": (0, 1.0, 2.0), "grip_hand_l": (0, ay - 2.0, 10.0),
+    })
+
+
+def ruby_chakram():
+    # A gauntlet-like handle; the blade disc (part "rocket": gone while it's thrown) sits in front, flat.
+    body = [
+        B(-1.0, -0.6, -2.0, 1.0, 1.6, 2.4, "black_metal", panels=True),               # gauntlet
+        B(-1.1, 1.6, -1.6, 1.1, 2.2, 2.0, "ruby_metal"),
+        B(-0.5, 2.2, -0.6, 0.5, 2.6, 1.4, "glow_ruby"),                               # charge gem
+        B(-0.4, 0.4, 2.4, 0.4, 1.0, 4.4, "steel"),                                   # cradle arm
+    ]
+    disc = []
+    disc += annulus(0, 0, -0.25, 0.25, 4.2, 1.1, "ruby_metal", cell=0.3)           # blade ring
+    disc += annulus(0, 0, -0.3, 0.3, 3.2, 0.3, "steel_bright", cell=0.3)
+    disc += annulus(0, 0, -0.2, 0.2, 1.4, 0.5, "glow_ruby", cell=0.25)            # glowing hub
+    disc.append(B(-0.6, -0.6, -0.35, 0.6, 0.6, 0.35, "graphite"))
+    for k in range(4):                                                               # four hooked blades
+        a = k * math.pi / 2 + 0.4
+        cx, cy = math.cos(a) * 4.4, math.sin(a) * 4.4
+        disc.append(B(cx - 0.5, cy - 0.5, -0.15, cx + 0.5, cy + 0.5, 0.15, "steel_bright"))
+        disc.append(B(cx - 0.25, cy - 0.25, -0.18, cx + 0.25, cy + 0.25, 0.18, "glow_ruby"))
+    rocket = R("rocket", pivot=(0, 1.0, 7.4), rot=(90, 0, 0), boxes=disc)
+    grip = R("grip", pivot=(0, 0.2, 0.0), rot=(-10, 0, 0), boxes=[B(-0.85, -4.0, -1.0, 0.85, 0.2, 0.6, "rubber", stipple=True)])
+    trigger = R("trigger", pivot=(0, 0.0, 0.8), boxes=[B(-0.15, -0.8, 0.0, 0.15, 0.0, 0.3, "steel")])
+    root = P("root", children=[P("body", body), rocket, grip, trigger])
+    return Gun(root, {
+        "sight": (0, 3.4, -1.0), "red_dot_sight": (0, 3.4, -1.0), "muzzle": (0, 1.0, 9.0), "eject": (0, 1.0, 9.0),
+        "hand_r": (0, -1.4, -0.4), "hand_l": (0, -1.4, -0.4), "mag_hand": (0, 1.0, 7.0), "grip_hand_l": (0, -1.4, -0.4),
+    }, palette={"glow_ruby": True})
+
+
+def dragons_breath():
+    ay = 3.0
+    body = [
+        B(-1.2, 0.8, -4.0, 1.2, 4.6, 4.0, "black_metal", panels=True),               # body
+        B(-1.0, 1.4, -10.0, 1.0, 4.0, -4.0, "graphite"),                            # stock
+        B(-1.1, 0.8, -10.6, 1.1, 4.6, -10.0, "rubber"),
+        *tube(0, ay, 4.0, 14.0, 0.9, "steel"),                                        # flame tube
+        *annulus(0, ay, 6.0, 12.0, 1.5, 0.25, "black_metal", cell=0.3),            # heat shield
+        B(-1.6, ay - 1.6, 6.5, 1.6, ay + 1.6, 7.0, "steel"),                         # cooling fins
+        B(-1.6, ay - 1.6, 8.5, 1.6, ay + 1.6, 9.0, "steel"),
+        B(-1.6, ay - 1.6, 10.5, 1.6, ay + 1.6, 11.0, "steel"),
+        *tube(0, ay, 14.0, 15.6, 1.2, "black_metal"),                                # nozzle
+        B(-0.6, ay - 0.6, 15.6, 0.6, ay + 0.6, 15.65, "glow_orange"),                # the flame inside
+        B(0.9, ay - 1.6, 14.4, 1.3, ay - 1.2, 15.2, "glow_orange"),                  # pilot light
+        B(-0.4, -0.2, -0.6, 0.4, 0.2, 1.8, "graphite"),
+        # Twin fuel tanks under the barrel, with a hose.
+        *tube(-0.9, -0.6, 2.0, 10.0, 0.9, "ruby_metal"),
+        *tube(0.9, -0.6, 2.0, 10.0, 0.9, "ruby_metal"),
+        B(-1.8, -1.0, 4.5, 1.8, -0.2, 5.2, "steel"),                                 # tank straps
+        B(-1.8, -1.0, 8.0, 1.8, -0.2, 8.7, "steel"),
+        B(-0.3, -0.2, 9.6, 0.3, ay - 0.6, 10.2, "rubber"),                           # hose
+        B(-1.7, -1.4, 6.0, -1.5, -0.4, 7.8, "warning"),
+        B(1.5, -1.4, 6.0, 1.7, -0.4, 7.8, "warning"),
+        B(-0.2, 4.6, -2.0, 0.2, 5.4, 2.0, "steel"),                                  # top rail
+    ]
+    grip = R("grip", pivot=(0, 0.8, -0.4), rot=(-15, 0, 0), boxes=[B(-0.9, -4.2, -1.2, 0.9, 0.4, 0.6, "rubber", stipple=True)])
+    trigger = R("trigger", pivot=(0, 0.6, 0.4), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
+    fore = [B(-0.7, -3.6, 11.0, 0.7, -1.0, 12.4, "rubber", stipple=True)]
+    root = P("root", children=[P("body", body + fore), grip, trigger])
+    return Gun(root, {
+        "sight": (0, 5.6, -2.0), "red_dot_sight": (0, 5.6, -2.0), "muzzle": (0, ay, 15.8), "eject": (0, ay, 15.8),
+        "hand_r": (0, -1.6, -0.4), "hand_l": (0, -2.4, 11.6), "mag_hand": (0, -0.6, 6.0), "grip_hand_l": (0, -2.4, 11.6),
+    })
+
+
+def swarm_launcher():
+    ty = 5.0
+    body = [
+        B(-2.6, ty - 2.6, -6.0, 2.6, ty + 2.6, 10.0, "olive_paint", panels=True, mark=True),   # launch pod
+        B(-2.8, ty - 2.8, 9.0, 2.8, ty + 2.8, 10.2, "black_metal"),                       # front frame
+        B(-2.8, ty - 2.8, -6.6, 2.8, ty + 2.8, -6.0, "black_metal"),                      # rear frame
+        B(-2.0, ty - 2.0, -6.7, 2.0, ty + 2.0, -6.6, "graphite", vents=True),
+        B(-0.5, ty + 2.6, -3.0, 0.5, ty + 3.4, 4.0, "black_metal"),                       # handle
+        B(-1.6, ty + 2.6, -4.6, -0.6, ty + 4.0, -2.4, "black_metal"),                     # targeting box
+        B(-1.5, ty + 2.8, -2.4, -0.7, ty + 3.8, -2.35, "lens"),
+        B(2.6, ty - 1.0, -2.0, 3.0, ty + 1.0, 6.0, "warning"),                            # hazard stripe
+        B(-3.0, ty - 1.0, -2.0, -2.6, ty + 1.0, 6.0, "warning"),
+        B(-0.4, -0.2, -0.6, 0.4, 0.2, 1.8, "graphite"),
+    ]
+    for i in range(3):                                                                    # six tubes, 3 x 2
+        for j in range(2):
+            cx = -1.6 + i * 1.6
+            cy = ty - 0.8 + j * 1.6
+            body.append(B(cx - 0.6, cy - 0.6, 10.2, cx + 0.6, cy + 0.6, 10.25, "black_metal", bore=True))
+            body.append(B(cx - 0.25, cy - 0.25, 10.0, cx + 0.25, cy + 0.25, 10.26, "seeker_glow"))
+    grip = R("grip", pivot=(0, ty - 2.6, -0.4), rot=(-12, 0, 0), boxes=[B(-0.9, -4.2, -1.2, 0.9, 0.4, 0.6, "polymer", stipple=True)])
+    trigger = R("trigger", pivot=(0, ty - 2.8, 0.4), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
+    fore = [B(-0.8, ty - 6.0, 5.0, 0.8, ty - 2.6, 6.2, "polymer", stipple=True)]
+    root = P("root", children=[P("body", body + fore), grip, trigger])
+    return Gun(root, {
+        "sight": (-1.1, ty + 3.3, -4.6), "red_dot_sight": (-1.1, ty + 3.3, -4.6), "muzzle": (0, ty, 10.6), "eject": (0, ty, -6.8),
+        "hand_r": (0, ty - 4.0, -0.4), "hand_l": (0, ty - 4.6, 5.6), "mag_hand": (0, ty, 10.0), "grip_hand_l": (0, ty - 4.6, 5.6),
+    })
+
+
+def tesla_coilgun():
+    ay = 3.4
+    body = [
+        B(-1.2, 0.8, -4.0, 1.2, 5.0, 4.0, "graphite", panels=True, mark=True),
+        B(-1.0, 1.0, -10.0, 1.0, 4.4, -4.0, "black_metal"),                            # stock
+        B(-1.1, 0.6, -10.6, 1.1, 4.8, -10.0, "rubber"),
+        B(-0.6, 1.8, -9.0, 0.6, 3.6, -5.0, "glow_cyan"),                                # battery window
+        *tube(0, ay, 4.0, 15.0, 0.55, "steel"),                                         # core rod
+        B(-0.4, -0.2, -0.6, 0.4, 0.2, 1.8, "graphite"),
+        B(-0.2, 5.0, -2.0, 0.2, 5.6, 3.0, "steel"),
+        B(-0.5, 5.6, -1.6, 0.5, 6.2, 2.6, "black_metal"),                              # top sight
+        # Insulators between the coils.
+        B(-0.7, ay - 0.7, 14.4, 0.7, ay + 0.7, 15.0, "white_poly"),
+    ]
+    for i, z in enumerate((5.0, 7.0, 9.0, 11.0, 13.0)):                                 # copper coils, growing
+        r = 1.0 + i * 0.18
+        body += annulus(0, ay, z, z + 1.1, r, 0.32, "brass", cell=0.25)
+    body += annulus(0, ay, 15.0, 17.0, 1.4, 0.35, "brass", cell=0.25)                # the terminal ring
+    body.append(B(-0.9, ay - 0.9, 15.4, 0.9, ay + 0.9, 16.6, "glow_cyan"))             # the glowing sphere
+    grip = R("grip", pivot=(0, 0.8, -0.4), rot=(-15, 0, 0), boxes=[B(-0.9, -4.2, -1.2, 0.9, 0.4, 0.6, "graphite", stipple=True)])
+    trigger = R("trigger", pivot=(0, 0.6, 0.4), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
+    fore = [B(-0.7, -3.4, 7.0, 0.7, ay - 1.4, 8.4, "rubber", stipple=True)]
+    root = P("root", children=[P("body", body + fore), grip, trigger])
+    return Gun(root, {
+        "sight": (0, 6.2, -1.6), "red_dot_sight": (0, 6.2, -1.6), "muzzle": (0, ay, 17.2), "eject": (-1.4, 3.6, 1.0),
+        "hand_r": (0, -1.6, -0.4), "hand_l": (0, -2.0, 7.6), "mag_hand": (0, 2.6, -7.0), "grip_hand_l": (0, -2.0, 7.6),
+    })
+
+
+def bouncer():
+    ay = 3.2
+    body = [
+        B(-1.2, 1.0, -3.0, 1.2, 5.0, 2.0, "black_metal", panels=True),                 # frame
+        B(-1.0, 1.4, -9.0, 1.0, 4.2, -3.0, "graphite"),                               # stock
+        B(-1.1, 1.0, -9.6, 1.1, 4.6, -9.0, "rubber"),
+        *annulus(0, ay, 2.0, 6.0, 2.2, 0.5, "steel", cell=0.3),                     # the drum
+        *annulus(0, ay, 2.6, 5.4, 1.75, 0.3, "ruby_metal", cell=0.3),
+        B(-0.4, ay - 0.4, 2.0, 0.4, ay + 0.4, 6.0, "graphite"),
+        *tube(0, ay, 6.0, 13.0, 1.15, "black_metal"),                                 # fat barrel
+        *annulus(0, ay, 12.6, 13.6, 1.5, 0.35, "ruby_metal", cell=0.3),
+        B(-0.8, ay - 0.8, 13.55, 0.8, ay + 0.8, 13.6, "black_metal", bore=True),
+        B(-1.4, ay + 1.2, 8.0, 1.4, ay + 1.6, 9.0, "glow_ruby"),                        # ruby band
+        B(-0.4, -0.2, -0.6, 0.4, 0.2, 1.6, "graphite"),
+        B(-0.3, 5.0, -2.4, 0.3, 5.8, -1.8, "steel"),                                   # flip sight
+        B(-0.2, ay + 1.2, 11.6, 0.2, ay + 2.2, 12.0, "steel"),
+    ]
+    for k in range(6):                                                                 # chamber mouths on the drum face
+        a = k * math.pi / 3
+        cx, cy = math.cos(a) * 1.25, ay + math.sin(a) * 1.25
+        body.append(B(cx - 0.35, cy - 0.35, 6.0, cx + 0.35, cy + 0.35, 6.05, "glow_ruby_dim"))
+    grip = R("grip", pivot=(0, 1.0, -0.4), rot=(-15, 0, 0), boxes=[B(-0.9, -4.2, -1.2, 0.9, 0.4, 0.6, "rubber", stipple=True)])
+    trigger = R("trigger", pivot=(0, 0.8, 0.4), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
+    fore = [B(-0.7, -2.6, 8.4, 0.7, ay - 1.15, 9.8, "rubber", stipple=True)]
+    root = P("root", children=[P("body", body + fore), grip, trigger])
+    return Gun(root, {
+        "sight": (0, 5.8, -2.1), "red_dot_sight": (0, 5.8, -2.1), "muzzle": (0, ay, 13.8), "eject": (0, ay, 2.0),
+        "hand_r": (0, -1.6, -0.4), "hand_l": (0, -1.8, 9.0), "mag_hand": (0, ay, 4.0), "grip_hand_l": (0, -1.8, 9.0),
+    }, palette={"glow_ruby": True})
+
+
+def six_shooter():
+    ay = 2.4
+    body = [
+        B(-0.6, 0.6, -1.6, 0.6, 3.0, 1.2, "steel", panels=True),                       # frame
+        *annulus(0, ay, 1.2, 3.8, 1.2, 0.4, "steel_bright", cell=0.2),               # cylinder
+        B(-0.3, ay - 0.3, 1.2, 0.3, ay + 0.3, 3.8, "steel"),
+        B(-1.25, ay - 0.4, 1.7, -1.15, ay + 0.4, 3.3, "glow_gold"),                     # cylinder flutes glinting
+        B(1.15, ay - 0.4, 1.7, 1.25, ay + 0.4, 3.3, "glow_gold"),
+        *tube(0, ay + 0.2, 3.8, 12.0, 0.45, "steel"),                                   # long barrel
+        B(-0.35, ay - 0.35, 3.8, 0.35, ay - 0.15, 10.0, "steel_bright"),                # ejector rod
+        B(-0.12, ay + 0.65, 11.2, 0.12, ay + 1.1, 11.8, "steel"),                       # front sight
+        B(-0.25, ay - 0.05, 11.95, 0.25, ay + 0.45, 12.0, "black_metal", bore=True),
+        B(-0.3, 0.4, -1.4, 0.3, 0.6, 1.0, "steel"),                                    # trigger guard
+        B(-0.62, 1.2, -1.2, -0.6, 2.4, 0.6, "ruby_metal"),                             # ruby inlay
+        B(0.6, 1.2, -1.2, 0.62, 2.4, 0.6, "ruby_metal"),
+        B(-0.15, 3.0, -1.4, 0.15, 3.3, -0.6, "steel"),                                 # top strap notch
+    ]
+    hammer = R("hammer", pivot=(0, 3.0, -1.4), boxes=[B(-0.2, 0.0, -0.6, 0.2, 0.9, 0.0, "steel_bright"), B(-0.25, 0.7, -0.9, 0.25, 0.95, -0.4, "steel")])
+    grip = R("grip", pivot=(0, 0.8, -1.2), rot=(-25, 0, 0), boxes=[B(-0.7, -4.0, -1.0, 0.7, 0.2, 0.8, "wood", grain=True),
+                                                                  B(-0.72, -2.8, -0.6, 0.72, -1.6, 0.4, "glow_ruby_dim")])
+    trigger = R("trigger", pivot=(0, 0.6, 0.0), boxes=[B(-0.12, -0.8, 0.0, 0.12, 0.0, 0.25, "steel")])
+    root = P("root", children=[P("body", body), hammer, grip, trigger])
+    return Gun(root, {
+        "sight": (0, ay + 1.1, -1.0), "red_dot_sight": (0, ay + 1.1, -1.0), "muzzle": (0, ay + 0.2, 12.2), "eject": (0, ay, 1.2),
+        "hand_r": (0, -1.5, -0.8), "hand_l": (0, -1.8, -0.4), "mag_hand": (0, ay, 2.4), "grip_hand_l": (0, -1.8, -0.4),
+    })
+
+
+def ruby_warhammer():
+    # Held like a long gun: the haft runs forward, the head at the front end.
+    body = [
+        *tube(0, 1.6, -6.0, 14.0, 0.55, "wood", grain=True),                            # haft
+        *annulus(0, 1.6, -6.4, -5.6, 0.8, 0.3, "steel"),                             # pommel
+        B(-0.5, 1.1, -7.0, 0.5, 2.1, -6.4, "ruby_metal"),
+        *annulus(0, 1.6, 2.0, 2.6, 0.75, 0.25, "steel"),                             # grip bands
+        *annulus(0, 1.6, 5.0, 5.6, 0.75, 0.25, "steel"),
+        B(-0.6, 1.0, -4.0, 0.6, 2.2, 1.6, "rubber", stipple=True),                     # leather wrap
+        # The head: a block of steel with ruby faces, spikes on top.
+        B(-2.0, -1.6, 13.0, 2.0, 5.4, 17.0, "black_metal", panels=True),
+        B(-2.2, -1.2, 13.4, 2.2, 5.0, 16.6, "steel"),
+        B(-2.25, -0.6, 14.0, -2.2, 4.4, 16.0, "glow_ruby"),                              # ruby faces
+        B(2.2, -0.6, 14.0, 2.25, 4.4, 16.0, "glow_ruby"),
+        B(-1.6, -1.6, 17.0, 1.6, 5.0, 17.4, "ruby_metal"),                             # striking face
+        B(-1.0, -0.8, 17.4, 1.0, 4.2, 17.6, "glow_ruby_dim"),
+        B(-0.5, 5.4, 14.4, 0.5, 6.8, 15.6, "steel_bright"),                            # top spike
+        B(-0.25, 6.8, 14.75, 0.25, 7.4, 15.25, "steel_bright"),
+        B(-0.5, -3.0, 14.4, 0.5, -1.6, 15.6, "steel_bright"),                          # bottom spike
+    ]
+    grip = R("grip", pivot=(0, 1.0, -0.4), rot=(0, 0, 0), boxes=[B(-0.55, -0.2, -1.0, 0.55, 0.4, 0.6, "rubber")])
+    trigger = R("trigger", pivot=(0, 1.0, 0.4), boxes=[B(-0.05, -0.1, 0.0, 0.05, 0.0, 0.1, "steel")])
+    root = P("root", children=[P("body", body), grip, trigger])
+    return Gun(root, {
+        "sight": (0, 4.0, -2.0), "red_dot_sight": (0, 4.0, -2.0), "muzzle": (0, 1.6, 17.6), "eject": (0, 1.6, 17.6),
+        "hand_r": (0, 1.0, -1.0), "hand_l": (0, 1.0, 4.0), "mag_hand": (0, 1.6, 15.0), "grip_hand_l": (0, 1.0, 4.0),
+    }, palette={"glow_ruby": True})
+
+
+def singularity_cannon():
+    ay = 4.0
+    body = [
+        B(-2.0, 1.0, -6.0, 2.0, 7.0, 2.0, "graphite", panels=True, mark=True),          # heavy breech
+        B(-2.2, 1.6, -5.0, 2.2, 6.4, 1.0, "black_metal", vents=True),
+        B(-1.4, 2.0, -9.0, 1.4, 6.0, -6.0, "black_metal"),                              # back block
+        B(-1.0, 2.6, -9.1, 1.0, 5.4, -9.0, "glow_purple"),
+        # The containment cage: four bars round a glass sphere (the orb shows when loaded).
+        B(-2.2, ay + 2.0, 2.0, -1.6, ay + 2.6, 9.0, "steel_bright"),
+        B(1.6, ay + 2.0, 2.0, 2.2, ay + 2.6, 9.0, "steel_bright"),
+        B(-2.2, ay - 2.6, 2.0, -1.6, ay - 2.0, 9.0, "steel_bright"),
+        B(1.6, ay - 2.6, 2.0, 2.2, ay - 2.0, 9.0, "steel_bright"),
+        *annulus(0, ay, 2.0, 2.8, 2.6, 0.5, "black_metal", cell=0.3),
+        *annulus(0, ay, 8.2, 9.0, 2.6, 0.5, "black_metal", cell=0.3),
+        *annulus(0, ay, 5.2, 5.6, 2.4, 0.2, "glow_purple", cell=0.25),               # the glowing equator
+        *tube(0, ay, 9.0, 14.0, 1.4, "graphite"),                                       # emitter
+        *annulus(0, ay, 13.4, 14.4, 1.8, 0.4, "steel", cell=0.3),
+        B(-1.0, ay - 1.0, 14.35, 1.0, ay + 1.0, 14.4, "black_metal", bore=True),
+        B(-0.4, -0.2, -0.6, 0.4, 0.2, 1.8, "graphite"),
+        B(-0.5, 7.0, -4.0, 0.5, 8.0, 0.0, "black_metal"),                               # top sight
+    ]
+    orb = []
+    orb += annulus(0, 0, -1.4, 1.4, 1.5, 1.5, "glow_purple", cell=0.3)            # a ball of light (filled disc stack)
+    orb.append(B(-0.7, -0.7, -1.6, 0.7, 0.7, 1.6, "glow_white"))
+    rocket = R("rocket", pivot=(0, ay, 5.4), boxes=orb)
+    grip = R("grip", pivot=(0, 1.0, -0.4), rot=(-15, 0, 0), boxes=[B(-0.9, -4.2, -1.2, 0.9, 0.4, 0.6, "graphite", stipple=True)])
+    trigger = R("trigger", pivot=(0, 0.8, 0.4), boxes=[B(-0.15, -1.0, 0.0, 0.15, 0.0, 0.3, "steel")])
+    fore = [B(-0.8, -2.6, 10.0, 0.8, ay - 1.4, 11.4, "rubber", stipple=True)]
+    root = P("root", children=[P("body", body + fore), rocket, grip, trigger])
+    return Gun(root, {
+        "sight": (0, 8.4, -2.0), "red_dot_sight": (0, 8.4, -2.0), "muzzle": (0, ay, 14.6), "eject": (0, ay, -9.2),
+        "hand_r": (0, -1.6, -0.4), "hand_l": (0, -1.8, 10.6), "mag_hand": (0, ay, 5.4), "grip_hand_l": (0, -1.8, 10.6),
+    })
+
 GUNS = {
     "arr_rifle": arr_rifle,
     "service_pistol": service_pistol,
@@ -546,6 +889,16 @@ GUNS = {
     "rocket_launcher": rocket_launcher,
     "skyhammer": skyhammer,
     "lancer": lancer,
+    "ruby_minigun": ruby_minigun,
+    "rail_lance": rail_lance,
+    "ruby_chakram": ruby_chakram,
+    "dragons_breath": dragons_breath,
+    "swarm_launcher": swarm_launcher,
+    "tesla_coilgun": tesla_coilgun,
+    "bouncer": bouncer,
+    "six_shooter": six_shooter,
+    "ruby_warhammer": ruby_warhammer,
+    "singularity_cannon": singularity_cannon,
 }
 
 
@@ -610,7 +963,8 @@ MATERIALS = {
     "red_paint": (190, 36, 36), "sight_paint": (226, 226, 214), "lamp": (150, 150, 140),
 }
 GLOW = {"flash": (255, 230, 170), "glow_red": (255, 40, 40), "glow_green": (80, 255, 120), "glow_white": (255, 250, 230), "glow_ruby": (255, 50, 100),
-        "glow_ruby_dim": (200, 30, 80), "seeker_glow": (255, 80, 60)}
+        "glow_ruby_dim": (200, 30, 80), "seeker_glow": (255, 80, 60), "glow_cyan": (90, 230, 255), "glow_orange": (255, 150, 40),
+        "glow_purple": (190, 110, 255), "glow_gold": (255, 210, 80)}
 METALS = {"black_metal", "steel", "steel_bright", "barrel", "rail", "suppressor", "graphite", "ruby_metal", "olive_paint", "rocket_head"}
 
 
@@ -824,7 +1178,7 @@ def main(root_dir):
              "\t/** Model units per pixel (the renderer scales by 1/16/UNITS per block). */",
              f"\tpublic static final float UNITS = {S}.0F;", "",
              "\t/** Anchor points per gun, in gun pixels (x left, y up, z forward; origin at the top of the grip). */",
-             "\tpublic static final Map<String, Map<String, float[]>> ANCHORS = Map.of("]
+             "\tpublic static final Map<String, Map<String, float[]>> ANCHORS = Map.ofEntries("]
     anchor_lines = []
     bodies = []
     for i, (name, design) in enumerate(GUNS.items()):
@@ -840,7 +1194,7 @@ def main(root_dir):
         out_dir = os.path.join(root_dir, "src/main/resources/assets/rubymod/textures/entity/gun")
         write_png(os.path.join(out_dir, name + ".png"), img)
         write_png(os.path.join(out_dir, name + "_glow.png"), glow)
-        anchor_lines.append(f"\t\t\t\"{name}\", Map.ofEntries({', '.join('Map.entry(' + e + ')' for e in _pairs(gun.anchors))})")
+        anchor_lines.append(f"\t\t\tMap.entry(\"{name}\", Map.ofEntries({', '.join('Map.entry(' + e + ')' for e in _pairs(gun.anchors))}))")
         bodies.append(f"\tpublic static LayerDefinition {camel(name)}() {{")
         bodies.append("\t\tMeshDefinition mesh = new MeshDefinition();")
         bodies.append("\t\tPartDefinition root = mesh.getRoot();")
@@ -869,7 +1223,9 @@ CASINGS = {"arr_rifle": "brass", "service_pistol": "brass_short", "combat_shotgu
 def add_extras(name, gun):
     """Every gun gets a muzzle flash (glow pass only) and, if it ejects anything, a spent casing part."""
     mx, my, mz = gun.anchors["muzzle"]
-    big = 1.6 if name in ("rocket_launcher", "skyhammer", "lancer") else 1.0
+    big = 1.6 if name in ("rocket_launcher", "skyhammer", "lancer") else 0.6 if name == "ruby_minigun" else 1.0
+    if name in ("ruby_chakram", "ruby_warhammer", "dragons_breath", "tesla_coilgun", "singularity_cannon"):
+        return  # no gun-style muzzle flash: they fire blades, flames, lightning and light
     gun.root.children.append(R("flash", pivot=(mx, my, mz), boxes=[
         B(-0.05, -1.7 * big, 0.0, 0.05, 1.7 * big, 3.6 * big, "flash"),
         B(-1.7 * big, -0.05, 0.0, 1.7 * big, 0.05, 3.6 * big, "flash"),

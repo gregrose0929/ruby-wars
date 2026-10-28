@@ -12,7 +12,8 @@ import re
 from PIL import Image
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', 'src', 'main', 'resources', 'assets', 'rubymod', 'textures')
-GUNS = ['arr_rifle', 'combat_shotgun', 'service_pistol', 'longshot_sniper', 'rocket_launcher', 'lancer', 'ruby_blaster', 'skyhammer']
+GUNS = ['arr_rifle', 'combat_shotgun', 'service_pistol', 'longshot_sniper', 'rocket_launcher', 'lancer', 'ruby_blaster', 'skyhammer',
+        'ruby_minigun', 'rail_lance', 'ruby_chakram', 'dragons_breath', 'swarm_launcher', 'tesla_coilgun', 'bouncer', 'six_shooter', 'ruby_warhammer', 'singularity_cannon']
 
 
 def lum(r, g, b):
@@ -42,7 +43,8 @@ WHITE = (255, 255, 255)
 MODELS = os.path.join(os.path.dirname(__file__), '..', 'src', 'client', 'java', 'dev', 'rubymod', 'client', 'model', 'GunModels.java')
 METHODS = {'arr_rifle': 'arrRifle', 'service_pistol': 'servicePistol', 'combat_shotgun': 'combatShotgun',
            'longshot_sniper': 'longshotSniper', 'ruby_blaster': 'rubyBlaster', 'rocket_launcher': 'rocketLauncher',
-           'skyhammer': 'skyhammer', 'lancer': 'lancer'}
+           'skyhammer': 'skyhammer', 'lancer': 'lancer',
+           'ruby_minigun': 'rubyMinigun', 'rail_lance': 'railLance', 'ruby_chakram': 'rubyChakram', 'dragons_breath': 'dragonsBreath', 'swarm_launcher': 'swarmLauncher', 'tesla_coilgun': 'teslaCoilgun', 'bouncer': 'bouncer', 'six_shooter': 'sixShooter', 'ruby_warhammer': 'rubyWarhammer', 'singularity_cannon': 'singularityCannon'}
 # Which parts glow: 'part' = all of it, 'part:0,2' = those boxes, 'part:small2' = its two smallest boxes.
 GLOWING = {
     'arr_rifle': ['mag_std', 'mag_ext', 'muzzle_device', 'irons', 'bolt'],
@@ -53,6 +55,9 @@ GLOWING = {
     'rocket_launcher': ['rocket', 'body:2,3,7'],
     'skyhammer': ['rocket', 'body:2,3,21,22,23,24,25'],
     'lancer': ['rocket', 'body:2,3,8', 'clu:2,3,5'],
+    # The exotic weapons glow where they were built to (their own glow parts), plus a few accents.
+    'ruby_minigun': ['spin:small6'], 'rail_lance': [], 'ruby_chakram': ['rocket:small4'], 'dragons_breath': [], 'swarm_launcher': ['body:small6'],
+    'tesla_coilgun': [], 'bouncer': [], 'six_shooter': ['hammer'], 'ruby_warhammer': [], 'singularity_cannon': ['rocket'],
 }
 # Left exactly as they were: the muzzle flash and the brass.
 KEEP = ('flash', 'casing')

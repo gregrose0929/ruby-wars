@@ -1,0 +1,10 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/bouncer",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "bouncer"
+		}
+	}
+}

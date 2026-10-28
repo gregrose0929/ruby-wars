@@ -30,6 +30,12 @@ final class RelicOffers {
 		if (pair(team, Relic.Element.FROST, Relic.Element.FIRE)) {
 			out.add(Relic.FROSTFIRE);
 		}
+		if (pair(team, Relic.Element.SHOCK, Relic.Element.FROST)) {
+			out.add(Relic.SUPERCONDUCTOR);
+		}
+		if (pair(team, Relic.Element.POISON, Relic.Element.FIRE)) {
+			out.add(Relic.TOXIC_INFERNO);
+		}
 		if (team.stream().filter(x -> x.has(Relic.POCKET_TANK)).count() >= 2) {
 			out.add(Relic.TANK_PLATOON);
 		}

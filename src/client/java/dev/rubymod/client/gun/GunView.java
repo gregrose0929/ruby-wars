@@ -180,6 +180,7 @@ public final class GunView {
 		gp.attachments = stack.getOrDefault(ModComponents.ATTACHMENTS, List.<String>of());
 		gp.rift = GunModel.isRift(stack);
 		gp.riftColor = GunModel.riftColor(stack);
+		gp.spin = stack.is(dev.rubymod.registry.ModItems.RUBY_MINIGUN) ? GunModel.minigunSpin() : 0;
 		gp.loaded = stack.getItem() instanceof GunItem || launcherCooldown <= 0.0F;
 		float sinceShot = (ms - lastShotAt) / 1000.0F;
 		float cycle = cycleTime(stack);

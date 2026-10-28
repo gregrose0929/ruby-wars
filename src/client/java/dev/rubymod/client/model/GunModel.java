@@ -33,10 +33,25 @@ import net.minecraft.world.item.Item;
  * applies it when the frame is actually drawn.
  */
 public final class GunModel extends Model<GunModel.Pose> {
-	private static final Map<String, Supplier<LayerDefinition>> DEFINITIONS = Map.of(
-			"arr_rifle", GunModels::arrRifle, "service_pistol", GunModels::servicePistol, "combat_shotgun", GunModels::combatShotgun,
-			"longshot_sniper", GunModels::longshotSniper, "ruby_blaster", GunModels::rubyBlaster, "rocket_launcher", GunModels::rocketLauncher,
-			"skyhammer", GunModels::skyhammer, "lancer", GunModels::lancer);
+	private static final Map<String, Supplier<LayerDefinition>> DEFINITIONS = Map.ofEntries(
+			Map.entry("arr_rifle", GunModels::arrRifle),
+			Map.entry("service_pistol", GunModels::servicePistol),
+			Map.entry("combat_shotgun", GunModels::combatShotgun),
+			Map.entry("longshot_sniper", GunModels::longshotSniper),
+			Map.entry("ruby_blaster", GunModels::rubyBlaster),
+			Map.entry("rocket_launcher", GunModels::rocketLauncher),
+			Map.entry("skyhammer", GunModels::skyhammer),
+			Map.entry("lancer", GunModels::lancer),
+			Map.entry("ruby_minigun", GunModels::rubyMinigun),
+			Map.entry("rail_lance", GunModels::railLance),
+			Map.entry("ruby_chakram", GunModels::rubyChakram),
+			Map.entry("dragons_breath", GunModels::dragonsBreath),
+			Map.entry("swarm_launcher", GunModels::swarmLauncher),
+			Map.entry("tesla_coilgun", GunModels::teslaCoilgun),
+			Map.entry("bouncer", GunModels::bouncer),
+			Map.entry("six_shooter", GunModels::sixShooter),
+			Map.entry("ruby_warhammer", GunModels::rubyWarhammer),
+			Map.entry("singularity_cannon", GunModels::singularityCannon));
 	private static final Map<String, ModelLayerLocation> LAYERS = new HashMap<>();
 	private static final Map<String, GunModel> BAKED = new HashMap<>();
 	private static final float U = GunModels.UNITS;
@@ -45,6 +60,8 @@ public final class GunModel extends Model<GunModel.Pose> {
 	public static class Pose {
 		/** Ruby Rift reskin. */
 		public boolean rift;
+		/** The Ruby Minigun's barrels, turned this far (radians). */
+		public float spin;
 		/** The Rift glow's color (ARGB; the level's color). */
 		public int riftColor = -1;
 		public List<String> attachments = List.of();
@@ -127,6 +144,7 @@ public final class GunModel extends Model<GunModel.Pose> {
 	private final ModelPart flash;
 	private final ModelPart casing;
 	private final ModelPart bipod;
+	private final ModelPart spinner;
 
 	private GunModel(String name, ModelPart root) {
 		super(root, RenderTypes::entityCutout);
@@ -153,6 +171,7 @@ public final class GunModel extends Model<GunModel.Pose> {
 		this.flash = child(root, "flash");
 		this.casing = child(root, "casing");
 		this.bipod = child(root, "bipod");
+		this.spinner = child(root, "spin");
 	}
 
 	private static ModelPart child(ModelPart parent, String name) {
@@ -165,6 +184,23 @@ public final class GunModel extends Model<GunModel.Pose> {
 			LAYERS.put(name, layer);
 			ModelLayerRegistry.registerModelLayer(layer, definition::get);
 		});
+	}
+
+	private static float spinSpeed;
+	private static float spinAngle;
+	private static long spinAt;
+
+	/** How far the Ruby Minigun's barrels have turned: they spin up while you hold fire, and wind down after. */
+	public static float minigunSpin() {
+		long now = net.minecraft.util.Util.getMillis();
+		float dt = Math.min(0.1F, (now - spinAt) / 1000.0F);
+		spinAt = now;
+		var mc = Minecraft.getInstance();
+		boolean firing = mc.player != null && mc.gui.screen() == null && mc.options.keyAttack.isDown()
+				&& mc.player.getMainHandItem().is(dev.rubymod.registry.ModItems.RUBY_MINIGUN);
+		spinSpeed = Math.max(0, Math.min(32, spinSpeed + (firing ? 45 : -20) * dt));
+		spinAngle = (spinAngle + spinSpeed * dt) % (float) (Math.PI * 2);
+		return spinAngle;
 	}
 
 	/** The model for a gun item, or null if the item isn't one of ours. */
@@ -248,6 +284,9 @@ public final class GunModel extends Model<GunModel.Pose> {
 		}
 		if (rocket != null) {
 			rocket.z += pose.rocketBack * U;
+		}
+		if (spinner != null) {
+			spinner.zRot += pose.spin;
 		}
 		if (bipod != null && pose.bipodDown) {
 			bipod.xRot = 0;

@@ -87,6 +87,27 @@ public class ModItems {
 	public static final Item SKYHAMMER = register("skyhammer",
 			p -> new dev.rubymod.item.LockOnLauncherItem(dev.rubymod.item.LockOnLauncherItem.Kind.ANTI_AIR, p),
 			new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
+	// Ruby Rift's exotic weapons (found at the Arsenal; see RiftWeapons).
+	public static final Item RUBY_MINIGUN = gun("ruby_minigun",
+			new GunStats(4.0F, 6, 150, 70, 3.2F, 2.0F, 70, 1, AmmoType.HEAVY, true, 1.5F, 0.45F, 0.6F, 0.85F, Special.SPINUP));
+	public static final Item RAIL_LANCE = gun("rail_lance",
+			new GunStats(30.0F, 26, 4, 60, 0.3F, 0.05F, 120, 1, AmmoType.SNIPER, false, 2.0F, 0.8F, 5.0F, 0.5F, Special.RAIL));
+	public static final Item RUBY_CHAKRAM = gun("ruby_chakram",
+			new GunStats(14.0F, 12, 1, 60, 0.0F, 0.0F, 28, 1, AmmoType.LIGHT, false, 1.0F, 1.0F, 0.5F, 1.0F, Special.CHAKRAM));
+	public static final Item DRAGONS_BREATH = gun("dragons_breath",
+			new GunStats(2.5F, 2, 200, 60, 0.0F, 0.0F, 8, 1, AmmoType.RUBY_CELL, true, 1.0F, 0.75F, 0.1F, 1.0F, Special.FLAME));
+	public static final Item SWARM_LAUNCHER = gun("swarm_launcher",
+			new GunStats(10.0F, 30, 1, 50, 0.0F, 0.0F, 60, 1, AmmoType.HEAVY, false, 1.0F, 0.7F, 3.0F, 0.8F, Special.SWARM));
+	public static final Item TESLA_COILGUN = gun("tesla_coilgun",
+			new GunStats(3.5F, 3, 120, 50, 0.0F, 0.0F, 22, 1, AmmoType.RUBY_CELL, true, 1.0F, 0.75F, 0.15F, 0.9F, Special.TESLA));
+	public static final Item BOUNCER = gun("bouncer",
+			new GunStats(14.0F, 14, 6, 60, 0.0F, 0.0F, 40, 1, AmmoType.HEAVY, false, 1.0F, 0.8F, 2.5F, 1.0F, Special.BOUNCER));
+	public static final Item SIX_SHOOTER = gun("six_shooter",
+			new GunStats(9.0F, 3, 6, 36, 1.6F, 0.4F, 70, 1, AmmoType.LIGHT, true, 2.2F, 1.0F, 2.2F, 0.8F, Special.FAN));
+	public static final Item RUBY_WARHAMMER = gun("ruby_warhammer",
+			new GunStats(16.0F, 16, 1000, 10, 0.0F, 0.0F, 4, 1, AmmoType.LIGHT, false, 1.0F, 1.0F, 1.5F, 1.0F, Special.HAMMER));
+	public static final Item SINGULARITY_CANNON = gun("singularity_cannon",
+			new GunStats(30.0F, 30, 2, 70, 0.0F, 0.0F, 30, 1, AmmoType.RUBY_CELL, false, 1.0F, 0.7F, 3.5F, 0.9F, Special.SINGULARITY));
 	public static final Item LANCER = register("lancer",
 			p -> new dev.rubymod.item.LockOnLauncherItem(dev.rubymod.item.LockOnLauncherItem.Kind.ANTI_TANK, p),
 			new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));

@@ -1,0 +1,10 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/swarm_launcher",
+		"model": {
+			"type": "rubymod:gun",
+			"gun": "swarm_launcher"
+		}
+	}
+}

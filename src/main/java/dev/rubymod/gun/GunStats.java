@@ -65,6 +65,15 @@ public record GunStats(
 		/** Ruby Blaster: bolts bounce once off walls. */
 		BOUNCE,
 		/** Sniper: other players see a glint when you aim at them. */
-		GLINT
+		GLINT,
+		/** Ruby Rift's exotic weapons (see RiftWeapons): Ruby Minigun spin-up, Rail Lance, Ruby Chakram, Dragon's Breath, Swarm Launcher,
+		 *  Tesla Coilgun, Bouncer, Six-Shooter (fanned, ricocheting headshots), Ruby Warhammer, Singularity Cannon. */
+		SPINUP, RAIL, CHAKRAM, FLAME, SWARM, TESLA, BOUNCER, FAN, HAMMER, SINGULARITY
+	}
+
+	/** The same gun hitting {@code factor} times as hard (Split Shot fragments). */
+	public GunStats scaled(float factor) {
+		return new GunStats(damage * factor, fireInterval, magazine, reloadTicks, hipSpread, aimSpread, range, pellets, ammo, automatic, headshot,
+				moveSpeed, recoil, zoom, special, silenced);
 	}
 }

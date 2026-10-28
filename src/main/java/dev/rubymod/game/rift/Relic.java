@@ -51,7 +51,31 @@ public enum Relic {
 	BERSERKER(Tier.CURSED, Element.FIRE, "Berserker", "minecraft:redstone", "The lower your health, the harder you hit (up to 4x)."),
 	BLOOD_AMMO(Tier.CURSED, Element.RUBY, "Blood Ammo", "minecraft:nether_wart", "3.5x damage, but every shot costs health. Kills give a little back."),
 
+	// ----- The second wave -----
+	LUCKY_COIN(Tier.COMMON, Element.NONE, "Lucky Coin", "minecraft:gold_nugget", "1 hit in 10 is a 5x critical hit. Critical kills drop extra gold."),
+	THORN_ARMOR(Tier.COMMON, Element.NONE, "Thorn Armor", "minecraft:cactus", "Enemies that hit you take double that damage back."),
+	OVERCLOCK(Tier.COMMON, Element.NONE, "Overclock", "minecraft:clock", "After every reload, your gun fires twice as fast for 3 seconds."),
+	VENOM_ROUNDS(Tier.RARE, Element.POISON, "Venom Rounds", "minecraft:spider_eye",
+			"Hits stack poison on enemies. Poisoned enemies spread it to their neighbours when they die."),
+	ECHO_SHOT(Tier.RARE, Element.NONE, "Echo Shot", "minecraft:echo_shard", "Every 5th shot fires again a moment later, from a ghost of your gun."),
+	GROUND_POUND(Tier.RARE, Element.NONE, "Ground Pound", "minecraft:mace", "Crouch in mid-air to slam down: a shockwave that stuns everything around you."),
+	SPLIT_SHOT(Tier.RARE, Element.NONE, "Split Shot", "minecraft:prismarine_shard", "Bullets that hit a wall burst into 3 bouncing fragments."),
+	STATIC_CHARGE(Tier.RARE, Element.SHOCK, "Static Charge", "minecraft:glowstone_dust",
+			"Sprinting builds a charge; your next shot lets it loose as a lightning blast."),
+	HALL_OF_MIRRORS(Tier.RARE, Element.NONE, "Hall of Mirrors", "minecraft:tinted_glass",
+			"Get hurt and two mirror images appear; enemies go after them instead of you."),
+	METEOR_SHOWER(Tier.LEGENDARY, Element.FIRE, "Meteor Shower", "minecraft:magma_block", "Every 8 kills, meteors rain down on the room."),
+	RUBY_DRAGON(Tier.LEGENDARY, Element.FIRE, "Ruby Dragon", "minecraft:dragon_head", "A little ruby dragon circles you, breathing fire on enemies."),
+	REWIND(Tier.LEGENDARY, Element.NONE, "Rewind", "minecraft:recovery_compass",
+			"Once a room, a hit that would leave you nearly dead rewinds you 3 seconds instead."),
+	THE_HUNTED(Tier.CURSED, Element.NONE, "The Hunted", "minecraft:wither_rose", "3x damage, but an unkillable Hunter stalks you through every room."),
+	GAMBLERS_DICE(Tier.CURSED, Element.NONE, "Gambler's Dice", "minecraft:ender_eye", "Every room, one of your relics doubles in power and another switches off."),
+
 	// ----- Bond: two teammates' elements together (the whole team gets it) -----
+	SUPERCONDUCTOR(Tier.BOND, Element.SHOCK, "Superconductor", "minecraft:packed_ice",
+			"Shock + Frost: lightning that touches a frozen enemy leaps to every frozen enemy in the room."),
+	TOXIC_INFERNO(Tier.BOND, Element.POISON, "Toxic Inferno", "minecraft:fermented_spider_eye",
+			"Poison + Fire: burning, poisoned enemies take double poison, and spread it twice as far."),
 	PLASMA_STORM(Tier.BOND, Element.SHOCK, "Plasma Storm", "minecraft:blaze_rod", "Shock + Fire: lightning sets enemies ablaze, and enemies that burn to death throw lightning."),
 	SHATTERBOMB(Tier.BOND, Element.FROST, "Shatterbomb", "minecraft:prismarine_crystals", "Frost + Explosive: explosions shatter frozen enemies instantly, and every shatter explodes."),
 	RUBY_CONDUIT(Tier.BOND, Element.RUBY, "Ruby Conduit", "minecraft:lightning_rod", "Shock + Ruby: a lightning beam links you to your teammates and fries anything that crosses it."),
@@ -72,7 +96,7 @@ public enum Relic {
 
 	public enum Element {
 		NONE("", 0xFFFFFFFF), SHOCK("Shock", 0xFF66E0FF), FIRE("Fire", 0xFFFF7A2E), FROST("Frost", 0xFFA8E8FF), EXPLOSIVE("Explosive", 0xFFFFD040),
-		RUBY("Ruby", 0xFFFF3D6E);
+		RUBY("Ruby", 0xFFFF3D6E), POISON("Poison", 0xFF7AE33A);
 
 		public final String title;
 		public final int color;
@@ -139,7 +163,7 @@ public enum Relic {
 
 	/** How many times it can be combined (one-off effects and Bonds can't). */
 	public int maxLevel() {
-		return tier == Tier.BOND || this == FIELD_MEDIC || this == TIME_LOOP || this == PHOENIX || this == ARSENAL ? 1 : 3;
+		return tier == Tier.BOND || this == FIELD_MEDIC || this == TIME_LOOP || this == PHOENIX || this == ARSENAL || this == GAMBLERS_DICE ? 1 : 3;
 	}
 
 	/** Its name with its stars (two copies combined: two stars). */
@@ -184,6 +208,19 @@ public enum Relic {
 			case GLASS_CANNON -> three ? "5x damage." : "4x damage.";
 			case BERSERKER -> three ? "up to 6x damage." : "up to 5x damage.";
 			case BLOOD_AMMO -> three ? "5.5x damage." : "4.5x damage.";
+			case LUCKY_COIN -> three ? "1 hit in 5 crits, for 7x." : "15% crits, for 6x.";
+			case THORN_ARMOR -> three ? "4x the damage back." : "3x the damage back.";
+			case OVERCLOCK -> three ? "lasts 5 seconds." : "lasts 4 seconds.";
+			case VENOM_ROUNDS -> three ? "three times the poison." : "twice the poison.";
+			case ECHO_SHOT -> three ? "every 3rd shot echoes." : "every 4th shot echoes.";
+			case GROUND_POUND -> three ? "a huge, heavy shockwave." : "a bigger, harder shockwave.";
+			case SPLIT_SHOT -> three ? "fragments hit almost as hard as the bullet." : "fragments hit harder.";
+			case STATIC_CHARGE -> three ? "charges three times as fast." : "charges twice as fast.";
+			case HALL_OF_MIRRORS -> three ? "four images, far more often." : "three images, more often.";
+			case METEOR_SHOWER -> three ? "every 4 kills." : "every 6 kills.";
+			case RUBY_DRAGON -> three ? "breathes fire constantly." : "breathes fire twice as often.";
+			case REWIND -> three ? "three times a room." : "twice a room.";
+			case THE_HUNTED -> three ? "5x damage." : "4x damage.";
 			default -> "stronger.";
 		};
 	}
