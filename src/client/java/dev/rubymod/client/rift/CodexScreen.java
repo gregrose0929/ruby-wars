@@ -22,8 +22,11 @@ public class CodexScreen extends Screen {
 	private record Entry(String section, String title, String icon, String tier, String about, boolean found) {
 	}
 
-	private static final String[] SECTIONS = {"relics", "combos", "legendaries", "bosses", "charms"};
-	private static final String[] NAMES = {"Relics", "Combos", "Legends", "Bosses", "Charms"};
+	private static final String[] SECTIONS = {"relics", "combos", "legendaries", "bosses", "charms", "rewards"};
+	private static final String[] NAMES = {"Relics", "Combos", "Legends", "Bosses", "Charms", "Rewards"};
+	private int found;
+	private int nextAt = 10;
+	private final List<String[]> perks = new ArrayList<>();
 
 	private final List<Entry> entries = new ArrayList<>();
 	private final Map<String, int[]> counts = new HashMap<>();
@@ -39,9 +42,15 @@ public class CodexScreen extends Screen {
 	void update(List<String> lines) {
 		entries.clear();
 		counts.clear();
+		perks.clear();
 		for (String line : lines) {
 			String[] f = line.split("[|]", -1);
-			if (f[0].equals("count") && f.length >= 4) {
+			if (f[0].equals("milestone") && f.length >= 3) {
+				found = Integer.parseInt(f[1]);
+				nextAt = Integer.parseInt(f[2]);
+			} else if (f[0].equals("perk") && f.length >= 4) {
+				perks.add(f);
+			} else if (f[0].equals("count") && f.length >= 4) {
 				counts.put(f[1], new int[] {Integer.parseInt(f[2]), Integer.parseInt(f[3])});
 			} else if (f[0].equals("entry") && f.length >= 8) {
 				entries.add(new Entry(f[1], f[3], f[4], f[5], f[6], f[7].equals("1")));
@@ -91,14 +100,25 @@ public class CodexScreen extends Screen {
 		int tw = Math.min(80, (width - 20) / SECTIONS.length);
 		int tx = width / 2 - tw * SECTIONS.length / 2;
 		for (int i = 0; i < SECTIONS.length; i++) {
-			int[] c = counts.getOrDefault(SECTIONS[i], new int[] {0, 0});
+			int[] c = counts.getOrDefault(SECTIONS[i], new int[] {found, nextAt});
 			boolean on = i == tab;
 			boolean hover = mouseX >= tx && mouseX < tx + tw - 2 && mouseY >= 34 && mouseY < 50;
 			g.fill(tx, 34, tx + tw - 2, 50, on ? 0xF0402030 : hover ? 0xD0281828 : 0xC0181018);
 			g.outline(tx, 34, tw - 2, 16, on ? 0xFFFFC02E : 0xFF503848);
-			g.centeredText(font, NAMES[i] + " " + c[0] + "/" + c[1], tx + tw / 2 - 1, 38, on ? 0xFFFFE680 : 0xFFD0C0D8);
+			String label = SECTIONS[i].equals("rewards") ? NAMES[i] : NAMES[i] + " " + c[0] + "/" + c[1];
+			float fit = Math.min(1F, (tw - 6) / (float) font.width(label));
+			g.pose().pushMatrix();
+			g.pose().translate(tx + tw / 2F - 1, 38 + (1 - fit) * 4);
+			g.pose().scale(fit, fit);
+			g.centeredText(font, label, 0, 0, on ? 0xFFFFE680 : 0xFFD0C0D8);
+			g.pose().popMatrix();
 			tabs.add(new int[] {tx, 34, tw - 2, 16, i});
 			tx += tw;
+		}
+		if (SECTIONS[tab].equals("rewards")) {
+			rewards(g);
+			g.centeredText(font, "Click a tab. Esc to close.", width / 2, height - 12, 0xFF8A7A9A);
+			return;
 		}
 		// The grid.
 		List<Entry> page = entries.stream().filter(e -> e.section().equals(SECTIONS[tab])).toList();
@@ -148,6 +168,30 @@ public class CodexScreen extends Screen {
 			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
 		}
 		g.centeredText(font, "Click a tab. Hover a tile to read it. Esc to close.", width / 2, height - 12, 0xFF8A7A9A);
+	}
+
+	/** The Rewards tab: the next milestone, and what each finished section gives you. */
+	private void rewards(GuiGraphicsExtractor g) {
+		int bar = Math.min(380, width - 40);
+		int x = width / 2 - bar / 2;
+		int y = 60;
+		g.text(font, "Every 10 things you find: +50 Rift Shards", x, y, 0xFFFFC02E, true);
+		y += 12;
+		float into = (found % 10) / 10F;
+		g.fill(x, y, x + bar, y + 10, 0xFF301828);
+		g.fill(x, y, x + (int) (bar * into), y + 10, 0xFFFFC02E);
+		g.centeredText(font, found + " found  \u2022  next reward at " + nextAt, x + bar / 2, y + 1, 0xFFFFFFFF);
+		y += 22;
+		g.text(font, "Finish a whole section for a perk in every run:", x, y, 0xFFFF7AE0, true);
+		y += 14;
+		for (String[] p : perks) {
+			boolean done = p[3].equals("1");
+			g.fill(x, y, x + bar, y + 20, done ? 0xD0203820 : 0xB0181018);
+			g.outline(x, y, bar, 20, done ? 0xFF6EE38A : 0xFF403040);
+			g.text(font, (done ? "\u2714 " : "\u2610 ") + p[1].substring(0, 1).toUpperCase() + p[1].substring(1), x + 6, y + 6, done ? 0xFF6EE38A : 0xFFB8A8C8, false);
+			g.text(font, font.plainSubstrByWidth(p[2], bar - 96), x + 90, y + 6, done ? 0xFFFFFFFF : 0xFFB8A8C8, false);
+			y += 24;
+		}
 	}
 
 	@Override

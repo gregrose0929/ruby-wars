@@ -33,13 +33,88 @@ public final class RiftCodex {
 		return r.riftCodex;
 	}
 
-	/** Something new: into the Codex (and a little "NEW" note the first time). */
+	/** Something new: into the Codex (and a little "NEW" note the first time; every 10 found pays 50 Rift Shards). */
 	static void learn(ServerPlayer p, String key, String title) {
 		if (found(p).add(key)) {
 			Stats.markDirty();
-			p.sendSystemMessage(Component.literal("✦ New in your Codex: ").withStyle(ChatFormatting.LIGHT_PURPLE)
+			p.sendSystemMessage(Component.literal("\u2726 New in your Codex: ").withStyle(ChatFormatting.LIGHT_PURPLE)
 					.append(Component.literal(title).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD)));
 			p.level().playSound(null, p.blockPosition(), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 0.8F, 1.2F);
+			Stats.Record rec = Stats.get(p);
+			while ((rec.riftCodexClaimed + 1) * 10 <= found(p).size()) {
+				rec.riftCodexClaimed++;
+				rec.riftShards += 50;
+				p.sendSystemMessage(Component.literal("\u2726 Codex milestone: " + rec.riftCodexClaimed * 10 + " found! +50 Rift Shards")
+						.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+				p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.6F, 1.6F);
+			}
+			for (String section : new String[] {"relics", "combos", "legendaries", "bosses", "charms"}) {
+				if (key.startsWith(prefix(section)) && done(p, section)) {
+					dev.rubymod.game.Alerts.title(p, "CODEX: " + section.toUpperCase() + " COMPLETE!", perk(section), ChatFormatting.GOLD);
+				}
+			}
+		}
+	}
+
+	private static String prefix(String section) {
+		return switch (section) {
+			case "relics" -> "relic:";
+			case "combos" -> "duo:";
+			case "legendaries" -> "legend:";
+			case "bosses" -> "boss:";
+			default -> "charm:";
+		};
+	}
+
+	private static int size(String section) {
+		return switch (section) {
+			case "relics" -> Relic.values().length;
+			case "combos" -> RelicCombos.Duo.values().length;
+			case "legendaries" -> RiftArsenal.legends().size();
+			case "bosses" -> RiftBosses.Boss.values().length;
+			default -> RiftCharms.Charm.values().length;
+		};
+	}
+
+	/** Every entry of a section found. */
+	static boolean done(ServerPlayer p, String section) {
+		String pre = prefix(section);
+		return found(p).stream().filter(k -> k.startsWith(pre)).count() >= size(section);
+	}
+
+	/** What finishing each section gives you, every run after. */
+	static String perk(String section) {
+		return switch (section) {
+			case "relics" -> "Every run starts with a free Rare relic.";
+			case "combos" -> "You can carry 4 charms instead of 3.";
+			case "legendaries" -> "Your first weapon starts every run with a random power.";
+			case "bosses" -> "Every run starts with 40 extra gold.";
+			default -> "Every run starts with a random charm.";
+		};
+	}
+
+	/** The start of a run: the perks you've earned. */
+	static void startPerks(ServerPlayer p, Rift.Runner r) {
+		var random = p.getRandom();
+		if (done(p, "relics")) {
+			List<Relic> rares = java.util.Arrays.stream(Relic.values()).filter(x -> x.tier == Relic.Tier.RARE && !r.has(x)).toList();
+			if (!rares.isEmpty()) {
+				Rift.give(p, r, rares.get(random.nextInt(rares.size())));
+			}
+		}
+		if (done(p, "legendaries")) {
+			for (int i = 0; i < 9; i++) {
+				if (p.getInventory().getItem(i).getItem() instanceof dev.rubymod.gun.GunItem) {
+					RiftSpring.temper(p, i);
+					break;
+				}
+			}
+		}
+		if (done(p, "bosses")) {
+			Rift.gold += 40;
+		}
+		if (done(p, "charms")) {
+			RiftCharms.give(p, RiftCharms.Charm.values()[random.nextInt(RiftCharms.Charm.values().length)]);
 		}
 	}
 
@@ -73,6 +148,12 @@ public final class RiftCodex {
 			lines.add("count|" + section + "|" + got + "|" + total);
 		}
 		lines.addAll(entries);
+		// Rewards: the milestones, and each section's perk.
+		int found = f.size();
+		lines.add("milestone|" + found + "|" + ((found / 10 + 1) * 10));
+		for (String section : new String[] {"relics", "combos", "legendaries", "bosses", "charms"}) {
+			lines.add("perk|" + section + "|" + perk(section) + "|" + (done(p, section) ? 1 : 0));
+		}
 		Net.send(p, new MorePayloads.RiftScreen("codex", lines));
 	}
 

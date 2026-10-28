@@ -1432,6 +1432,237 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("riftextras")) {
+			// Companion and mutators (the Altar's EXTRAS page), music, a secret stash, the Codex rewards, the Endless Descent.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(260, mc -> {
+				var send = new dev.rubymod.net.MorePayloads.RiftChoice("companion", "hound");
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(send);
+				for (String m : new String[] {"party", "explosive_kills", "low_gravity"}) {
+					net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("mutator", m));
+				}
+			});
+			then(10, mc -> onServer(mc, server -> {
+				dev.rubymod.game.rift.RiftMeta.sendTo(me(server));
+				log("mutators: {}", dev.rubymod.game.rift.Rift.mutators());
+			}));
+			then(10, mc -> dev.rubymod.client.rift.RiftClient.reopen());
+			then(10, mc -> {
+				if (mc.gui.screen() instanceof dev.rubymod.client.rift.ThresholdScreen ts) {
+					ts.flip();
+				}
+			});
+			then(10, mc -> shot(mc, "extras-altar"));
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				log("music in the Threshold: {}", dev.rubymod.client.rift.RiftMusic.current() == null ? "none"
+						: dev.rubymod.client.rift.RiftMusic.current().sound().unwrapKey().map(Object::toString).orElse("?"));
+				onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "secret");
+					dev.rubymod.game.rift.Rift.testSkip(server, "start");
+				});
+			});
+			for (int i = 0; i < 40; i++) {
+				then(20, mc -> {
+					onServer(mc, server -> me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(
+							net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 4, false, false)));
+					if (dev.rubymod.game.rift.Rift.debugState().startsWith("VOTE")) {
+						net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+								new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode()));
+					}
+				});
+			}
+			then(5, mc -> {
+				log("music in a fight: {}", dev.rubymod.client.rift.RiftMusic.current() == null ? "none"
+						: dev.rubymod.client.rift.RiftMusic.current().sound().unwrapKey().map(Object::toString).orElse("?"));
+				onServer(mc, server -> {
+					me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+					log("secret at {} | {}", dev.rubymod.game.rift.RiftSecrets.where(), dev.rubymod.game.rift.Rift.debugState());
+				});
+			});
+			then(5, mc -> onServer(mc, server -> {
+				var at = dev.rubymod.game.rift.RiftSecrets.where();
+				if (at != null) {
+					var me = me(server);
+					me.teleportTo(at.x + 3, at.y + 0.5, at.z + 3);
+					var to = at.subtract(me.getEyePosition());
+					me.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+					me.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+				}
+			}));
+			then(5, mc -> {
+				var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+				mc.player.setYRot(sp.getYRot());
+				mc.player.setXRot(sp.getXRot());
+				shot(mc, "extras-secret");
+			});
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "opensecret")));
+			then(15, mc -> {
+				shot(mc, "extras-secret-open");
+				log("after secret: {}", dev.rubymod.game.rift.Rift.debugState());
+			});
+			// Fight with the hound (and the mutators), then level it up.
+			then(5, mc -> onServer(mc, server -> {
+				var stack = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.ARR_RIFLE);
+				stack.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+				me(server).getInventory().setItem(0, stack);
+				dev.rubymod.game.rift.Rift.testSkip(server, "kills:85");
+			}));
+			for (int t = 0; t < 300; t++) {
+				int tick = t;
+				then(1, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					if (!dev.rubymod.game.rift.Rift.debugState().startsWith("FIGHT")) {
+						return;
+					}
+					aimAtNearest(server);
+					me.getInventory().setSelectedSlot(0);
+					var stack = me.getInventory().getItem(0);
+					if (dev.rubymod.gun.GunItem.ammo(stack) <= 0) {
+						stack.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+					}
+					if (tick % 2 == 0 && stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+						dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+					}
+				}));
+				if (t == 120) {
+					then(0, mc -> {
+						var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+						mc.player.setYRot(sp.getYRot());
+						mc.player.setXRot(sp.getXRot());
+						shot(mc, "extras-fight");
+						onServer(mc, server -> log("companions near: {}", me(server).level().getEntities((net.minecraft.world.entity.Entity) null,
+								me(server).getBoundingBox().inflate(30), e -> e instanceof net.minecraft.world.entity.animal.wolf.Wolf || e.hasCustomName() && e.getCustomName().getString().contains("Ruby Hound"))
+								.stream().map(e -> e.getName().getString() + " alive " + e.isAlive()).toList()));
+					});
+				}
+			}
+			// The Codex's Rewards tab.
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("codex", "open")));
+			then(15, mc -> {
+				if (mc.gui.screen() instanceof dev.rubymod.client.rift.CodexScreen cs) {
+					cs.tab(5);
+				}
+			});
+			then(10, mc -> shot(mc, "extras-codex-rewards"));
+			// Win, then keep going down.
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+					dev.rubymod.game.rift.Rift.testSkip(server, "win");
+				});
+			});
+			then(40, mc -> shot(mc, "extras-descend-offer"));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", "end:descend")));
+			then(20, mc -> {
+				log("descending: {}", dev.rubymod.game.rift.Rift.debugState());
+				onServer(mc, server -> {
+					var c = dev.rubymod.game.rift.Rift.roomCenter();
+					if (c != null) {
+						me(server).teleportTo(c.x, c.y + 0.2, c.z);
+					}
+				});
+			});
+			then(60, mc -> {
+				log("depth: {}", dev.rubymod.game.rift.Rift.debugState());
+				shot(mc, "extras-depth-map");
+			});
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("polish")) {
+			// The new Mysteries, the relic grid, a ping, and the run summary.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(40, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 15; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+				int k = 0;
+				for (var relic : dev.rubymod.game.rift.Relic.values()) {
+					if (relic.tier != dev.rubymod.game.rift.Relic.Tier.CURSED && k++ < 32) {
+						dev.rubymod.game.rift.Rift.testSkip(server, relic.id());
+					}
+				}
+			}));
+			then(40, mc -> {
+				mc.gui.setScreen(null);
+				shot(mc, "polish-grid");
+			});
+			// A ping on the nearest monster.
+			then(5, mc -> onServer(mc, server -> aimAtNearest(server)));
+			then(3, mc -> {
+				var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+				mc.player.setYRot(sp.getYRot());
+				mc.player.setXRot(sp.getXRot());
+				dev.rubymod.client.map.Pinger.ping(mc);
+			});
+			then(20, mc -> shot(mc, "polish-ping"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "clear")));
+			for (int kind = 3; kind < 13; kind++) {
+				int kd = kind;
+				then(60, mc -> {
+					mc.gui.setScreen(null);
+					onServer(mc, server -> {
+						dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+						dev.rubymod.game.Stats.get(me(server)); // keep the gold up for the paid ones
+						dev.rubymod.game.rift.Rift.testSkip(server, "event:" + kd);
+					});
+				});
+				for (int i = 0; i < 14; i++) {
+					then(20, mc -> {});
+				}
+				then(5, mc -> shot(mc, "event-" + kd));
+				then(5, mc -> {
+					var screen = dev.rubymod.client.rift.RiftClient.lastScreen;
+					String pick = null;
+					if (screen != null) {
+						for (String line : screen.lines()) {
+							if (!line.startsWith("title|")) {
+								pick = line.split("[|]")[0];
+								break;
+							}
+						}
+					}
+					log("event {} picks {}", kd, pick);
+					if (pick != null) {
+						net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("event", pick));
+					}
+				});
+				then(30, mc -> {
+					shot(mc, "event-" + kd + "-after");
+					log("after event {}: {}", kd, dev.rubymod.game.rift.Rift.debugState());
+				});
+			}
+			then(60, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "win"));
+			});
+			then(40, mc -> shot(mc, "polish-summary"));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("finale")) {
 			// All three keys, the act 3 boss, the Heart of the Rift, the echoes and the Sovereign.
 			then(0, mc -> {

@@ -305,6 +305,7 @@ public final class Gunfire {
 
 	/** A bullet hitting a block: chips, a dust puff, sparks off stone and metal, the block's hit sound, and a bullet hole. */
 	private static void impact(ServerLevel level, BlockHitResult hit, BlockState state, GunStats stats) {
+		dev.rubymod.game.rift.RiftSecrets.onImpact(level, hit.getBlockPos());
 		Vec3 p = hit.getLocation();
 		Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i());
 		Vec3 out = p.add(n.scale(0.05));

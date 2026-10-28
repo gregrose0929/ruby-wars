@@ -126,7 +126,7 @@ final class RiftSpring {
 		}
 	}
 
-	private static void temper(ServerPlayer p, int slot) {
+	static void temper(ServerPlayer p, int slot) {
 		ItemStack s = p.getInventory().getItem(slot);
 		List<Trait> can = powers(s);
 		if (!(s.getItem() instanceof GunItem gun) || can.isEmpty() || Trait.of(s).size() >= 3) {

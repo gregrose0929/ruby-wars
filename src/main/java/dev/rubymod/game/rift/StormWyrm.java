@@ -93,7 +93,7 @@ public final class StormWyrm implements RiftBoss {
 		h.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, -1, 0, false, false));
 		h.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, -1, 0, false, false));
 		set(h, Attributes.SCALE, 2.4);
-		set(h, Attributes.MAX_HEALTH, 640 * (1 + 0.65 * (players - 1)));
+		set(h, Attributes.MAX_HEALTH, 640 * RiftBosses.healthScale(players));
 		set(h, Attributes.KNOCKBACK_RESISTANCE, 1.0);
 		h.setHealth(h.getMaxHealth());
 		h.setPersistenceRequired();

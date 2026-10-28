@@ -79,7 +79,7 @@ public final class HiveQueen implements RiftBoss {
 		}
 		spider.snapTo(room.center.getX() + 0.5, room.center.getY() + 1, room.center.getZ() - room.half + 10, 0, 0);
 		set(spider, Attributes.SCALE, 3.2);
-		set(spider, Attributes.MAX_HEALTH, 520 * (1 + 0.65 * (players - 1)));
+		set(spider, Attributes.MAX_HEALTH, 520 * RiftBosses.healthScale(players));
 		set(spider, Attributes.ATTACK_DAMAGE, 9);
 		set(spider, Attributes.FOLLOW_RANGE, 80);
 		set(spider, Attributes.MOVEMENT_SPEED, 0.32);

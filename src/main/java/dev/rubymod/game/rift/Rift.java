@@ -97,6 +97,10 @@ public final class Rift {
 		RelicEffects.State fx = new RelicEffects.State();
 		/** Event rooms: this runner's options (and whether they've chosen). */
 		List<String> event = List.of();
+		/** Damage dealt to the Rift's monsters this run (for the summary). */
+		float damage;
+		/** Shrine of Blessings: "speed", "health", "power" (for the run). */
+		final Set<String> blessings = new java.util.HashSet<>();
 		/** The active ability (Z), and when it's ready again. */
 		RiftAbilities.Ability ability = RiftAbilities.Ability.DASH;
 		long abilityReadyAt;
@@ -560,11 +564,19 @@ public final class Rift {
 		RiftRooms.guardians = 0;
 		KEYS.clear();
 		FACED.clear();
+		RiftEvents.SEEN.clear();
+		RiftExtras.newRun();
+		endless = 0;
+		runStart = ticks;
+		heroRooms = 0;
+		doubleNext = false;
+		doubling = false;
 		node = null;
 		for (ServerPlayer p : players(server)) {
 			RiftMeta.kit(p, RUNNERS.get(p.getUUID()));
 			ammo(p);
 			RelicEffects.apply(p, RUNNERS.get(p.getUUID()));
+			RiftCodex.startPerks(p, RUNNERS.get(p.getUUID()));
 			Alerts.title(p, "THE RIFT OPENS", (RiftMeta.daily ? "Today's Daily Rift" : "Choose your path")
 					+ (RiftMeta.heat > 0 ? "  \u2022  Heat " + RiftMeta.heat : ""), ChatFormatting.LIGHT_PURPLE);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.7F, 1.2F);
@@ -576,10 +588,12 @@ public final class Rift {
 		if (nextAct) {
 			nextAct = false;
 			act++;
-			map = RiftMap.generate(RandomSource.create(seed + act * 104729L), act);
+			map = endless > 0 ? RiftMap.endless(RandomSource.create(seed + act * 104729L), endless)
+					: RiftMap.generate(RandomSource.create(seed + act * 104729L), act);
 			for (ServerPlayer p : players(server)) {
-				Alerts.title(p, act >= 4 ? "THE HEART OF THE RIFT" : "ACT " + act, act >= 4 ? "The secret act: the Ruby Sovereign waits"
-						: "Deeper: " + map.boss.title + " waits at the bottom", ChatFormatting.LIGHT_PURPLE);
+				Alerts.title(p, endless > 0 ? "DEPTH " + endless : act >= 4 ? "THE HEART OF THE RIFT" : "ACT " + act, endless > 0
+						? "Deeper and harder: " + map.boss.title + " waits at the bottom" : act >= 4 ? "The secret act: the Ruby Sovereign waits"
+								: "Deeper: " + map.boss.title + " waits at the bottom", ChatFormatting.LIGHT_PURPLE);
 				p.level().playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.7F, 0.9F);
 			}
 			for (Runner r : RUNNERS.values()) {
@@ -655,6 +669,9 @@ public final class Rift {
 		RiftWeapons.clear(level);
 		RiftObjectives.clear(level);
 		RiftRooms.clear(level);
+		RiftEvents.clear(level);
+		RiftExtras.clearPets();
+		RiftSecrets.clear();
 		RiftTanks.clear(level);
 		slot = 1 - slot;
 		room = RiftRoom.build(WORK, level, SLOTS[slot], pick.theme, pick.type, seed + pick.id * 7919L);
@@ -676,6 +693,7 @@ public final class Rift {
 	private static void roomReady(MinecraftServer server) {
 		ServerLevel level = level(server);
 		if (state == State.STAGING || state == State.OVER) {
+			music(server, "theme:THRESHOLD");
 			for (ServerPlayer p : players(server)) {
 				place(p, room.entry);
 				if (state == State.STAGING) {
@@ -700,6 +718,7 @@ public final class Rift {
 			place(p, room.entry);
 			ammo(p);
 			RelicEffects.onRoomStart(p, r, level);
+			RiftExtras.onRoomStart(p);
 			RiftFx.screen(p, "flash", node.theme.color, 20);
 			if (late) {
 				// Joined mid-run: a free relic to catch up.
@@ -708,6 +727,15 @@ public final class Rift {
 			}
 		}
 		RiftRooms.bringGuardians(level, players(server));
+		RiftExtras.bringCompanions(level, players(server));
+		music(server, node.type == RiftMap.Type.BOSS ? "boss" + (map.boss == RiftBosses.Boss.SOVEREIGN ? 4 : map.boss.act) : "theme:" + node.theme.name());
+		if (node.type == RiftMap.Type.FIGHT || node.type == RiftMap.Type.ELITE || node.type == RiftMap.Type.GAUNTLET || node.type == RiftMap.Type.DARK
+				|| node.type == RiftMap.Type.HOLD || node.type == RiftMap.Type.RESCUE) {
+			RiftSecrets.place(level, room);
+		}
+		if (heroRooms > 0 && node.type != RiftMap.Type.SHOP && node.type != RiftMap.Type.EVENT) {
+			bringHero(level, players(server));
+		}
 		switch (node.type) {
 			case FIGHT, ELITE, TANK -> startFight(server, level);
 			case GAUNTLET, HEIST, RESCUE, DARK -> {
@@ -727,6 +755,9 @@ public final class Rift {
 					FACED.add(map.boss);
 				}
 				boss = RiftBosses.spawn(map.boss, level, room, RUNNERS.size(), node.floor);
+				bossStart = ticks;
+				raged = false;
+				pitySaid = false;
 				String[] intro = {map.boss.title.toUpperCase(), map.boss.tip};
 				BAR.setVisible(false);
 				if (boss != null) {
@@ -763,6 +794,16 @@ public final class Rift {
 		wave = 0;
 		int players = Math.max(1, RUNNERS.size());
 		waveBudget = (int) Math.round((5 + depth() * 1.6) * (1 + 0.6 * (players - 1)));
+		waveBudget = (int) Math.round(waveBudget * RiftExtras.budgetScale());
+		if (doubleNext) {
+			// Double or Nothing: a bigger fight, for triple gold.
+			doubleNext = false;
+			doubling = true;
+			waveBudget = (int) Math.round(waveBudget * 1.5);
+			for (ServerPlayer p : players(server)) {
+				Alerts.title(p, "DOUBLE OR NOTHING", "More monsters, triple gold!", ChatFormatting.RED);
+			}
+		}
 		if (node.type == RiftMap.Type.TANK) {
 			RiftTanks.giveTanks(level, room, players(server));
 			for (ServerPlayer p : players(server)) {
@@ -841,6 +882,7 @@ public final class Rift {
 				if (mob != null) {
 					if (!p.tank()) {
 						level.addFreshEntity(mob);
+						RiftExtras.onSpawn(mob);
 					}
 					if (node != null && node.burning && p.twist() != null) {
 						// A Burning Elite: much tougher, wreathed in fire, and fire can't hurt it.
@@ -914,8 +956,20 @@ public final class Rift {
 			RiftTanks.tick(level, targets);
 		}
 		if (boss != null) {
+			if (!pitySaid && (ticks - bossStart) / 20 > 75) {
+				pitySaid = true;
+				for (ServerPlayer p : targets) {
+					Alerts.title(p, "THE RIFT IS ON YOUR SIDE", "Your hits grow stronger the longer this fight lasts", ChatFormatting.GOLD);
+				}
+			}
 			boss.tick(level, targets);
 			RiftMutations.tick(level, boss, targets, ticks);
+			LivingEntity bossBody = boss.body(level);
+			if (!raged && bossBody != null && bossBody.getHealth() < bossBody.getMaxHealth() * 0.5F && map.boss != RiftBosses.Boss.SOVEREIGN) {
+				// Half gone: the music turns.
+				raged = true;
+				music(server, "rage");
+			}
 			if (boss.dead()) {
 				boss = null;
 				// Whatever it brought along (brood, husks, reflections) goes with it.
@@ -928,7 +982,18 @@ public final class Rift {
 				}
 				MOBS.clear();
 				RiftMutations.clear();
-				if (act < 3 || act == 3 && KEYS.size() >= 3) {
+				if (endless > 0) {
+					endless++;
+					for (ServerPlayer p : players(server)) {
+						var rec = dev.rubymod.game.Stats.get(p);
+						if (endless - 1 > rec.riftDeepest) {
+							rec.riftDeepest = endless - 1;
+							dev.rubymod.game.Stats.markDirty();
+							p.sendSystemMessage(Component.literal("\u2726 New best Endless Descent: depth " + (endless - 1) + "!").withStyle(ChatFormatting.LIGHT_PURPLE));
+						}
+					}
+					actCleared(server, level);
+				} else if (act < 3 || act == 3 && KEYS.size() >= 3) {
 					actCleared(server, level);
 				} else {
 					victory(server);
@@ -1010,6 +1075,61 @@ public final class Rift {
 		}
 	}
 
+	/** When the boss fight began (the Rift helps out if it drags on), and whether it's said so. */
+	private static int bossStart;
+	private static boolean pitySaid;
+	/** The boss music has turned (it's badly hurt). */
+	private static boolean raged;
+
+	/** What the music should be: "theme:CRYSTAL", "boss1".."boss4", "rage", "victory". */
+	static void music(MinecraftServer server, String id) {
+		for (ServerPlayer p : players(server)) {
+			RiftFx.screen(p, "music:" + id, 0, 0);
+		}
+	}
+
+	/** Damage against a boss: more and more once the fight's gone on 75 seconds (up to x2.5). */
+	public static float bossPity(Entity target) {
+		if (boss == null || !RiftBoss.isBoss(target)) {
+			return 1;
+		}
+		float seconds = (ticks - bossStart) / 20F;
+		return seconds <= 75 ? 1 : 1 + Math.min(1.5F, (seconds - 75) / 40F);
+	}
+
+	/** Mysteries: rooms left with the hired Wandering Hero; a Double or Nothing waiting, or running. */
+	static int heroRooms;
+	static boolean doubleNext;
+	private static boolean doubling;
+
+	/** Sir Ruby, the Wandering Hero: an axe-swinging ally for this room. */
+	private static void bringHero(ServerLevel level, List<ServerPlayer> players) {
+		if (players.isEmpty()) {
+			return;
+		}
+		ServerPlayer owner = players.get(0);
+		Mob hero = EntityTypes.VINDICATOR.create(level, EntitySpawnReason.EVENT);
+		if (hero == null) {
+			return;
+		}
+		hero.snapTo(owner.getX() - 2, owner.getY(), owner.getZ() + 2, owner.getYRot(), 0);
+		var hp = hero.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+		if (hp != null) {
+			hp.setBaseValue(80);
+			hero.setHealth(80);
+		}
+		hero.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.NETHERITE_AXE));
+		hero.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(Items.GOLDEN_HELMET));
+		hero.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0);
+		hero.setDropChance(net.minecraft.world.entity.EquipmentSlot.HEAD, 0);
+		hero.addEffect(new MobEffectInstance(MobEffects.STRENGTH, -1, 1, false, false));
+		hero.setCustomName(Component.literal("Sir Ruby (" + heroRooms + " rooms)").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		hero.addTag(TAG);
+		level.addFreshEntity(hero);
+		RelicEffects.ALLIES.put(hero.getUUID(), new RelicEffects.Ally(Long.MAX_VALUE, owner.getUUID(), false));
+		RiftFx.beam(level, hero.position(), 8, ParticleTypes.END_ROD, 0xFFFFC02E);
+	}
+
 	/** This room's Burning Elites (they burn, and fire can't touch them). */
 	private static final java.util.Set<UUID> BURNING = new java.util.HashSet<>();
 
@@ -1079,6 +1199,16 @@ public final class Rift {
 		}
 		if (RiftRooms.loot() >= 100) {
 			grantKey(server, "gold", "Key of Gold");
+		}
+		if (doubling) {
+			doubling = false;
+			bonus *= 3;
+		}
+		if (heroRooms > 0) {
+			heroRooms--;
+			if (heroRooms == 0) {
+				tell(server, Component.literal("Sir Ruby salutes and goes his own way.").withStyle(ChatFormatting.GOLD));
+			}
 		}
 		RiftMap.Type special = RiftRooms.active() ? RiftRooms.rewardTier() : null;
 		String specialTitle = RiftRooms.rewardTitle();
@@ -1158,7 +1288,8 @@ public final class Rift {
 			}
 			case EVENT -> {
 				level.setBlock(BlockPos.containing(room.portal).above(), net.minecraft.world.level.block.Blocks.ENCHANTING_TABLE.defaultBlockState(), 3);
-				int kind = random.nextInt(3);
+				int kind = forceEvent >= 0 ? forceEvent : RiftEvents.pick(random);
+				forceEvent = -1;
 				for (ServerPlayer p : players(server)) {
 					Runner r = RUNNERS.get(p.getUUID());
 					r.event = RiftEvents.options(kind);
@@ -1377,6 +1508,10 @@ public final class Rift {
 		r.event = List.of();
 		if (option.startsWith(RiftArsenal.PREFIX)) {
 			RiftArsenal.give(player, r, option);
+		} else if (option.equals("end:descend")) {
+			descend(player.level().getServer());
+		} else if (option.equals("end:home")) {
+			player.sendSystemMessage(Component.literal("Heading home. (Step into the portal, or wait.)").withStyle(ChatFormatting.GRAY));
 		} else if (option.startsWith(RiftSpring.PREFIX)) {
 			RiftSpring.choose(player, r, option);
 		} else {
@@ -1671,7 +1806,86 @@ public final class Rift {
 	}
 
 	/** Shards for everyone, and the Daily Rift score. */
+	/** The Endless Descent: how deep (0: not descending). */
+	static int endless;
+
+	private static void offerDescent(ServerPlayer p, Runner r) {
+		r.event = List.of("title|Victory! Keep going down?",
+				"end:descend|Endless Descent|Keep going: deeper and harder, as far as you can make it. Your best depth goes on the Altar's leaderboard.|minecraft:crying_obsidian",
+				"end:home|Go Home|The run ends here. Back to the Threshold.|minecraft:ender_pearl");
+		Net.send(p, new MorePayloads.RiftScreen("event", r.event));
+	}
+
+	/** Somebody chose to keep going: the next depth opens. */
+	private static void descend(MinecraftServer server) {
+		if (state != State.OVER) {
+			return;
+		}
+		ServerLevel level = level(server);
+		endless++;
+		nextAct = true;
+		state = State.CALM;
+		timer = REWARD_TICKS;
+		for (Runner r : RUNNERS.values()) {
+			r.event = List.of();
+		}
+		reviveAll(server, level, 1.0F);
+		for (ServerPlayer p : players(server)) {
+			Net.send(p, new MorePayloads.RiftScreen("close", List.of()));
+			Alerts.title(p, "ENDLESS DESCENT", "Depth " + endless + ": step into the portal", ChatFormatting.DARK_PURPLE);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.8F, 0.6F);
+		}
+		BAR.setName(Component.literal("Endless Descent  \u2022  depth " + endless + "  \u2022  step into the portal"));
+		openPortal(level);
+	}
+
+	/** For autotests: the next Mystery (-1: random). */
+	private static int forceEvent = -1;
+
+	/** When this run began (for the summary's time). */
+	private static int runStart;
+
+	/** A hit on a Rift monster, for the summary. */
+	public static void recordDamage(ServerPlayer attacker, Entity target, float amount) {
+		Runner r = RUNNERS.get(attacker.getUUID());
+		if (r != null && isEnemy(target)) {
+			r.damage += amount;
+		}
+	}
+
+	/** The end-of-run summary: how far, how long, and a card for each runner (MVP: most damage). */
+	private static void sendSummary(MinecraftServer server, boolean won) {
+		List<String> lines = new ArrayList<>();
+		lines.add("title|" + (won ? act >= 4 && endless == 0 ? "TRUE VICTORY!" : "VICTORY!" : endless > 0 ? "DEPTH " + endless + " REACHED" : "RUN OVER"));
+		String where = endless > 0 ? "Endless Descent, depth " + endless : act >= 4 ? "The Heart of the Rift" : "Act " + act + "  \u2022  Floor " + (node == null ? 1 : node.floor + 1) + " of " + (RiftMap.FLOORS + 1)
+				+ (node == null ? "" : "  \u2022  " + node.theme.title);
+		int seconds = Math.max(0, (ticks - runStart) / 20);
+		lines.add("info|" + where + "|" + seconds / 60 + ":" + String.format("%02d", seconds % 60) + "|" + roomsCleared + "|" + elitesKilled + "|" + bossesKilled
+				+ "|" + KEYS.size());
+		Runner mvp = RUNNERS.values().stream().max(Comparator.comparingDouble(r -> r.damage)).orElse(null);
+		for (Runner r : RUNNERS.values()) {
+			ServerPlayer p = server.getPlayerList().getPlayer(r.id);
+			List<String> legends = new ArrayList<>();
+			if (p != null) {
+				for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+					String l = dev.rubymod.gun.Trait.legendary(p.getInventory().getItem(i));
+					if (l != null) {
+						legends.add(l);
+					}
+				}
+			}
+			lines.add("runner|" + r.name + "|" + r.kills + "|" + Math.round(r.damage) + "|" + (r == mvp && RUNNERS.size() > 1 ? 1 : 0) + "|"
+					+ String.join(",", r.relics.stream().map(x -> x.icon + ";" + x.tier.name()).toList()) + "|"
+					+ String.join(",", RelicCombos.active(r).stream().map(d -> d.title).toList()) + "|" + String.join(",", legends));
+		}
+		for (ServerPlayer p : players(server)) {
+			Net.send(p, new MorePayloads.RiftScreen("summary", lines));
+		}
+	}
+
 	private static void endRun(MinecraftServer server, boolean won) {
+		sendSummary(server, won);
+		RiftPing.clear();
 		RiftMeta.award(server, roomsCleared, elitesKilled, bossesKilled, won);
 		if (RiftMeta.daily) {
 			int kills = RUNNERS.values().stream().mapToInt(r -> r.kills).sum();
@@ -1687,6 +1901,7 @@ public final class Rift {
 		timer = 20 * 20;
 		ServerLevel level = level(server);
 		fireworks(level, room.portal, 12);
+		music(server, "victory");
 		for (ServerPlayer p : players(server)) {
 			Runner r = RUNNERS.get(p.getUUID());
 			Alerts.title(p, act >= 4 ? "TRUE VICTORY!" : "RIFT CONQUERED!", act >= 4 ? "The Ruby Sovereign has fallen. The Rift is yours!"
@@ -1701,6 +1916,10 @@ public final class Rift {
 		endRun(server, true);
 		reviveAll(server, level, 1.0F);
 		openPortal(level);
+		timer = 20 * 40;
+		for (ServerPlayer p : players(server)) {
+			offerDescent(p, RUNNERS.get(p.getUUID()));
+		}
 	}
 
 	/** After a run: back to the Threshold, relics gone, ready for another. */
@@ -1710,6 +1929,10 @@ public final class Rift {
 			Runner r = RUNNERS.get(p.getUUID());
 			RelicEffects.cleanup(p, r);
 			r.relics.clear();
+			r.blessings.clear();
+			r.damage = 0;
+			p.removeEffect(MobEffects.SLOW_FALLING);
+			p.removeEffect(MobEffects.JUMP_BOOST);
 			r.alive = true;
 			r.kills = 0;
 			removeMarker(server, r);
@@ -1744,8 +1967,8 @@ public final class Rift {
 			rocket.set(net.minecraft.core.component.DataComponents.FIREWORKS, new net.minecraft.world.item.component.Fireworks(1,
 					List.of(new net.minecraft.world.item.component.FireworkExplosion(net.minecraft.world.item.component.FireworkExplosion.Shape.values()[i % 4],
 							colors, it.unimi.dsi.fastutil.ints.IntList.of(0xFFFFFF), true, true))));
-			var fw = new net.minecraft.world.entity.projectile.FireworkRocketEntity(level, at.x + (i % 3 - 1) * 2, at.y + 1, at.z + (i / 3 % 3 - 1) * 2,
-					rocket);
+			double a = i * Math.PI * 2 / Math.max(1, count) + 0.3;
+			var fw = new net.minecraft.world.entity.projectile.FireworkRocketEntity(level, at.x + Math.cos(a) * 9, at.y + 1, at.z + Math.sin(a) * 9, rocket);
 			level.addFreshEntity(fw);
 		}
 	}
@@ -1766,7 +1989,8 @@ public final class Rift {
 	private static void syncHud(MinecraftServer server) {
 		String where = state == State.STAGING ? "THE THRESHOLD" + (RiftMeta.heat > 0 ? "  \u2022  HEAT " + RiftMeta.heat : "")
 				+ (RiftMeta.daily ? "  \u2022  DAILY" : "") : node == null ? "RUBY RIFT"
-				: act >= 4 ? "THE HEART OF THE RIFT" + (KEYS.isEmpty() ? "" : "  \u2022  KEYS " + KEYS.size() + "/3")
+				: endless > 0 ? "ENDLESS DESCENT  \u2022  DEPTH " + endless + "  \u2022  FLOOR " + (node.floor + 1) + "/" + (RiftMap.FLOORS + 1)
+				: act >= 4 && map != null && map.boss == RiftBosses.Boss.SOVEREIGN ? "THE HEART OF THE RIFT" + (KEYS.isEmpty() ? "" : "  \u2022  KEYS " + KEYS.size() + "/3")
 						: "ACT " + act + "  \u2022  FLOOR " + (node.floor + 1) + "/" + (RiftMap.FLOORS + 1) + "  \u2022  " + node.theme.title.toUpperCase()
 								+ (KEYS.isEmpty() ? "" : "  \u2022  KEYS " + KEYS.size() + "/3");
 		List<String> team = new ArrayList<>();
@@ -1807,6 +2031,11 @@ public final class Rift {
 	/** Where this room starts (a Pocket Portal goes there). */
 	static Vec3 entry() {
 		return room == null ? null : room.entry;
+	}
+
+	/** For autotests: the team's mutators. */
+	public static String mutators() {
+		return RiftExtras.MUTATORS.toString();
 	}
 
 	/** For autotests: each runner's active combos and bonds. */
@@ -1931,6 +2160,33 @@ public final class Rift {
 					map.nodes.set(b.id, new RiftMap.Node(b.id, b.floor, b.col, b.cols, RiftMap.Type.BOSS, map.boss.theme));
 					map.node(b.id).next.addAll(b.next);
 					testSkip(server, "boss");
+					return;
+				}
+				if (what.startsWith("kills:")) {
+					for (Runner rn : RUNNERS.values()) {
+						rn.kills += Integer.parseInt(what.substring(6));
+					}
+					return;
+				}
+				if (what.equals("secret")) {
+					RiftSecrets.force = true;
+					return;
+				}
+				if (what.equals("opensecret") && RiftSecrets.where() != null) {
+					RiftSecrets.onBlast(level(server), RiftSecrets.where(), 1);
+					return;
+				}
+				if (what.equals("descend")) {
+					descend(server);
+					return;
+				}
+				if (what.startsWith("event:")) {
+					forceEvent = Integer.parseInt(what.substring(6));
+					testSkip(server, "room:EVENT");
+					return;
+				}
+				if (what.equals("win")) {
+					victory(server);
 					return;
 				}
 				if (what.equals("killboss") && boss != null) {

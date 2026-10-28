@@ -86,7 +86,7 @@ public final class MirrorKnight implements RiftBoss {
 		}
 		k.snapTo(room.center.getX() + 0.5, room.center.getY() + 1, room.center.getZ() - room.half + 10, 0, 0);
 		set(k, Attributes.SCALE, 2.2);
-		set(k, Attributes.MAX_HEALTH, 600 * (1 + 0.65 * (players - 1)));
+		set(k, Attributes.MAX_HEALTH, 600 * RiftBosses.healthScale(players));
 		set(k, Attributes.ATTACK_DAMAGE, 10);
 		set(k, Attributes.FOLLOW_RANGE, 80);
 		set(k, Attributes.MOVEMENT_SPEED, 0.3);

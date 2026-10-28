@@ -58,6 +58,12 @@ public final class Stats {
 		/** The Rift ability picked at the Altar of Echoes (Z). */
 		public String riftAbility = "dash";
 		public int riftHeatUnlocked;
+		/** The Rift companion picked at the Altar ("none", "hound", "fox", "pebble", "buzz"). */
+		public String riftCompanion = "none";
+		/** The deepest the Endless Descent has gone (0: never). */
+		public int riftDeepest;
+		/** Codex milestones already paid out (one per 10 entries found). */
+		public int riftCodexClaimed;
 		public int seasonsWon;
 		public Set<String> unlocked = new HashSet<>();
 		public String hat = "";

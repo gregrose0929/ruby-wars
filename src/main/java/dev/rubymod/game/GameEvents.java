@@ -209,8 +209,11 @@ public final class GameEvents {
 				Jetpacks.setThrusting(context.player(), payload.on()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Hello.TYPE, (payload, context) ->
 				VersionCheck.onHello(context.player(), payload.build()));
-		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Ping.TYPE, (payload, context) ->
-				Waypoints.ping(context.player(), payload));
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Ping.TYPE, (payload, context) -> {
+			if (!dev.rubymod.game.rift.RiftPing.ping(context.player(), payload.x(), payload.y(), payload.z(), payload.entityId())) {
+				Waypoints.ping(context.player(), payload);
+			}
+		});
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.LookQuery.TYPE, (payload, context) ->
 				LookInfo.answer(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ModeSelect.TYPE, (payload, context) -> {
@@ -348,6 +351,7 @@ public final class GameEvents {
 								: source.is(dev.rubymod.registry.ModDamage.HEADSHOT) ? 0xFFFFD040 : 0xFFFFFFFF;
 						dev.rubymod.game.rift.RiftFx.damageNumber(attacker, entity, damageTaken, color);
 						dev.rubymod.game.rift.RelicEffects.onHit(attacker, entity, damageTaken);
+						dev.rubymod.game.rift.Rift.recordDamage(attacker, entity, damageTaken);
 					}
 					if (entity instanceof ServerPlayer victim && dev.rubymod.game.rift.Rift.playing(victim)) {
 						dev.rubymod.game.rift.RelicEffects.afterDamage(victim);
@@ -393,6 +397,7 @@ public final class GameEvents {
 					}
 					dev.rubymod.game.rift.Rift.onMobDeath(entity, source);
 					dev.rubymod.game.rift.RelicCombos.onDeath(entity);
+					dev.rubymod.game.rift.RiftEvents.onDeath(entity, source);
 				} catch (RuntimeException e) {
 					dev.rubymod.RubyMod.LOGGER.error("Ruby Rift kill effects failed", e);
 				}

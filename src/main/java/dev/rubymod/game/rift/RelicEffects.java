@@ -276,6 +276,10 @@ public final class RelicEffects {
 		if (p.level().getGameTime() < r.fx.rageUntil) {
 			dmg *= 2;
 		}
+		dmg *= Rift.bossPity(target);
+		if (r.blessings.contains("power")) {
+			dmg *= 1.15F;
+		}
 		if (r.has(Relic.THE_HUNTED)) {
 			dmg *= 2 + r.level(Relic.THE_HUNTED);
 		}
@@ -392,7 +396,7 @@ public final class RelicEffects {
 		effectColor = color;
 		try {
 			target.setInvulnerableTime(0);
-			target.hurtServer(level, owner.damageSources().playerAttack(owner), amount);
+			target.hurtServer(level, owner.damageSources().playerAttack(owner), amount * Rift.bossPity(target));
 		} finally {
 			inEffect = before;
 			effectColor = beforeColor;
@@ -405,6 +409,7 @@ public final class RelicEffects {
 			return;
 		}
 		boolean boss = JuggernautMech.isBoss(target);
+		RiftExtras.onHit(p, target);
 		if (r.has(Relic.CHAIN_LIGHTNING)) {
 			List<LivingEntity> near = enemiesNear(level, target.position(), 7, target);
 			near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(target)));
@@ -474,6 +479,7 @@ public final class RelicEffects {
 			return;
 		}
 		Vec3 at = victim.getBoundingBox().getCenter();
+		RiftExtras.onKill(level, p, victim);
 		if (r.has(Relic.BLOOD_AMMO)) {
 			p.heal(1.0F);
 		}
@@ -672,6 +678,7 @@ public final class RelicEffects {
 
 	private static final Identifier HEALTH_ID = Identifier.fromNamespaceAndPath("rubymod", "rift_health");
 	private static final Identifier SCALE_ID = Identifier.fromNamespaceAndPath("rubymod", "rift_scale");
+	private static final Identifier SPEED_ID = Identifier.fromNamespaceAndPath("rubymod", "rift_speed");
 
 	/** Re-apply everything that changes your body (call after gaining a relic or being revived). */
 	public static void apply(ServerPlayer p, Rift.Runner r) {
@@ -685,6 +692,9 @@ public final class RelicEffects {
 			}
 			if (r.has(Relic.RUBY_AVATAR)) {
 				extra += 20;
+			}
+			if (r.blessings.contains("health")) {
+				extra += 8;
 			}
 			if (r.has(Relic.GLASS_CANNON)) {
 				extra = 6 - health.getBaseValue();
@@ -700,10 +710,18 @@ public final class RelicEffects {
 				p.heal(p.getMaxHealth() - before);
 			}
 		}
+		AttributeInstance speed = p.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speed != null) {
+			speed.removeModifier(SPEED_ID);
+			if (r.blessings.contains("speed")) {
+				speed.addTransientModifier(new AttributeModifier(SPEED_ID, 0.2, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+			}
+		}
 		if (scale != null) {
 			scale.removeModifier(SCALE_ID);
-			if (r.has(Relic.RUBY_AVATAR)) {
-				scale.addTransientModifier(new AttributeModifier(SCALE_ID, 1.0, AttributeModifier.Operation.ADD_VALUE));
+			double size = (r.has(Relic.RUBY_AVATAR) ? 1.0 : 0) + RiftExtras.scaleBonus();
+			if (size != 0) {
+				scale.addTransientModifier(new AttributeModifier(SCALE_ID, size, AttributeModifier.Operation.ADD_VALUE));
 			}
 		}
 	}
@@ -717,6 +735,10 @@ public final class RelicEffects {
 		AttributeInstance scale = p.getAttribute(Attributes.SCALE);
 		if (scale != null) {
 			scale.removeModifier(SCALE_ID);
+		}
+		AttributeInstance speed = p.getAttribute(Attributes.MOVEMENT_SPEED);
+		if (speed != null) {
+			speed.removeModifier(SPEED_ID);
 		}
 		if (p.getHealth() > p.getMaxHealth()) {
 			p.setHealth(p.getMaxHealth());
@@ -903,6 +925,10 @@ public final class RelicEffects {
 		var server = level.getServer();
 		tickSecondWaveWorld(level, t);
 		RelicCombos.tickWorld(level, t);
+		RiftEvents.tick(level);
+		RiftPing.tick(level);
+		RiftExtras.tick(level);
+		RiftSecrets.tick(level);
 		for (Iterator<Map.Entry<UUID, Frozen>> it = FROZEN.entrySet().iterator(); it.hasNext();) {
 			var e = it.next();
 			if (t >= e.getValue().until() || !(level.getEntity(e.getKey()) instanceof LivingEntity mob) || !mob.isAlive()) {
@@ -1156,6 +1182,7 @@ public final class RelicEffects {
 			e.setDeltaMovement(e.getDeltaMovement().add(push.x, 0.3, push.z));
 		}
 		RelicCombos.onBlast(level, owner, at, radius);
+		RiftSecrets.onBlast(level, at, radius);
 		if (hurtsPlayers) {
 			for (ServerPlayer p : Rift.players(level.getServer())) {
 				if (!p.isSpectator() && p.position().distanceTo(at) < radius) {

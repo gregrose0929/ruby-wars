@@ -116,6 +116,11 @@ public final class RiftMeta {
 
 	// ----- The Altar of Echoes screen -----
 
+	/** For autotests: open the Altar for this player. */
+	public static void sendTo(ServerPlayer p) {
+		send(p);
+	}
+
 	static void send(ServerPlayer p) {
 		Stats.Record r = rec(p);
 		List<String> lines = new ArrayList<>();
@@ -136,6 +141,10 @@ public final class RiftMeta {
 						+ (r.riftUnlocks.contains(relic.id()) ? "owned" : "locked") + "|" + relic.tier.name());
 			}
 		}
+		RiftExtras.lines(p, lines);
+		List<String> deepest = Stats.all().stream().filter(x -> x.riftDeepest > 0).sorted((a, b) -> b.riftDeepest - a.riftDeepest).limit(3)
+				.map(x -> x.name + ": depth " + x.riftDeepest).toList();
+		lines.add("deepest|" + String.join(";", deepest));
 		Net.send(p, new MorePayloads.RiftScreen("threshold", lines));
 	}
 
@@ -194,6 +203,8 @@ public final class RiftMeta {
 							+ (h > 0 ? " (" + HEAT_ABOUT[h] + " Shards x" + String.format("%.2f", 1 + 0.25 * h) + ")" : "")).withStyle(ChatFormatting.GOLD));
 				}
 			}
+			case "mutator" -> RiftExtras.toggleMutator(p, id);
+			case "companion" -> RiftExtras.pickCompanion(p, id);
 			case "daily" -> {
 				daily = !daily;
 				Rift.tell(server, Component.literal(p.getName().getString() + (daily ? " turned the Daily Rift ON: today's run, the same for everyone."

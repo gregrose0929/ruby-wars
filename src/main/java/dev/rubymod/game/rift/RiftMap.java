@@ -157,6 +157,18 @@ public final class RiftMap {
 		map.nodes.set(old.id, n);
 	}
 
+	/** The Endless Descent: an act-3 map (the hardest rooms) with any of the bosses at the bottom. */
+	public static RiftMap endless(RandomSource random, int depth) {
+		RiftMap map = generate(random, 3);
+		RiftBosses.Boss[] pool = {RiftBosses.Boss.JUGGERNAUT, RiftBosses.Boss.GUNSHIP, RiftBosses.Boss.TITAN, RiftBosses.Boss.HIVE_QUEEN,
+				RiftBosses.Boss.MIRROR_KNIGHT, RiftBosses.Boss.STORM_WYRM};
+		map.boss = pool[random.nextInt(pool.length)];
+		Node old = map.nodes.get(map.nodes.size() - 1);
+		Node b = new Node(old.id, old.floor, old.col, old.cols, Type.BOSS, map.boss.theme);
+		map.nodes.set(old.id, b);
+		return map;
+	}
+
 	/** A room for this floor and lane. */
 	private static Type pick(RandomSource random, int floor, int lane) {
 		if (floor == 0) {

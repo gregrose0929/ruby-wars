@@ -136,6 +136,10 @@ public final class RiftClient {
 		});
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.ScreenFx.TYPE, (p, c) -> {
 			Minecraft mc = Minecraft.getInstance();
+			if (p.kind().startsWith("music:")) {
+				RiftMusic.set(p.kind().substring(6));
+				return;
+			}
 			if (p.kind().startsWith("relic:")) {
 				if (mc.player != null) {
 					mc.player.displayItemActivation(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(p.kind().substring(6)))));
@@ -155,6 +159,10 @@ public final class RiftClient {
 						|| mc.gui.screen() instanceof CodexScreen) {
 					mc.gui.setScreen(null);
 				}
+				return;
+			}
+			if (p.kind().equals("summary")) {
+				mc.gui.setScreen(new SummaryScreen(p.lines()));
 				return;
 			}
 			if (p.kind().equals("codex")) {
@@ -281,26 +289,37 @@ public final class RiftClient {
 					y += 16;
 				}
 			}
-			// Your relics: a column down the right edge, framed in their tier's colour.
-			int x = w - 22;
-			int ry = 6;
-			int n = 0;
-			for (String r : relicLines()) {
-				String[] f = r.split("[|]");
+			// Your relics: a small grid in the top-right corner, framed in their tier's colour (the full list: E).
+			java.util.List<String> owned = relicLines();
+			int cell = 13;
+			int rows = Math.max(4, Math.min(owned.size(), (h - 90) / cell));
+			int cols = 3;
+			int shown = Math.min(owned.size(), rows * cols);
+			if (owned.size() > rows * cols) {
+				shown = rows * cols - 1;
+			}
+			for (int n = 0; n < shown; n++) {
+				String[] f = owned.get(n).split("[|]");
 				if (f.length < 3) {
 					continue;
 				}
+				int x = w - 4 - cell * (1 + n / rows);
+				int ry = 4 + (n % rows) * cell;
 				int tier = tierColor(f[2]);
 				float pulse = 0.55F + 0.45F * (float) Math.sin(now / 450.0 + n);
-				g.fill(x, ry, x + 18, ry + 18, 0xD0100810);
-				g.outline(x, ry, 18, 18, (int) (pulse * 255) << 24 | tier & 0xFFFFFF);
-				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[1]))), x + 1, ry + 1);
-				ry += 20;
-				n++;
-				if (ry > h - 60) {
-					ry = 6;
-					x -= 20;
-				}
+				g.fill(x, ry, x + cell - 1, ry + cell - 1, 0xC0100810);
+				g.outline(x, ry, cell - 1, cell - 1, (int) (pulse * 255) << 24 | tier & 0xFFFFFF);
+				g.pose().pushMatrix();
+				g.pose().translate(x + 1, ry + 1);
+				g.pose().scale(0.65F, 0.65F);
+				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[1]))), 0, 0);
+				g.pose().popMatrix();
+			}
+			if (owned.size() > shown) {
+				int x = w - 4 - cell * (1 + shown / rows);
+				int ry = 4 + (shown % rows) * cell;
+				g.fill(x, ry, x + cell - 1, ry + cell - 1, 0xE0302030);
+				g.centeredText(font, "+" + (owned.size() - shown), x + cell / 2, ry + 3, 0xFFFFC02E);
 			}
 			// Your ability (Z): icon, name, and a cooldown sweep; it flashes when it's ready.
 			String[] ab = abilityLine();

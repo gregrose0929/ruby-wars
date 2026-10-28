@@ -47,6 +47,11 @@ public final class RiftBosses {
 	private RiftBosses() {
 	}
 
+	/** Boss health by team size: a little less for one player alone, much more for a full team. */
+	static double healthScale(int players) {
+		return players <= 1 ? 0.8 : 1 + 0.65 * (players - 1);
+	}
+
 	static Boss pick(int act, RandomSource random) {
 		List<Boss> pool = new ArrayList<>();
 		for (Boss b : Boss.values()) {

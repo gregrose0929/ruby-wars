@@ -62,6 +62,11 @@ public final class RiftCharms {
 	private RiftCharms() {
 	}
 
+	/** How many you can carry: 3, or 4 with every combo in the Codex. */
+	static int max(ServerPlayer p) {
+		return RiftCodex.done(p, "combos") ? MAX + 1 : MAX;
+	}
+
 	public static ItemStack stack(Charm c) {
 		ItemStack s = new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c.icon)));
 		s.set(ModComponents.CHARM, c.name());
@@ -99,9 +104,9 @@ public final class RiftCharms {
 
 	static void give(ServerPlayer p, Charm c) {
 		RiftCodex.learn(p, "charm:" + c.name(), c.title);
-		if (count(p) >= MAX) {
+		if (count(p) >= max(p)) {
 			Rift.gold += 20;
-			p.sendSystemMessage(Component.literal("Your charm pouch is full (3): the " + c.title + " sold for 20 gold.").withStyle(ChatFormatting.GOLD));
+			p.sendSystemMessage(Component.literal("Your charm pouch is full (" + max(p) + "): the " + c.title + " sold for 20 gold.").withStyle(ChatFormatting.GOLD));
 			return;
 		}
 		ItemStack s = stack(c);

@@ -171,7 +171,7 @@ public final class RiftFinale implements RiftBoss {
 		}
 		w.snapTo(room.center.getX() + 0.5, room.center.getY() + 1, room.center.getZ() + 0.5, 180, 0);
 		set(w, Attributes.SCALE, 1.9);
-		set(w, Attributes.MAX_HEALTH, 900 * (1 + 0.65 * (players - 1)));
+		set(w, Attributes.MAX_HEALTH, 900 * RiftBosses.healthScale(players));
 		set(w, Attributes.ATTACK_DAMAGE, 16);
 		set(w, Attributes.FOLLOW_RANGE, 80);
 		set(w, Attributes.KNOCKBACK_RESISTANCE, 1.0);

@@ -40,6 +40,15 @@ public abstract class MinecraftMixin {
 		}
 	}
 
+	/** In the Ruby Rift: the Rift's music (each theme and boss has its own). */
+	@Inject(method = "getSituationalMusic", at = @At("HEAD"), cancellable = true)
+	private void rubymod$riftMusic(CallbackInfoReturnable<net.minecraft.sounds.Music> cir) {
+		net.minecraft.sounds.Music music = dev.rubymod.client.rift.RiftMusic.current();
+		if (music != null) {
+			cir.setReturnValue(music);
+		}
+	}
+
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void rubymod$noMiningWithGun(boolean down, CallbackInfo ci) {
 		if (Trigger.capturesAttack((Minecraft) (Object) this)) {
