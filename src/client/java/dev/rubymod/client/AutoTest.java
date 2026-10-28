@@ -70,6 +70,21 @@ public final class AutoTest {
 				message -> RubyMod.LOGGER.info("[autotest] screenshot {}: {}", name, message.getString()));
 	}
 
+	private static void aimAtNearest(net.minecraft.server.MinecraftServer server) {
+		var me = me(server);
+		var level = (net.minecraft.server.level.ServerLevel) me.level();
+		var near = level.getEntities((net.minecraft.world.entity.Entity) null, me.getBoundingBox().inflate(30),
+				e -> e instanceof net.minecraft.world.entity.Mob m && m.isAlive() && dev.rubymod.game.rift.Rift.isEnemy(e));
+		near.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(me)));
+		if (!near.isEmpty()) {
+			var to = near.get(0).getBoundingBox().getCenter().subtract(me.getEyePosition());
+			float yaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z));
+			me.setYRot(yaw);
+			me.setYHeadRot(yaw);
+			me.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+		}
+	}
+
 	private static void log(String message, Object... args) {
 		RubyMod.LOGGER.info("[autotest] " + message, args);
 	}
@@ -1410,6 +1425,162 @@ public final class AutoTest {
 						log("firing: {}", dev.rubymod.game.rift.Rift.debugState());
 					});
 				}
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("combos")) {
+			// Relic duos, the new Bonds and every legendary's signature, in a real fight.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(30, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 25; i++) {
+				then(20, mc -> {});
+			}
+			boolean legendsOnly = System.getenv("LEGENDS_ONLY") != null;
+			// A card that would complete a combo.
+			if (!legendsOnly) {
+			then(5, mc -> onServer(mc, server -> {
+				me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false));
+				dev.rubymod.game.rift.Rift.testSkip(server, "blink");
+				dev.rubymod.game.rift.Rift.testSkip(server, "offer:hall_of_mirrors,quick_hands,cryo");
+			}));
+			then(60, mc -> shot(mc, "combos-card"));
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "nooffer"));
+			});
+			// Every duo (one at a time, so each one's COMBO! fires), then every new Bond.
+			String[] relics = {"hall_of_mirrors", "bottomless_mag", "quick_hands", "twin_barrels", "echo_shot", "titan_blood", "thorn_armor", "rocket_boots",
+					"ground_pound", "field_medic", "time_loop", "headhunter", "lucky_coin", "ricochet", "split_shot", "overkill", "glass_cannon", "drop_turret",
+					"arsenal", "shadow_clone", "necromancer", "mirror_guard", "rewind", "black_hole", "overclock", "the_hunted", "gamblers_dice",
+					"thunderbomb", "neurotoxin", "firestorm", "ember_heart", "crystal_heart", "black_ice", "gem_bomb", "plague_bomb", "bloodsucker",
+					"chain_lightning", "venom_rounds", "napalm", "cryo", "domino"};
+			for (String r : relics) {
+				then(3, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, r)));
+				if (r.equals("quick_hands")) {
+					then(8, mc -> shot(mc, "combos-banner"));
+				}
+			}
+			then(10, mc -> onServer(mc, server -> {
+				log("combos: {}", dev.rubymod.game.rift.Rift.debugCombos());
+				me(server).setHealth(me(server).getMaxHealth());
+			}));
+			then(10, mc -> mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)));
+			then(20, mc -> shot(mc, "combos-inventory"));
+			then(5, mc -> mc.gui.setScreen(null));
+			// Fight with all of it: shoot, blink, reload, again and again.
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var stack = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.ARR_RIFLE);
+				stack.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+				me.getInventory().setItem(0, stack);
+				dev.rubymod.game.rift.Rift.testSkip(server, "spawn");
+			}));
+			for (int t = 0; t < 240; t++) {
+				int tick = t;
+				then(1, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					aimAtNearest(server);
+					me.clearFire();
+					me.getInventory().setSelectedSlot(0);
+					var stack = me.getInventory().getItem(0);
+					if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+						dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+					}
+					if (tick % 60 == 30) {
+						dev.rubymod.game.rift.Rift.testSkip(server, "do:blink");
+					}
+					if (tick % 80 == 40) {
+						dev.rubymod.game.rift.Rift.testSkip(server, "do:reloaded");
+					}
+					if (tick % 80 == 0) {
+						dev.rubymod.game.rift.Rift.testSkip(server, "spawn");
+					}
+					if (me.getHealth() < 10) {
+						me.setHealth(me.getMaxHealth());
+					}
+				}));
+				if (t == 60 || t == 150) {
+					then(0, mc -> {
+						log("combos fight: {} | hp {}", dev.rubymod.game.rift.Rift.debugState(), mc.player.getHealth());
+						shot(mc, "combos-fight-" + tick);
+					});
+				}
+			}
+			}
+			then(5, mc -> onServer(mc, server -> me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(
+					net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 3, false, false))));
+			// Every legendary's signature, in a fresh fight.
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+					dev.rubymod.game.rift.Rift.testSkip(server, "room:FIGHT");
+				});
+			});
+			for (int i = 0; i < 20; i++) {
+				then(20, mc -> mc.gui.setScreen(null));
+			}
+			String[][] legends = {{"ruby_minigun", "Inferno Gatling"}, {"ruby_chakram", "Storm Disc"}, {"longshot_sniper", "Event Horizon"},
+					{"swarm_launcher", "Apocalypse Pod"}, {"combat_shotgun", "Dragon Duster"}, {"ruby_warhammer", "Ruby Titan Blade"},
+					{"arr_rifle", "Railstorm Rifle"}, {"rail_lance", "Prism Lance"}, {"swarm_launcher", "Hydra"}, {"tesla_coilgun", "Thunderbird"},
+					{"service_pistol", "Deadeye"}, {"bouncer", "Firecracker"}};
+			for (String[] lg : legends) {
+				then(5, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse("rubymod:" + lg[0]));
+					var stack = new net.minecraft.world.item.ItemStack(item);
+					java.util.List<String> traits = new java.util.ArrayList<>();
+					if (lg[1].equals("Railstorm Rifle")) {
+						traits.add("RAIL");
+					}
+					traits.add("LEGEND:" + lg[1]);
+					stack.set(dev.rubymod.registry.ModComponents.TRAITS, traits);
+					if (item instanceof dev.rubymod.gun.GunItem g) {
+						stack.set(dev.rubymod.registry.ModComponents.AMMO, g.stats(stack).magazine());
+					}
+					me.getInventory().setItem(0, stack);
+					dev.rubymod.game.rift.Rift.testSkip(server, "spawn");
+				}));
+				then(30, mc -> {});
+				for (int t = 0; t < 60; t++) {
+					int tick = t;
+					then(1, mc -> onServer(mc, server -> {
+						var me = me(server);
+						var level = (net.minecraft.server.level.ServerLevel) me.level();
+						aimAtNearest(server);
+						me.clearFire();
+						me.getInventory().setSelectedSlot(0);
+						var stack = me.getInventory().getItem(0);
+						if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+							dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+						}
+						if (me.getHealth() < 10) {
+							me.setHealth(me.getMaxHealth());
+						}
+					}));
+					if (t == 14) {
+						then(0, mc -> {
+							mc.gui.setScreen(null);
+							var sp = mc.getSingleplayerServer().getPlayerList().getPlayers().get(0);
+							mc.player.setYRot(sp.getYRot());
+							mc.player.setXRot(sp.getXRot());
+							shot(mc, "legend-" + lg[1].replace(" ", "_").toLowerCase());
+						});
+					}
+				}
+				then(5, mc -> log("legend {}: {}", lg[1], dev.rubymod.game.rift.Rift.debugState()));
 			}
 			then(20, mc -> {
 				log("done");

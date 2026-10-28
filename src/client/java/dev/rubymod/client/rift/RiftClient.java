@@ -332,6 +332,7 @@ public final class RiftClient {
 			case "LEGENDARY" -> 0xFFFFC02E;
 			case "CURSED" -> 0xFFB04CFF;
 			case "BOND" -> 0xFF2EE6C8;
+			case "DUO" -> 0xFFFF9A2E;
 			default -> 0xFFB8C4D0;
 		};
 	}

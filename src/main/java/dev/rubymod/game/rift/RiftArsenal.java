@@ -93,7 +93,13 @@ final class RiftArsenal {
 			new Legend(ModItems.LONGSHOT_SNIPER, ModItems.SINGULARITY_CANNON, "Event Horizon", Trait.BLAST),
 			new Legend(ModItems.SWARM_LAUNCHER, ModItems.ROCKET_LAUNCHER, "Apocalypse Pod", Trait.IGNITE),
 			new Legend(ModItems.COMBAT_SHOTGUN, ModItems.SIX_SHOOTER, "Dragon Duster", Trait.IGNITE),
-			new Legend(ModItems.RUBY_WARHAMMER, ModItems.RUBY_SWORD, "Ruby Titan Blade", Trait.VORTEX));
+			new Legend(ModItems.RUBY_WARHAMMER, ModItems.RUBY_SWORD, "Ruby Titan Blade", Trait.VORTEX),
+			new Legend(ModItems.ARR_RIFLE, ModItems.RAIL_LANCE, "Railstorm Rifle", Trait.PIERCE),
+			new Legend(ModItems.RAIL_LANCE, ModItems.RUBY_BLASTER, "Prism Lance", Trait.CHAIN),
+			new Legend(ModItems.SWARM_LAUNCHER, ModItems.LANCER, "Hydra", Trait.BLAST),
+			new Legend(ModItems.TESLA_COILGUN, ModItems.SKYHAMMER, "Thunderbird", Trait.CHAIN),
+			new Legend(ModItems.SERVICE_PISTOL, ModItems.LONGSHOT_SNIPER, "Deadeye", Trait.FAN),
+			new Legend(ModItems.BOUNCER, ModItems.DRAGONS_BREATH, "Firecracker", Trait.CHAIN));
 
 	private record Fusion(int base, int donor, Trait trait, Legend legend) {
 	}
@@ -128,11 +134,11 @@ final class RiftArsenal {
 				if (t == null || has.contains(t) || t == Trait.donor(base.getItem()) || donor.getItem() == base.getItem()) {
 					continue;
 				}
-				// The exotic weapons fire their own way: only traits that act on hits (or Quickdraw) work on them.
-				if (exotic && t.kind != Trait.Kind.HIT && t != Trait.QUICKDRAW) {
+				// The exotic weapons fire their own way: only traits that act on hits (or Quickdraw) work on them (a legendary always works).
+				Legend l = legend(base.getItem(), donor.getItem());
+				if (exotic && t.kind != Trait.Kind.HIT && t != Trait.QUICKDRAW && l == null) {
 					continue;
 				}
-				Legend l = legend(base.getItem(), donor.getItem());
 				(l != null ? legends : plain).add(new Fusion(b, d, t, l));
 			}
 		}
@@ -169,7 +175,8 @@ final class RiftArsenal {
 			List<Trait> after = new ArrayList<>(Trait.of(base));
 			after.add(f.trait());
 			String name = fusedName(base, after, f.legend());
-			String about = (f.legend() != null ? "LEGENDARY (+50% damage, and " + f.legend().bonus().about + "). " : "")
+			String about = (f.legend() != null ? "LEGENDARY: " + Trait.legendAbout(f.legend().name()) + " Plus +50% damage, and "
+					+ f.legend().bonus().about + ". " : "")
 					+ base.getItem().getName(base).getString() + " gains " + f.trait().title + ": " + f.trait().about + ". The "
 					+ donor.getItem().getName(donor).getString() + " is used up.";
 			lines.add(PREFIX + "fz:" + f.base() + ":" + f.donor() + "|" + (f.legend() != null ? "\u2605 " : "") + name + "|" + about + "|"

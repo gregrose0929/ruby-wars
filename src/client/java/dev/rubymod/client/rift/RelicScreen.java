@@ -22,10 +22,13 @@ import net.minecraft.world.item.ItemStack;
  * gold with a sweep of light; Cursed ones flicker purple. Cards rise in one by one.
  */
 public class RelicScreen extends Screen {
-	/** id, title, tier, element, icon, about, price ("" where it doesn't apply), and the stars it combines to (0: a new relic). */
-	private record Card(String id, String title, String tier, String element, String icon, String about, int price, int combine) {
+	/**
+	 * id, title, tier, element, icon, about, price ("" where it doesn't apply), the stars it combines to (0: a new relic),
+	 * and the relic combo it would complete for you ("": none).
+	 */
+	private record Card(String id, String title, String tier, String element, String icon, String about, int price, int combine, String combo) {
 		Card(String id, String title, String tier, String element, String icon, String about, int price) {
-			this(id, title, tier, element, icon, about, price, 0);
+			this(id, title, tier, element, icon, about, price, 0, "");
 		}
 	}
 
@@ -57,7 +60,7 @@ public class RelicScreen extends Screen {
 						list.add(new Card(f[0], f[1], kind.equals("event") ? "EVENT" : "SERVICE", "NONE", f[3], f[2], f.length > 4 ? Integer.parseInt(f[4]) : -1));
 					}
 				} else if (f.length >= 7) {
-					list.add(new Card(f[0], f[1], f[2], f[3], f[4], f[5], Integer.parseInt(f[6]), f.length > 7 ? Integer.parseInt(f[7]) : 0));
+					list.add(new Card(f[0], f[1], f[2], f[3], f[4], f[5], Integer.parseInt(f[6]), f.length > 7 ? Integer.parseInt(f[7]) : 0, f.length > 8 ? f[8] : ""));
 				}
 			} catch (NumberFormatException e) {
 				// A line we can't read is skipped, never a crash.
@@ -157,7 +160,10 @@ public class RelicScreen extends Screen {
 			g.fillGradient(x + 1, y + 1, x + cardW - 1, y + 50, glowA << 24 | tier & 0xFFFFFF, 0x00000000);
 			// The frame: shimmering gold for Legendary, flickering purple for Cursed.
 			int frame = tier;
-			if (c.combine() > 0) {
+			if (!c.combo().isEmpty()) {
+				// Completes a combo: an orange frame that flickers with the duo's colour.
+				frame = (now / 150 + i) % 2 == 0 ? 0xFFFF9A2E : 0xFFFFE680;
+			} else if (c.combine() > 0) {
 				// Combining: a gold frame that pulses.
 				frame = (now / 200 + i) % 2 == 0 ? 0xFFFFE680 : 0xFFFFB020;
 			} else if (legendary) {
@@ -176,6 +182,15 @@ public class RelicScreen extends Screen {
 					g.fill(x + sweep + k * 2 - k, y, x + sweep + k * 2 - k + 2, y + cardH, 0x18FFFFFF);
 				}
 				g.disableScissor();
+			}
+			if (!c.combo().isEmpty()) {
+				// "COMBO!" ribbon across the top, with a little lightning either side.
+				int bw = Math.min(cardW - 8, font.width("\u26A1 COMBO! \u26A1") + 12);
+				int bx = x + cardW / 2 - bw / 2;
+				int glow = (int) (180 + 75 * Math.sin(now / 120.0));
+				g.fill(bx, y - 5, bx + bw, y + 7, glow << 24 | 0xFF9A2E);
+				g.outline(bx, y - 5, bw, 12, 0xFFFFE680);
+				g.centeredText(font, "\u26A1 COMBO! \u26A1", x + cardW / 2, y - 3, 0xFF201008);
 			}
 			// Big icon.
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c.icon())));
@@ -234,7 +249,12 @@ public class RelicScreen extends Screen {
 		g.centeredText(font, foot, width / 2, height - 14, 0xFF8A7A9A);
 		// Hover a card: everything it does, in full.
 		if (hoverCard != null) {
-			g.setComponentTooltipForNextFrame(font, tooltip(hoverCard.title(), hoverCard.tier(), hoverCard.element(), hoverCard.about()), mouseX, mouseY);
+			List<Component> tip = tooltip(hoverCard.title(), hoverCard.tier(), hoverCard.element(), hoverCard.about());
+			if (!hoverCard.combo().isEmpty()) {
+				tip.add(Component.literal(""));
+				tip.addAll(wrap("\u26A1 COMBO! " + hoverCard.combo(), 0xFF9A2E));
+			}
+			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
 		}
 	}
 
@@ -245,19 +265,26 @@ public class RelicScreen extends Screen {
 		if (!tier.equals("EVENT") && !tier.equals("SERVICE")) {
 			lines.add(Component.literal(pretty(tier) + (elementColor(element) != 0 ? "  •  " + pretty(element) : "")).withColor(0x9AA4AE));
 		}
+		lines.addAll(wrap(about, 0xEDE6F2));
+		if (tier.equals("CURSED")) {
+			lines.add(Component.literal("Cursed: huge power, a real cost.").withColor(0xB04CFF));
+		}
+		return lines;
+	}
+
+	/** Text in tooltip-width lines, all one colour. */
+	static List<Component> wrap(String text, int color) {
+		List<Component> lines = new ArrayList<>();
 		StringBuilder line = new StringBuilder();
-		for (String word : about.split(" ")) {
+		for (String word : text.split(" ")) {
 			if (line.length() > 0 && line.length() + word.length() > 42) {
-				lines.add(Component.literal(line.toString()).withColor(0xEDE6F2));
+				lines.add(Component.literal(line.toString()).withColor(color));
 				line.setLength(0);
 			}
 			line.append(line.length() > 0 ? " " : "").append(word);
 		}
 		if (line.length() > 0) {
-			lines.add(Component.literal(line.toString()).withColor(0xEDE6F2));
-		}
-		if (tier.equals("CURSED")) {
-			lines.add(Component.literal("Cursed: huge power, a real cost.").withColor(0xB04CFF));
+			lines.add(Component.literal(line.toString()).withColor(color));
 		}
 		return lines;
 	}

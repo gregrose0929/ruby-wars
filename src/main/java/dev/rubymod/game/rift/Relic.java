@@ -80,7 +80,20 @@ public enum Relic {
 	SHATTERBOMB(Tier.BOND, Element.FROST, "Shatterbomb", "minecraft:prismarine_crystals", "Frost + Explosive: explosions shatter frozen enemies instantly, and every shatter explodes."),
 	RUBY_CONDUIT(Tier.BOND, Element.RUBY, "Ruby Conduit", "minecraft:lightning_rod", "Shock + Ruby: a lightning beam links you to your teammates and fries anything that crosses it."),
 	FROSTFIRE(Tier.BOND, Element.FIRE, "Frostfire", "minecraft:soul_lantern", "Frost + Fire: frozen enemies burst into flames when they thaw or shatter."),
-	TANK_PLATOON(Tier.BOND, Element.EXPLOSIVE, "Tank Platoon", "rubymod:tank", "Two Pocket Tanks: they fire twice as often and hit twice as hard.");
+	TANK_PLATOON(Tier.BOND, Element.EXPLOSIVE, "Tank Platoon", "rubymod:tank", "Two Pocket Tanks: they fire twice as often and hit twice as hard."),
+	THUNDERBOMB(Tier.BOND, Element.SHOCK, "Thunderbomb", "minecraft:creeper_head",
+			"Shock + Explosive: explosions throw lightning at 3 more enemies, and every lightning strike ends in a small explosion."),
+	NEUROTOXIN(Tier.BOND, Element.POISON, "Neurotoxin", "minecraft:pufferfish",
+			"Shock + Poison: lightning carries poison to everything it touches, and stuns enemies that are already poisoned."),
+	FIRESTORM(Tier.BOND, Element.FIRE, "Firestorm", "minecraft:magma_cream", "Fire + Explosive: explosions set enemies alight and leave a ring of burning ground."),
+	EMBER_HEART(Tier.BOND, Element.FIRE, "Ember Heart", "minecraft:campfire", "Fire + Ruby: enemies that die burning burst into embers that heal everyone nearby."),
+	CRYSTAL_HEART(Tier.BOND, Element.RUBY, "Crystal Heart", "minecraft:heart_of_the_sea",
+			"Frost + Ruby: shattered enemies spray ruby shards that cut nearby enemies and heal the team."),
+	BLACK_ICE(Tier.BOND, Element.FROST, "Black Ice", "minecraft:ice", "Frost + Poison: frozen enemies take double poison, and shattering one bursts a poison cloud."),
+	GEM_BOMB(Tier.BOND, Element.EXPLOSIVE, "Gem Bomb", "minecraft:gold_block", "Explosive + Ruby: every enemy an explosion kills drops 3 gold and heals you a heart."),
+	PLAGUE_BOMB(Tier.BOND, Element.POISON, "Plague Bomb", "minecraft:lingering_potion",
+			"Explosive + Poison: explosions leave a poison cloud that keeps poisoning everything inside."),
+	BLOODSUCKER(Tier.BOND, Element.RUBY, "Bloodsucker", "minecraft:red_mushroom", "Ruby + Poison: poison damage heals whoever applied it.");
 
 	public enum Tier {
 		COMMON("Common", 0xFFB8C4D0), RARE("Rare", 0xFF4FA8FF), LEGENDARY("Legendary", 0xFFFFC02E), CURSED("Cursed", 0xFFB04CFF), BOND("Bond", 0xFF2EE6C8);

@@ -1083,7 +1083,7 @@ public final class Rift {
 		List<String> lines = new ArrayList<>();
 		lines.add("title|" + title);
 		for (Relic relic : r.offer) {
-			lines.add(relic.line(-1, r.has(relic) ? r.level(relic) + 1 : 0));
+			lines.add(hinted(relic.line(-1, r.has(relic) ? r.level(relic) + 1 : 0), r, relic));
 		}
 		Net.send(p, new MorePayloads.RiftScreen("offer", lines));
 	}
@@ -1099,11 +1099,20 @@ public final class Rift {
 			if (me != null && me.has(relic)) {
 				lines.add(me.canCombine(relic) ? relic.line(e.getValue(), me.level(relic) + 1) : relic.line(-2));
 			} else {
-				lines.add(relic.line(e.getValue()));
+				lines.add(hinted(relic.line(e.getValue()), me, relic));
 			}
 		}
 		lines.add("restock|Restock|New relics on the merchant's shelves.|minecraft:emerald|" + RESTOCK_PRICE);
 		Net.send(p, new MorePayloads.RiftScreen("shop", lines));
+	}
+
+	/** A card line, plus (as its 9th field) the combo it would complete for this runner. */
+	private static String hinted(String line, Runner r, Relic relic) {
+		String hint = RelicCombos.hint(r, relic);
+		if (hint.isEmpty()) {
+			return line;
+		}
+		return line + (line.split("[|]", -1).length >= 8 ? "" : "|0") + "|" + hint.replace("|", "/");
 	}
 
 	/** A relic picked from an offer. */
@@ -1172,6 +1181,7 @@ public final class Rift {
 		}
 		r.relics.add(relic);
 		RelicEffects.apply(p, r);
+		RelicCombos.announce(p, r, relic);
 		ServerLevel level = (ServerLevel) p.level();
 		Vec3 at = p.position();
 		RiftFx.beam(level, at, 14, ParticleTypes.END_ROD, relic.tier.color);
@@ -1411,7 +1421,17 @@ public final class Rift {
 				RiftFx.line(level, helper.position().add(0, 1, 0), down.downAt.add(0, 0.5, 0), RiftFx.dust(0x6EE38A, 1.0F), 0.4);
 			}
 			if (down.revive >= 60) {
-				revive(server, level, down, down.downAt, 0.5F);
+				Runner medic = RUNNERS.get(helper.getUUID());
+				boolean secondWind = instant && RelicCombos.on(medic, RelicCombos.Duo.SECOND_WIND);
+				revive(server, level, down, down.downAt, secondWind ? 1.0F : 0.5F);
+				ServerPlayer up = server.getPlayerList().getPlayer(down.id);
+				if (secondWind && up != null) {
+					// Second Wind: back at full health, untouchable for 5 seconds.
+					down.fx.untouchableUntil = level.getGameTime() + 100;
+					RiftFx.beam(level, up.position(), 14, ParticleTypes.END_ROD, 0xFF6EE38A);
+					RiftFx.ring(level, up.position().add(0, 1, 0), 1.4, RiftFx.dust(0xFFE680, 1.4F), 24);
+					Alerts.title(up, "SECOND WIND", "Untouchable for 5 seconds", ChatFormatting.GREEN);
+				}
 			}
 		}
 	}
@@ -1629,10 +1649,21 @@ public final class Rift {
 			List<String> relics = new ArrayList<>(r.relics.stream().map(x -> x.id() + "|" + x.icon + "|" + x.tier.name() + "|" + x.title(r.level(x)) + "|" + x.about
 					+ (r.level(x) > 1 ? " Combined: " + x.upgrade(r.level(x)) : "")).toList());
 			// Your ability and how long until it's ready: "@ability|id|title|icon|ticks left|cooldown".
+			relics.addAll(RelicCombos.hudLines(r));
 			relics.add("@ability|" + r.ability.id() + "|" + r.ability.title + "|" + r.ability.icon + "|"
 					+ Math.max(0, r.abilityReadyAt - level(server).getGameTime()) + "|" + r.ability.cooldown);
 			Net.send(p, new MorePayloads.RiftHud(where, state == State.STAGING ? RiftMeta.rec(p).riftShards : gold, relics, team));
 		}
+	}
+
+	/** For autotests: each runner's active combos and bonds. */
+	public static String debugCombos() {
+		StringBuilder out = new StringBuilder();
+		for (Runner r : RUNNERS.values()) {
+			out.append(r.name).append(" duos ").append(RelicCombos.active(r)).append(" bonds ")
+					.append(r.relics.stream().filter(x -> x.tier == Relic.Tier.BOND).toList()).append("; ");
+		}
+		return out.toString();
 	}
 
 	/** For autotests: the Hold the Zone ring (null when there isn't one) and the job's line on the bar. */
@@ -1738,6 +1769,23 @@ public final class Rift {
 				}
 				if (what.startsWith("shape:")) {
 					RiftRoom.forceShape = RiftRoom.Shape.valueOf(what.substring(6));
+					return;
+				}
+				// "offer:a,b,c": show these relics as the offer; "nooffer" takes it away. "do:blink", "do:reloaded": as if you did.
+				if (what.startsWith("offer:") || what.equals("nooffer") || what.equals("do:blink") || what.equals("do:reloaded")) {
+					for (ServerPlayer p : players(server)) {
+						Runner rn = RUNNERS.get(p.getUUID());
+						if (what.startsWith("offer:")) {
+							rn.offer = java.util.Arrays.stream(what.substring(6).split(",")).map(Relic::byId).toList();
+							sendOffer(p, rn, "Test offer");
+						} else if (what.equals("nooffer")) {
+							rn.offer = List.of();
+						} else if (what.equals("do:blink")) {
+							RelicEffects.ability(p, "blink");
+						} else {
+							RelicEffects.onReloaded(p);
+						}
+					}
 					return;
 				}
 				// "room:SHOP", "room:REST"...: the next room is one of those.

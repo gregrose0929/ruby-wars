@@ -116,6 +116,25 @@ public enum Trait {
 		return null;
 	}
 
+	/** What a named legendary does on top of its traits (its signature move). */
+	public static String legendAbout(String name) {
+		return switch (name) {
+			case "Inferno Gatling" -> "At full spin it breathes a roaring cone of fire along with the bullets.";
+			case "Storm Disc" -> "The disc trails lightning, zapping every enemy it flies past.";
+			case "Event Horizon" -> "Every hit tears open a small black hole that swallows weak enemies.";
+			case "Apocalypse Pod" -> "Every missile bursts into a cluster of three more explosions.";
+			case "Dragon Duster" -> "Every blast throws a wall of flame that sets the whole crowd alight.";
+			case "Ruby Titan Blade" -> "Every swing sends a ruby shockwave racing 12 blocks forward.";
+			case "Railstorm Rifle" -> "Every 3rd shot is a rail beam, and beam kills burst into lightning.";
+			case "Prism Lance" -> "The beam reflects off walls 3 times, changing colour with every bounce.";
+			case "Hydra" -> "Nine missiles, and each one splits into two more seekers on the way.";
+			case "Thunderbird" -> "The lightning jumps to 6 enemies and calls down bolts on anything flying.";
+			case "Deadeye" -> "A headshot marks up to 3 more heads, and a golden flash shoots them all.";
+			case "Firecracker" -> "Grenades burst into six fizzing sparks that each explode, leaving fire behind.";
+			default -> "";
+		};
+	}
+
 	/** The gun's numbers with its traits (Full Auto, Quickdraw, Spread) and a legendary's extra punch. */
 	public static GunStats apply(GunStats s, ItemStack stack) {
 		List<Trait> traits = of(stack);

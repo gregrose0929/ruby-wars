@@ -99,6 +99,9 @@ public class GunItem extends Item {
 		String legend = Trait.legendary(stack);
 		if (legend != null) {
 			builder.accept(Component.literal("\u2605 Legendary fusion: +50% damage").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			if (!Trait.legendAbout(legend).isEmpty()) {
+				builder.accept(Component.literal("\u2605 " + Trait.legendAbout(legend)).withStyle(ChatFormatting.YELLOW));
+			}
 		}
 		for (Trait t : Trait.of(stack)) {
 			builder.accept(Component.literal("\u2726 " + t.title + ": " + t.about).withColor(t.color & 0xFFFFFF));

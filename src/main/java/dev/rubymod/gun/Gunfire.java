@@ -77,7 +77,7 @@ public final class Gunfire {
 		// Fused traits for this shot (read by the bullets and the hits it makes).
 		CURRENT = Trait.of(stack);
 		PIERCED = 0;
-		dev.rubymod.game.rift.RiftWeapons.armed(player, CURRENT);
+		dev.rubymod.game.rift.RiftWeapons.armed(player, CURRENT, Trait.legendary(stack));
 		int interval = stats.special() == GunStats.Special.SPINUP ? dev.rubymod.game.rift.RiftWeapons.spinInterval(player)
 				: CURRENT.contains(Trait.SPINUP) ? Math.max(1, Math.round(stats.fireInterval() * dev.rubymod.game.rift.RiftWeapons.spinInterval(player) / 6.0F))
 				: stats.fireInterval();
@@ -119,6 +119,7 @@ public final class Gunfire {
 		}
 		if (rift && !CURRENT.isEmpty()) {
 			dev.rubymod.game.rift.RiftWeapons.traitShot(level, player, stats, CURRENT);
+			dev.rubymod.game.rift.RiftWeapons.legendShot(level, player, stats);
 		}
 		if (rift) {
 			RelicEffects.onShot(level, player, stack);
@@ -160,7 +161,8 @@ public final class Gunfire {
 			hitPos = entityHit.location();
 			hitEntity(level, shooter, stats, entityHit.entity(), hitPos, entityHit.eyeY());
 			// Pierce: on through, into whatever's behind it (up to 3).
-			if (CURRENT.contains(Trait.PIERCE) && PIERCED < 3 && dev.rubymod.game.rift.Rift.playing(shooter)) {
+			if ((CURRENT.contains(Trait.PIERCE) || dev.rubymod.game.rift.RelicCombos.pierces(shooter)) && PIERCED < 3
+					&& dev.rubymod.game.rift.Rift.playing(shooter)) {
 				PIERCED++;
 				Vec3 beyond = hitPos.add(dir.scale(entityHit.entity().getBbWidth() + 0.7));
 				drawTracer(level, start, hitPos, stats);
@@ -187,6 +189,14 @@ public final class Gunfire {
 				}
 				drawTracer(level, start, hitPos, stats);
 				trace(level, shooter, stats, hitPos.add(normal.scale(0.05)), reflected, range - travelled, bounces - 1);
+				// Pinball: every bounce throws off two fragments.
+				if (dev.rubymod.game.rift.Rift.playing(shooter) && dev.rubymod.game.rift.RelicCombos.pinball(shooter)) {
+					level.sendParticles(ParticleTypes.ELECTRIC_SPARK, hitPos.x, hitPos.y, hitPos.z, 6, 0.1, 0.1, 0.1, 0.2);
+					for (int k = 0; k < 2; k++) {
+						trace(level, shooter, stats.scaled(RelicEffects.splitDamage(shooter)), hitPos.add(normal.scale(0.05)),
+								withSpread(reflected, 22.0F, shooter.getRandom()), 14, -1);
+					}
+				}
 				return;
 			}
 			// Split Shot: a bullet that hits a wall bursts into three fragments (fragments, at -1 bounces, don't split again).
@@ -286,6 +296,7 @@ public final class Gunfire {
 		}
 		if (rift && !CURRENT.isEmpty() && target instanceof net.minecraft.world.entity.LivingEntity living) {
 			dev.rubymod.game.rift.RiftWeapons.traitHit(level, shooter, living, damage, CURRENT, headshot);
+			dev.rubymod.game.rift.RiftWeapons.legendHit(level, shooter, living, damage, headshot);
 		}
 		Bounties.onGunHit(shooter, target, headshot);
 		level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, hitPos.x, hitPos.y, hitPos.z, 1, 0.1, 0.1, 0.1, 0.0);

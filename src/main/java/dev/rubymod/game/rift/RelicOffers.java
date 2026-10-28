@@ -36,6 +36,33 @@ final class RelicOffers {
 		if (pair(team, Relic.Element.POISON, Relic.Element.FIRE)) {
 			out.add(Relic.TOXIC_INFERNO);
 		}
+		if (pair(team, Relic.Element.SHOCK, Relic.Element.EXPLOSIVE)) {
+			out.add(Relic.THUNDERBOMB);
+		}
+		if (pair(team, Relic.Element.SHOCK, Relic.Element.POISON)) {
+			out.add(Relic.NEUROTOXIN);
+		}
+		if (pair(team, Relic.Element.FIRE, Relic.Element.EXPLOSIVE)) {
+			out.add(Relic.FIRESTORM);
+		}
+		if (pair(team, Relic.Element.FIRE, Relic.Element.RUBY)) {
+			out.add(Relic.EMBER_HEART);
+		}
+		if (pair(team, Relic.Element.FROST, Relic.Element.RUBY)) {
+			out.add(Relic.CRYSTAL_HEART);
+		}
+		if (pair(team, Relic.Element.FROST, Relic.Element.POISON)) {
+			out.add(Relic.BLACK_ICE);
+		}
+		if (pair(team, Relic.Element.EXPLOSIVE, Relic.Element.RUBY)) {
+			out.add(Relic.GEM_BOMB);
+		}
+		if (pair(team, Relic.Element.EXPLOSIVE, Relic.Element.POISON)) {
+			out.add(Relic.PLAGUE_BOMB);
+		}
+		if (pair(team, Relic.Element.RUBY, Relic.Element.POISON)) {
+			out.add(Relic.BLOODSUCKER);
+		}
 		if (team.stream().filter(x -> x.has(Relic.POCKET_TANK)).count() >= 2) {
 			out.add(Relic.TANK_PLATOON);
 		}

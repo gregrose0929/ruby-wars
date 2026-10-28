@@ -392,6 +392,7 @@ public final class GameEvents {
 						dev.rubymod.game.rift.RelicEffects.onKill(killer, entity);
 					}
 					dev.rubymod.game.rift.Rift.onMobDeath(entity, source);
+					dev.rubymod.game.rift.RelicCombos.onDeath(entity);
 				} catch (RuntimeException e) {
 					dev.rubymod.RubyMod.LOGGER.error("Ruby Rift kill effects failed", e);
 				}

@@ -82,6 +82,9 @@ public final class RelicEffects {
 		float charge;
 		long mirrorsAt;
 		boolean pounding;
+		/** Where a Ground Pound started (Meteor Drop), and when Gravity Overload can next open a hole. */
+		double poundFrom;
+		long gravityAt;
 		long overclockUntil;
 		int meteorKills;
 		int rewinds;
@@ -110,7 +113,7 @@ public final class RelicEffects {
 	private static final Map<UUID, Bomblet> GRENADES = new HashMap<>();
 
 	/** Anyone on the team has this (Bonds and team-wide effects). */
-	private static boolean team(ServerLevel level, Relic r) {
+	static boolean team(ServerLevel level, Relic r) {
 		for (ServerPlayer p : Rift.players(level.getServer())) {
 			if (has(p, r)) {
 				return true;
@@ -149,10 +152,10 @@ public final class RelicEffects {
 		}
 	}
 
-	private record Frozen(UUID ice, long until) {
+	record Frozen(UUID ice, long until) {
 	}
 
-	private record Patch(Vec3 at, long until, UUID owner) {
+	record Patch(Vec3 at, long until, UUID owner) {
 	}
 
 	private record Hole(Vec3 at, long until, UUID owner, UUID core) {
@@ -161,18 +164,18 @@ public final class RelicEffects {
 	private record Strike(Vec3 at, long when, UUID owner) {
 	}
 
-	private record Ally(long until, UUID owner, boolean isClone) {
+	record Ally(long until, UUID owner, boolean isClone) {
 	}
 
 	private record Statue(UUID display, long when) {
 	}
 
-	private static final Map<UUID, Frozen> FROZEN = new HashMap<>();
+	static final Map<UUID, Frozen> FROZEN = new HashMap<>();
 	private static final Map<UUID, Integer> CHILL = new HashMap<>();
-	private static final List<Patch> PATCHES = new ArrayList<>();
+	static final List<Patch> PATCHES = new ArrayList<>();
 	private static final List<Hole> HOLES = new ArrayList<>();
 	private static final List<Strike> STRIKES = new ArrayList<>();
-	private static final Map<UUID, Ally> ALLIES = new HashMap<>();
+	static final Map<UUID, Ally> ALLIES = new HashMap<>();
 	private static final List<Statue> STATUES = new ArrayList<>();
 	/** Damage dealt by a relic (so it doesn't set off more relics forever), and its colour for the damage number. */
 	static boolean inEffect;
@@ -185,18 +188,18 @@ public final class RelicEffects {
 		return Rift.runner(e);
 	}
 
-	private static boolean has(ServerPlayer p, Relic r) {
+	static boolean has(ServerPlayer p, Relic r) {
 		Rift.Runner run = runner(p);
 		return run != null && run.has(r);
 	}
 
 	/** 0 without the relic; its stars (1-3) with it. */
-	private static int lv(ServerPlayer p, Relic r) {
+	static int lv(ServerPlayer p, Relic r) {
 		Rift.Runner run = runner(p);
 		return run == null ? 0 : run.level(r);
 	}
 
-	private static long now(ServerLevel level) {
+	static long now(ServerLevel level) {
 		return level.getGameTime();
 	}
 
@@ -219,7 +222,11 @@ public final class RelicEffects {
 		Rift.Runner r = runner(p);
 		if (r != null && r.has(Relic.BOTTOMLESS_MAG)) {
 			// Spinning up: 2% faster every shot in a row, up to twice as fast (more with stars).
-			scale *= Math.max(1.0F / (1 + r.level(Relic.BOTTOMLESS_MAG) * 0.5F + 0.5F), 1.0F - r.fx.spin * 0.02F);
+			float most = 1.0F / (1 + r.level(Relic.BOTTOMLESS_MAG) * 0.5F + 0.5F);
+			if (RelicCombos.on(r, RelicCombos.Duo.BULLET_HOSE)) {
+				most = Math.min(most, 1.0F / 3);
+			}
+			scale *= Math.max(most, 1.0F - r.fx.spin * 0.02F);
 		}
 		return scale;
 	}
@@ -264,7 +271,8 @@ public final class RelicEffects {
 		if (r.has(Relic.THE_HUNTED)) {
 			dmg *= 2 + r.level(Relic.THE_HUNTED);
 		}
-		if (r.has(Relic.LUCKY_COIN) && !inEffect && p.getRandom().nextFloat() < 0.05F + 0.05F * r.level(Relic.LUCKY_COIN)) {
+		if (r.has(Relic.LUCKY_COIN) && !inEffect && (p.getRandom().nextFloat() < 0.05F + 0.05F * r.level(Relic.LUCKY_COIN)
+				|| headshot && RelicCombos.on(r, RelicCombos.Duo.JACKPOT))) {
 			dmg *= 4 + r.level(Relic.LUCKY_COIN);
 			lastCrit = target.getUUID();
 			if (p.level() instanceof ServerLevel level) {
@@ -292,7 +300,8 @@ public final class RelicEffects {
 		if (r == null) {
 			return;
 		}
-		if (r.has(Relic.ECHO_SHOT) && held.getItem() instanceof GunItem g && ++r.fx.echo % (6 - r.level(Relic.ECHO_SHOT)) == 0) {
+		if (r.has(Relic.ECHO_SHOT) && held.getItem() instanceof GunItem g
+				&& ++r.fx.echo % (RelicCombos.on(r, RelicCombos.Duo.FIRING_SQUAD) ? Math.min(3, 6 - r.level(Relic.ECHO_SHOT)) : 6 - r.level(Relic.ECHO_SHOT)) == 0) {
 			ECHOES.add(new Echo(p.getUUID(), level.getGameTime() + 8, g.stats(held)));
 		}
 		if (r.has(Relic.STATIC_CHARGE) && r.fx.charge >= 25) {
@@ -329,10 +338,36 @@ public final class RelicEffects {
 		if (excess < 1 || !has(p, Relic.OVERKILL) || !(p.level() instanceof ServerLevel level)) {
 			return;
 		}
-		LivingEntity next = nearestEnemy(level, target.position(), 10, target, false);
-		if (next != null) {
-			RiftFx.line(level, target.getBoundingBox().getCenter(), next.getBoundingBox().getCenter(), RiftFx.dust(0xFF4040, 1.2F), 0.3);
+		boolean unstoppable = RelicCombos.on(p, RelicCombos.Duo.UNSTOPPABLE);
+		java.util.Set<Entity> done = new java.util.HashSet<>();
+		Entity from = target;
+		for (int jump = 0; jump < (unstoppable ? 8 : 1) && excess >= 1; jump++) {
+			done.add(from);
+			LivingEntity next = null;
+			for (LivingEntity e : enemiesNear(level, from.position(), 10, null)) {
+				if (!done.contains(e) && (next == null || e.distanceToSqr(from) < next.distanceToSqr(from))) {
+					next = e;
+				}
+			}
+			if (next == null) {
+				return;
+			}
+			Vec3 a = from.getBoundingBox().getCenter();
+			Vec3 b = next.getBoundingBox().getCenter();
+			RiftFx.line(level, a, b, RiftFx.dust(0xFF4040, 1.2F), 0.3);
+			float health = next.getHealth();
 			hurt(p, next, excess, 0xFFFF4040);
+			if (!unstoppable) {
+				return;
+			}
+			// Each jump goes off like a shell, and carries on if it killed.
+			RiftFx.line(level, a, b, ParticleTypes.FLAME, 0.5);
+			blast(level, p, b, 2.2, 3 + excess * 0.3F, 0xFFFF4040, false);
+			if (next.isAlive()) {
+				return;
+			}
+			excess -= health;
+			from = next;
 		}
 	}
 
@@ -369,6 +404,7 @@ public final class RelicEffects {
 				LivingEntity e = near.get(i);
 				RiftFx.arc(level, target.getBoundingBox().getCenter(), e.getBoundingBox().getCenter(), 0xFF66E0FF);
 				hurt(p, e, Math.max(3, amount * 0.6F), 0xFF66E0FF);
+				RelicCombos.shocked(level, p, e, true);
 				if (r.has(Relic.PLASMA_STORM)) {
 					e.igniteForSeconds(4);
 				}
@@ -414,6 +450,7 @@ public final class RelicEffects {
 				level.addFreshEntity(bolt);
 			}
 			hurt(p, target, 12, 0xFF66E0FF);
+			RelicCombos.shocked(level, p, target, true);
 			for (LivingEntity e : enemiesNear(level, target.position(), 2.5, target)) {
 				hurt(p, e, 6, 0xFF66E0FF);
 			}
@@ -433,7 +470,12 @@ public final class RelicEffects {
 			p.heal(1.0F);
 		}
 		if (victim.getUUID().equals(lastCrit) && r.has(Relic.LUCKY_COIN)) {
-			Rift.gold += 4;
+			boolean jackpot = RelicCombos.on(r, RelicCombos.Duo.JACKPOT);
+			Rift.gold += jackpot ? 12 : 4;
+			if (jackpot) {
+				level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.GOLD_BLOCK.defaultBlockState()), at.x, at.y, at.z, 30, 0.4, 0.4, 0.4, 0.3);
+				level.playSound(null, victim.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.2F, 1.8F);
+			}
 			level.sendParticles(ParticleTypes.WAX_ON, at.x, at.y, at.z, 20, 0.4, 0.4, 0.4, 0.8);
 			level.playSound(null, victim.blockPosition(), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 0.6F, 2.0F);
 		}
@@ -452,11 +494,15 @@ public final class RelicEffects {
 			blast(level, p, at, 3.0, 4 + 4 * r.level(Relic.NAPALM), 0xFFFF7A2E, false);
 			level.sendParticles(ParticleTypes.FLAME, at.x, at.y, at.z, 30, 0.6, 0.6, 0.6, 0.12);
 		}
+		if (victim.isOnFire()) {
+			RelicCombos.burnedKill(level, victim);
+		}
 		if (r.has(Relic.PLASMA_STORM) && victim.isOnFire()) {
 			List<LivingEntity> near = enemiesNear(level, victim.position(), 7, victim);
 			for (int i = 0; i < Math.min(2, near.size()); i++) {
 				RiftFx.arc(level, at, near.get(i).getBoundingBox().getCenter(), 0xFFFF9040);
 				hurt(p, near.get(i), 6, 0xFF66E0FF);
+				RelicCombos.shocked(level, p, near.get(i), true);
 			}
 		}
 		if (r.has(Relic.RUBY_SIPHON)) {
@@ -521,13 +567,21 @@ public final class RelicEffects {
 		if (r.has(Relic.THORN_ARMOR) && attacker instanceof LivingEntity hitter && Rift.isEnemy(hitter) && victim.level() instanceof ServerLevel level) {
 			RiftFx.line(level, victim.getBoundingBox().getCenter(), hitter.getBoundingBox().getCenter(), RiftFx.dust(0x4CAF50, 0.9F), 0.4);
 			level.sendParticles(ParticleTypes.CRIT, hitter.getX(), hitter.getY() + 1, hitter.getZ(), 8, 0.3, 0.4, 0.3, 0.2);
-			hurt(victim, hitter, amount * (1 + r.level(Relic.THORN_ARMOR)), 0xFF4CAF50);
+			boolean fortress = RelicCombos.on(r, RelicCombos.Duo.LIVING_FORTRESS) && victim.getHealth() > victim.getMaxHealth() / 2;
+			hurt(victim, hitter, amount * (1 + r.level(Relic.THORN_ARMOR)) * (fortress ? 2 : 1), 0xFF4CAF50);
+			if (fortress) {
+				Vec3 away = hitter.position().subtract(victim.position()).multiply(1, 0, 1).normalize();
+				hitter.setDeltaMovement(away.scale(1.6).add(0, 0.7, 0));
+				hitter.needsSync = true;
+				level.sendParticles(ParticleTypes.SWEEP_ATTACK, hitter.getX(), hitter.getY() + 1, hitter.getZ(), 1, 0, 0, 0, 0);
+				level.playSound(null, hitter.blockPosition(), SoundEvents.MACE_SMASH_AIR, SoundSource.PLAYERS, 0.8F, 1.2F);
+			}
 		}
 		if (r.has(Relic.MIRROR_GUARD) && victim.isShiftKeyDown() && attacker instanceof LivingEntity shooter && Rift.isEnemy(shooter)
 				&& (source.getDirectEntity() != attacker || source.is(dev.rubymod.registry.ModDamage.BULLET)) && victim.level() instanceof ServerLevel level) {
 			RiftFx.line(level, victim.getEyePosition(), shooter.getBoundingBox().getCenter(), RiftFx.dust(0xFFFFFF, 1.0F), 0.4);
 			level.playSound(null, victim.blockPosition(), SoundEvents.SHIELD_BLOCK.value(), SoundSource.PLAYERS, 1.0F, 1.3F);
-			hurt(victim, shooter, amount * (1 + r.level(Relic.MIRROR_GUARD)), 0xFFFFFFFF);
+			hurt(victim, shooter, amount * (1 + r.level(Relic.MIRROR_GUARD)) * (RelicCombos.on(r, RelicCombos.Duo.PERFECT_PARRY) ? 2 : 1), 0xFFFFFFFF);
 			return false;
 		}
 		return true;
@@ -583,6 +637,19 @@ public final class RelicEffects {
 			var hit = level.clip(new ClipContext(eye, eye.add(look.scale(reach)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
 			Vec3 to = hit.getType() == HitResult.Type.MISS ? eye.add(look.scale(reach)) : hit.getLocation().subtract(look.scale(0.6));
 			Vec3 from = p.position();
+			if (RelicCombos.on(r, RelicCombos.Duo.PHANTOM_STEP)) {
+				LivingEntity decoy = clone(level, p);
+				if (decoy != null) {
+					decoy.teleportTo(from.x, from.y, from.z);
+					ALLIES.put(decoy.getUUID(), new Ally(now(level) + 50, p.getUUID(), true));
+					RelicCombos.DECOYS.add(decoy.getUUID());
+					for (LivingEntity e : enemiesNear(level, from, 16, null)) {
+						if (e instanceof Mob m && !JuggernautMech.isBoss(m)) {
+							m.setTarget(decoy);
+						}
+					}
+				}
+			}
 			p.teleportTo(to.x, to.y - p.getEyeHeight() + 0.2, to.z);
 			p.resetFallDistance();
 			r.fx.blinkAt = now(level) + 60 - 15 * r.level(Relic.BLINK);
@@ -802,9 +869,20 @@ public final class RelicEffects {
 				if (--s.turretCooldown <= 0) {
 					s.turretCooldown = Math.max(2, 7 - 2 * r.level(Relic.DROP_TURRET));
 					Vec3 muzzle = s.turretAt.add(0, 1.0, 0);
-					RiftFx.line(level, muzzle, target.getBoundingBox().getCenter(), ParticleTypes.CRIT, 0.7);
-					level.playSound(null, BlockPos.containing(muzzle), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.PLAYERS, 0.35F, 1.4F);
-					hurt(p, target, 2.5F + r.level(Relic.DROP_TURRET), 0xFFB8C4D0);
+					ItemStack held = p.getMainHandItem();
+					if (RelicCombos.on(r, RelicCombos.Duo.GUN_NEST) && held.getItem() instanceof GunItem gun) {
+						// Gun Nest: a copy of the gun in your hand, in ruby light.
+						var stats = gun.stats(held);
+						s.turretCooldown = Math.max(2, stats.fireInterval());
+						RiftFx.line(level, muzzle, target.getBoundingBox().getCenter(), RiftFx.dust(0xFF3D6E, 0.9F), 0.5);
+						level.sendParticles(ParticleTypes.FLAME, muzzle.x, muzzle.y, muzzle.z, 2, 0.05, 0.05, 0.05, 0.01);
+						level.playSound(null, BlockPos.containing(muzzle), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.PLAYERS, 0.45F, 1.1F);
+						hurt(p, target, stats.damage() * Math.min(4, stats.pellets()) * 0.8F, 0xFFFF3D6E);
+					} else {
+						RiftFx.line(level, muzzle, target.getBoundingBox().getCenter(), ParticleTypes.CRIT, 0.7);
+						level.playSound(null, BlockPos.containing(muzzle), dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.PLAYERS, 0.35F, 1.4F);
+						hurt(p, target, 2.5F + r.level(Relic.DROP_TURRET), 0xFFB8C4D0);
+					}
 				}
 			}
 		}
@@ -815,6 +893,7 @@ public final class RelicEffects {
 		long t = now(level);
 		var server = level.getServer();
 		tickSecondWaveWorld(level, t);
+		RelicCombos.tickWorld(level, t);
 		for (Iterator<Map.Entry<UUID, Frozen>> it = FROZEN.entrySet().iterator(); it.hasNext();) {
 			var e = it.next();
 			if (t >= e.getValue().until() || !(level.getEntity(e.getKey()) instanceof LivingEntity mob) || !mob.isAlive()) {
@@ -912,8 +991,10 @@ public final class RelicEffects {
 			if (ent == null || !ent.isAlive() || t >= a.until()) {
 				if (ent != null) {
 					level.sendParticles(ParticleTypes.SOUL, ent.getX(), ent.getY() + 1, ent.getZ(), 12, 0.3, 0.5, 0.3, 0.03);
+					RelicCombos.decoyGone(level, server.getPlayerList().getPlayer(a.owner()), ent);
 					ent.discard();
 				}
+				RelicCombos.SHADOWS.remove(e.getKey());
 				it.remove();
 				continue;
 			}
@@ -996,6 +1077,7 @@ public final class RelicEffects {
 	public static void clearWorld(ServerLevel level) {
 		ECHOES.clear();
 		METEORS.clear();
+		RelicCombos.clearWorld(level);
 		POISONED.clear();
 		for (Rift.Runner run : Rift.RUNNERS.values()) {
 			if (run.fx.hunter != null && level.getEntity(run.fx.hunter) instanceof Entity h) {
@@ -1057,10 +1139,14 @@ public final class RelicEffects {
 			double falloff = 1 - Math.min(0.6, e.position().distanceTo(at) / radius * 0.6);
 			if (owner != null) {
 				hurt(owner, e, (float) (damage * falloff), color);
+				if (!e.isAlive()) {
+					RelicCombos.blastKill(level, owner, e);
+				}
 			}
 			Vec3 push = e.position().subtract(at).normalize().scale(0.5);
 			e.setDeltaMovement(e.getDeltaMovement().add(push.x, 0.3, push.z));
 		}
+		RelicCombos.onBlast(level, owner, at, radius);
 		if (hurtsPlayers) {
 			for (ServerPlayer p : Rift.players(level.getServer())) {
 				if (!p.isSpectator() && p.position().distanceTo(at) < radius) {
@@ -1138,6 +1224,7 @@ public final class RelicEffects {
 		if (has(p, Relic.SHATTERBOMB)) {
 			blast(level, p, at, 3.2, 10, 0xFFFFD040, false);
 		}
+		RelicCombos.shattered(level, p, at);
 	}
 
 	private static void statue(ServerLevel level, ServerPlayer p, Mob mob) {
@@ -1160,7 +1247,7 @@ public final class RelicEffects {
 		hurt(p, mob, 99999, 0xFFFF3D6E);
 	}
 
-	private static void blackHole(ServerLevel level, ServerPlayer p, Vec3 at) {
+	static void blackHole(ServerLevel level, ServerPlayer p, Vec3 at) {
 		Display.BlockDisplay core = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
 		UUID id = null;
 		if (core != null) {
@@ -1190,16 +1277,25 @@ public final class RelicEffects {
 		mob.setPersistenceRequired();
 		mob.addTag(Rift.TAG);
 		level.addFreshEntity(mob);
-		ALLIES.put(mob.getUUID(), new Ally(now(level) + ticks, p.getUUID(), false));
+		boolean legion = RelicCombos.on(p, RelicCombos.Duo.SHADOW_LEGION);
+		ALLIES.put(mob.getUUID(), new Ally(legion ? Long.MAX_VALUE : now(level) + ticks, p.getUUID(), false));
+		if (legion) {
+			// Shadow Legion: a warrior for the whole room, hitting twice as hard.
+			mob.addEffect(new MobEffectInstance(MobEffects.STRENGTH, -1, 2, false, false));
+			mob.setCustomName(Component.literal("Shadow " + (dead.getCustomName() == null ? "Warrior" : dead.getCustomName().getString()))
+					.withStyle(ChatFormatting.DARK_PURPLE));
+			RelicCombos.SHADOWS.add(mob.getUUID());
+			level.sendParticles(RiftFx.dust(0x6020A0, 1.8F), mob.getX(), mob.getY() + 1, mob.getZ(), 30, 0.4, 0.7, 0.4, 0);
+		}
 		level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, mob.getX(), mob.getY() + 1, mob.getZ(), 30, 0.3, 0.6, 0.3, 0.05);
 		level.playSound(null, mob.blockPosition(), SoundEvents.ZOMBIE_VILLAGER_CURE, SoundSource.PLAYERS, 0.5F, 1.4F);
 	}
 
 	/** Shadow Clone: a copy of you (your skin and all) that fights beside you for 10 seconds. */
-	private static void clone(ServerLevel level, ServerPlayer p) {
+	static LivingEntity clone(ServerLevel level, ServerPlayer p) {
 		var mannequin = EntityTypes.MANNEQUIN.create(level, EntitySpawnReason.EVENT);
 		if (mannequin == null) {
-			return;
+			return null;
 		}
 		Vec3 at = p.position().add(level.getRandom().nextDouble() * 2 - 1, 0, level.getRandom().nextDouble() * 2 - 1);
 		mannequin.snapTo(at.x, at.y, at.z, p.getYRot(), 0);
@@ -1214,6 +1310,7 @@ public final class RelicEffects {
 		ALLIES.put(mannequin.getUUID(), new Ally(now(level) + 200, p.getUUID(), true));
 		level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y + 1, at.z, 20, 0.3, 0.6, 0.3, 0.02);
 		level.playSound(null, BlockPos.containing(at), SoundEvents.ILLUSIONER_MIRROR_MOVE, SoundSource.PLAYERS, 1.0F, 1.0F);
+		return mannequin;
 	}
 
 	private static void tickClone(ServerLevel level, LivingEntity clone, ServerPlayer owner) {
@@ -1367,12 +1464,12 @@ public final class RelicEffects {
 	private record Meteor(Vec3 at, long when, UUID owner) {
 	}
 
-	private record Poison(UUID owner, int stacks, long until) {
+	record Poison(UUID owner, int stacks, long until) {
 	}
 
 	private static final List<Echo> ECHOES = new ArrayList<>();
 	private static final List<Meteor> METEORS = new ArrayList<>();
-	private static final Map<UUID, Poison> POISONED = new HashMap<>();
+	static final Map<UUID, Poison> POISONED = new HashMap<>();
 
 	/** Split Shot: does this shooter's bullet split on a wall, and how hard do the fragments hit? */
 	public static boolean splitShot(ServerPlayer p) {
@@ -1390,10 +1487,19 @@ public final class RelicEffects {
 			r.fx.overclockUntil = now(level) + 40 + 20 * r.level(Relic.OVERCLOCK);
 			level.playSound(null, p.blockPosition(), SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.8F, 2.0F);
 			p.sendOverlayMessage(Component.literal("OVERCLOCKED").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+			if (RelicCombos.on(r, RelicCombos.Duo.GRAVITY_OVERLOAD) && now(level) >= r.fx.gravityAt && Rift.state == Rift.State.FIGHT) {
+				r.fx.gravityAt = now(level) + 60;
+				LivingEntity target = aimed(level, p, 40);
+				Vec3 eye = p.getEyePosition();
+				var hit = level.clip(new ClipContext(eye, eye.add(p.getLookAngle().scale(30)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
+				Vec3 at = target != null ? target.position().add(0, 1, 0) : hit.getLocation().subtract(p.getLookAngle().scale(1.0));
+				RiftFx.line(level, eye.add(p.getLookAngle()), at, RiftFx.dust(0x8040FF, 1.2F), 0.4);
+				blackHole(level, p, at);
+			}
 		}
 	}
 
-	private static void poison(ServerLevel level, ServerPlayer p, LivingEntity target, int stars) {
+	static void poison(ServerLevel level, ServerPlayer p, LivingEntity target, int stars) {
 		Poison old = POISONED.get(target.getUUID());
 		int stacks = Math.min(12 * stars, (old == null ? 0 : old.stacks()) + stars);
 		POISONED.put(target.getUUID(), new Poison(p.getUUID(), stacks, now(level) + 100));
@@ -1418,6 +1524,7 @@ public final class RelicEffects {
 			if (!id.equals(from.getUUID()) && level.getEntity(id) instanceof LivingEntity e && e.isAlive()) {
 				RiftFx.arc(level, from.getBoundingBox().getCenter(), e.getBoundingBox().getCenter(), 0xFFA8F0FF);
 				hurt(p, e, 8, 0xFFA8F0FF);
+				RelicCombos.shocked(level, p, e, true);
 			}
 		}
 	}
@@ -1438,6 +1545,9 @@ public final class RelicEffects {
 		}
 		RiftFx.arc(level, eye.add(p.getLookAngle()), at, 0xFF66E0FF);
 		blast(level, p, at, 2.5 + charge / 40, 4 + charge * 0.25F, 0xFF66E0FF, false);
+		if (aimedAt != null) {
+			RelicCombos.shocked(level, p, aimedAt, false);
+		}
 		level.playSound(null, p.blockPosition(), SoundEvents.TRIDENT_THUNDER.value(), SoundSource.PLAYERS, 0.8F, 1.4F);
 	}
 
@@ -1486,6 +1596,18 @@ public final class RelicEffects {
 		level.playSound(null, p.blockPosition(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.0F, 1.8F);
 		level.playSound(null, p.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.8F, 0.6F);
 		dev.rubymod.game.Alerts.title(p, "REWIND", "Three seconds back", ChatFormatting.AQUA);
+		if (RelicCombos.on(r, RelicCombos.Duo.PERFECT_PARRY)) {
+			Vec3 c = p.position();
+			for (int ring = 1; ring <= 4; ring++) {
+				RiftFx.ring(level, c.add(0, 0.3 + ring * 0.2, 0), ring * 1.8, RiftFx.dust(0xFFFFFF, 1.6F), 16 * ring);
+			}
+			for (LivingEntity e : enemiesNear(level, c, 7, null)) {
+				hurt(p, e, 14, 0xFFFFFFFF);
+				e.setDeltaMovement(e.position().subtract(c).multiply(1, 0, 1).normalize().scale(1.8).add(0, 0.6, 0));
+				e.needsSync = true;
+			}
+			level.playSound(null, p.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 0.8F, 1.6F);
+		}
 	}
 
 	private static void meteors(ServerLevel level, ServerPlayer p) {
@@ -1506,6 +1628,7 @@ public final class RelicEffects {
 		if (!r.relics.contains(Relic.GAMBLERS_DICE)) {
 			return;
 		}
+		boolean bounty = r.relics.contains(Relic.THE_HUNTED);
 		List<Relic> pool = r.relics.stream().filter(x -> x != Relic.GAMBLERS_DICE && x.tier != Relic.Tier.BOND).toList();
 		if (pool.size() < 2) {
 			return;
@@ -1513,9 +1636,12 @@ public final class RelicEffects {
 		var random = level.getRandom();
 		r.boosted = pool.get(random.nextInt(pool.size()));
 		Relic off;
+		if (bounty && pool.size() == 2 && pool.contains(Relic.THE_HUNTED) && r.boosted != Relic.THE_HUNTED) {
+			r.boosted = Relic.THE_HUNTED;
+		}
 		do {
 			off = pool.get(random.nextInt(pool.size()));
-		} while (off == r.boosted);
+		} while (off == r.boosted || bounty && off == Relic.THE_HUNTED);
 		r.disabled = off;
 		apply(p, r);
 		p.sendSystemMessage(Component.literal("\u2684 Gambler's Dice: ").withStyle(ChatFormatting.LIGHT_PURPLE)
@@ -1531,8 +1657,18 @@ public final class RelicEffects {
 		}
 		Vec3 at = p.position().add(0, 6, -8);
 		vex.snapTo(at.x, at.y, at.z, 0, 0);
-		vex.setPermanentlyInvulnerable(true);
-		vex.setCustomName(Component.literal("The Hunter").withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.BOLD));
+		boolean bounty = r.relics.contains(Relic.GAMBLERS_DICE);
+		if (bounty) {
+			// Double or Nothing: it can die, and it's worth it.
+			AttributeInstance hp = vex.getAttribute(Attributes.MAX_HEALTH);
+			if (hp != null) {
+				hp.setBaseValue(60);
+				vex.setHealth(60);
+			}
+		} else {
+			vex.setPermanentlyInvulnerable(true);
+		}
+		vex.setCustomName(Component.literal(bounty ? "The Hunter (bounty: 50 gold)" : "The Hunter").withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.BOLD));
 		vex.addTag(Rift.TAG);
 		vex.setTarget(p);
 		level.addFreshEntity(vex);
@@ -1564,6 +1700,7 @@ public final class RelicEffects {
 		if (r.has(Relic.GROUND_POUND)) {
 			if (!p.onGround() && p.isShiftKeyDown() && !s.pounding && p.getDeltaMovement().y < 0.3) {
 				s.pounding = true;
+				s.poundFrom = p.getY();
 				p.setDeltaMovement(0, -1.8, 0);
 				p.needsSync = true;
 				level.playSound(null, p.blockPosition(), SoundEvents.BREEZE_JUMP, SoundSource.PLAYERS, 1.0F, 0.6F);
@@ -1573,6 +1710,15 @@ public final class RelicEffects {
 				s.pounding = false;
 				int stars = r.level(Relic.GROUND_POUND);
 				double reach = 3.5 + 1.5 * stars;
+				// Meteor Drop: the higher you came from, the bigger it gets, and it burns.
+				boolean meteor = RelicCombos.on(r, RelicCombos.Duo.METEOR_DROP);
+				double height = Math.max(0, s.poundFrom - p.getY());
+				if (meteor) {
+					reach += Math.min(6, height * 0.4);
+					level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, p.getX(), p.getY() + 0.3, p.getZ(), 1, 0, 0, 0, 0);
+					RiftFx.ring(level, p.position().add(0, 0.25, 0), reach * 0.9, ParticleTypes.FLAME, 50);
+					RiftFx.ring(level, p.position().add(0, 0.3, 0), reach * 0.6, ParticleTypes.LAVA, 16);
+				}
 				var under = level.getBlockState(p.blockPosition().below());
 				for (int ring = 1; ring <= (int) reach; ring++) {
 					RiftFx.ring(level, p.position().add(0, 0.2, 0), ring, new BlockParticleOption(ParticleTypes.BLOCK, under.isAir() ? Blocks.STONE.defaultBlockState()
@@ -1580,7 +1726,10 @@ public final class RelicEffects {
 				}
 				RiftFx.ring(level, p.position().add(0, 0.3, 0), reach, RiftFx.dust(0xFFFFFF, 1.6F), 40);
 				for (LivingEntity e : enemiesNear(level, p.position(), reach, null)) {
-					hurt(p, e, 6 + 5 * stars, 0xFFFFFFFF);
+					hurt(p, e, 6 + 5 * stars + (meteor ? (float) Math.min(20, height * 1.5) : 0), meteor ? 0xFFFF7A2E : 0xFFFFFFFF);
+					if (meteor) {
+						e.igniteForSeconds(5);
+					}
 					e.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 50, 6, false, false));
 					e.setDeltaMovement(e.getDeltaMovement().add(0, 0.6, 0));
 				}
@@ -1649,7 +1798,13 @@ public final class RelicEffects {
 				// A ghost of the gun fires again.
 				Vec3 m = p.getEyePosition().add(p.getLookAngle().scale(0.8)).add(0, -0.2, 0);
 				level.sendParticles(ParticleTypes.SCULK_SOUL, m.x, m.y, m.z, 4, 0.1, 0.1, 0.1, 0.02);
-				dev.rubymod.gun.Gunfire.ghostShot(level, p, e.stats());
+				int volleys = RelicCombos.on(p, RelicCombos.Duo.FIRING_SQUAD) ? shotMultiplier(p) : 1;
+				for (int v = 0; v < volleys; v++) {
+					dev.rubymod.gun.Gunfire.ghostShot(level, p, e.stats());
+				}
+				if (volleys > 1) {
+					level.sendParticles(ParticleTypes.SCULK_SOUL, m.x, m.y, m.z, 8, 0.3, 0.2, 0.3, 0.03);
+				}
 				level.playSound(null, p.blockPosition(), SoundEvents.SCULK_SHRIEKER_SHRIEK, SoundSource.PLAYERS, 0.15F, 2.0F);
 			}
 		}
@@ -1685,7 +1840,7 @@ public final class RelicEffects {
 				}
 				ServerPlayer p = server.getPlayerList().getPlayer(v.owner());
 				if (p != null) {
-					float dmg = v.stacks() * (inferno && mob.isOnFire() ? 1.6F : 0.8F);
+					float dmg = RelicCombos.poisonTick(level, p, mob, v.stacks() * (inferno && mob.isOnFire() ? 1.6F : 0.8F));
 					hurt(p, mob, dmg, 0xFF7AE33A);
 					level.sendParticles(RiftFx.dust(0x7AE33A, 1.1F), mob.getX(), mob.getY() + mob.getBbHeight() * 0.7, mob.getZ(), 3 + v.stacks() / 3, 0.3,
 							0.3, 0.3, 0);

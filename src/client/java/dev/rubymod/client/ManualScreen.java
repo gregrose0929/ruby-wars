@@ -42,6 +42,8 @@ public class ManualScreen extends Screen {
 					"A co-op roguelike for 1-4: fight room to room through three acts, and after every room pick 1 of 3 relics.",
 					"Vote on the map where to go next: fights, elites, treasure, the merchant, mysteries, the Arsenal (new weapons), tank assaults.",
 					"Relics change how you play: lightning, napalm, ice, drones, clones, black holes... Two elements on two teammates can make a Bond relic.",
+					"COMBOS: some pairs of relics switch on a bonus power by themselves (cards that would complete one say COMBO!). "
+							+ "At the Arsenal, fuse two weapons; 12 pairs make a named legendary with its own special move.",
 					"Bosses: the Juggernaut Mech, the Rift Gunship, the Ruby Titan (break its pylons first).",
 					"Between runs, Rift Shards buy loadouts and new relics at the Altar of Echoes (J in the Threshold). Heat makes it harder for more.",
 					"Gunmen get tougher each act: Recruits (a red laser warns you before they fire), then Troopers, then Commandos."),
