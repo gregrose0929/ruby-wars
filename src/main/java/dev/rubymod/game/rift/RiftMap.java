@@ -78,7 +78,7 @@ public final class RiftMap {
 	/** Which act this map is (1-3: each ends with a different boss). */
 	public int act = 1;
 
-	/** The three lanes: left plays it safe, the middle is a mix (and the treasure), the right is where the danger and the best loot are. */
+	/** Three rooms a floor. Each room quietly gets an easy, medium or hard mix (never shown): a different map every run. */
 	public static final int LANES = 3;
 
 	/** Which boss waits at the top of this act (shown on the map from the start). */
@@ -102,25 +102,28 @@ public final class RiftMap {
 			return map;
 		}
 		RiftRoom.Theme[] themes = RiftRoom.Theme.normal();
+		// The treasure somewhere halfway up; the last floor's three stops (a Spring, the Arsenal, the Merchant) in any order.
+		int treasureCol = random.nextInt(LANES);
+		List<Type> stops = new java.util.ArrayList<>(List.of(Type.SPRING, Type.REST, Type.SHOP));
+		java.util.Collections.shuffle(stops, new java.util.Random(random.nextLong()));
 		for (int f = 0; f < FLOORS; f++) {
 			for (int c = 0; c < LANES; c++) {
-				Type type = pick(random, f + (act - 1) * 2, c);
-				// Fixed stops: the treasure halfway up the middle; the last floor before the boss is a Spring, the Arsenal and the Merchant.
-				if (f == 3 && c == 1) {
+				// Each room's mix is rolled on its own: easy, medium or hard, never shown.
+				Type type = pick(random, f + (act - 1) * 2, random.nextInt(3));
+				if (f == 3 && c == treasureCol) {
 					type = Type.TREASURE;
 				}
 				if (f == FLOORS - 1) {
-					type = c == 0 ? Type.SPRING : c == 1 ? Type.REST : Type.SHOP;
+					type = stops.get(c);
 				}
 				map.nodes.add(new Node(map.nodes.size(), f, c, LANES, type, themes[random.nextInt(themes.length)]));
 			}
 		}
-		// One Burning Elite an act: an elite on the right lane if there is one (else any elite, else a fight turned elite).
+		// One Burning Elite an act: any elite (else a fight turned elite).
 		List<Node> elites = map.nodes.stream().filter(n -> n.type == Type.ELITE && n.floor >= 2 && n.floor <= 5).toList();
-		List<Node> right = elites.stream().filter(n -> n.col == LANES - 1).toList();
-		Node burning = !right.isEmpty() ? right.get(random.nextInt(right.size())) : !elites.isEmpty() ? elites.get(random.nextInt(elites.size())) : null;
+		Node burning = !elites.isEmpty() ? elites.get(random.nextInt(elites.size())) : null;
 		if (burning == null) {
-			Node old = map.floor(2 + random.nextInt(3)).get(LANES - 1);
+			Node old = map.floor(2 + random.nextInt(3)).get(random.nextInt(LANES));
 			replace(map, old, Type.ELITE);
 			burning = map.node(old.id);
 		}
@@ -169,7 +172,7 @@ public final class RiftMap {
 		return map;
 	}
 
-	/** A room for this floor and lane. */
+	/** A room for this floor, from one of three hidden mixes (0 gentle, 1 mixed, 2 dangerous). */
 	private static Type pick(RandomSource random, int floor, int lane) {
 		if (floor == 0) {
 			return Type.FIGHT;

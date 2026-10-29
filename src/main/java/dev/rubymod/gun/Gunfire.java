@@ -255,7 +255,7 @@ public final class Gunfire {
 		Hit best = null;
 		double bestDistance = Double.MAX_VALUE;
 		for (Entity e : level.getEntities(shooter, searchBox,
-				e -> e.isAlive() && e.isPickable() && !e.isSpectator() && !e.isPassengerOfSameVehicle(shooter))) {
+				e -> e.isAlive() && e.isPickable() && !e.isSpectator() && !e.isPassengerOfSameVehicle(shooter) && !dev.rubymod.game.rift.RelicEffects.isAlly(e))) {
 			AABB box = LagCompensation.boxAt(e, rewind).inflate(0.1);
 			var clip = box.contains(start) ? java.util.Optional.of(start) : box.clip(start, end);
 			if (clip.isPresent()) {

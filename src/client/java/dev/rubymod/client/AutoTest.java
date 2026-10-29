@@ -1432,6 +1432,103 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("safety")) {
+			// The map's rooms (no lanes), shooting your own companion, and falling into lava.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(260, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("companion", "pebble")));
+			then(20, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(60, mc -> {
+				shot(mc, "safety-map");
+				var screen = dev.rubymod.client.rift.RiftClient.lastScreen;
+				if (screen != null) {
+					StringBuilder cols = new StringBuilder();
+					for (String line : screen.lines()) {
+						String[] f = line.split("[|]", -1);
+						if (f.length >= 8 && !f[0].equals("boss") && !f[0].equals("votes") && !f[0].equals("keys")) {
+							cols.append(f[1]).append(':').append(f[2]).append('=').append(f[4]).append(' ');
+						}
+					}
+					log("map rooms: {}", cols);
+				}
+			});
+			for (int i = 0; i < 40; i++) {
+				then(20, mc -> {
+					onServer(mc, server -> me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(
+							net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 4, false, false)));
+					if (dev.rubymod.game.rift.Rift.debugState().startsWith("VOTE")) {
+						net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+								new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode()));
+					}
+				});
+			}
+			// Shoot the companion point blank.
+			float[] before = {0};
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var stack = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.COMBAT_SHOTGUN);
+				stack.set(dev.rubymod.registry.ModComponents.AMMO, 8);
+				me.getInventory().setItem(0, stack);
+				me.getInventory().setSelectedSlot(0);
+			}));
+			for (int t = 0; t < 40; t++) {
+				then(1, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					var pets = level.getEntitiesOfClass(net.minecraft.world.entity.animal.golem.IronGolem.class, me.getBoundingBox().inflate(40),
+							g -> g.hasCustomName() && g.getCustomName().getString().contains("Pebble"));
+					if (pets.isEmpty()) {
+						return;
+					}
+					var pet = pets.get(0);
+					if (before[0] == 0) {
+						before[0] = pet.getHealth();
+						me.teleportTo(pet.getX() + 2, pet.getY(), pet.getZ());
+					}
+					var to = pet.getBoundingBox().getCenter().subtract(me.getEyePosition());
+					me.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+					me.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+					var stack = me.getInventory().getItem(0);
+					stack.set(dev.rubymod.registry.ModComponents.AMMO, 8);
+					if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+						dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+					}
+					me.hurtServer(level, me.damageSources().playerAttack(me), 0);
+					pet.hurtServer(level, me.damageSources().playerAttack(me), 10);
+				}));
+			}
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var pets = me.level().getEntitiesOfClass(net.minecraft.world.entity.animal.golem.IronGolem.class, me.getBoundingBox().inflate(40),
+						g -> g.hasCustomName() && g.getCustomName().getString().contains("Pebble"));
+				log("companion health: before {} after {} ({})", before[0], pets.isEmpty() ? -1 : pets.get(0).getHealth(),
+						pets.isEmpty() ? "none" : pets.get(0).getCustomName().getString());
+			}));
+			// Into the lava.
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				me.removeAllEffects();
+				var below = me.blockPosition();
+				for (int dx = -1; dx <= 1; dx++) {
+					for (int dz = -1; dz <= 1; dz++) {
+						me.level().setBlock(below.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
+						me.level().setBlock(below.offset(dx, 0, dz), net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), 3);
+					}
+				}
+				log("into the lava at {} health {}", me.position(), me.getHealth());
+			}));
+			then(40, mc -> onServer(mc, server -> log("after the lava: at {} health {} burning {} | {}", me(server).position(), me(server).getHealth(),
+					me(server).isOnFire(), dev.rubymod.game.rift.Rift.debugState())));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("riftextras")) {
 			// Companion and mutators (the Altar's EXTRAS page), music, a secret stash, the Codex rewards, the Endless Descent.
 			then(0, mc -> {

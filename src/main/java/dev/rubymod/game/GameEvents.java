@@ -335,6 +335,7 @@ public final class GameEvents {
 				&& Rules.canHurt(source.getEntity(), entity) && !Armor.crewProtected(entity, source)
 				&& (!(entity instanceof ServerPlayer runner) || dev.rubymod.game.rift.RelicEffects.allowDamage(runner, source, amount))
 				&& !dev.rubymod.game.rift.Rift.shielded(entity, source, amount)
+				&& !(source.getEntity() instanceof ServerPlayer && dev.rubymod.game.rift.RelicEffects.isAlly(entity))
 				&& !(source.is(net.minecraft.world.damagesource.DamageTypes.IN_WALL) && entity instanceof ServerPlayer p
 						&& dev.rubymod.game.party.PartyGames.of(p) != null));
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamage, damageTaken, blocked) -> {

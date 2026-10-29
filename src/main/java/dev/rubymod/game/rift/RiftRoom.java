@@ -435,7 +435,8 @@ public final class RiftRoom {
 						work.add(() -> {
 							for (BlockPos p : new BlockPos[] {new BlockPos(ox + fi, oy, oz + fw), new BlockPos(ox + fw, oy, oz + fi)}) {
 								level.setBlock(p.below(), b(Blocks.LAVA), Block.UPDATE_CLIENTS);
-								level.setBlock(p, b(Blocks.IRON_BARS), Block.UPDATE_CLIENTS);
+								// Solid glass over it: you see the glow, you can't fall in.
+								level.setBlock(p, Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.ORANGE).defaultBlockState(), Block.UPDATE_CLIENTS);
 							}
 						});
 					}

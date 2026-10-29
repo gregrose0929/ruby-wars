@@ -807,6 +807,18 @@ public final class RelicEffects {
 		if (p.onGround()) {
 			s.airJumps = 0;
 		}
+		// Never a lava death in the Rift: out you come, back to the room's entrance.
+		if (p.isInLava()) {
+			Vec3 safe = Rift.entry();
+			if (safe != null) {
+				level.sendParticles(ParticleTypes.LAVA, p.getX(), p.getY() + 0.5, p.getZ(), 12, 0.3, 0.3, 0.3, 0);
+				p.teleportTo(safe.x, safe.y, safe.z);
+				p.resetFallDistance();
+				p.sendOverlayMessage(Component.literal("Phew! Pulled out of the lava.").withStyle(ChatFormatting.GOLD));
+			}
+			p.clearFire();
+			p.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 60, 0, false, false));
+		}
 		RiftCharms.tick(p, r, level);
 		tickSecondWave(level, p, r, s);
 		// Ruby Avatar: land from a jump to stomp.

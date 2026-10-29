@@ -174,7 +174,7 @@ public class RiftMapScreen extends Screen {
 
 	private int[] pos(Node n, int floors) {
 		int top = 34;
-		int bottom = height - 66;
+		int bottom = height - 50;
 		int span = Math.min(width - 160, 300);
 		int left = (width - span) / 2;
 		double across = n.cols() == 1 ? 0.5 : n.col() / (double) (n.cols() - 1);
@@ -216,17 +216,7 @@ public class RiftMapScreen extends Screen {
 						Component.literal("All three open a secret fourth act.").withColor(0xE0E0E0)), mouseX, mouseY);
 			}
 		}
-		// The three lanes, named at the bottom.
-		{
-			int span = Math.min(width - 160, 300);
-			int left = (width - span) / 2;
-			String[] lane = {"SAFE", "MIDDLE", "DANGER"};
-			int[] laneColor = {0xFF6EE38A, 0xFFFFC02E, 0xFFFF5050};
-			for (int c = 0; c < 3; c++) {
-				int lx = left + c * span / 2;
-				g.centeredText(font, lane[c], lx, height - 46, laneColor[c]);
-			}
-		}
+
 		int floors = nodes.stream().mapToInt(Node::floor).max().orElse(1);
 		Map<Integer, Node> byId = new HashMap<>();
 		for (Node n : nodes) {
@@ -321,7 +311,7 @@ public class RiftMapScreen extends Screen {
 		// Legend.
 		int ly = height - 22;
 		g.centeredText(font, "Hover any room to see what it is. Rooms in flames are Burning Elites.", width / 2, ly, 0xFF8A7A9A);
-		g.centeredText(font, "Safe: shops & springs  •  Middle: a mix + treasure  •  Danger: elites & loot", width / 2, ly + 10, 0xFF8A7A9A);
+		g.centeredText(font, "Every path is different: plan your route by the rooms you can see.", width / 2, ly + 10, 0xFF8A7A9A);
 		if (hovered != null) {
 			List<Component> tip = new ArrayList<>();
 			tip.add(Component.literal(hovered.type().equals("BOSS") && !bossName.isEmpty() ? "BOSS: " + bossName
@@ -332,10 +322,7 @@ public class RiftMapScreen extends Screen {
 			tip.add(Component.literal(hovered.type().equals("BOSS") && !bossAbout.isEmpty() ? bossAbout
 					: hovered.burning() ? "Elites wreathed in fire: tougher, and there's one more of them. Beat them for a Legendary relic and 100 gold."
 					: about(hovered.type())).withColor(0xE0E0E0));
-			String laneName = hovered.type().equals("BOSS") ? "" : hovered.col() == 0 ? "Safe lane" : hovered.col() == 1 ? "Middle lane" : "Danger lane";
-			if (!laneName.isEmpty()) {
-				tip.add(Component.literal(laneName).withColor(hovered.col() == 0 ? 0x6EE38A : hovered.col() == 1 ? 0xFFC02E : 0xFF5050));
-			}
+
 			if (hovered.state().equals("open")) {
 				tip.add(Component.literal("Click to vote").withColor(0xFFC02E));
 			}
