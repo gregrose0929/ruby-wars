@@ -166,5 +166,6 @@
 	"item.rubymod.bouncer": "Bouncer",
 	"item.rubymod.six_shooter": "Six-Shooter",
 	"item.rubymod.ruby_warhammer": "Ruby Warhammer",
-	"item.rubymod.singularity_cannon": "Singularity Cannon"
+	"item.rubymod.singularity_cannon": "Singularity Cannon",
+	"block.rubymod.rift_portal": "Ruby Rift Portal"
 }

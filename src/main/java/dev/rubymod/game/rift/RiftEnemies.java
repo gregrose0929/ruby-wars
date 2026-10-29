@@ -48,6 +48,17 @@ public final class RiftEnemies {
 
 	static final Kind TROOPER = new Kind(null, "Rift Trooper", 3, 2);
 
+	/** Shoots from a distance (gunmen, archers, blazes, breezes, witches). */
+	static boolean ranged(Kind k) {
+		return k.type() == null || k.type() == EntityTypes.SKELETON || k.type() == EntityTypes.STRAY || k.type() == EntityTypes.BLAZE
+				|| k.type() == EntityTypes.BREEZE || k.type() == EntityTypes.WITCH;
+	}
+
+	/** The most shooters one wave brings: one early on, a few more deeper down and with a bigger team. */
+	static int maxRanged(int players) {
+		return Math.min(5, 1 + Rift.depth() / 7 + Math.max(0, players - 1));
+	}
+
 	/**
 	 * How dangerous the gunmen are: 0 Rift Recruit (act 1), 1 Rift Trooper (act 2),
 	 * 2 Rift Commando (act 3, full strength). Bloodthirst Heat and up: one rank higher.
@@ -84,11 +95,11 @@ public final class RiftEnemies {
 			case FORGE, FOUNDRY -> List.of(new Kind(EntityTypes.ZOMBIE, "Ash Walker", 1, 4), new Kind(EntityTypes.WITHER_SKELETON, "Forge Reaver", 3, 3),
 					new Kind(EntityTypes.BLAZE, "Cinder", 3, 2), new Kind(EntityTypes.MAGMA_CUBE, "Slag", 2, 2),
 					new Kind(EntityTypes.PIGLIN_BRUTE, "Furnace Brute", 4, 1), TROOPER);
-			case FROST -> List.of(new Kind(EntityTypes.STRAY, "Frost Archer", 2, 4), new Kind(EntityTypes.ZOMBIE, "Frozen Husk", 1, 4),
-					new Kind(EntityTypes.BREEZE, "Gale", 3, 2), new Kind(EntityTypes.CAVE_SPIDER, "Ice Crawler", 1, 2), TROOPER);
+			case FROST -> List.of(new Kind(EntityTypes.STRAY, "Frost Archer", 2, 2), new Kind(EntityTypes.ZOMBIE, "Frozen Husk", 1, 4),
+					new Kind(EntityTypes.BREEZE, "Gale", 3, 2), new Kind(EntityTypes.CAVE_SPIDER, "Ice Crawler", 1, 3), TROOPER);
 			case LAB -> List.of(new Kind(EntityTypes.DROWNED, "Lab Subject", 1, 4), new Kind(EntityTypes.WITCH, "Alchemist", 3, 2),
 					new Kind(EntityTypes.SLIME, "Ooze", 2, 2), new Kind(EntityTypes.ZOMBIE_VILLAGER, "Test Subject", 1, 3), TROOPER);
-			default -> List.of(new Kind(EntityTypes.ZOMBIE, "Crystal Husk", 1, 5), new Kind(EntityTypes.SKELETON, "Shard Archer", 2, 3),
+			default -> List.of(new Kind(EntityTypes.ZOMBIE, "Crystal Husk", 1, 5), new Kind(EntityTypes.SKELETON, "Shard Archer", 2, 2),
 					new Kind(EntityTypes.SPIDER, "Rift Crawler", 1, 3), TROOPER);
 		};
 	}

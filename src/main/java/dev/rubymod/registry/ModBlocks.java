@@ -182,6 +182,10 @@ public class ModBlocks {
 			props().mapColor(MapColor.COLOR_PURPLE).strength(-1.0F, 3_600_000.0F).noCollision().noOcclusion().noLootTable().lightLevel(s -> 11)
 					.sound(SoundType.GLASS).pushReaction(PushReaction.IMMOVEABLE));
 
+	public static final Block RIFT_PORTAL = registerNoItem("rift_portal", p -> new dev.rubymod.block.ModePortalBlock(0xFF3D9E, p),
+			props().mapColor(MapColor.COLOR_MAGENTA).strength(-1.0F, 3_600_000.0F).noCollision().noOcclusion().noLootTable().lightLevel(s -> 11)
+					.sound(SoundType.GLASS).pushReaction(PushReaction.IMMOVEABLE));
+
 	/** Ruby Rift's glowing veined stone (built into the rooms; can't be broken). */
 	public static final Block RIFT_STONE = registerNoItem("rift_stone", Block::new, riftStone());
 	public static final Block RIFT_MAGMA = registerNoItem("rift_magma", Block::new, riftStone());

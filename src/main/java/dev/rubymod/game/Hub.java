@@ -55,9 +55,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.phys.AABB;
 
 /**
- * The hub: a floating plaza where everyone arrives when they join the server, with a
- * walk-in portal for each game: Ruby Wars (the main one) and Co-op Horde. Press H
- * anywhere to switch games, or use /hub and /play.
+ * The hub: a floating plaza where everyone arrives when they join the server. In front of
+ * you, the three main games side by side: Ruby Wars, the Ruby Rift and Co-op Horde. Behind
+ * you, the Party Games portal. Press H anywhere to switch games, or use /hub and /play.
  *
  * Leaving Ruby Wars saves where you were and everything you carried (to
  * world/rubywars/hub/<uuid>.dat); going back puts it all back. The hub and Horde never
@@ -72,10 +72,11 @@ public final class Hub {
 	private static final int PORTAL_Z = -14;
 	/** Where you arrive, facing the portals. */
 	private static final int SPAWN_Z = 4;
-	private static final int RUBY_X = -7;
-	private static final int HORDE_X = 7;
-	/** The Party Games arch stands between and behind the other two. */
-	private static final int PARTY_Z = -18;
+	private static final int RUBY_X = -9;
+	private static final int RIFT_X = 0;
+	private static final int HORDE_X = 9;
+	/** The Party Games arch stands at the back of the plaza, behind where you arrive. */
+	private static final int PARTY_Z = 15;
 	private static final String LABEL_TAG = "rubymod_hub_label";
 
 	public enum Where { RUBY_WARS, HUB, HORDE, DUEL, PARTY, RIFT }
@@ -473,12 +474,13 @@ public final class Hub {
 			if (box.intersects(new AABB(-2, FLOOR + 1, PARTY_Z + 0.2, 3, FLOOR + 7, PARTY_Z + 0.8))) {
 				// The Party Games portal opens the game picker.
 				PORTAL_COOLDOWN.put(player.getUUID(), 40);
-				player.teleportTo(hub, player.getX(), FLOOR + 1, PARTY_Z + 3.5, Set.<Relative>of(), 180.0F, 0.0F, true);
+				player.teleportTo(hub, player.getX(), FLOOR + 1, PARTY_Z - 3.5, Set.<Relative>of(), 0.0F, 0.0F, true);
 				dev.rubymod.net.Net.send(player, new dev.rubymod.net.MorePayloads.ModeInfo(whereLabel(player), modeLines(server)));
 				dev.rubymod.net.Net.send(player, new dev.rubymod.net.MorePayloads.OpenModes());
 				continue;
 			}
-			String target = box.intersects(portalBox(RUBY_X)) ? "rubywars" : box.intersects(portalBox(HORDE_X)) ? "horde" : null;
+			String target = box.intersects(portalBox(RUBY_X)) ? "rubywars" : box.intersects(portalBox(RIFT_X)) ? "rift"
+					: box.intersects(portalBox(HORDE_X)) ? "horde" : null;
 			if (target == null) {
 				continue;
 			}
@@ -605,18 +607,22 @@ public final class Hub {
 		// Coloured paths from where you arrive to each portal.
 		path(level, 0, SPAWN_Z - 1, RUBY_X, PORTAL_Z + 1, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.RED).defaultBlockState());
 		path(level, 0, SPAWN_Z - 1, HORDE_X, PORTAL_Z + 1, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.LIME).defaultBlockState());
+		for (int z = PORTAL_Z + 1; z <= SPAWN_Z - 1; z++) {
+			set(level, 0, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
+		}
 		set(level, 0, FLOOR, SPAWN_Z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.WHITE).defaultBlockState());
 		arch(level, RUBY_X, Blocks.RED_NETHER_BRICKS.defaultBlockState(), ruby, ModBlocks.RUBY_PORTAL.defaultBlockState());
 		arch(level, HORDE_X, Blocks.MOSSY_STONE_BRICKS.defaultBlockState(), Blocks.VERDANT_FROGLIGHT.defaultBlockState(),
 				ModBlocks.HORDE_PORTAL.defaultBlockState());
-		// Party Games: between and behind, on a purple path.
-		for (int z = PARTY_Z + 1; z <= -4; z++) {
+		arch(level, RIFT_X, Blocks.CRYING_OBSIDIAN.defaultBlockState(), ruby, ModBlocks.RIFT_PORTAL.defaultBlockState());
+		// Party Games: at the back, behind where you arrive, on a purple path.
+		for (int z = SPAWN_Z + 1; z <= PARTY_Z - 1; z++) {
 			set(level, 0, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.PURPLE).defaultBlockState());
 		}
 		arch(level, 0, PARTY_Z, Blocks.PURPUR_BLOCK.defaultBlockState(), Blocks.PEARLESCENT_FROGLIGHT.defaultBlockState(),
 				ModBlocks.PARTY_PORTAL.defaultBlockState());
 		// Lamp posts around the plaza.
-		for (int[] p : new int[][] {{-13, 6}, {13, 6}, {-15, -4}, {15, -4}, {0, 16}}) {
+		for (int[] p : new int[][] {{-15, 6}, {15, 6}, {-16, -6}, {16, -6}, {-6, 14}, {6, 14}}) {
 			for (int y = 1; y <= 3; y++) {
 				set(level, p[0], FLOOR + y, p[1], Blocks.DARK_OAK_FENCE.defaultBlockState());
 			}
@@ -663,6 +669,8 @@ public final class Hub {
 	private static final List<Label> LABELS = List.of(
 			new Label("ruby_title", RUBY_X + 0.5, FLOOR + 10.4, PORTAL_Z + 0.5, 3.6F),
 			new Label("ruby_info", RUBY_X + 0.5, FLOOR + 8.1, PORTAL_Z + 0.5, 2.0F),
+			new Label("rift_title", RIFT_X + 0.5, FLOOR + 10.4, PORTAL_Z + 0.5, 3.6F),
+			new Label("rift_info", RIFT_X + 0.5, FLOOR + 8.1, PORTAL_Z + 0.5, 2.0F),
 			new Label("horde_title", HORDE_X + 0.5, FLOOR + 10.4, PORTAL_Z + 0.5, 3.6F),
 			new Label("horde_info", HORDE_X + 0.5, FLOOR + 8.1, PORTAL_Z + 0.5, 2.0F),
 			new Label("party_title", 0.5, FLOOR + 10.4, PARTY_Z + 0.5, 3.0F),
@@ -677,6 +685,9 @@ public final class Hub {
 			case "ruby_info" -> Component.literal("Build a base, then fight!\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(rubyWarsSign(server)).withStyle(ChatFormatting.GOLD));
 			case "horde_title" -> Component.literal("CO-OP HORDE").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD);
+			case "rift_title" -> Component.literal("RUBY RIFT").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+			case "rift_info" -> Component.literal("Fight room to room, collect relics!\n").withStyle(ChatFormatting.WHITE)
+					.append(Component.literal(dev.rubymod.game.rift.Rift.hubStatus(server)).withStyle(ChatFormatting.GOLD));
 			case "party_title" -> Component.literal("PARTY GAMES").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
 			case "board_party" -> partyBoard();
 			case "board_records" -> recordsBoard(server);

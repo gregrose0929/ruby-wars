@@ -153,6 +153,6 @@ public class SummaryScreen extends Screen {
 				}
 			}
 		}
-		g.centeredText(font, "Esc to close. Back to the Threshold for another run!", width / 2, height - 14, 0xFF8A7A9A);
+		g.centeredText(font, "Esc to close. Back to the Threshold for another run!", width / 2, height - 14, 0xFFD0C4DC);
 	}
 }

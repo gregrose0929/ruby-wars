@@ -310,8 +310,8 @@ public class RiftMapScreen extends Screen {
 		}
 		// Legend.
 		int ly = height - 22;
-		g.centeredText(font, "Hover any room to see what it is. Rooms in flames are Burning Elites.", width / 2, ly, 0xFF8A7A9A);
-		g.centeredText(font, "Every path is different: plan your route by the rooms you can see.", width / 2, ly + 10, 0xFF8A7A9A);
+		g.centeredText(font, "Hover any room to see what it is. Rooms in flames are Burning Elites.", width / 2, ly, 0xFFD0C4DC);
+		g.centeredText(font, "Every path is different: plan your route by the rooms you can see.", width / 2, ly + 10, 0xFFD0C4DC);
 		if (hovered != null) {
 			List<Component> tip = new ArrayList<>();
 			tip.add(Component.literal(hovered.type().equals("BOSS") && !bossName.isEmpty() ? "BOSS: " + bossName

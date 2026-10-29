@@ -158,7 +158,9 @@ public class GameHud implements HudElement {
 	/** Bank and power, under the Heart panel, once you have either. */
 	private void drawEconomy(GuiGraphicsExtractor g, Font font) {
 		var e = ClientState.economy;
-		if (e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
+		// Only in the Ruby Wars world (the hub and the other modes don't need it).
+		if (e == null || !ClientState.inRubyWarsWorld()
+				|| e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
 			return;
 		}
 		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY && ClientState.inRubyWarsWorld() ? 24 : 4;

@@ -789,12 +789,16 @@ public final class Rift {
 	private static void startFight(MinecraftServer server, ServerLevel level) {
 		state = State.FIGHT;
 		boolean elite = node.type == RiftMap.Type.ELITE;
-		waves = node.type == RiftMap.Type.HOLD || node.type == RiftMap.Type.GAUNTLET || node.type == RiftMap.Type.HEIST ? 99
+		waves = node.type == RiftMap.Type.HOLD ? 5 : node.type == RiftMap.Type.GAUNTLET || node.type == RiftMap.Type.HEIST ? 99
 				: node.type == RiftMap.Type.DEFEND || node.type == RiftMap.Type.RESCUE ? 3 : elite || node.type == RiftMap.Type.TANK ? 2 : node.floor >= 4 ? 3 : 2;
 		wave = 0;
 		int players = Math.max(1, RUNNERS.size());
 		waveBudget = (int) Math.round((5 + depth() * 1.6) * (1 + 0.6 * (players - 1)));
 		waveBudget = (int) Math.round(waveBudget * RiftExtras.budgetScale());
+		if (node.type == RiftMap.Type.HOLD) {
+			// Smaller waves while you're busy standing in the light.
+			waveBudget = Math.max(3, (int) Math.round(waveBudget * 0.65));
+		}
 		if (doubleNext) {
 			// Double or Nothing: a bigger fight, for triple gold.
 			doubleNext = false;
@@ -820,8 +824,7 @@ public final class Rift {
 		RandomSource random = level.getRandom();
 		int budget = waveBudget;
 		boolean elite = (node.type == RiftMap.Type.ELITE || RiftMeta.heat >= 2 && node.type == RiftMap.Type.FIGHT) && wave == waves;
-		List<BlockPos> spawns = new ArrayList<>(room.spawns);
-		java.util.Collections.shuffle(spawns, new java.util.Random(random.nextLong()));
+		List<BlockPos> spawns = fairSpawns(level);
 		int i = 0;
 		if (elite) {
 			int count = (node.floor >= 5 || RUNNERS.size() >= 3 ? 2 : 1) + (node.burning ? 1 : 0);
@@ -840,11 +843,16 @@ public final class Rift {
 			budget /= 2;
 		}
 		int gunmen = 0;
+		int ranged = 0;
+		int maxRanged = RiftEnemies.maxRanged(RUNNERS.size());
 		while (budget > 0) {
 			RiftEnemies.Kind kind = RiftEnemies.pick(node.theme, random);
-			// Early on, only a couple of gunmen at a time.
-			if (kind == RiftEnemies.TROOPER && gunmen >= RiftEnemies.maxGunmen()) {
+			// Only a few shooters a wave (and early on, only a couple of gunmen): most come at you up close.
+			if (RiftEnemies.ranged(kind) && (ranged >= maxRanged || kind == RiftEnemies.TROOPER && gunmen >= RiftEnemies.maxGunmen())) {
 				continue;
+			}
+			if (RiftEnemies.ranged(kind)) {
+				ranged++;
 			}
 			if (kind == RiftEnemies.TROOPER) {
 				gunmen++;
@@ -921,7 +929,7 @@ public final class Rift {
 			}
 			if (ticks % 20 == 0) {
 				if (!room.inside(mob.position()) && !RiftBoss.isBoss(mob)) {
-					BlockPos back = room.spawns.get(level.getRandom().nextInt(room.spawns.size()));
+					BlockPos back = fairSpawns(level).get(0);
 					mob.teleportTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5);
 				}
 				if (RiftObjectives.goesForCore(mob, targets)) {
@@ -1128,6 +1136,35 @@ public final class Rift {
 		level.addFreshEntity(hero);
 		RelicEffects.ALLIES.put(hero.getUUID(), new RelicEffects.Ally(Long.MAX_VALUE, owner.getUUID(), false));
 		RiftFx.beam(level, hero.position(), 8, ParticleTypes.END_ROD, 0xFFFFC02E);
+	}
+
+	/**
+	 * Where monsters come through: never right on top of anyone (12+ blocks from every player)
+	 * and, where possible, somewhere in front of someone rather than behind everybody.
+	 */
+	static List<BlockPos> fairSpawns(ServerLevel level) {
+		List<ServerPlayer> watchers = players(level.getServer()).stream().filter(p -> !p.isSpectator()).toList();
+		List<BlockPos> ahead = new ArrayList<>();
+		List<BlockPos> clear = new ArrayList<>();
+		List<BlockPos> rest = new ArrayList<>();
+		for (BlockPos s : room.spawns) {
+			Vec3 at = Vec3.atBottomCenterOf(s);
+			boolean far = watchers.stream().allMatch(p -> p.position().distanceTo(at) >= 12);
+			boolean seen = watchers.stream().anyMatch(p -> at.subtract(p.position()).multiply(1, 0, 1).normalize()
+					.dot(p.getLookAngle().multiply(1, 0, 1).normalize()) > 0.25);
+			(far && seen ? ahead : far ? clear : rest).add(s);
+		}
+		java.util.Random shuffle = new java.util.Random(level.getRandom().nextLong());
+		java.util.Collections.shuffle(ahead, shuffle);
+		java.util.Collections.shuffle(clear, shuffle);
+		java.util.Collections.shuffle(rest, shuffle);
+		List<BlockPos> out = new ArrayList<>(ahead);
+		out.addAll(clear);
+		// Only if there's nowhere else: the near ones, farthest first.
+		rest.sort(Comparator.comparingDouble(s -> -watchers.stream().mapToDouble(p -> p.position().distanceTo(Vec3.atBottomCenterOf(s))).min().orElse(0)));
+		out.addAll(rest);
+		// Spread a wave over the good spots (not all from the single best one).
+		return out.isEmpty() ? new ArrayList<>(room.spawns) : out.subList(0, Math.max(1, Math.min(out.size(), Math.max(ahead.size() + clear.size(), 3))));
 	}
 
 	/** This room's Burning Elites (they burn, and fire can't touch them). */
@@ -2031,6 +2068,12 @@ public final class Rift {
 	/** Where this room starts (a Pocket Portal goes there). */
 	static Vec3 entry() {
 		return room == null ? null : room.entry;
+	}
+
+	/** For the sign over the Rift's portal in the hub. */
+	public static String hubStatus(MinecraftServer server) {
+		int n = players(server).size();
+		return n == 0 ? "Nobody in yet" : state == State.STAGING || state == State.IDLE ? n + " getting ready" : n + " in a run";
 	}
 
 	/** For autotests: the team's mutators. */

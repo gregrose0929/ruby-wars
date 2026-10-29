@@ -88,9 +88,9 @@ public class ThresholdScreen extends Screen {
 
 	private void button(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, int color, boolean on, int mouseX, int mouseY, String kind, String id) {
 		boolean hover = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
-		g.fill(x, y, x + w, y + h, on ? 0xFF000000 | color & 0xFFFFFF : hover ? 0xE0000000 | color & 0x7F7F7F : 0xC0181018);
+		g.fill(x, y, x + w, y + h, on ? 0xFF000000 | RelicScreen.darker(color, 0.6F) : hover ? 0xE0000000 | RelicScreen.darker(color, 0.35F) : 0xC0181018);
 		g.outline(x, y, w, h, 0xFF000000 | color & 0xFFFFFF);
-		g.centeredText(font, label, x + w / 2, y + (h - 8) / 2, on ? 0xFF101010 : 0xFFFFFFFF);
+		g.centeredText(font, label, x + w / 2, y + (h - 8) / 2, 0xFFFFFFFF);
 		buttons.add(new int[] {x, y, w, h});
 		actions.add(new String[] {kind, id});
 	}
@@ -140,8 +140,8 @@ public class ThresholdScreen extends Screen {
 			g.fill(x1, y, x1 + colW, y + rowH - 3, selected ? 0xD0402030 : 0xB0140C14);
 			g.outline(x1, y, colW, rowH - 3, selected ? 0xFFFFC02E : 0xFF402838);
 			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(l[3]))), x1 + 3, y + 3);
-			g.text(font, font.plainSubstrByWidth(l[2], colW - 84), x1 + 22, y + 3, locked ? 0xFF8A7A9A : 0xFFFFFFFF, false);
-			g.text(font, font.plainSubstrByWidth(l[4], colW - 26), x1 + 22, y + 14, 0xFFA898B8, false);
+			g.text(font, font.plainSubstrByWidth(l[2], colW - 84), x1 + 22, y + 3, locked ? 0xFFD0C4DC : 0xFFFFFFFF, false);
+			g.text(font, font.plainSubstrByWidth(l[4], colW - 26), x1 + 22, y + 14, 0xFFDCD2E6, false);
 			String label = selected ? "SELECTED" : locked ? "◆ " + l[5] : "SELECT";
 			button(g, x1 + colW - 58, y + 2, 54, 10, label, locked ? 0xFFFFC02E : 0xFFFF3D6E, selected, mouseX, mouseY, "loadout", l[1]);
 			y += rowH;
@@ -177,7 +177,7 @@ public class ThresholdScreen extends Screen {
 			g.outline(x2, y, colW, rh - 3, owned ? 0xFF5BE37D : (int) (120 + 135 * shine) << 24 | tier & 0xFFFFFF);
 			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(r[3]))), x2 + 3, y + 3);
 			g.text(font, font.plainSubstrByWidth(r[2], colW - 84), x2 + 22, y + 3, tier, false);
-			g.text(font, font.plainSubstrByWidth(r[4], colW - 26), x2 + 22, y + 14, 0xFFA898B8, false);
+			g.text(font, font.plainSubstrByWidth(r[4], colW - 26), x2 + 22, y + 14, 0xFFDCD2E6, false);
 			if (owned) {
 				g.text(font, "✔ OWNED", x2 + colW - font.width("✔ OWNED") - 4, y + 3, 0xFF5BE37D, false);
 			} else {
@@ -210,7 +210,7 @@ public class ThresholdScreen extends Screen {
 		y += 12;
 		button(g, x3, y, colW, 14, daily ? "ON: today's run for everyone" : "OFF (click to turn on)", 0xFFC27BFF, daily, mouseX, mouseY, "daily", "toggle");
 		y += 18;
-		g.text(font, "Today's best:", x3, y, 0xFFA898B8, false);
+		g.text(font, "Today's best:", x3, y, 0xFFDCD2E6, false);
 		y += 10;
 		if (dailyTop.isEmpty()) {
 			g.text(font, "  nobody yet", x3, y, 0xFF706070, false);
@@ -222,7 +222,7 @@ public class ThresholdScreen extends Screen {
 		y += 8;
 		g.text(font, "ENDLESS DESCENT", x3, y, 0xFFC27BFF, true);
 		y += 11;
-		g.text(font, font.plainSubstrByWidth("Win a run, then keep going down!", colW), x3, y, 0xFFA898B8, false);
+		g.text(font, font.plainSubstrByWidth("Win a run, then keep going down!", colW), x3, y, 0xFFDCD2E6, false);
 		y += 10;
 		if (deepest.isEmpty()) {
 			g.text(font, "  nobody yet", x3, y, 0xFF706070, false);
@@ -234,7 +234,7 @@ public class ThresholdScreen extends Screen {
 		if (tip != null) {
 			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
 		}
-		g.centeredText(font, "Choices here are for the next run. Step into the portal when everyone's ready.", width / 2, height - 12, 0xFF8A7A9A);
+		g.centeredText(font, "Choices here are for the next run. Step into the portal when everyone's ready.", width / 2, height - 12, 0xFFD0C4DC);
 	}
 
 	/** The EXTRAS page: your companion (left) and the team's mutators (right). */
@@ -253,7 +253,7 @@ public class ThresholdScreen extends Screen {
 			g.outline(x1, y, colW, rh - 3, on ? 0xFF66E0FF : 0xFF402838);
 			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c[3]))), x1 + 3, y + (rh - 3 - 16) / 2);
 			g.text(font, c[2], x1 + 22, y + 3, 0xFFFFFFFF, false);
-			g.text(font, font.plainSubstrByWidth(c[4], colW - 84), x1 + 22, y + 13, 0xFFA898B8, false);
+			g.text(font, font.plainSubstrByWidth(c[4], colW - 84), x1 + 22, y + 13, 0xFFDCD2E6, false);
 			button(g, x1 + colW - 58, y + 2, 54, 10, on ? "WITH YOU" : "CHOOSE", 0xFF66E0FF, on, mouseX, mouseY, "companion", c[1]);
 			if (mouseX >= x1 && mouseX < x1 + colW - 60 && mouseY >= y && mouseY < y + rh - 3) {
 				tip = List.of(Component.literal(c[2]).withColor(0x66E0FF), Component.literal(c[4]).withColor(0xE0D8E8));
@@ -269,7 +269,7 @@ public class ThresholdScreen extends Screen {
 			g.outline(x2, y, colW, rh - 3, on ? 0xFFFF7AE0 : 0xFF402838);
 			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(m[3]))), x2 + 3, y + (rh - 3 - 16) / 2);
 			g.text(font, m[2], x2 + 22, y + 3, 0xFFFFFFFF, false);
-			g.text(font, font.plainSubstrByWidth(m[4], colW - 84), x2 + 22, y + 13, 0xFFA898B8, false);
+			g.text(font, font.plainSubstrByWidth(m[4], colW - 84), x2 + 22, y + 13, 0xFFDCD2E6, false);
 			button(g, x2 + colW - 58, y + 2, 54, 10, on ? "ON" : "OFF", 0xFFFF7AE0, on, mouseX, mouseY, "mutator", m[1]);
 			if (mouseX >= x2 && mouseX < x2 + colW - 60 && mouseY >= y && mouseY < y + rh - 3) {
 				tip = List.of(Component.literal(m[2]).withColor(0xFF7AE0), Component.literal(m[4]).withColor(0xE0D8E8));
@@ -279,7 +279,7 @@ public class ThresholdScreen extends Screen {
 		if (tip != null) {
 			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
 		}
-		g.centeredText(font, "Companions level up with your kills. Mutators are just for fun. Hover for details.", width / 2, height - 12, 0xFF8A7A9A);
+		g.centeredText(font, "Companions level up with your kills. Mutators are just for fun. Hover for details.", width / 2, height - 12, 0xFFD0C4DC);
 	}
 
 	@Override

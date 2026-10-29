@@ -117,7 +117,7 @@ public class CodexScreen extends Screen {
 		}
 		if (SECTIONS[tab].equals("rewards")) {
 			rewards(g);
-			g.centeredText(font, "Click a tab. Esc to close.", width / 2, height - 12, 0xFF8A7A9A);
+			g.centeredText(font, "Click a tab. Esc to close.", width / 2, height - 12, 0xFFD0C4DC);
 			return;
 		}
 		// The grid.
@@ -167,7 +167,7 @@ public class CodexScreen extends Screen {
 			}
 			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
 		}
-		g.centeredText(font, "Click a tab. Hover a tile to read it. Esc to close.", width / 2, height - 12, 0xFF8A7A9A);
+		g.centeredText(font, "Click a tab. Hover a tile to read it. Esc to close.", width / 2, height - 12, 0xFFD0C4DC);
 	}
 
 	/** The Rewards tab: the next milestone, and what each finished section gives you. */

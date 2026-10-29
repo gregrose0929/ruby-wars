@@ -94,6 +94,14 @@ public class RelicScreen extends Screen {
 		};
 	}
 
+	/** A colour darkened (0..1 of its brightness), for buttons that white text stands out on. */
+	static int darker(int color, float f) {
+		int r = (int) (((color >> 16) & 0xFF) * f);
+		int gr = (int) (((color >> 8) & 0xFF) * f);
+		int b = (int) ((color & 0xFF) * f);
+		return r << 16 | gr << 8 | b;
+	}
+
 	private static String pretty(String s) {
 		return s.isEmpty() ? s : s.charAt(0) + s.substring(1).toLowerCase();
 	}
@@ -237,16 +245,17 @@ public class RelicScreen extends Screen {
 			String label = owned ? "OWNED" : kind.equals("shop") ? (cantAfford ? "◆ " + c.price() : (c.combine() > 0 ? "COMBINE  ◆ " : "BUY  ◆ ") + c.price())
 					: kind.equals("event") ? "CHOOSE" : c.combine() > 0 ? "COMBINE" : "TAKE IT";
 			int by = y + cardH - 20;
-			int btn = owned ? 0xC0303038 : cantAfford ? 0xC0602020 : hover ? 0xFF000000 | tier & 0xFFFFFF : 0xB0000000 | tier & 0xFFFFFF;
+			int btn = owned ? 0xC0303038 : cantAfford ? 0xC0602020 : hover ? 0xFF000000 | darker(tier, 0.75F) : 0xFF000000 | darker(tier, 0.5F);
 			g.fill(x + 8, by, x + cardW - 8, by + 14, btn);
-			g.centeredText(font, label, x + cardW / 2, by + 3, owned ? 0xFF9AA4AE : cantAfford ? 0xFFFF9090 : 0xFF101010);
+			g.outline(x + 8, by, cardW - 16, 14, owned || cantAfford ? 0x60FFFFFF : 0xFF000000 | tier & 0xFFFFFF);
+			g.centeredText(font, label, x + cardW / 2, by + 3, owned ? 0xFF9AA4AE : cantAfford ? 0xFFFF9090 : 0xFFFFFFFF);
 			if (delay >= 1 && !owned) {
 				boxes.add(new int[] {x, y, cardW, cardH, i});
 			}
 		}
 		String foot = kind.equals("shop") ? "Buy as many as the team's gold allows. Press Esc when you're done, then step into the portal."
 				: kind.equals("event") ? "Choose wisely." : "Relics last the whole run. Press Esc to look around first (J brings this back).";
-		g.centeredText(font, foot, width / 2, height - 14, 0xFF8A7A9A);
+		g.centeredText(font, foot, width / 2, height - 14, 0xFFD0C4DC);
 		// Hover a card: everything it does, in full.
 		if (hoverCard != null) {
 			List<Component> tip = tooltip(hoverCard.title(), hoverCard.tier(), hoverCard.element(), hoverCard.about());

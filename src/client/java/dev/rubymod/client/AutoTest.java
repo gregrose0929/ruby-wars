@@ -1432,6 +1432,119 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("portaltest")) {
+			// The hub's portals, the Rift portal, fair spawns, Hold the Zone, and the brighter screens.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+				command(mc, "gamemode survival @a");
+				command(mc, "execute as @p run hub");
+			});
+			then(80, mc -> onServer(mc, server -> {
+				var me = me(server);
+				me.teleportTo(0.5, dev.rubymod.game.Hub.FLOOR + 1, 4.5);
+				me.setYRot(180);
+				me.setXRot(-8);
+			}));
+			then(10, mc -> {
+				mc.player.setYRot(180);
+				mc.player.setXRot(-8);
+			});
+			then(30, mc -> shot(mc, "fixes-hub-front"));
+			then(5, mc -> onServer(mc, server -> {
+				me(server).setYRot(0);
+			}));
+			then(5, mc -> mc.player.setYRot(0));
+			then(20, mc -> shot(mc, "fixes-hub-back"));
+			// Walk into the Rift's portal.
+			then(5, mc -> onServer(mc, server -> me(server).teleportTo(0.5, dev.rubymod.game.Hub.FLOOR + 1, -13.5)));
+			then(80, mc -> onServer(mc, server -> log("after the Rift portal: {}", dev.rubymod.game.Hub.where(me(server)))));
+			then(40, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			for (int i = 0; i < 30; i++) {
+				then(20, mc -> {
+					onServer(mc, server -> me(server).addEffect(new net.minecraft.world.effect.MobEffectInstance(
+							net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 4, false, false)));
+					if (dev.rubymod.game.rift.Rift.debugState().startsWith("VOTE")) {
+						net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+								new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode()));
+					}
+				});
+			}
+			// Where did the first monsters come through?
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var mobs = me.level().getEntities((net.minecraft.world.entity.Entity) null, me.getBoundingBox().inflate(60),
+						e -> dev.rubymod.game.rift.Rift.isEnemy(e));
+				log("monsters: {} | distances {} | {}", mobs.size(), mobs.stream().map(e -> Math.round(e.distanceTo(me))).sorted().toList(),
+						dev.rubymod.game.rift.Rift.debugState());
+			}));
+			then(5, mc -> onServer(mc, server -> {
+				dev.rubymod.game.rift.Rift.testSkip(server, "clear");
+			}));
+			then(40, mc -> shot(mc, "fixes-offer"));
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+					dev.rubymod.game.rift.Rift.testSkip(server, "room:HOLD");
+				});
+			});
+			for (int i = 0; i < 15; i++) {
+				then(20, mc -> mc.gui.setScreen(null));
+			}
+			then(40, mc -> {
+				log("hold: zone {} | {}", dev.rubymod.game.rift.Rift.zonePos(), dev.rubymod.game.rift.Rift.debugState());
+				shot(mc, "fixes-hold");
+			});
+			// Never step into the zone: the waves must still run out.
+			for (int t = 0; t < 2400; t++) {
+				int tick = t;
+				then(1, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var level = (net.minecraft.server.level.ServerLevel) me.level();
+					if (!dev.rubymod.game.rift.Rift.debugState().startsWith("FIGHT")) {
+						return;
+					}
+					var zone = dev.rubymod.game.rift.Rift.zonePos();
+					if (zone != null && me.position().distanceTo(zone) < 8) {
+						me.teleportTo(zone.x + 12, zone.y, zone.z);
+					}
+					aimAtNearest(server);
+					var stack = me.getInventory().getItem(0);
+					me.getInventory().setSelectedSlot(0);
+					if (stack.getItem() instanceof dev.rubymod.gun.GunItem g) {
+						if (dev.rubymod.gun.GunItem.ammo(stack) <= 0) {
+							stack.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+						}
+						dev.rubymod.gun.Gunfire.tryFire(level, me, stack, g);
+					}
+					if (tick % 400 == 0) {
+						log("hold t{}: {}", tick, dev.rubymod.game.rift.Rift.debugState());
+					}
+				}));
+			}
+			then(5, mc -> {
+				log("hold end: {}", dev.rubymod.game.rift.Rift.debugState());
+				shot(mc, "fixes-hold-end");
+			});
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> {
+					dev.rubymod.game.rift.Rift.testSkip(server, "nooffer");
+					dev.rubymod.game.rift.Rift.testSkip(server, "room:SHOP");
+				});
+			});
+			for (int i = 0; i < 12; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> dev.rubymod.client.rift.RiftClient.reopen());
+			then(20, mc -> shot(mc, "fixes-shop"));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("safety")) {
 			// The map's rooms (no lanes), shooting your own companion, and falling into lava.
 			then(0, mc -> {

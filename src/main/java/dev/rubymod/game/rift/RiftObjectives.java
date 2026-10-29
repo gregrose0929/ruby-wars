@@ -36,9 +36,10 @@ import net.minecraft.world.phys.Vec3;
  * monsters go for it and drain it while they're close; keep them off it until the last
  * wave is down. Lose it and it shatters (it hurts), and the reward's an ordinary one.
  *
- * HOLD THE ZONE: a ring of light somewhere in the room. Stand in it to fill it; any
- * monster inside stops it (contested). Monsters keep coming until it's full: then the
- * zone flares and everything left in the room dies.
+ * HOLD THE ZONE: a ring of light somewhere in the room, under a tall glowing pillar you
+ * can see through walls (and a pointer on screen telling you which way). Stand in it to
+ * fill it; a monster inside slows it (contested). Full: the zone flares and everything left
+ * dies. Up to five waves come; clear them all and the room's done anyway (a lesser reward).
  */
 final class RiftObjectives {
 	enum Kind { NONE, DEFEND, HOLD }
@@ -51,7 +52,9 @@ final class RiftObjectives {
 	private static boolean coreLost;
 	private static Vec3 zone;
 	private static final double ZONE_R = 4.5;
-	private static final int ZONE_FULL = 900;
+	private static final int ZONE_FULL = 600;
+	/** The pillar of light over the zone (glowing, so it shows through walls). */
+	private static UUID pillar;
 	private static float progress;
 	private static boolean contested;
 	private static int t;
@@ -99,6 +102,18 @@ final class RiftObjectives {
 			}
 			if (zone == null) {
 				zone = Vec3.atBottomCenterOf(room.center.offset(0, 1, -room.half / 2));
+			}
+			Display.BlockDisplay beam = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
+			if (beam != null) {
+				beam.snapTo(zone.x, zone.y, zone.z, 0, 0);
+				((dev.rubymod.mixin.BlockDisplayAccessor) beam).rubymod$setBlockState(net.minecraft.world.level.block.Blocks.STAINED_GLASS
+						.pick(net.minecraft.world.item.DyeColor.YELLOW).defaultBlockState());
+				((DisplayAccessor) beam).rubymod$setTransformation(new Transformation(new Vector3f(-0.35F, 0, -0.35F), new Quaternionf(),
+						new Vector3f(0.7F, 16F, 0.7F), new Quaternionf()));
+				beam.setGlowingTag(true);
+				beam.addTag(Rift.TAG);
+				level.addFreshEntity(beam);
+				pillar = beam.getUUID();
 			}
 			for (ServerPlayer p : Rift.players(level.getServer())) {
 				Alerts.title(p, "HOLD THE ZONE", "Stand in the ring of light until it fills", ChatFormatting.GOLD);
@@ -238,6 +253,29 @@ final class RiftObjectives {
 				level.playSound(null, BlockPos.containing(zone), SoundEvents.BEACON_AMBIENT, SoundSource.PLAYERS, 0.8F, 0.6F + progress / ZONE_FULL);
 			}
 		}
+		// Anyone outside it: which way it is, and a short trail of light pointing there.
+		if (t % 20 == 0) {
+			for (ServerPlayer p : targets) {
+				double dist = p.position().distanceTo(zone);
+				if (dist < ZONE_R) {
+					p.sendOverlayMessage(net.minecraft.network.chat.Component.literal(contested ? "In the zone, but a monster's in it too: clear it out!"
+							: "In the zone: hold it!").withStyle(contested ? ChatFormatting.RED : ChatFormatting.GOLD));
+					continue;
+				}
+				Vec3 to = zone.subtract(p.position()).multiply(1, 0, 1).normalize();
+				Vec3 look = p.getLookAngle().multiply(1, 0, 1).normalize();
+				double ahead = to.dot(look);
+				double side = look.x * to.z - look.z * to.x;
+				String way = ahead > 0.7 ? "ahead" : ahead < -0.5 ? "behind you" : side > 0 ? "to your right" : "to your left";
+				String arrow = ahead > 0.7 ? "\u25B2" : ahead < -0.5 ? "\u25BC" : side > 0 ? "\u25B6" : "\u25C0";
+				p.sendOverlayMessage(net.minecraft.network.chat.Component.literal(arrow + "  The zone: " + Math.round(dist) + " blocks " + way + "  " + arrow)
+						.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+				for (double d = 1.5; d < Math.min(7, dist); d += 0.5) {
+					Vec3 at = p.position().add(to.scale(d)).add(0, 0.2, 0);
+					level.sendParticles(p, RiftFx.dust(0xFFC02E, 1.0F), true, false, at.x, at.y, at.z, 1, 0, 0, 0, 0);
+				}
+			}
+		}
 		// The ring: lit gold as far round as it's filled, a beam in the middle, red flicker when contested.
 		if (t % 3 == 0) {
 			int points = 48;
@@ -270,6 +308,10 @@ final class RiftObjectives {
 			d.discard();
 		}
 		coreDisplay = null;
+		if (pillar != null && level != null && level.getEntity(pillar) instanceof Entity b) {
+			b.discard();
+		}
+		pillar = null;
 		kind = Kind.NONE;
 		zone = null;
 		core = null;
