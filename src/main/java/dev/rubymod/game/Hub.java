@@ -71,7 +71,7 @@ public final class Hub {
 	private static final int RADIUS = 20;
 	private static final int PORTAL_Z = -14;
 	/** Where you arrive, facing the portals. */
-	private static final int SPAWN_Z = 4;
+	private static final int SPAWN_Z = 8;
 	private static final int RUBY_X = -9;
 	private static final int RIFT_X = 0;
 	private static final int HORDE_X = 9;
@@ -464,6 +464,7 @@ public final class Hub {
 		if (hub == null || server.getTickCount() % 4 != 0) {
 			return;
 		}
+		ambience(hub);
 		PORTAL_COOLDOWN.replaceAll((id, t) -> t - 4);
 		PORTAL_COOLDOWN.values().removeIf(t -> t <= 0);
 		for (ServerPlayer player : new ArrayList<>(hub.players())) {
@@ -494,6 +495,26 @@ public final class Hub {
 				player.level().playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.6F, 1.2F);
 			}
 		}
+	}
+
+	/** Motes of each game's colour drifting up through its gate, and a sparkle off the fountain. */
+	private static void ambience(ServerLevel hub) {
+		if (hub.players().isEmpty()) {
+			return;
+		}
+		var random = hub.getRandom();
+		int[][] gates = {{RUBY_X, PORTAL_Z, 0xFF3D3D}, {RIFT_X, PORTAL_Z, 0xFF3D9E}, {HORDE_X, PORTAL_Z, 0x5BE37D}, {0, PARTY_Z, 0xC27BFF}};
+		for (int[] g : gates) {
+			for (int k = 0; k < 2; k++) {
+				double x = g[0] + 0.5 + (random.nextDouble() - 0.5) * 5;
+				double y = FLOOR + 1 + random.nextDouble() * 6;
+				hub.sendParticles(new net.minecraft.core.particles.DustParticleOptions(g[2], 1.2F), x, y, g[1] + 0.5, 1, 0.05, 0.3, 0.05, 0);
+			}
+			hub.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD, g[0] + 0.5, FLOOR + 1.2 + random.nextDouble() * 5, g[1] + 0.5, 1, 1.5, 0.3, 0.2,
+					0.01);
+		}
+		hub.sendParticles(net.minecraft.core.particles.ParticleTypes.SPLASH, 0.5, FLOOR + 1.1, 0.5, 6, 1.4, 0.1, 1.4, 0.1);
+		hub.sendParticles(net.minecraft.core.particles.ParticleTypes.WAX_ON, 0.5, FLOOR + 2.8, 0.5, 1, 0.3, 0.3, 0.3, 0.3);
 	}
 
 	private static AABB portalBox(int cx) {
@@ -571,9 +592,9 @@ public final class Hub {
 		BlockState ruby = ModBlocks.RUBY_BLOCK.defaultBlockState();
 		BlockState tiles = Blocks.DEEPSLATE_TILES.defaultBlockState();
 		BlockState polished = Blocks.POLISHED_DEEPSLATE.defaultBlockState();
-		BlockState rim = Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState();
-		BlockState lantern = Blocks.SEA_LANTERN.defaultBlockState();
 		BlockState barrier = Blocks.BARRIER.defaultBlockState();
+		BlockState grass = Blocks.GRASS_BLOCK.defaultBlockState();
+		// The island: a stone plaza in the middle, a garden ring round the edge, a rocky underside.
 		for (int x = -RADIUS - 1; x <= RADIUS + 1; x++) {
 			for (int z = -RADIUS - 1; z <= RADIUS + 1; z++) {
 				double r = Math.sqrt(x * x + z * z);
@@ -581,53 +602,200 @@ public final class Hub {
 					continue;
 				}
 				BlockState floor;
-				if (r < 2.5) {
-					floor = ruby;
-				} else if (r > RADIUS - 1.5) {
-					floor = (x + z) % 4 == 0 ? lantern : rim;
-				} else if (((int) r) % 6 == 5) {
-					floor = lantern;
+				if (r < GARDEN_R) {
+					floor = ((int) r) % 6 == 5 ? Blocks.CALCITE.defaultBlockState() : ((int) r) % 2 == 0 ? tiles : polished;
 				} else {
-					floor = ((int) r) % 2 == 0 ? tiles : polished;
+					floor = grass;
 				}
 				set(level, x, FLOOR, z, floor);
-				// A floating-island underside, tapering down.
-				for (int d = 1; d <= 6; d++) {
-					set(level, x, FLOOR - d, z, r < RADIUS - d * 2.6 ? (d < 3 ? Blocks.DEEPSLATE : Blocks.COBBLED_DEEPSLATE).defaultBlockState()
-							: Blocks.AIR.defaultBlockState());
+				// The underside: dirt under the garden, stone below, tapering to a point, with ruby veins.
+				for (int d = 1; d <= 10; d++) {
+					boolean solid = r < RADIUS - d * 1.9 + Math.sin(x * 0.7 + z * 0.4) * 1.2;
+					BlockState under = !solid ? Blocks.AIR.defaultBlockState() : d == 1 && r >= GARDEN_R ? Blocks.DIRT.defaultBlockState()
+							: (x * 7 + z * 13 + d * 5) % 41 == 0 ? ruby : d < 4 ? Blocks.STONE.defaultBlockState() : Blocks.DEEPSLATE.defaultBlockState();
+					set(level, x, FLOOR - d, z, under);
 				}
-				for (int y = FLOOR + 1; y <= FLOOR + 10; y++) {
+				for (int y = FLOOR + 1; y <= FLOOR + 12; y++) {
 					boolean edge = r > RADIUS - 0.5;
-					BlockState want = edge && y == FLOOR + 1 ? Blocks.POLISHED_BLACKSTONE_WALL.defaultBlockState() : edge && y <= FLOOR + 4 ? barrier
-							: Blocks.AIR.defaultBlockState();
+					BlockState want = edge && y <= FLOOR + 4 ? barrier : Blocks.AIR.defaultBlockState();
 					set(level, x, y, z, want);
 				}
 			}
 		}
-		// Coloured paths from where you arrive to each portal.
-		path(level, 0, SPAWN_Z - 1, RUBY_X, PORTAL_Z + 1, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.RED).defaultBlockState());
-		path(level, 0, SPAWN_Z - 1, HORDE_X, PORTAL_Z + 1, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.LIME).defaultBlockState());
-		for (int z = PORTAL_Z + 1; z <= SPAWN_Z - 1; z++) {
+		// A low hedge along the edge (the barrier keeps you on).
+		for (int x = -RADIUS; x <= RADIUS; x++) {
+			for (int z = -RADIUS; z <= RADIUS; z++) {
+				double r = Math.sqrt(x * x + z * z);
+				if (r > RADIUS - 1.5 && r <= RADIUS - 0.5) {
+					set(level, x, FLOOR + 1, z, Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState()
+							.setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+				}
+			}
+		}
+		// The ruby fountain where you arrive.
+		fountain(level);
+		// Paths: from round the fountain to each gate.
+		path(level, -3, -3, RUBY_X, PORTAL_Z + 2, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.RED).defaultBlockState());
+		path(level, 3, -3, HORDE_X, PORTAL_Z + 2, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.LIME).defaultBlockState());
+		for (int z = PORTAL_Z + 2; z <= -5; z++) {
 			set(level, 0, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
+			set(level, -1, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
 		}
-		set(level, 0, FLOOR, SPAWN_Z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.WHITE).defaultBlockState());
-		arch(level, RUBY_X, Blocks.RED_NETHER_BRICKS.defaultBlockState(), ruby, ModBlocks.RUBY_PORTAL.defaultBlockState());
-		arch(level, HORDE_X, Blocks.MOSSY_STONE_BRICKS.defaultBlockState(), Blocks.VERDANT_FROGLIGHT.defaultBlockState(),
-				ModBlocks.HORDE_PORTAL.defaultBlockState());
-		arch(level, RIFT_X, Blocks.CRYING_OBSIDIAN.defaultBlockState(), ruby, ModBlocks.RIFT_PORTAL.defaultBlockState());
-		// Party Games: at the back, behind where you arrive, on a purple path.
-		for (int z = SPAWN_Z + 1; z <= PARTY_Z - 1; z++) {
+		for (int z = SPAWN_Z + 1; z <= PARTY_Z - 2; z++) {
 			set(level, 0, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.PURPLE).defaultBlockState());
+			set(level, -1, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.PURPLE).defaultBlockState());
 		}
-		arch(level, 0, PARTY_Z, Blocks.PURPUR_BLOCK.defaultBlockState(), Blocks.PEARLESCENT_FROGLIGHT.defaultBlockState(),
+		// The four gates, each in its own style.
+		gate(level, RUBY_X, PORTAL_Z, Blocks.RED_NETHER_BRICKS.defaultBlockState(), ruby, Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.RED)
+				.defaultBlockState(), Blocks.LANTERN.defaultBlockState(), ModBlocks.RUBY_PORTAL.defaultBlockState());
+		gate(level, RIFT_X, PORTAL_Z, Blocks.CRYING_OBSIDIAN.defaultBlockState(), Blocks.AMETHYST_BLOCK.defaultBlockState(),
+				Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState(), Blocks.SOUL_LANTERN.defaultBlockState(),
+				ModBlocks.RIFT_PORTAL.defaultBlockState());
+		gate(level, HORDE_X, PORTAL_Z, Blocks.MOSSY_STONE_BRICKS.defaultBlockState(), Blocks.VERDANT_FROGLIGHT.defaultBlockState(),
+				Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.LIME).defaultBlockState(), Blocks.LANTERN.defaultBlockState(),
+				ModBlocks.HORDE_PORTAL.defaultBlockState());
+		gate(level, 0, PARTY_Z, Blocks.PURPUR_BLOCK.defaultBlockState(), Blocks.PEARLESCENT_FROGLIGHT.defaultBlockState(),
+				Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.PURPLE).defaultBlockState(), Blocks.SOUL_LANTERN.defaultBlockState(),
 				ModBlocks.PARTY_PORTAL.defaultBlockState());
-		// Lamp posts around the plaza.
-		for (int[] p : new int[][] {{-15, 6}, {15, 6}, {-16, -6}, {16, -6}, {-6, 14}, {6, 14}}) {
+		// The garden: cherry trees, flowers, lanterns.
+		for (int[] t : new int[][] {{-15, -6}, {15, -6}, {-14, 8}, {14, 8}, {-7, 16}, {7, 16}, {-17, 2}, {17, 2}}) {
+			cherry(level, t[0], t[1], 4 + Math.abs(t[0] * 3 + t[1]) % 2);
+		}
+		java.util.Random rng = new java.util.Random(7);
+		BlockState[] flowers = {Blocks.POPPY.defaultBlockState(), Blocks.CORNFLOWER.defaultBlockState(), Blocks.ALLIUM.defaultBlockState(),
+				Blocks.AZURE_BLUET.defaultBlockState(), Blocks.OXEYE_DAISY.defaultBlockState(), Blocks.PINK_PETALS.defaultBlockState(),
+				Blocks.SHORT_GRASS.defaultBlockState(), Blocks.SHORT_GRASS.defaultBlockState(), Blocks.LILY_OF_THE_VALLEY.defaultBlockState()};
+		for (int x = -RADIUS; x <= RADIUS; x++) {
+			for (int z = -RADIUS; z <= RADIUS; z++) {
+				double r = Math.sqrt(x * x + z * z);
+				if (r >= GARDEN_R + 0.5 && r < RADIUS - 1.5 && rng.nextFloat() < 0.35F && level.getBlockState(new BlockPos(x, FLOOR, z)).is(Blocks.GRASS_BLOCK)
+						&& level.getBlockState(new BlockPos(x, FLOOR + 1, z)).isAir()) {
+					set(level, x, FLOOR + 1, z, flowers[rng.nextInt(flowers.length)]);
+				}
+			}
+		}
+		for (int[] p : new int[][] {{-11, -2}, {11, -2}, {-10, 9}, {10, 9}, {-4, 12}, {4, 12}}) {
 			for (int y = 1; y <= 3; y++) {
 				set(level, p[0], FLOOR + y, p[1], Blocks.DARK_OAK_FENCE.defaultBlockState());
 			}
 			set(level, p[0], FLOOR + 4, p[1], Blocks.LANTERN.defaultBlockState());
 		}
+		// Two waterfalls spilling off the island's edge.
+		for (int[] w : new int[][] {{-19, 6}, {19, 6}}) {
+			set(level, w[0], FLOOR, w[1], Blocks.WATER.defaultBlockState());
+			set(level, w[0], FLOOR, w[1] + 1, Blocks.WATER.defaultBlockState());
+		}
+		// Little islands floating round about.
+		islet(level, -32, FLOOR - 6, -10, 5);
+		islet(level, 30, FLOOR + 3, -18, 4);
+		islet(level, 34, FLOOR - 9, 14, 6);
+		islet(level, -28, FLOOR + 5, 22, 4);
+		islet(level, 4, FLOOR - 12, -36, 5);
+		islet(level, -6, FLOOR + 8, 36, 3);
+	}
+
+	/** The plaza's inner circle: stone to here, the garden beyond. */
+	private static final int GARDEN_R = 14;
+
+	/** A round ruby fountain: a quartz rim, water, and a ruby spire with a crystal on top. */
+	private static void fountain(ServerLevel level) {
+		for (int x = -4; x <= 4; x++) {
+			for (int z = -4; z <= 4; z++) {
+				double r = Math.sqrt(x * x + z * z);
+				if (r < 3.0) {
+					set(level, x, FLOOR, z, Blocks.WATER.defaultBlockState());
+					set(level, x, FLOOR - 1, z, Blocks.QUARTZ_BRICKS.defaultBlockState());
+				} else if (r < 3.9) {
+					set(level, x, FLOOR, z, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+					set(level, x, FLOOR + 1, z, Blocks.QUARTZ_SLAB.defaultBlockState());
+				}
+			}
+		}
+		for (int y = 0; y <= 1; y++) {
+			set(level, 0, FLOOR + y, 0, y == 0 ? Blocks.QUARTZ_PILLAR.defaultBlockState() : ModBlocks.RUBY_BLOCK.defaultBlockState());
+		}
+		set(level, 0, FLOOR + 2, 0, Blocks.AMETHYST_CLUSTER.defaultBlockState());
+		for (int[] o : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+			set(level, o[0], FLOOR + 1, o[1], Blocks.SEA_LANTERN.defaultBlockState());
+		}
+	}
+
+	/** A cherry tree: a short trunk and a round pink crown. */
+	private static void cherry(ServerLevel level, int x, int z, int height) {
+		for (int y = 1; y <= height; y++) {
+			set(level, x, FLOOR + y, z, Blocks.CHERRY_LOG.defaultBlockState());
+		}
+		BlockState leaves = Blocks.CHERRY_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+		for (int dx = -3; dx <= 3; dx++) {
+			for (int dy = -1; dy <= 2; dy++) {
+				for (int dz = -3; dz <= 3; dz++) {
+					double d = Math.sqrt(dx * dx + dy * dy * 2.2 + dz * dz);
+					if (d < 3.2 && !(dx == 0 && dz == 0 && dy < 1) && (dx * 31 + dz * 17 + dy * 7 & 7) != 0) {
+						BlockPos at = new BlockPos(x + dx, FLOOR + height + dy, z + dz);
+						if (level.getBlockState(at).isAir()) {
+							set(level, at.getX(), at.getY(), at.getZ(), leaves);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/** A small floating island with a little cherry tree. */
+	private static void islet(ServerLevel level, int cx, int cy, int cz, int radius) {
+		for (int x = -radius; x <= radius; x++) {
+			for (int z = -radius; z <= radius; z++) {
+				double r = Math.sqrt(x * x + z * z);
+				if (r > radius + 0.3) {
+					continue;
+				}
+				set(level, cx + x, cy, cz + z, Blocks.GRASS_BLOCK.defaultBlockState());
+				for (int d = 1; d <= radius; d++) {
+					if (r < radius - d * 1.1) {
+						set(level, cx + x, cy - d, cz + z, d == 1 ? Blocks.DIRT.defaultBlockState() : Blocks.STONE.defaultBlockState());
+					}
+				}
+			}
+		}
+		for (int y = 1; y <= 3; y++) {
+			set(level, cx, cy + y, cz, Blocks.CHERRY_LOG.defaultBlockState());
+		}
+		BlockState leaves = Blocks.CHERRY_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dz = -2; dz <= 2; dz++) {
+				for (int dy = 0; dy <= 1; dy++) {
+					if (Math.abs(dx) + Math.abs(dz) + dy < 4) {
+						set(level, cx + dx, cy + 3 + dy, cz + dz, leaves);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * A grand gate round a portal: the arch, tall pillars either side crowned with glowing
+	 * blocks, a pointed crown over the top, glass windows in its colour, and a brazier at each foot.
+	 */
+	private static void gate(ServerLevel level, int cx, int z, BlockState stone, BlockState glow, BlockState glass, BlockState fire, BlockState portal) {
+		arch(level, cx, z, stone, glow, portal);
+		for (int side : new int[] {-1, 1}) {
+			int px = cx + side * 4;
+			for (int y = 0; y <= 9; y++) {
+				set(level, px, FLOOR + y, z, y == 9 ? glow : y == 4 || y == 7 ? glass : stone);
+			}
+			set(level, px, FLOOR + 10, z, Blocks.END_ROD.defaultBlockState());
+			// A lantern on a pedestal at its foot, in front.
+			set(level, px, FLOOR + 1, z + (z < 0 ? 2 : -2), stone);
+			set(level, px, FLOOR + 2, z + (z < 0 ? 2 : -2), fire);
+		}
+		// The crown: stepping up to a point over the arch.
+		for (int x = cx - 3; x <= cx + 3; x++) {
+			int h = 3 - Math.abs(x - cx);
+			for (int y = 8; y <= 7 + h; y++) {
+				set(level, x, FLOOR + y, z, y == 7 + h ? glow : stone);
+			}
+		}
+		set(level, cx, FLOOR + 11, z, glass);
 	}
 
 	private static void path(ServerLevel level, int x0, int z0, int x1, int z1, BlockState state) {
@@ -667,15 +835,15 @@ public final class Hub {
 	}
 
 	private static final List<Label> LABELS = List.of(
-			new Label("ruby_title", RUBY_X + 0.5, FLOOR + 10.4, PORTAL_Z + 0.5, 3.6F),
-			new Label("ruby_info", RUBY_X + 0.5, FLOOR + 8.1, PORTAL_Z + 0.5, 2.0F),
-			new Label("rift_title", RIFT_X + 0.5, FLOOR + 10.4, PORTAL_Z + 0.5, 3.6F),
-			new Label("rift_info", RIFT_X + 0.5, FLOOR + 8.1, PORTAL_Z + 0.5, 2.0F),
-			new Label("horde_title", HORDE_X + 0.5, FLOOR + 10.4, PORTAL_Z + 0.5, 3.6F),
-			new Label("horde_info", HORDE_X + 0.5, FLOOR + 8.1, PORTAL_Z + 0.5, 2.0F),
-			new Label("party_title", 0.5, FLOOR + 10.4, PARTY_Z + 0.5, 3.0F),
-			new Label("party_info", 0.5, FLOOR + 8.1, PARTY_Z + 0.5, 1.8F),
-			new Label("welcome", 0.5, FLOOR + 1.1, 0.5, 0.9F),
+			new Label("ruby_title", RUBY_X + 0.5, FLOOR + 13.2, PORTAL_Z + 1.0, 3.6F),
+			new Label("ruby_info", RUBY_X + 0.5, FLOOR + 3.0, PORTAL_Z + 2.6, 1.4F),
+			new Label("rift_title", RIFT_X + 0.5, FLOOR + 13.2, PORTAL_Z + 1.0, 3.6F),
+			new Label("rift_info", RIFT_X + 0.5, FLOOR + 3.0, PORTAL_Z + 2.6, 1.4F),
+			new Label("horde_title", HORDE_X + 0.5, FLOOR + 13.2, PORTAL_Z + 1.0, 3.6F),
+			new Label("horde_info", HORDE_X + 0.5, FLOOR + 3.0, PORTAL_Z + 2.6, 1.4F),
+			new Label("party_title", 0.5, FLOOR + 13.2, PARTY_Z, 3.0F),
+			new Label("party_info", 0.5, FLOOR + 3.0, PARTY_Z - 2.1, 1.4F),
+			new Label("welcome", 0.5, FLOOR + 3.6, 0.5, 0.9F),
 			new Label("board_party", -9.0, FLOOR + 1.0, 5.5, 1.6F),
 			new Label("board_records", 10.0, FLOOR + 1.0, 5.5, 1.6F));
 

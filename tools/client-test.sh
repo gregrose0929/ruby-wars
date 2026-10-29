@@ -16,11 +16,12 @@ if [ ! -d run/saves/autotest ]; then
 	echo "Create run/saves/autotest first (copy any test world there)."
 	exit 1
 fi
-# Skip the first-launch accessibility screen and keep running when the window loses focus.
+# Skip the first-launch accessibility screen, keep running when the window loses focus, and test in silence.
 if [ -f run/options.txt ]; then
 	sed -i 's/onboardAccessibility:true/onboardAccessibility:false/; s/pauseOnLostFocus:true/pauseOnLostFocus:false/' run/options.txt
+	sed -i -E 's/^(soundCategory_[a-z]+):.*/\1:0.0/' run/options.txt
 else
-	printf 'onboardAccessibility:false\npauseOnLostFocus:false\n' > run/options.txt
+	printf 'onboardAccessibility:false\npauseOnLostFocus:false\nsoundCategory_master:0.0\n' > run/options.txt
 fi
 rm -f run/screenshots/autotest-*.png
 RUBYMOD_AUTOTEST="$MODE" timeout ${CLIENT_TIMEOUT:-900} ./gradlew runClient --no-daemon -q --args="--quickPlaySingleplayer autotest" > run/client-test.log 2>&1 || true

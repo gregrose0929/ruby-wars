@@ -1545,6 +1545,43 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("hubtour")) {
+			// The hub from a few angles (silent: the test client's sound is off).
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "execute as @p run hub");
+			});
+			double[][] views = {
+					{0.5, 1, 8.5, 180, -6}, // where you arrive
+					{0.5, 1, 8.5, 0, -6}, // turning round: the Party Games gate
+					{0.5, 26, 34, 180, 32}, // from above and behind
+					{-26, 14, -2, 250, 18}, // from the side
+					{0.5, 2, -6, 180, -12}, // up close: the Rift gate
+					{-9, 2, -6, 180, -12}, // up close: the Ruby Wars gate
+			};
+			then(100, mc -> {});
+			for (int i = 0; i < views.length; i++) {
+				double[] v = views[i];
+				int n = i;
+				then(5, mc -> onServer(mc, server -> {
+					var me = me(server);
+					me.setNoGravity(true);
+					me.teleportTo(v[0], dev.rubymod.game.Hub.FLOOR + v[1], v[2]);
+					me.setYRot((float) v[3]);
+					me.setXRot((float) v[4]);
+				}));
+				then(6, mc -> {
+					mc.player.setYRot((float) v[3]);
+					mc.player.setXRot((float) v[4]);
+				});
+				then(30, mc -> shot(mc, "hub-view-" + n));
+			}
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("safety")) {
 			// The map's rooms (no lanes), shooting your own companion, and falling into lava.
 			then(0, mc -> {
