@@ -62,7 +62,7 @@ public final class GameEvents {
 	public static void register() {
 		// No hostile mobs (config: hostileMobs); raid soldiers, guards and animals are unaffected.
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-			if (Cosmetics.strayHat(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world)) {
+			if (Cosmetics.strayHat(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world) || dev.rubymod.game.convoy.Convoy.stale(entity)) {
 				entity.discard();
 				return;
 			}
@@ -78,7 +78,14 @@ public final class GameEvents {
 				entity.discard();
 				return;
 			}
+			// Nothing drops on the convoy's road either.
+			if ((entity instanceof net.minecraft.world.entity.item.ItemEntity || entity instanceof net.minecraft.world.entity.ExperienceOrb)
+					&& dev.rubymod.game.convoy.Convoy.protects(world, entity.blockPosition())) {
+				entity.discard();
+				return;
+			}
 			if (!GameConfig.get().hostileMobs && entity instanceof net.minecraft.world.entity.monster.Enemy && !entity.entityTags().contains("rubymod_horde") && !entity.entityTags().contains(dev.rubymod.game.rift.Rift.TAG)
+					&& !entity.entityTags().contains(dev.rubymod.game.convoy.Convoy.TAG)
 					&& entity.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER) {
 				entity.discard();
 			}
@@ -97,6 +104,8 @@ public final class GameEvents {
 			Duels.reset();
 			Horde.reset();
 			dev.rubymod.game.rift.Rift.reset();
+			dev.rubymod.game.convoy.Convoy.reset();
+			dev.rubymod.game.convoy.Convoy.cleanup(server);
 			Horde.load(server);
 			Arenas.load(server);
 			dev.rubymod.game.party.PartyGames.reset(server);
@@ -143,6 +152,14 @@ public final class GameEvents {
 				riftErrors++;
 				if (riftErrors % 200 == 1) {
 					dev.rubymod.RubyMod.LOGGER.error("Ruby Rift hit an error (skipping the tick)", e);
+				}
+			}
+			try {
+				dev.rubymod.game.convoy.Convoy.tick(server);
+			} catch (RuntimeException e) {
+				convoyErrors++;
+				if (convoyErrors % 200 == 1) {
+					dev.rubymod.RubyMod.LOGGER.error("Ruby Convoy hit an error (skipping the tick)", e);
 				}
 			}
 			try {
@@ -198,6 +215,7 @@ public final class GameEvents {
 			Duels.onLeave(server, handler.getPlayer());
 			Horde.onLeave(server, handler.getPlayer());
 			dev.rubymod.game.rift.Rift.onDisconnect(handler.getPlayer());
+			dev.rubymod.game.convoy.Convoy.onDisconnect(handler.getPlayer());
 			dev.rubymod.game.party.PartyGames.onDisconnect(handler.getPlayer());
 			VersionCheck.onLeave(handler.getPlayer());
 			Jetpacks.forget(handler.getPlayer().getUUID());
@@ -239,6 +257,7 @@ public final class GameEvents {
 			}
 			Net.send(context.player(), new dev.rubymod.net.MorePayloads.ProfileSync(Stats.profileLines(context.player()), Cosmetics.lines(context.player())));
 		});
+		dev.rubymod.game.convoy.Convoy.register();
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.RiftChoice.TYPE, (payload, context) ->
 				dev.rubymod.game.rift.RiftChoices.handle(context.player(), payload.kind(), payload.id()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordeBuy.TYPE, (payload, context) -> {
@@ -336,6 +355,7 @@ public final class GameEvents {
 				&& (!(entity instanceof ServerPlayer runner) || dev.rubymod.game.rift.RelicEffects.allowDamage(runner, source, amount))
 				&& !dev.rubymod.game.rift.Rift.shielded(entity, source, amount)
 				&& !(source.getEntity() instanceof ServerPlayer && dev.rubymod.game.rift.RelicEffects.isAlly(entity))
+				&& dev.rubymod.game.convoy.Convoy.allowDamage(entity, source)
 				&& !(source.is(net.minecraft.world.damagesource.DamageTypes.IN_WALL) && entity instanceof ServerPlayer p
 						&& dev.rubymod.game.party.PartyGames.of(p) != null));
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamage, damageTaken, blocked) -> {
@@ -353,6 +373,11 @@ public final class GameEvents {
 						dev.rubymod.game.rift.RiftFx.damageNumber(attacker, entity, damageTaken, color);
 						dev.rubymod.game.rift.RelicEffects.onHit(attacker, entity, damageTaken);
 						dev.rubymod.game.rift.Rift.recordDamage(attacker, entity, damageTaken);
+					}
+					if (source.getEntity() instanceof ServerPlayer attacker && attacker != entity && dev.rubymod.game.convoy.Convoy.playing(attacker)
+							&& dev.rubymod.game.convoy.Convoy.isEnemy(entity)) {
+						dev.rubymod.game.rift.RiftFx.damageNumber(attacker, entity, damageTaken,
+								source.is(dev.rubymod.registry.ModDamage.HEADSHOT) ? 0xFFFFD040 : 0xFFFFFFFF);
 					}
 					if (entity instanceof ServerPlayer victim && dev.rubymod.game.rift.Rift.playing(victim)) {
 						dev.rubymod.game.rift.RelicEffects.afterDamage(victim);
@@ -377,7 +402,8 @@ public final class GameEvents {
 					Horde.hiccup(player.level().getServer(), e);
 					hordeDeath = Horde.playing(player);
 				}
-				if (hordeDeath || dev.rubymod.game.rift.Rift.onDeath(player, source) || dev.rubymod.game.party.PartyGames.onDeath(player, source)
+				if (hordeDeath || dev.rubymod.game.rift.Rift.onDeath(player, source) || dev.rubymod.game.convoy.Convoy.onDeath(player, source)
+						|| dev.rubymod.game.party.PartyGames.onDeath(player, source)
 						|| Duels.onDeath(player, source)) {
 					return false;
 				}
@@ -397,6 +423,7 @@ public final class GameEvents {
 						dev.rubymod.game.rift.RelicEffects.onKill(killer, entity);
 					}
 					dev.rubymod.game.rift.Rift.onMobDeath(entity, source);
+					dev.rubymod.game.convoy.Convoy.onMobDeath(entity, source);
 					dev.rubymod.game.rift.RelicCombos.onDeath(entity);
 					dev.rubymod.game.rift.RiftEvents.onDeath(entity, source);
 				} catch (RuntimeException e) {
@@ -554,6 +581,7 @@ public final class GameEvents {
 	}
 
 	private static int riftErrors;
+	private static int convoyErrors;
 
 	/** Who was standing in a base last second (build phase: safe inside, fair game outside). */
 	private static final java.util.Map<java.util.UUID, Boolean> IN_BASE = new java.util.HashMap<>();

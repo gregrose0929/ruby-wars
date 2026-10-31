@@ -126,7 +126,8 @@ public class RubyModClient implements ClientModInitializer {
 				}
 			}
 			while (researchKey.consumeClick()) {
-				if (client.player != null && client.gui.screen() == null && !dev.rubymod.client.rift.RiftClient.reopen()) {
+				if (client.player != null && client.gui.screen() == null && !dev.rubymod.client.rift.RiftClient.reopen()
+						&& !dev.rubymod.client.convoy.ConvoyClient.reopen()) {
 					client.gui.setScreen(new ResearchScreen());
 				}
 			}
@@ -278,6 +279,8 @@ public class RubyModClient implements ClientModInitializer {
 		HudElementRegistry.addLast(RubyMod.id("launcher_seeker"), new LauncherSeeker());
 		HudElementRegistry.addLast(RubyMod.id("rift"), new dev.rubymod.client.rift.RiftClient.Hud());
 		dev.rubymod.client.rift.RiftClient.register();
+		HudElementRegistry.addLast(RubyMod.id("convoy"), new dev.rubymod.client.convoy.ConvoyClient.Hud());
+		dev.rubymod.client.convoy.ConvoyClient.register();
 		// In a vehicle the vehicle HUD replaces the hotbar, hearts, hunger, armor, air and XP.
 		for (var element : java.util.List.of(VanillaHudElements.HOTBAR, VanillaHudElements.HEALTH_BAR, VanillaHudElements.FOOD_BAR,
 				VanillaHudElements.ARMOR_BAR, VanillaHudElements.AIR_BAR, VanillaHudElements.EXPERIENCE_LEVEL, VanillaHudElements.INFO_BAR,

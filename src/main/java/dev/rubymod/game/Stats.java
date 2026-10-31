@@ -50,6 +50,11 @@ public final class Stats {
 		public int riftRuns;
 		public int riftBestFloor;
 		public int riftWins;
+		/** Ruby Convoy: jobs run, rubies delivered, the furthest stage reached (1-5), kills. */
+		public int convoyRuns;
+		public int convoyWins;
+		public int convoyBest;
+		public int convoyKills;
 		public int riftShards;
 		public Set<String> riftUnlocks = new HashSet<>();
 		/** The Ruby Rift Codex: everything found ("relic:id", "duo:id", "legend:name", "boss:ID", "charm:ID"). */
@@ -201,6 +206,17 @@ public final class Stats {
 		changed(id);
 	}
 
+	public static void convoy(UUID id, String name, int stage, boolean delivered, int kills) {
+		Record r = get(id, name);
+		r.convoyRuns++;
+		r.convoyBest = Math.max(r.convoyBest, stage);
+		r.convoyKills += kills;
+		if (delivered) {
+			r.convoyWins++;
+		}
+		changed(id);
+	}
+
 	public static void skyRace(UUID id, String name, int ticks) {
 		Record r = get(id, name);
 		if (r.skyBest == 0 || ticks < r.skyBest) {
@@ -255,6 +271,7 @@ public final class Stats {
 		lines.add("Horde best|" + (r.hordeBestWave > 0 ? "wave " + r.hordeBestWave : "-") + " (" + r.hordeGames + " games, " + r.hordeKills + " kills, "
 				+ r.hordeRevives + " revives)");
 		lines.add("Ruby Rift|" + (r.riftRuns == 0 ? "-" : r.riftWins + " wins, best floor " + r.riftBestFloor + " (" + r.riftRuns + " runs)"));
+		lines.add("Ruby Convoy|" + (r.convoyRuns == 0 ? "-" : r.convoyWins + " delivered, best stage " + r.convoyBest + "/5 (" + r.convoyRuns + " runs)"));
 		lines.add("Sky Race best|" + (r.skyBest > 0 ? raceTime(r.skyBest) : "-"));
 		lines.add("Duels won|" + r.duelsWon);
 		lines.add("Ruby Wars seasons won|" + r.seasonsWon);

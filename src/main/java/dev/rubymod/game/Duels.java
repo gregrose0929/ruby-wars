@@ -279,7 +279,7 @@ public final class Duels {
 		if (duelOf(player.getUUID()) != null) {
 			return you ? "You're already in a duel. /duel leave to quit it." : who + " is already in a duel.";
 		}
-		if (Horde.playing(player) || dev.rubymod.game.party.PartyGames.of(player) != null) {
+		if (Horde.playing(player) || dev.rubymod.game.party.PartyGames.of(player) != null || dev.rubymod.game.convoy.Convoy.playing(player)) {
 			return you ? "Leave your game first (H)." : who + " is in another game.";
 		}
 		if (Rules.isEliminated(player.getUUID()) || player.isSpectator()) {

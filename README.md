@@ -39,9 +39,13 @@ On the server, everyone arrives in **the hub**: a floating plaza with a portal f
 game. Walk into one, press **H** anywhere for the game picker, or type `/hub` and
 `/play rubywars|horde`.
 
+Four gates stand along the front of the plaza, left to right:
+
 - **Ruby Wars** (red portal) is the main game: the season.
+- **Ruby Rift** (pink portal): the co-op roguelike (see below).
+- **Ruby Convoy** (orange portal): the co-op escort mission (see below).
 - **Co-op Horde** (green portal) is a team game you can play any time (see below).
-- **Party Games** (purple portal, in the middle) opens the game picker with 9 quick games.
+- **Party Games** (purple portal, behind where you arrive) opens the game picker with the quick games.
 
 Leaving Ruby Wars saves where you were and everything you carry (in
 `world/rubywars/hub/`); going back puts it all back, so the hub and Horde never touch
@@ -145,6 +149,49 @@ every room you pick a relic that changes how you play for the rest of the run.
   Golem). **Heat** 1-5 makes runs harder for more shards (win at a Heat to unlock the
   next). The **Daily Rift** is the same run for everyone today, with a leaderboard
   (on the hub's Records board too).
+
+## Ruby Convoy
+
+A co-op escort mission for 1-4 players (the orange portal, the RUBY CONVOY card in the
+game picker, or `/play convoy`). The Ruby Truck leaves the Ruby Mine loaded with rubies;
+get it to the vault behind the Iron Fortress through five stages of hostile country.
+The road is built fresh for every run: its bends, trees, houses and boulders are never
+in the same place twice.
+
+- **Pick your job** first: Gunner (rifle and shotgun, takes less damage), Demolition
+  (rocket launcher and lots of grenades), Marksman (sniper and revolver) or Mechanic
+  (Ruby Blaster, repairs three times as fast). Everyone gets iron armor; ammo never runs out.
+- **The truck** only drives while someone is close to it, and stops while enemies crowd
+  it (CONTESTED on the HUD). It never rolls back. Crouch beside it to repair it.
+  Right-click the top of it to ride: the roof gun (you hit harder and take less) or the
+  cargo bed. Its ruby load glows through walls, and a marker at the top of the screen
+  points to it when you're away.
+- **The Iron Legion** comes from up the road and the sides, never from behind, out of
+  red smoke a second before it arrives. Sappers (TNT on their heads) run at the truck
+  and blow up; Brutes ram it; Rocketeers aim a red laser at it before they fire (shoot
+  them first); gunmen take potshots at it. Enemy tanks, the gunship and the boss mark a
+  red circle where each shell or rocket is about to land.
+- **The stages**, each with its own set piece:
+  1. Greenwood Road: fallen logs across the road. Shoot them or blow them up.
+  2. Ember Town: a burning town with gunmen in the windows; Legion tanks roll into the square.
+  3. Red Canyon: a gunship attacks (everyone gets a Skyhammer) and the bridge is out:
+     engineers build a new one while someone guards the truck.
+  4. Frost Pass: snipers on the ridges, boulders rolling down onto red circles, then an
+     avalanche buries the road (shoot the snow to dig through).
+  5. Iron Fortress: the **Iron Dreadnought**, a giant tank. It shells the truck, sprays
+     its machine guns, lobs mortars and calls reinforcements; under half health its
+     armor cracks. Destroy it to blow the vault gate open.
+- **Depots** between the stages: the truck parks, gets repaired, grenades are topped up,
+  fresh vehicles wait on the pads (jeeps at the mine, tanks for the town, a helicopter
+  at the canyon and before the fortress), and everyone picks an upgrade for the convoy:
+  Armor Plating, Roof Minigun, Rocket Pods, Tesla Coil, Turbo Engine, Spiked Ram, Field
+  Hospital, Energy Shield, Repair Drone, Air Support, Spare Truck, Jump Jets or Heavy
+  Weapons (J reopens the cards).
+- **Supply caches**: one glowing barrel per stage, off the road. Stand on it to open it.
+- **Going down**: you're back on the truck 8 seconds later. If the truck is wrecked a
+  spare one (3 to start) restarts the stage from its depot; run out and the job fails.
+  Falling into the gorge or wandering off the map puts you back by the truck.
+- Deliveries and the furthest stage reached go on your profile and the hub's records board.
 
 ## Profile, cosmetics and leaderboards
 

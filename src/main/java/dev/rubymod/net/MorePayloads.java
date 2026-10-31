@@ -426,7 +426,60 @@ public final class MorePayloads {
 		}
 	}
 
+	/**
+	 * Server -> client: the Ruby Convoy HUD. Empty header: no HUD. nums: progress (0-1), truck hp, max hp, shield, status
+	 * (0 moving, 1 nobody near, 2 contested, 3 blocked, 4 depot, 5 getting ready, 6 wrecked, 7 delivered, 8 failed),
+	 * objective bar (-1: none), truck x, y, z, spare trucks, seconds left (-1: none), stage (0-4).
+	 * team: "name|hp|max|down|role".
+	 */
+	public record ConvoyHud(String header, List<Float> nums, String objective, List<String> team) implements CustomPacketPayload {
+		public static final Type<ConvoyHud> TYPE = new Type<>(RubyMod.id("convoy_hud"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ConvoyHud> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ConvoyHud::header,
+				ByteBufCodecs.FLOAT.apply(ByteBufCodecs.list()), ConvoyHud::nums,
+				ByteBufCodecs.STRING_UTF8, ConvoyHud::objective,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), ConvoyHud::team,
+				ConvoyHud::new);
+
+		@Override
+		public Type<ConvoyHud> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: cards to pick one of ("role" or "upgrade"; "close" shuts the screen). Cards: "id|title|about|icon|color". */
+	public record ConvoyCards(String kind, String title, List<String> cards) implements CustomPacketPayload {
+		public static final Type<ConvoyCards> TYPE = new Type<>(RubyMod.id("convoy_cards"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ConvoyCards> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ConvoyCards::kind,
+				ByteBufCodecs.STRING_UTF8, ConvoyCards::title,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), ConvoyCards::cards,
+				ConvoyCards::new);
+
+		@Override
+		public Type<ConvoyCards> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the card picked ("role" or "upgrade", and its id). */
+	public record ConvoyPick(String kind, String id) implements CustomPacketPayload {
+		public static final Type<ConvoyPick> TYPE = new Type<>(RubyMod.id("convoy_pick"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ConvoyPick> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ConvoyPick::kind,
+				ByteBufCodecs.STRING_UTF8, ConvoyPick::id,
+				ConvoyPick::new);
+
+		@Override
+		public Type<ConvoyPick> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(ConvoyHud.TYPE, ConvoyHud.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(ConvoyCards.TYPE, ConvoyCards.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ConvoyPick.TYPE, ConvoyPick.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Hello.TYPE, Hello.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(JetpackThrust.TYPE, JetpackThrust.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DeathInfo.TYPE, DeathInfo.CODEC);

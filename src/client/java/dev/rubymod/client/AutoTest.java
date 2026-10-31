@@ -85,6 +85,43 @@ public final class AutoTest {
 		}
 	}
 
+	/** Ruby Convoy tests: move the truck (and the player) to Z, then ride it again. */
+	private static void convoyGoto(String z) {
+		then(5, mc -> onServer(mc, server -> {
+			var me = me(server);
+			me.setNoGravity(false);
+			me.stopRiding();
+			dev.rubymod.game.convoy.Convoy.testSkip(server, "goto:" + z);
+			dev.rubymod.game.convoy.Convoy.testSkip(server, "hp:5000");
+		}));
+		then(30, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "ride")));
+	}
+
+	/** Ruby Convoy tests: hop off and look at the truck from (dx, dy, dz) off it. */
+	private static void convoyView(double dx, double dy, double dz) {
+		then(5, mc -> onServer(mc, server -> {
+			var me = me(server);
+			var t = dev.rubymod.game.convoy.Convoy.truckPos();
+			if (t == null) {
+				return;
+			}
+			me.stopRiding();
+			me.setNoGravity(true);
+			me.teleportTo(t.x + dx, t.y + dy, t.z + dz);
+		}));
+		then(8, mc -> {
+			var h = dev.rubymod.client.convoy.ConvoyClient.hud;
+			if (h == null || h.nums().size() < 12) {
+				return;
+			}
+			var t = new net.minecraft.world.phys.Vec3(h.nums().get(6), h.nums().get(7) + 1, h.nums().get(8));
+			var e = mc.player.getEyePosition();
+			var to = t.subtract(e);
+			mc.player.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
+			mc.player.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
+		});
+	}
+
 	private static void log(String message, Object... args) {
 		RubyMod.LOGGER.info("[autotest] " + message, args);
 	}
@@ -1580,6 +1617,132 @@ public final class AutoTest {
 			then(10, mc -> shot(mc, "fkey-hud"));
 			then(400, mc -> net.minecraft.client.KeyMapping.click(dev.rubymod.client.RubyModClient.autopilotKey.getDefaultKey()));
 			then(10, mc -> onServer(mc, server -> log("after Z (once F's cooldown is over): ability wait {}", dev.rubymod.game.rift.Rift.abilityWait(me(server)))));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("convoy")) {
+			// Ruby Convoy from the mine to the vault: the job cards, each stage's set piece, a depot, the Dreadnought, the delivery.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+			});
+			then(20, mc -> command(mc, "execute as @p run play convoy"));
+			then(80, mc -> shot(mc, "convoy-jobs"));
+			then(5, mc -> {
+				if (mc.gui.screen() instanceof dev.rubymod.client.convoy.ConvoyScreen s) {
+					s.pick(1);
+				}
+			});
+			for (int i = 0; i < 12; i++) {
+				then(40, mc -> log("waiting: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			}
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 4, false, false));
+				me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, -1, 2, false, false));
+				log("ready {} | {} | {}", dev.rubymod.game.convoy.Convoy.ready(), dev.rubymod.game.convoy.Convoy.debugState(), inventorySummary(mc));
+			}));
+			convoyView(-7, 3, 10);
+			then(30, mc -> shot(mc, "convoy-mine"));
+			then(5, mc -> onServer(mc, server -> {
+				dev.rubymod.game.convoy.Convoy.testSkip(server, "start");
+			}));
+			then(40, mc -> onServer(mc, server -> {
+				dev.rubymod.game.convoy.Convoy.testSkip(server, "ride");
+				dev.rubymod.game.convoy.Convoy.testSkip(server, "hp:5000");
+			}));
+			then(200, mc -> {
+				log("rolling: {} | riding {}", dev.rubymod.game.convoy.Convoy.debugState(), mc.player.getVehicle());
+				mc.player.setYRot(0);
+				mc.player.setXRot(10);
+			});
+			then(10, mc -> shot(mc, "convoy-ride"));
+			// Greenwood Road: the fallen logs.
+			convoyGoto("" + (dev.rubymod.game.convoy.ConvoyRouteView.logs() - 6));
+			then(120, mc -> log("logs: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyView(9, 4, 2);
+			then(20, mc -> shot(mc, "convoy-logs"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "logs")));
+			then(20, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "ride")));
+			then(80, mc -> log("after logs: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			// Into Depot 1.
+			convoyGoto("170");
+			then(20, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "clear")));
+			then(300, mc -> log("depot: {} | screen {}", dev.rubymod.game.convoy.Convoy.debugState(), mc.gui.screen()));
+			then(10, mc -> shot(mc, "convoy-depot-cards"));
+			then(5, mc -> {
+				if (mc.gui.screen() instanceof dev.rubymod.client.convoy.ConvoyScreen s) {
+					s.pick(0);
+				}
+			});
+			convoyView(-9, 5, 14);
+			then(20, mc -> shot(mc, "convoy-depot"));
+			then(160, mc -> log("left depot: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			// Ember Town, and its tanks.
+			convoyGoto("" + (dev.rubymod.game.convoy.ConvoyRouteView.start(1) + 40));
+			then(100, mc -> log("town: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyView(-6, 5, -8);
+			then(20, mc -> shot(mc, "convoy-town"));
+			convoyGoto("" + (dev.rubymod.game.convoy.ConvoyRouteView.square() - 24));
+			then(160, mc -> log("tanks: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyView(0, 9, -10);
+			then(20, mc -> shot(mc, "convoy-tanks"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "tanks")));
+			then(60, mc -> log("after tanks: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			// Red Canyon: the gunship and the bridge.
+			convoyGoto("346");
+			then(20, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "clear")));
+			then(300, mc -> log("depot 2: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "pick")));
+			then(140, mc -> log("left depot 2: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyGoto("" + (dev.rubymod.game.convoy.ConvoyRouteView.gap() - 8));
+			then(160, mc -> log("bridge: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyView(10, 6, -6);
+			then(20, mc -> shot(mc, "convoy-bridge"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "bridge")));
+			then(40, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "ride")));
+			then(100, mc -> log("after bridge: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyView(12, 4, 6);
+			then(20, mc -> shot(mc, "convoy-bridge-built"));
+			// Frost Pass: the avalanche.
+			convoyGoto("522");
+			then(20, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "clear")));
+			then(220, mc -> log("depot 3: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "pick")));
+			then(140, mc -> log("left depot 3: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyGoto("" + (dev.rubymod.game.convoy.ConvoyRouteView.snow() - 26));
+			then(200, mc -> log("avalanche: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyView(-8, 5, -6);
+			then(20, mc -> shot(mc, "convoy-avalanche"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "logs")));
+			then(40, mc -> log("dug out: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			// The Iron Fortress and the Dreadnought.
+			convoyGoto("698");
+			then(20, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "clear")));
+			then(280, mc -> log("depot 4: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "pick")));
+			then(140, mc -> log("left depot 4: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyGoto("" + (dev.rubymod.game.convoy.ConvoyRouteView.courtyard() - 4));
+			then(200, mc -> log("boss: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			convoyView(-10, 8, -12);
+			then(20, mc -> shot(mc, "convoy-boss"));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "ride")));
+			then(160, mc -> log("boss fight: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "killboss")));
+			then(120, mc -> log("boss down: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "ride")));
+			then(10, mc -> {
+				mc.player.setYRot(0);
+				mc.player.setXRot(5);
+			});
+			then(20, mc -> shot(mc, "convoy-gate"));
+			for (int i = 0; i < 8; i++) {
+				then(100, mc -> log("to the vault: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+			}
+			then(5, mc -> shot(mc, "convoy-delivered"));
 			then(20, mc -> {
 				log("done");
 				mc.stop();

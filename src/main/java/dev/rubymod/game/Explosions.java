@@ -38,6 +38,7 @@ public final class Explosions {
 
 	public static void explode(ServerLevel level, Entity source, double x, double y, double z, float power, boolean breakBlocks) {
 		level.explode(source, x, y, z, power, breakBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
+		dev.rubymod.game.convoy.Convoy.onBlast(level, x, y, z, power);
 		if (power >= 3.0F) {
 			Vec3 at = new Vec3(x, y, z);
 			shake(level, at, power * 0.9F, (int) (6 + power * 3));

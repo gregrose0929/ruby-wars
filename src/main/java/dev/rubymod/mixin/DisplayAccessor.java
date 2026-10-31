@@ -27,4 +27,7 @@ public interface DisplayAccessor {
 
 	@Invoker("setPosRotInterpolationDuration")
 	void rubymod$setPosRotInterpolationDuration(int ticks);
+
+	@Invoker("setGlowColorOverride")
+	void rubymod$setGlowColorOverride(int rgb);
 }

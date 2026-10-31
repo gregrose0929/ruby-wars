@@ -31,7 +31,9 @@ public class ModeScreen extends Screen {
 			new Game("horde", "CO-OP HORDE", "Build a base together and defend the Ruby Core from waves of monsters. Spend the team's rubies on gear.",
 					"rubymod:arr_rifle", 0xFF3FC85A),
 			new Game("rift", "RUBY RIFT", "Co-op roguelike: fight room to room, pick wild relics after each one, and beat the boss at the bottom.",
-					"minecraft:end_crystal", 0xFFFF3D6E));
+					"minecraft:end_crystal", 0xFFFF3D6E),
+			new Game("convoy", "RUBY CONVOY", "Co-op escort: guard the ruby truck through five stages in tanks, jeeps and a helicopter. Beat the Dreadnought!",
+					"rubymod:tank", 0xFFFF9A30));
 
 	/** The latest info from the server (where you are, a status line per game). */
 	public static MorePayloads.ModeInfo info;
@@ -82,6 +84,7 @@ public class ModeScreen extends Screen {
 			case "rubywars" -> where().equals("RUBY_WARS");
 			case "horde" -> where().equals("HORDE");
 			case "rift" -> where().equals("RIFT");
+			case "convoy" -> where().equals("CONVOY");
 			default -> where().equals("PARTY:" + id.substring(5));
 		};
 	}

@@ -44,6 +44,7 @@ public final class HubCommand {
 		dispatcher.register(play
 				.then(Commands.literal("rubywars").executes(c -> go(c, "rubywars")))
 				.then(Commands.literal("rift").executes(c -> go(c, "rift")))
+				.then(Commands.literal("convoy").executes(c -> go(c, "convoy")))
 				.then(Commands.literal("horde").executes(c -> go(c, "horde"))
 						.then(Commands.literal("easy").executes(c -> go(c, "horde:easy")))
 						.then(Commands.literal("normal").executes(c -> go(c, "horde:normal")))

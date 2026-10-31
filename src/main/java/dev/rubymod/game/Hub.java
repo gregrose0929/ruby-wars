@@ -56,8 +56,8 @@ import net.minecraft.world.phys.AABB;
 
 /**
  * The hub: a floating plaza where everyone arrives when they join the server. In front of
- * you, the three main games side by side: Ruby Wars, the Ruby Rift and Co-op Horde. Behind
- * you, the Party Games portal. Press H anywhere to switch games, or use /hub and /play.
+ * you, the four main games side by side: Ruby Wars, the Ruby Rift, the Ruby Convoy and
+ * Co-op Horde. Behind you, the Party Games portal. Press H anywhere to switch games, or use /hub and /play.
  *
  * Leaving Ruby Wars saves where you were and everything you carried (to
  * world/rubywars/hub/<uuid>.dat); going back puts it all back. The hub and Horde never
@@ -68,18 +68,19 @@ public final class Hub {
 	public static final ResourceKey<Level> HUB = ResourceKey.create(Registries.DIMENSION, RubyMod.id("hub"));
 	/** The plaza's floor level (players stand on FLOOR + 1). */
 	public static final int FLOOR = 100;
-	private static final int RADIUS = 20;
+	private static final int RADIUS = 24;
 	private static final int PORTAL_Z = -14;
 	/** Where you arrive, facing the portals. */
 	private static final int SPAWN_Z = 8;
-	private static final int RUBY_X = -9;
-	private static final int RIFT_X = 0;
-	private static final int HORDE_X = 9;
+	private static final int RUBY_X = -14;
+	private static final int RIFT_X = -5;
+	private static final int CONVOY_X = 5;
+	private static final int HORDE_X = 14;
 	/** The Party Games arch stands at the back of the plaza, behind where you arrive. */
 	private static final int PARTY_Z = 15;
 	private static final String LABEL_TAG = "rubymod_hub_label";
 
-	public enum Where { RUBY_WARS, HUB, HORDE, DUEL, PARTY, RIFT }
+	public enum Where { RUBY_WARS, HUB, HORDE, DUEL, PARTY, RIFT, CONVOY }
 
 	private static boolean built;
 	private static final Map<UUID, Integer> PORTAL_COOLDOWN = new HashMap<>();
@@ -153,6 +154,9 @@ public final class Hub {
 		if (dev.rubymod.game.rift.Rift.playing(player)) {
 			return Where.RIFT;
 		}
+		if (dev.rubymod.game.convoy.Convoy.playing(player)) {
+			return Where.CONVOY;
+		}
 		if (dev.rubymod.game.party.PartyGames.of(player) != null) {
 			return Where.PARTY;
 		}
@@ -203,6 +207,7 @@ public final class Hub {
 			case "rubywars" -> Where.RUBY_WARS;
 			case "horde" -> Where.HORDE;
 			case "rift" -> Where.RIFT;
+			case "convoy" -> Where.CONVOY;
 			case "hub" -> Where.HUB;
 			case "party" -> Where.PARTY;
 			default -> null;
@@ -219,6 +224,7 @@ public final class Hub {
 				case RUBY_WARS -> "You're already in Ruby Wars.";
 				case HORDE -> "You're already in Horde.";
 				case RIFT -> "You're already in the Rift.";
+				case CONVOY -> "You're already on the convoy.";
 				default -> "You're already in the hub.";
 			};
 		}
@@ -232,6 +238,12 @@ public final class Hub {
 		}
 		if (to == Where.RIFT) {
 			String error = dev.rubymod.game.rift.Rift.canJoin(player);
+			if (error != null) {
+				return error;
+			}
+		}
+		if (to == Where.CONVOY) {
+			String error = dev.rubymod.game.convoy.Convoy.canJoin(player);
 			if (error != null) {
 				return error;
 			}
@@ -261,6 +273,8 @@ public final class Hub {
 			Horde.leave(player);
 		} else if (from == Where.RIFT) {
 			dev.rubymod.game.rift.Rift.leave(player);
+		} else if (from == Where.CONVOY) {
+			dev.rubymod.game.convoy.Convoy.leave(player);
 		} else if (from == Where.PARTY) {
 			current.leave(player);
 		}
@@ -269,6 +283,7 @@ public final class Hub {
 			case RUBY_WARS -> enterRubyWars(player);
 			case HORDE -> Horde.join(player, challenge);
 			case RIFT -> dev.rubymod.game.rift.Rift.join(player);
+			case CONVOY -> dev.rubymod.game.convoy.Convoy.join(player);
 			case PARTY -> game.join(player);
 			default -> enterHub(player);
 		}
@@ -426,7 +441,8 @@ public final class Hub {
 	private static void onJoin(ServerPlayer player) {
 		MinecraftServer server = player.level().getServer();
 		boolean gameWorld = player.level().dimension() == Duels.ARENA || player.level().dimension() == dev.rubymod.game.party.RubyRush.RUSH;
-		if (gameWorld && !Duels.inDuel(player) && !Horde.playing(player) && dev.rubymod.game.party.PartyGames.of(player) == null) {
+		if (gameWorld && !Duels.inDuel(player) && !Horde.playing(player) && dev.rubymod.game.party.PartyGames.of(player) == null
+				&& !dev.rubymod.game.convoy.Convoy.playing(player)) {
 			// Left in the middle of a Horde game: their Horde gear stays behind.
 			player.getInventory().clearContent();
 			player.removeAllEffects();
@@ -481,7 +497,7 @@ public final class Hub {
 				continue;
 			}
 			String target = box.intersects(portalBox(RUBY_X)) ? "rubywars" : box.intersects(portalBox(RIFT_X)) ? "rift"
-					: box.intersects(portalBox(HORDE_X)) ? "horde" : null;
+					: box.intersects(portalBox(CONVOY_X)) ? "convoy" : box.intersects(portalBox(HORDE_X)) ? "horde" : null;
 			if (target == null) {
 				continue;
 			}
@@ -503,7 +519,8 @@ public final class Hub {
 			return;
 		}
 		var random = hub.getRandom();
-		int[][] gates = {{RUBY_X, PORTAL_Z, 0xFF3D3D}, {RIFT_X, PORTAL_Z, 0xFF3D9E}, {HORDE_X, PORTAL_Z, 0x5BE37D}, {0, PARTY_Z, 0xC27BFF}};
+		int[][] gates = {{RUBY_X, PORTAL_Z, 0xFF3D3D}, {RIFT_X, PORTAL_Z, 0xFF3D9E}, {CONVOY_X, PORTAL_Z, 0xFF9A30}, {HORDE_X, PORTAL_Z, 0x5BE37D},
+				{0, PARTY_Z, 0xC27BFF}};
 		for (int[] g : gates) {
 			for (int k = 0; k < 2; k++) {
 				double x = g[0] + 0.5 + (random.nextDouble() - 0.5) * 5;
@@ -538,11 +555,13 @@ public final class Hub {
 		}
 		for (ServerPlayer player : new ArrayList<>(server.getPlayerList().getPlayers())) {
 			Where where = where(player);
-			if ((where == Where.HORDE || where == Where.PARTY || where == Where.RIFT) && mustStay(player)) {
+			if ((where == Where.HORDE || where == Where.PARTY || where == Where.RIFT || where == Where.CONVOY) && mustStay(player)) {
 				if (where == Where.HORDE) {
 					Horde.leave(player);
 				} else if (where == Where.RIFT) {
 					dev.rubymod.game.rift.Rift.leave(player);
+				} else if (where == Where.CONVOY) {
+					dev.rubymod.game.convoy.Convoy.leave(player);
 				} else {
 					dev.rubymod.game.party.PartyGames.of(player).leave(player);
 				}
@@ -636,21 +655,22 @@ public final class Hub {
 		fountain(level);
 		// Paths: from round the fountain to each gate.
 		path(level, -3, -3, RUBY_X, PORTAL_Z + 2, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.RED).defaultBlockState());
+		path(level, -1, -4, RIFT_X, PORTAL_Z + 2, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
+		path(level, 1, -4, CONVOY_X, PORTAL_Z + 2, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.ORANGE).defaultBlockState());
 		path(level, 3, -3, HORDE_X, PORTAL_Z + 2, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.LIME).defaultBlockState());
-		for (int z = PORTAL_Z + 2; z <= -5; z++) {
-			set(level, 0, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
-			set(level, -1, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
-		}
 		for (int z = SPAWN_Z + 1; z <= PARTY_Z - 2; z++) {
 			set(level, 0, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.PURPLE).defaultBlockState());
 			set(level, -1, FLOOR, z, Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.PURPLE).defaultBlockState());
 		}
-		// The four gates, each in its own style.
+		// The five gates, each in its own style.
 		gate(level, RUBY_X, PORTAL_Z, Blocks.RED_NETHER_BRICKS.defaultBlockState(), ruby, Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.RED)
 				.defaultBlockState(), Blocks.LANTERN.defaultBlockState(), ModBlocks.RUBY_PORTAL.defaultBlockState());
 		gate(level, RIFT_X, PORTAL_Z, Blocks.CRYING_OBSIDIAN.defaultBlockState(), Blocks.AMETHYST_BLOCK.defaultBlockState(),
 				Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState(), Blocks.SOUL_LANTERN.defaultBlockState(),
 				ModBlocks.RIFT_PORTAL.defaultBlockState());
+		gate(level, CONVOY_X, PORTAL_Z, Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState(), Blocks.OCHRE_FROGLIGHT.defaultBlockState(),
+				Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.ORANGE).defaultBlockState(), Blocks.LANTERN.defaultBlockState(),
+				ModBlocks.CONVOY_PORTAL.defaultBlockState());
 		gate(level, HORDE_X, PORTAL_Z, Blocks.MOSSY_STONE_BRICKS.defaultBlockState(), Blocks.VERDANT_FROGLIGHT.defaultBlockState(),
 				Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.LIME).defaultBlockState(), Blocks.LANTERN.defaultBlockState(),
 				ModBlocks.HORDE_PORTAL.defaultBlockState());
@@ -681,7 +701,7 @@ public final class Hub {
 			set(level, p[0], FLOOR + 4, p[1], Blocks.LANTERN.defaultBlockState());
 		}
 		// Two waterfalls spilling off the island's edge.
-		for (int[] w : new int[][] {{-19, 6}, {19, 6}}) {
+		for (int[] w : new int[][] {{-23, 6}, {23, 6}}) {
 			set(level, w[0], FLOOR, w[1], Blocks.WATER.defaultBlockState());
 			set(level, w[0], FLOOR, w[1] + 1, Blocks.WATER.defaultBlockState());
 		}
@@ -839,6 +859,8 @@ public final class Hub {
 			new Label("ruby_info", RUBY_X + 0.5, FLOOR + 3.0, PORTAL_Z + 2.6, 1.4F),
 			new Label("rift_title", RIFT_X + 0.5, FLOOR + 13.2, PORTAL_Z + 1.0, 3.6F),
 			new Label("rift_info", RIFT_X + 0.5, FLOOR + 3.0, PORTAL_Z + 2.6, 1.4F),
+			new Label("convoy_title", CONVOY_X + 0.5, FLOOR + 13.2, PORTAL_Z + 1.0, 3.6F),
+			new Label("convoy_info", CONVOY_X + 0.5, FLOOR + 3.0, PORTAL_Z + 2.6, 1.4F),
 			new Label("horde_title", HORDE_X + 0.5, FLOOR + 13.2, PORTAL_Z + 1.0, 3.6F),
 			new Label("horde_info", HORDE_X + 0.5, FLOOR + 3.0, PORTAL_Z + 2.6, 1.4F),
 			new Label("party_title", 0.5, FLOOR + 13.2, PARTY_Z, 3.0F),
@@ -854,6 +876,9 @@ public final class Hub {
 					.append(Component.literal(rubyWarsSign(server)).withStyle(ChatFormatting.GOLD));
 			case "horde_title" -> Component.literal("CO-OP HORDE").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD);
 			case "rift_title" -> Component.literal("RUBY RIFT").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+			case "convoy_title" -> Component.literal("RUBY CONVOY").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+			case "convoy_info" -> Component.literal("Guard the ruby truck to the vault!\n").withStyle(ChatFormatting.WHITE)
+					.append(Component.literal(dev.rubymod.game.convoy.Convoy.hubStatus()).withStyle(ChatFormatting.GOLD));
 			case "rift_info" -> Component.literal("Fight room to room, collect relics!\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(dev.rubymod.game.rift.Rift.hubStatus(server)).withStyle(ChatFormatting.GOLD));
 			case "party_title" -> Component.literal("PARTY GAMES").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
@@ -936,6 +961,15 @@ public final class Hub {
 			text.append(Component.literal("  " + (r.riftWins > 0 ? r.riftWins + " wins" : "floor " + r.riftBestFloor) + "  " + r.name + "\n")
 					.withStyle(ChatFormatting.WHITE));
 		}
+		var convoy = Stats.top(java.util.Comparator.comparingInt((Stats.Record r) -> r.convoyWins * 10 + r.convoyBest).reversed(), 2, r -> r.convoyRuns > 0);
+		text.append(Component.literal("Ruby Convoy\n").withStyle(ChatFormatting.GOLD));
+		if (convoy.isEmpty()) {
+			text.append(Component.literal("  nobody yet\n").withStyle(ChatFormatting.GRAY));
+		}
+		for (Stats.Record r : convoy) {
+			text.append(Component.literal("  " + (r.convoyWins > 0 ? r.convoyWins + " delivered" : "stage " + r.convoyBest) + "  " + r.name + "\n")
+					.withStyle(ChatFormatting.WHITE));
+		}
 		var daily = dev.rubymod.game.rift.RiftMeta.dailyTop(server, 1);
 		if (!daily.isEmpty()) {
 			text.append(Component.literal("Today's Daily Rift\n  " + daily.get(0) + "\n").withStyle(ChatFormatting.LIGHT_PURPLE));
@@ -1001,6 +1035,7 @@ public final class Hub {
 		lines.add("rubywars|Ruby Wars|" + rubyWarsStatus(server));
 		lines.add("horde|Co-op Horde|" + Horde.status() + "|" + Horde.running());
 		lines.add("rift|Ruby Rift|" + dev.rubymod.game.rift.Rift.status() + "|" + dev.rubymod.game.rift.Rift.running());
+		lines.add("convoy|Ruby Convoy|" + dev.rubymod.game.convoy.Convoy.status() + "|" + dev.rubymod.game.convoy.Convoy.running());
 		lines.addAll(dev.rubymod.game.party.PartyGames.lines());
 		return lines;
 	}

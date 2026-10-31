@@ -255,7 +255,8 @@ public final class Gunfire {
 		Hit best = null;
 		double bestDistance = Double.MAX_VALUE;
 		for (Entity e : level.getEntities(shooter, searchBox,
-				e -> e.isAlive() && e.isPickable() && !e.isSpectator() && !e.isPassengerOfSameVehicle(shooter) && !dev.rubymod.game.rift.RelicEffects.isAlly(e))) {
+				e -> e.isAlive() && e.isPickable() && !e.isSpectator() && !e.isPassengerOfSameVehicle(shooter) && !dev.rubymod.game.rift.RelicEffects.isAlly(e)
+						&& !dev.rubymod.game.convoy.Convoy.isTruckPart(e))) {
 			AABB box = LagCompensation.boxAt(e, rewind).inflate(0.1);
 			var clip = box.contains(start) ? java.util.Optional.of(start) : box.clip(start, end);
 			if (clip.isPresent()) {
@@ -306,6 +307,7 @@ public final class Gunfire {
 	/** A bullet hitting a block: chips, a dust puff, sparks off stone and metal, the block's hit sound, and a bullet hole. */
 	private static void impact(ServerLevel level, BlockHitResult hit, BlockState state, GunStats stats) {
 		dev.rubymod.game.rift.RiftSecrets.onImpact(level, hit.getBlockPos());
+		dev.rubymod.game.convoy.Convoy.onImpact(level, hit.getBlockPos());
 		Vec3 p = hit.getLocation();
 		Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i());
 		Vec3 out = p.add(n.scale(0.05));
@@ -390,7 +392,7 @@ public final class Gunfire {
 
 	/** No ammo needed: creative, or anywhere in Ruby Rift (magazines still empty and reload). */
 	public static boolean freeAmmo(net.minecraft.world.entity.player.Player player) {
-		return player.isCreative() || dev.rubymod.game.rift.Rift.playing(player);
+		return player.isCreative() || dev.rubymod.game.rift.Rift.playing(player) || dev.rubymod.game.convoy.Convoy.playing(player);
 	}
 
 	public static void startReload(ServerPlayer player) {
