@@ -1749,6 +1749,112 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("uimenus")) {
+			// Just the hub's menus (quick look while restyling).
+			then(0, mc -> command(mc, "execute as @p run hub"));
+			then(100, mc -> mc.gui.setScreen(new ModeScreen()));
+			then(5, mc -> onServer(mc, server -> {
+				try {
+					log("mode lines: {} | where {}", dev.rubymod.game.Hub.modeLines(server).size(), dev.rubymod.game.Hub.whereLabel(me(server)));
+				} catch (RuntimeException e) {
+					log("mode lines failed: {}", e.toString());
+					e.printStackTrace();
+				}
+			}));
+			then(30, mc -> {
+				log("mode info: {}", ModeScreen.info);
+				shot(mc, "ui-modes");
+			});
+			then(5, mc -> mc.gui.setScreen(new ManualScreen()));
+			then(15, mc -> shot(mc, "ui-manual"));
+			then(5, mc -> mc.gui.setScreen(new ProfileScreen()));
+			then(30, mc -> shot(mc, "ui-profile"));
+			then(5, mc -> mc.gui.setScreen(new SquadScreen()));
+			then(15, mc -> shot(mc, "ui-squad"));
+			then(5, mc -> mc.gui.setScreen(new ResearchScreen()));
+			then(30, mc -> shot(mc, "ui-guide"));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("uitour")) {
+			// Every menu and HUD, one screenshot each (for reviewing the look).
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty peaceful");
+				command(mc, "execute as @p run hub");
+			});
+			then(100, mc -> shot(mc, "ui-hub-hud"));
+			then(5, mc -> mc.gui.setScreen(new ModeScreen()));
+			then(30, mc -> shot(mc, "ui-modes"));
+			then(5, mc -> {
+				ManualScreen m = new ManualScreen();
+				mc.gui.setScreen(m);
+			});
+			then(15, mc -> shot(mc, "ui-manual"));
+			then(5, mc -> mc.gui.setScreen(new ProfileScreen()));
+			then(30, mc -> shot(mc, "ui-profile"));
+			then(5, mc -> mc.gui.setScreen(new SquadScreen()));
+			then(15, mc -> shot(mc, "ui-squad"));
+			then(5, mc -> mc.gui.setScreen(null));
+			// Ruby Wars: the game HUD, the guide, the map.
+			then(5, mc -> command(mc, "execute as @p run play rubywars"));
+			then(100, mc -> shot(mc, "ui-rubywars-hud"));
+			then(5, mc -> mc.gui.setScreen(new ResearchScreen()));
+			then(30, mc -> shot(mc, "ui-guide"));
+			then(5, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));
+			then(30, mc -> shot(mc, "ui-map"));
+			then(5, mc -> mc.gui.setScreen(null));
+			// Co-op Horde: the HUD and the shop.
+			then(5, mc -> command(mc, "execute as @p run play horde normal"));
+			then(120, mc -> shot(mc, "ui-horde-hud"));
+			then(5, mc -> command(mc, "execute as @p run horde shop"));
+			then(30, mc -> shot(mc, "ui-horde-shop"));
+			then(5, mc -> mc.gui.setScreen(null));
+			// Ruby Rift: the Altar, the map, a relic choice, the HUD.
+			then(5, mc -> command(mc, "execute as @p run play rift"));
+			then(160, mc -> shot(mc, "ui-rift-threshold-hud"));
+			then(5, mc -> dev.rubymod.client.rift.RiftClient.reopen());
+			then(20, mc -> shot(mc, "ui-rift-altar"));
+			then(5, mc -> mc.gui.setScreen(null));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			then(40, mc -> shot(mc, "ui-rift-map"));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode())));
+			for (int i = 0; i < 10; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "offer:chain_lightning,napalm,blink")));
+			then(30, mc -> shot(mc, "ui-rift-relics"));
+			then(5, mc -> mc.gui.setScreen(null));
+			then(10, mc -> shot(mc, "ui-rift-hud"));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("codex", "open")));
+			then(20, mc -> shot(mc, "ui-rift-codex"));
+			then(5, mc -> mc.gui.setScreen(null));
+			// Ruby Convoy: the job cards and the HUD.
+			then(5, mc -> command(mc, "execute as @p run play convoy"));
+			then(60, mc -> shot(mc, "ui-convoy-jobs"));
+			then(5, mc -> {
+				if (mc.gui.screen() instanceof dev.rubymod.client.convoy.ConvoyScreen cs) {
+					cs.pick(0);
+				}
+			});
+			for (int i = 0; i < 12; i++) {
+				then(20, mc -> {});
+			}
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "start")));
+			then(60, mc -> {
+				mc.player.setYRot(0);
+				shot(mc, "ui-convoy-hud");
+			});
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("hubtour")) {
 			// The hub from a few angles (silent: the test client's sound is off).
 			then(0, mc -> {

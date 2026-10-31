@@ -9,6 +9,8 @@ import dev.rubymod.net.MorePayloads;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -187,33 +189,35 @@ public class RiftMapScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		long now = System.currentTimeMillis();
-		g.fillGradient(0, 0, width, height, 0xE0140410, 0xF0060208);
-		// Drifting motes of light.
-		for (int i = 0; i < 40; i++) {
-			double s = (now / 40.0 + i * 97) % height;
-			int mx = (int) ((i * 131 + Math.sin(now / 900.0 + i) * 20) % width + width) % width;
-			int my = height - (int) s;
-			g.fill(mx, my, mx + 1, my + 1, (i % 3 == 0 ? 0x90FF3D6E : 0x70C27BFF));
+		float in = Ui.ease(opened, 260);
+		Ui.dim(g, width, height, in);
+		// The map sits on one big panel.
+		int span = Math.min(width - 160, 300);
+		int mapX = (width - span) / 2 - 34;
+		Ui.panel(g, mapX, 26, span + 68, height - 26 - 30);
+		// Header: the emblem, the act's boss, the Rift Keys.
+		Ui.emblem(g, "rift", 6, 5, 16);
+		Ui.heading(g, "The Rift", 26, 9, Ui.TEXT, 1.0F, false);
+		if (!bossName.isEmpty()) {
+			Ui.icon(g, Ui.Icon.SKULL, 26 + font.width("The Rift") + 10, 8);
+			Ui.text(g, "Boss: " + bossName, 26 + font.width("The Rift") + 22, 9, Ui.RED);
 		}
-		g.centeredText(font, "◆ THE RIFT ◆" + (bossName.isEmpty() ? "" : "   Boss: " + bossName.toUpperCase()), width / 2, 8, 0xFFFF3D6E);
-		g.centeredText(font, "Click a glowing room to vote for it. The most votes wins.", width / 2, 20, 0xFFB8A8C8);
-		// The Rift Keys: three slots, lit as they're found.
 		{
 			String[] names = {"flame", "gold", "life"};
 			int[] colors = {0xFFFF7A2E, 0xFFFFC02E, 0xFF6EE38A};
-			int kx = width - 64;
-			g.text(font, "KEYS", kx - 28, 9, 0xFFC27BFF, true);
+			int kx = width - 62;
+			Ui.text(g, "Keys", kx - 26, 9, Ui.MUTED);
 			for (int i = 0; i < 3; i++) {
 				boolean got = keys.contains(names[i]);
-				g.fill(kx + i * 18, 6, kx + i * 18 + 14, 20, got ? 0xFF000000 | colors[i] : 0x80202020);
-				g.outline(kx + i * 18, 6, 14, 14, got ? 0xFFFFFFFF : 0xFF504050);
-				g.centeredText(font, got ? "\u2726" : "?", kx + i * 18 + 7, 9, got ? 0xFF201008 : 0xFF706070);
+				Ui.inset(g, kx + i * 18, 4, 16, 16);
+				if (got) {
+					g.fill(kx + i * 18 + 2, 6, kx + i * 18 + 14, 18, colors[i]);
+					Ui.icon(g, Ui.Icon.STAR, kx + i * 18 + 3, 7);
+				}
 			}
-			if (mouseX >= kx - 30 && mouseX < kx + 54 && mouseY >= 4 && mouseY < 22) {
-				g.setComponentTooltipForNextFrame(font, List.of(Component.literal("Rift Keys: " + keys.size() + "/3").withColor(0xC27BFF),
-						Component.literal("Flame: beat a Burning Elite.").withColor(0xFF7A2E), Component.literal("Gold: steal 100+ gold in a Vault Heist.")
-								.withColor(0xFFC02E), Component.literal("Life: take it at a Ruby Spring (instead of a gift).").withColor(0x6EE38A),
-						Component.literal("All three open a secret fourth act.").withColor(0xE0E0E0)), mouseX, mouseY);
+			if (Ui.inside(mouseX, mouseY, kx - 30, 4, 84, 18)) {
+				Ui.tooltip(g, List.of("Rift Keys: " + keys.size() + " of 3", "Flame: beat a Burning Elite.", "Gold: steal 100+ gold in a Vault Heist.",
+						"Life: take it at a Ruby Spring (instead of a gift).", "All three open a secret fourth act."), mouseX, mouseY, width, height);
 			}
 		}
 
@@ -232,8 +236,8 @@ public class RiftMapScreen extends Screen {
 				}
 				int[] pb = pos(b, floors);
 				boolean taken = (a.state().equals("done") || a.state().equals("here")) && (b.state().equals("done") || b.state().equals("here"));
-				boolean onward = a.state().equals("here") && b.state().equals("open") || a.state().equals("open") && false;
-				int color = taken ? 0xFFFFC02E : onward ? (((now / 250) % 2 == 0) ? 0xFFFF3D6E : 0xFFC27BFF) : 0x60808090;
+				boolean onward = a.state().equals("here") && b.state().equals("open");
+				int color = taken ? Ui.GOLD : onward ? Ui.mix(Ui.RIFT, Ui.TEXT, Ui.pulse(900)) : 0x50808090;
 				double len = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]);
 				for (double d = 12; d < len - 12; d += 5) {
 					int x = (int) (pa[0] + (pb[0] - pa[0]) * d / len);
@@ -248,29 +252,23 @@ public class RiftMapScreen extends Screen {
 		for (Node n : nodes) {
 			int[] p = pos(n, floors);
 			boolean boss = n.type().equals("BOSS");
-			int r = boss ? 16 : 11;
+			int r = boss ? 15 : 11;
 			boolean open = n.state().equals("open");
 			boolean here = n.state().equals("here");
 			boolean done = n.state().equals("done");
-			boolean hover = open && Math.abs(mouseX - p[0]) <= r && Math.abs(mouseY - p[1]) <= r;
-			if (hover || Math.abs(mouseX - p[0]) <= r && Math.abs(mouseY - p[1]) <= r) {
+			boolean over = Math.abs(mouseX - p[0]) <= r && Math.abs(mouseY - p[1]) <= r;
+			if (over) {
 				hovered = n;
 			}
 			int theme = themeColor(n.theme());
-			float pulse = (float) (0.5 + 0.5 * Math.sin(now / 220.0 + n.id()));
 			if (open) {
-				int ring = r + 3 + (int) (pulse * 3);
-				g.outline(p[0] - ring, p[1] - ring, ring * 2, ring * 2, (int) (120 + 135 * pulse) << 24 | theme & 0xFFFFFF);
-			}
-			if (here) {
-				int ring = r + 2 + (int) ((now / 60) % 8);
-				g.outline(p[0] - ring, p[1] - ring, ring * 2, ring * 2, (int) (255 - (now / 60 % 8) * 30) << 24 | 0xFFC02E);
+				int ring = r + 2 + Math.round(Ui.pulse(1100) * 2);
+				g.outline(p[0] - ring, p[1] - ring, ring * 2, ring * 2, Ui.alpha(theme, 0.5F + 0.5F * Ui.pulse(1100)));
 			}
 			if (n.burning() && !done) {
 				int flick = (int) ((now / 90 + n.id()) % 3);
 				int fire = flick == 0 ? 0xFFFF7A2E : flick == 1 ? 0xFFFFC02E : 0xFFFF3020;
 				g.outline(p[0] - r - 3, p[1] - r - 3, r * 2 + 6, r * 2 + 6, fire);
-				g.outline(p[0] - r - 2, p[1] - r - 2, r * 2 + 4, r * 2 + 4, 0xA0000000 | fire & 0xFFFFFF);
 				for (int k = 0; k < 5; k++) {
 					double rise = ((now / 30.0 + k * 37 + n.id() * 11) % 28);
 					int fx = p[0] - r + (int) ((k * 53 + n.id() * 7) % (r * 2));
@@ -278,55 +276,53 @@ public class RiftMapScreen extends Screen {
 					g.fill(fx, fy, fx + 2, fy + 2, (int) (255 * (1 - rise / 28)) << 24 | (k % 2 == 0 ? 0xFF7A2E : 0xFFC02E));
 				}
 			}
-			int bg = done ? 0xE0302830 : here ? 0xF0503010 : open ? (hover ? 0xF0402040 : 0xE0281428) : 0xC0181018;
-			g.fill(p[0] - r, p[1] - r, p[0] + r, p[1] + r, bg);
-			g.outline(p[0] - r, p[1] - r, r * 2, r * 2, done ? 0xFF706070 : here ? 0xFFFFC02E : open ? theme | 0xFF000000 : 0xFF403840);
-			g.fill(p[0] - r + 1, p[1] + r - 3, p[0] + r - 1, p[1] + r - 1, (open || here ? 0xFF000000 : 0x80000000) | theme & 0xFFFFFF);
+			float hv = Ui.hover("room:" + n.id(), over && open);
+			if (open || here) {
+				Ui.card(g, p[0] - r, p[1] - r, r * 2, r * 2, here ? Ui.GOLD : theme, hv);
+			} else {
+				Ui.inset(g, p[0] - r, p[1] - r, r * 2, r * 2);
+			}
+			int lift = Math.round(hv * 2);
 			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(icon(n.type()))));
 			if (boss) {
 				g.pose().pushMatrix();
-				g.pose().translate(p[0] - 12, p[1] - 12);
+				g.pose().translate(p[0] - 12, p[1] - 11 - lift);
 				g.pose().scale(1.5F, 1.5F);
 				g.item(stack, 0, 0);
 				g.pose().popMatrix();
 			} else {
-				g.item(stack, p[0] - 8, p[1] - 9);
+				g.item(stack, p[0] - 8, p[1] - 7 - lift);
 			}
 			if (done) {
-				g.text(font, "✔", p[0] + r - 7, p[1] - r + 1, 0xFF5BE37D, true);
+				g.fill(p[0] - r + 1, p[1] - r + 1, p[0] + r - 1, p[1] + r - 1, 0x90101216);
+				Ui.icon(g, Ui.Icon.CHECK, p[0] - 4, p[1] - 4);
 			}
 			int v = votes.getOrDefault(n.id(), 0);
 			if (v > 0) {
 				String vs = v + (v == 1 ? " vote" : " votes");
-				g.fill(p[0] - font.width(vs) / 2 - 2, p[1] - r - 12, p[0] + font.width(vs) / 2 + 2, p[1] - r - 2, 0xE0FF3D6E);
-				g.centeredText(font, vs, p[0], p[1] - r - 11, 0xFFFFFFFF);
+				Ui.tag(g, vs, p[0] - (font.width(vs) + 6) / 2, p[1] - r - 14, Ui.RIFT);
 			}
 			if (myVote == n.id()) {
-				g.outline(p[0] - r - 1, p[1] - r - 1, r * 2 + 2, r * 2 + 2, 0xFFFFFFFF);
+				g.outline(p[0] - r - 1, p[1] - r - 1, r * 2 + 2, r * 2 + 2, Ui.TEXT);
 			}
 			if (open) {
 				boxes.put(n.id(), new int[] {p[0] - r - 2, p[1] - r - 2, r * 2 + 4, r * 2 + 4});
 			}
 		}
-		// Legend.
-		int ly = height - 22;
-		g.centeredText(font, "Hover any room to see what it is. Rooms in flames are Burning Elites.", width / 2, ly, 0xFFD0C4DC);
-		g.centeredText(font, "Every path is different: plan your route by the rooms you can see.", width / 2, ly + 10, 0xFFD0C4DC);
+		g.centeredText(font, "Click a glowing room to vote for it. Rooms in flames hold Burning Elites.", width / 2, height - 20, Ui.DIM);
 		if (hovered != null) {
-			List<Component> tip = new ArrayList<>();
-			tip.add(Component.literal(hovered.type().equals("BOSS") && !bossName.isEmpty() ? "BOSS: " + bossName
-					: hovered.burning() ? "BURNING ELITE" : title(hovered.type())).withColor(hovered.burning() ? 0xFF7A2E : themeColor(hovered.theme()) & 0xFFFFFF));
+			List<String> tip = new ArrayList<>();
+			tip.add(hovered.type().equals("BOSS") && !bossName.isEmpty() ? "Boss: " + bossName : hovered.burning() ? "Burning Elite" : title(hovered.type()));
 			if (!themeName(hovered.theme()).isEmpty()) {
-				tip.add(Component.literal(themeName(hovered.theme())).withColor(0xA090B0));
+				tip.add(themeName(hovered.theme()));
 			}
-			tip.add(Component.literal(hovered.type().equals("BOSS") && !bossAbout.isEmpty() ? bossAbout
+			tip.add(hovered.type().equals("BOSS") && !bossAbout.isEmpty() ? bossAbout
 					: hovered.burning() ? "Elites wreathed in fire: tougher, and there's one more of them. Beat them for a Legendary relic and 100 gold."
-					: about(hovered.type())).withColor(0xE0E0E0));
-
+					: about(hovered.type()));
 			if (hovered.state().equals("open")) {
-				tip.add(Component.literal("Click to vote").withColor(0xFFC02E));
+				tip.add("Click to vote.");
 			}
-			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
+			Ui.tooltip(g, tip, mouseX, mouseY, width, height);
 		}
 	}
 

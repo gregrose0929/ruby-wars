@@ -2,6 +2,8 @@ package dev.rubymod.client;
 
 import java.util.List;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -102,6 +104,8 @@ public class ManualScreen extends Screen {
 					"Holo Camo: right-click it with any block to disguise it. Your squad walks through it; enemies hit a wall."));
 
 	private int page;
+	private final long opened = System.currentTimeMillis();
+	private long turned = System.currentTimeMillis();
 
 	public ManualScreen() {
 		super(Component.literal("Field Manual"));
@@ -112,42 +116,63 @@ public class ManualScreen extends Screen {
 		return false;
 	}
 
+	private int w() {
+		return Math.min(360, width - 16);
+	}
+
+	private int h() {
+		return Math.min(224, height - 16);
+	}
+
+	private int navW() {
+		return 96;
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
-		int w = Math.min(320, width - 20);
-		int h = Math.min(200, height - 20);
+		float in = Ui.ease(opened, 240);
+		Ui.dim(g, width, height, in);
+		int w = w();
+		int h = h();
 		int x = (width - w) / 2;
-		int y = (height - h) / 2;
-		g.fill(x + 3, y + 3, x + w + 3, y + h + 3, 0x66000000);
-		g.fillGradient(x, y, x + w, y + h, 0xF0232830, 0xF0171A1F);
-		g.outline(x, y, w, h, 0xFF7A0A2A);
-		g.fill(x + 1, y + 1, x + w - 1, y + 16, 0xFF1A1E24);
-		g.fill(x + 1, y + 16, x + w - 1, y + 17, 0xFFD0154A);
-		g.text(font, "FIELD MANUAL", x + 8, y + 5, 0xFFE8EAED, false);
-		String count = (page + 1) + " / " + PAGES.size();
-		g.text(font, count, x + w - 8 - font.width(count), y + 5, 0xFF8B93A1, false);
-		// Page list down the left.
+		int y = (height - h) / 2 + Math.round((1 - in) * 8);
+		Ui.panel(g, x, y, w, h);
+		Ui.heading(g, "Field Manual", x + 10, y + 9, Ui.TEXT, 1.0F, false);
+		String count = (page + 1) + " of " + PAGES.size();
+		Ui.text(g, count, x + w - 10 - font.width(count), y + 9, Ui.MUTED);
+		// The pages, down the left.
+		int nx = x + 6;
+		int ny = y + 24;
+		int rowH = Math.min(13, (h - 32) / PAGES.size());
+		Ui.inset(g, nx, ny - 2, navW(), PAGES.size() * rowH + 4);
 		for (int i = 0; i < PAGES.size(); i++) {
-			int ty = y + 24 + i * 14;
+			int ty = ny + i * rowH;
 			boolean on = i == page;
+			boolean over = Ui.inside(mouseX, mouseY, nx + 2, ty, navW() - 4, rowH);
+			float hv = Ui.hover("manual:" + i, over && !on);
 			if (on) {
-				g.fill(x + 6, ty - 2, x + 84, ty + 10, 0xFF3A2430);
-				g.fill(x + 6, ty - 2, x + 8, ty + 10, 0xFFD0154A);
+				g.fill(nx + 2, ty, nx + navW() - 2, ty + rowH - 1, 0x40E0294A);
+				g.fill(nx + 2, ty, nx + 4, ty + rowH - 1, Ui.RUBY);
+			} else if (hv > 0) {
+				g.fill(nx + 2, ty, nx + navW() - 2, ty + rowH - 1, Ui.alpha(0x20FFFFFF, hv));
 			}
-			g.text(font, PAGES.get(i).title(), x + 12, ty, on ? 0xFFFFFFFF : 0xFF8B93A1, false);
+			Ui.text(g, PAGES.get(i).title(), nx + 8, ty + (rowH - 8) / 2, navW() - 12, on ? Ui.TEXT : Ui.mix(Ui.MUTED, Ui.DIM, hv));
 		}
+		// The page.
 		Page p = PAGES.get(page);
-		int tx = x + 94;
-		int ty = y + 24;
-		g.text(font, p.title().toUpperCase(), tx, ty, 0xFFFF5A82, false);
-		ty += 14;
+		float turn = Ui.ease(turned, 180);
+		int tx = x + navW() + 16;
+		int ty = y + 26;
+		int tw = x + w - 10 - tx;
+		Ui.heading(g, p.title(), tx + Math.round((1 - turn) * 6), ty, Ui.alpha(Ui.GOLD, turn), 1.0F, false);
+		ty += 15;
 		for (String line : p.lines()) {
-			for (FormattedCharSequence seq : font.split(Component.literal(line), x + w - 8 - tx)) {
+			for (FormattedCharSequence seq : font.split(Component.literal(line), tw)) {
 				if (ty > y + h - 12) {
 					break;
 				}
-				g.text(font, seq, tx, ty, 0xFFC8D0D8, false);
+				g.text(font, seq, tx, ty, Ui.alpha(Ui.DIM, turn), false);
 				ty += 10;
 			}
 			ty += 4;
@@ -156,14 +181,18 @@ public class ManualScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
-		int w = Math.min(320, width - 20);
-		int h = Math.min(200, height - 20);
+		int w = w();
+		int h = h();
 		int x = (width - w) / 2;
 		int y = (height - h) / 2;
+		int rowH = Math.min(13, (h - 32) / PAGES.size());
 		for (int i = 0; i < PAGES.size(); i++) {
-			int ty = y + 24 + i * 14;
-			if (event.x() >= x + 6 && event.x() < x + 84 && event.y() >= ty - 2 && event.y() < ty + 10) {
-				page = i;
+			int ty = y + 24 + i * rowH;
+			if (Ui.inside(event.x(), event.y(), x + 8, ty, navW() - 4, rowH)) {
+				if (page != i) {
+					page = i;
+					turned = System.currentTimeMillis();
+				}
 				return true;
 			}
 		}

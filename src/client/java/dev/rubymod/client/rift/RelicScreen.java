@@ -7,6 +7,8 @@ import dev.rubymod.net.MorePayloads;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -110,160 +112,137 @@ public class RelicScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		long now = System.currentTimeMillis();
-		float intro = Math.min(1, (now - opened) / 450.0F);
-		g.fillGradient(0, 0, width, height, 0xC8100410, 0xE8040208);
+		float in = Ui.ease(opened, 260);
+		Ui.dim(g, width, height, in);
 		boolean anyLegend = cards.stream().anyMatch(c -> c.tier().equals("LEGENDARY"));
-		// Sparks rising behind the cards.
-		for (int i = 0; i < 24; i++) {
-			double s = (now / 25.0 + i * 61) % height;
+		// Motes drifting up behind the cards.
+		for (int i = 0; i < 18; i++) {
+			double s = (now / 30.0 + i * 61) % height;
 			int sx = (int) ((i * 173 + Math.sin(now / 700.0 + i) * 25) % width + width) % width;
 			int sy = height - (int) s;
-			int c = anyLegend && i % 2 == 0 ? 0x70FFC02E : i % 3 == 0 ? 0x50FF3D6E : 0x40C27BFF;
-			g.fill(sx, sy, sx + 2, sy + 2, c);
+			g.fill(sx, sy, sx + 2, sy + 2, anyLegend && i % 2 == 0 ? 0x60F5C542 : 0x40C85BFF);
 		}
-		// Heading.
-		g.pose().pushMatrix();
-		g.pose().translate(width / 2.0F, 14);
-		g.pose().scale(1.6F, 1.6F);
-		g.centeredText(font, heading, 0, 0, kind.equals("shop") ? 0xFFFFC02E : 0xFFFF3D6E);
-		g.pose().popMatrix();
+		Ui.emblem(g, "rift", width / 2 - 12, 6, 24);
+		Ui.heading(g, heading, width / 2, 33, kind.equals("shop") ? Ui.GOLD : Ui.TEXT, 1.5F, true);
 		if (kind.equals("shop")) {
-			g.centeredText(font, "◆ " + gold + " gold (the whole team's)", width / 2, 34, 0xFFFFC02E);
+			String goldText = gold + " gold (the whole team's)";
+			int gw = font.width(goldText) + 12;
+			Ui.icon(g, Ui.Icon.GEM, width / 2 - gw / 2, 47);
+			Ui.text(g, goldText, width / 2 - gw / 2 + 12, 48, Ui.GOLD);
 		}
 		int n = cards.size();
 		if (n == 0) {
 			return;
 		}
-		int cols = Math.min(n, kind.equals("shop") ? 3 : 3);
+		int cols = Math.min(n, 3);
 		int rows = (n + cols - 1) / cols;
 		int gap = 10;
-		int cardW = Math.min(132, (width - 40 - gap * (cols - 1)) / cols);
-		int cardH = Math.min(rows == 1 ? 190 : 120, (height - 70 - gap * (rows - 1)) / rows);
+		int cardW = Math.min(128, (width - 40 - gap * (cols - 1)) / cols);
+		int cardH = Math.min(rows == 1 ? 180 : 116, (height - 84 - gap * (rows - 1)) / rows);
 		int x0 = (width - (cardW * cols + gap * (cols - 1))) / 2;
-		int y0 = kind.equals("shop") ? 48 : Math.max(44, (height - cardH * rows - gap * (rows - 1)) / 2 + 8);
+		int y0 = kind.equals("shop") ? 62 : Math.max(56, (height - cardH * rows - gap * (rows - 1)) / 2 + 12);
 		boxes.clear();
-		Card hoverCard = null;
+		Card tipCard = null;
 		for (int i = 0; i < n; i++) {
 			Card c = cards.get(i);
 			int col = i % cols;
 			int row = i / cols;
-			float delay = Math.max(0, Math.min(1, intro * 1.6F - i * 0.18F));
+			float rise = Ui.ease(opened + 80L * i, 300);
 			int x = x0 + col * (cardW + gap);
-			int y = y0 + row * (cardH + gap) + (int) ((1 - delay) * 40);
-			boolean hover = mouseX >= x && mouseX < x + cardW && mouseY >= y && mouseY < y + cardH;
-			if (hover) {
-				y -= 4;
-				hoverCard = c;
-			}
+			int y = y0 + row * (cardH + gap) + Math.round((1 - rise) * 24);
+			boolean hover = Ui.inside(mouseX, mouseY, x, y, cardW, cardH);
 			int tier = tierColor(c.tier());
 			boolean legendary = c.tier().equals("LEGENDARY");
 			boolean cursed = c.tier().equals("CURSED");
 			boolean cantAfford = c.price() > 0 && kind.equals("shop") && gold < c.price();
 			// -2: a relic you already have (the merchant still sells it to teammates).
 			boolean owned = c.price() == -2;
-			// Body: dark, tinted by the tier.
-			g.fill(x, y, x + cardW, y + cardH, 0xF8100A12);
-			// Glow behind the icon.
-			int glowA = (int) (60 + 40 * Math.sin(now / 300.0 + i));
-			g.fillGradient(x + 1, y + 1, x + cardW - 1, y + 50, glowA << 24 | tier & 0xFFFFFF, 0x00000000);
-			// The frame: shimmering gold for Legendary, flickering purple for Cursed.
-			int frame = tier;
-			if (!c.combo().isEmpty()) {
-				// Completes a combo: an orange frame that flickers with the duo's colour.
-				frame = (now / 150 + i) % 2 == 0 ? 0xFFFF9A2E : 0xFFFFE680;
-			} else if (c.combine() > 0) {
-				// Combining: a gold frame that pulses.
-				frame = (now / 200 + i) % 2 == 0 ? 0xFFFFE680 : 0xFFFFB020;
-			} else if (legendary) {
-				float sh = (float) (0.5 + 0.5 * Math.sin(now / 160.0));
-				frame = sh > 0.5F ? 0xFFFFE680 : 0xFFFFC02E;
-			} else if (cursed && (now / 90 + i) % 7 == 0) {
-				frame = 0xFFFF40FF;
-			}
-			g.outline(x, y, cardW, cardH, frame);
-			g.outline(x + 1, y + 1, cardW - 2, cardH - 2, (hover ? 0xC0000000 : 0x60000000) | frame & 0xFFFFFF);
+			int accent = !c.combo().isEmpty() ? Ui.mix(0xFFFF9A2E, 0xFFFFE680, Ui.pulse(500)) : legendary ? Ui.mix(Ui.GOLD, 0xFFFFF0B0, Ui.pulse(900))
+					: cursed && (now / 90 + i) % 9 == 0 ? 0xFFFF40FF : tier;
+			float hv = Ui.hover("relic:" + c.id() + i, hover && !owned);
+			Ui.card(g, x, y, cardW, cardH, accent, hv);
+			int lift = Math.round(hv * 2);
+			y -= lift;
 			if (legendary) {
 				// A sweep of light across the card.
 				int sweep = (int) ((now / 6) % (cardW * 3)) - cardW;
 				g.enableScissor(x + 2, y + 2, x + cardW - 2, y + cardH - 2);
-				for (int k = 0; k < 10; k++) {
-					g.fill(x + sweep + k * 2 - k, y, x + sweep + k * 2 - k + 2, y + cardH, 0x18FFFFFF);
+				for (int k = 0; k < 8; k++) {
+					g.fill(x + sweep + k, y, x + sweep + k + 2, y + cardH, 0x14FFFFFF);
 				}
 				g.disableScissor();
 			}
-			if (!c.combo().isEmpty()) {
-				// "COMBO!" ribbon across the top, with a little lightning either side.
-				int bw = Math.min(cardW - 8, font.width("\u26A1 COMBO! \u26A1") + 12);
-				int bx = x + cardW / 2 - bw / 2;
-				int glow = (int) (180 + 75 * Math.sin(now / 120.0));
-				g.fill(bx, y - 5, bx + bw, y + 7, glow << 24 | 0xFF9A2E);
-				g.outline(bx, y - 5, bw, 12, 0xFFFFE680);
-				g.centeredText(font, "\u26A1 COMBO! \u26A1", x + cardW / 2, y - 3, 0xFF201008);
-			}
-			// Big icon.
-			ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c.icon())));
-			float bob = (float) Math.sin(now / 350.0 + i) * 2;
+			// The icon, big, on a sunken plate glowing in the tier's colour.
+			boolean compact = cardH < 130;
+			int plate = compact ? 30 : 44;
+			int py = y + 9;
+			Ui.inset(g, x + cardW / 2 - plate / 2, py, plate, plate);
+			g.fill(x + cardW / 2 - plate / 2 + 1, py + 1, x + cardW / 2 + plate / 2 - 1, py + plate - 1,
+					Ui.alpha(tier, 0.12F + 0.08F * (float) Math.sin(now / 300.0 + i)));
+			float iconScale = compact ? 1.5F : 2.25F;
+			float bob = (float) Math.sin(now / 350.0 + i) * 1.5F;
 			g.pose().pushMatrix();
-			// Short cards (two rows of them): a smaller icon, so the name fits above the button.
-			boolean compact = cardH < 140;
-			float iconScale = compact ? 1.6F : 2.5F;
-			g.pose().translate(x + cardW / 2.0F - 8 * iconScale, y + (compact ? 4 : 8) + bob);
+			g.pose().translate(x + cardW / 2.0F - 8 * iconScale, py + plate / 2.0F - 8 * iconScale + bob);
 			g.pose().scale(iconScale, iconScale);
-			g.item(stack, 0, 0);
+			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c.icon()))), 0, 0);
 			g.pose().popMatrix();
-			int ty = y + (compact ? 33 : 52);
-			// Tier and element.
-			String tierText = c.tier().equals("EVENT") || c.tier().equals("SERVICE") ? "" : pretty(c.tier()).toUpperCase();
-			int el = elementColor(c.element());
-			String elText = el != 0 ? "  •  " + pretty(c.element()) : "";
-			if (!tierText.isEmpty()) {
-				int tw = font.width(tierText + elText);
-				g.text(font, tierText, x + cardW / 2 - tw / 2, ty, tier, true);
-				if (el != 0) {
-					g.text(font, elText, x + cardW / 2 - tw / 2 + font.width(tierText), ty, el, true);
+			if (!c.combo().isEmpty()) {
+				int tw = font.width("Combo!") + 6;
+				Ui.tag(g, "Combo!", x + cardW / 2 - tw / 2, y - 5, 0xFFFF9A2E);
+			}
+			int ty = py + plate + 5;
+			// Tier and element, as tags.
+			if (!c.tier().equals("EVENT") && !c.tier().equals("SERVICE")) {
+				int el = elementColor(c.element());
+				String a = pretty(c.tier());
+				String b = el != 0 ? pretty(c.element()) : "";
+				int tw = font.width(a) + 6 + (b.isEmpty() ? 0 : font.width(b) + 9);
+				int tx = x + cardW / 2 - tw / 2;
+				tx += Ui.tag(g, a, tx, ty, tier) + 3;
+				if (!b.isEmpty()) {
+					Ui.tag(g, b, tx, ty, el);
 				}
-				ty += 12;
+				ty += 15;
 			}
 			// Name and what it does.
-			for (FormattedCharSequence line : font.split(Component.literal(c.title()).withStyle(net.minecraft.ChatFormatting.BOLD), cardW - 10)) {
-				if (ty > y + cardH - 32) {
-					break;
-				}
-				g.centeredText(font, line, x + cardW / 2, ty, 0xFFFFFFFF);
+			for (FormattedCharSequence line : font.split(Component.literal(c.title()), cardW - 10)) {
+				g.centeredText(font, line, x + cardW / 2, ty, Ui.TEXT);
 				ty += 10;
 			}
-			ty += 4;
-			g.fill(x + 12, ty - 3, x + cardW - 12, ty - 2, 0x40000000 | tier & 0xFFFFFF);
+			ty += 3;
+			int maxY = y + cardH - 24;
+			if (Ui.lines(c.about(), cardW - 14) * 10 > maxY - ty || !c.combo().isEmpty()) {
+				if (hover) {
+					tipCard = c;
+				}
+			}
 			for (FormattedCharSequence line : font.split(Component.literal(c.about()), cardW - 14)) {
-				if (ty > y + cardH - 26) {
+				if (ty + 9 > maxY) {
 					break;
 				}
-				g.centeredText(font, line, x + cardW / 2, ty, 0xFFEDE6F2);
+				g.centeredText(font, line, x + cardW / 2, ty, Ui.DIM);
 				ty += 10;
 			}
 			// The button.
-			String label = owned ? "OWNED" : kind.equals("shop") ? (cantAfford ? "◆ " + c.price() : (c.combine() > 0 ? "COMBINE  ◆ " : "BUY  ◆ ") + c.price())
-					: kind.equals("event") ? "CHOOSE" : c.combine() > 0 ? "COMBINE" : "TAKE IT";
-			int by = y + cardH - 20;
-			int btn = owned ? 0xC0303038 : cantAfford ? 0xC0602020 : hover ? 0xFF000000 | darker(tier, 0.75F) : 0xFF000000 | darker(tier, 0.5F);
-			g.fill(x + 8, by, x + cardW - 8, by + 14, btn);
-			g.outline(x + 8, by, cardW - 16, 14, owned || cantAfford ? 0x60FFFFFF : 0xFF000000 | tier & 0xFFFFFF);
-			g.centeredText(font, label, x + cardW / 2, by + 3, owned ? 0xFF9AA4AE : cantAfford ? 0xFFFF9090 : 0xFFFFFFFF);
-			if (delay >= 1 && !owned) {
+			String label = owned ? "Owned" : kind.equals("shop") ? (c.combine() > 0 ? "Combine " : "Buy ") + c.price()
+					: kind.equals("event") ? "Choose" : c.combine() > 0 ? "Combine" : "Take it";
+			Ui.button(g, label, x + 7, y + cardH - 21, cardW - 14, 16, mouseX, mouseY, cantAfford ? 0xFF6A3036 : tier, !owned);
+			if (rise >= 0.95F && !owned) {
 				boxes.add(new int[] {x, y, cardW, cardH, i});
 			}
 		}
-		String foot = kind.equals("shop") ? "Buy as many as the team's gold allows. Press Esc when you're done, then step into the portal."
-				: kind.equals("event") ? "Choose wisely." : "Relics last the whole run. Press Esc to look around first (J brings this back).";
-		g.centeredText(font, foot, width / 2, height - 14, 0xFFD0C4DC);
-		// Hover a card: everything it does, in full.
-		if (hoverCard != null) {
-			List<Component> tip = tooltip(hoverCard.title(), hoverCard.tier(), hoverCard.element(), hoverCard.about());
-			if (!hoverCard.combo().isEmpty()) {
-				tip.add(Component.literal(""));
-				tip.addAll(wrap("\u26A1 COMBO! " + hoverCard.combo(), 0xFF9A2E));
+		String foot = kind.equals("shop") ? "Buy as many as the team's gold allows. Esc when you're done, then step into the portal."
+				: kind.equals("event") ? "Choose wisely." : "Relics last the whole run. Esc to look around first (J brings this back).";
+		g.centeredText(font, foot, width / 2, height - 14, Ui.MUTED);
+		// Hover a card whose text didn't fit (or that completes a combo): all of it.
+		if (tipCard != null) {
+			List<String> tip = new ArrayList<>();
+			tip.add(tipCard.title());
+			tip.add(tipCard.about());
+			if (!tipCard.combo().isEmpty()) {
+				tip.add("Combo! " + tipCard.combo());
 			}
-			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
+			Ui.tooltip(g, tip, mouseX, mouseY, width, height);
 		}
 	}
 

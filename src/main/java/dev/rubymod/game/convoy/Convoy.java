@@ -501,7 +501,7 @@ public final class Convoy {
 		for (ConvoyUpgrade.Role r : ConvoyUpgrade.Role.values()) {
 			cards.add(r.card());
 		}
-		Net.send(player, new MorePayloads.ConvoyCards("role", "PICK YOUR JOB", cards));
+		Net.send(player, new MorePayloads.ConvoyCards("role", "Pick your job", cards));
 	}
 
 	private static void offerUpgrades(ServerPlayer player, Crew c, Random random) {
@@ -518,7 +518,7 @@ public final class Convoy {
 		for (ConvoyUpgrade u : c.offer) {
 			cards.add(u.card(level(u)));
 		}
-		Net.send(player, new MorePayloads.ConvoyCards("upgrade", "DEPOT " + stage + ": UPGRADE THE CONVOY", cards));
+		Net.send(player, new MorePayloads.ConvoyCards("upgrade", "Depot " + stage + ": upgrade the convoy", cards));
 	}
 
 	private static int stageNumber() {
@@ -1228,25 +1228,25 @@ public final class Convoy {
 		int seconds = -1;
 		switch (state) {
 			case STAGING -> {
-				header = "RUBY CONVOY  •  LOADING UP";
+				header = "Loading up";
 				objective = ready ? "Pick your job. The truck rolls out in " + Math.max(0, timer / 20) + "s." : "Building the road...";
 				seconds = ready ? timer / 20 : -1;
 			}
 			case DEPOT -> {
-				header = "DEPOT " + stage + "  •  NEXT: " + ConvoyRoute.NAMES[stage].toUpperCase();
+				header = "Depot " + stage + ", next: " + ConvoyRoute.NAMES[stage];
 				objective = "Repairs and new vehicles. Pick an upgrade! Rolling out in " + Math.max(0, timer / 20) + "s.";
 				seconds = timer / 20;
 			}
 			case WRECKED -> {
-				header = "STAGE " + stageNumber() + "  •  " + ConvoyRoute.NAMES[stage].toUpperCase();
+				header = "Stage " + stageNumber() + ": " + ConvoyRoute.NAMES[stage];
 				objective = spares > 0 ? "The truck is wrecked! A spare is coming..." : "The truck is wrecked!";
 			}
 			case OVER -> {
-				header = won ? "RUBIES DELIVERED!" : "THE CONVOY IS LOST";
+				header = won ? "Rubies delivered!" : "The convoy is lost";
 				objective = "A new convoy loads up in " + Math.max(0, timer / 20) + "s.";
 			}
 			default -> {
-				header = "STAGE " + stageNumber() + "  •  " + ConvoyRoute.NAMES[stage].toUpperCase();
+				header = "Stage " + stageNumber() + ": " + ConvoyRoute.NAMES[stage];
 				objective = truck == null ? "" : ConvoyEvents.objective(level, stage, truck.z);
 				bar = truck == null ? -1 : ConvoyEvents.objectiveBar(level, stage, truck.z);
 			}

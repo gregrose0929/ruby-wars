@@ -7,6 +7,8 @@ import dev.rubymod.net.MorePayloads;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -76,9 +78,9 @@ public class ThresholdScreen extends Screen {
 		}
 	}
 
-	/** For autotests: turn to the other page. */
+	/** For autotests: turn to the Extras page (and back). */
 	public void flip() {
-		page = 1 - page;
+		page = page == 3 ? 0 : 3;
 	}
 
 	@Override
@@ -86,13 +88,28 @@ public class ThresholdScreen extends Screen {
 		return false;
 	}
 
+	private static final String[] TABS = {"Loadout", "Relics", "Heat & Daily", "Extras"};
+
 	private void button(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, int color, boolean on, int mouseX, int mouseY, String kind, String id) {
-		boolean hover = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h;
-		g.fill(x, y, x + w, y + h, on ? 0xFF000000 | RelicScreen.darker(color, 0.6F) : hover ? 0xE0000000 | RelicScreen.darker(color, 0.35F) : 0xC0181018);
-		g.outline(x, y, w, h, 0xFF000000 | color & 0xFFFFFF);
-		g.centeredText(font, label, x + w / 2, y + (h - 8) / 2, 0xFFFFFFFF);
+		Ui.button(g, label, x, y, w, h, mouseX, mouseY, on ? Ui.lighten(color, 0.1F) : Ui.darken(color, 0.6F), true);
+		if (on) {
+			g.outline(x - 1, y - 1, w + 2, h + 2, Ui.TEXT);
+		}
 		buttons.add(new int[] {x, y, w, h});
 		actions.add(new String[] {kind, id});
+	}
+
+	/** One row: a card with an icon, a name and a line about it, and room for a button on the right. Returns true when hovered. */
+	private boolean row(GuiGraphicsExtractor g, int x, int y, int w, int h, String icon, String title, int titleColor, String about, int accent,
+			boolean on, int mouseX, int mouseY) {
+		boolean over = Ui.inside(mouseX, mouseY, x, y, w, h);
+		Ui.card(g, x, y, w, h, on ? accent : Ui.darken(accent, 0.5F), Ui.hover("altar:" + title, over));
+		g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(icon))), x + 5, y + (h - 16) / 2);
+		Ui.text(g, title, x + 26, y + (h > 24 ? 6 : (h - 8) / 2), w - 96, titleColor);
+		if (h > 24) {
+			Ui.text(g, about, x + 26, y + 17, w - 32 - 70, Ui.DIM);
+		}
+		return over;
 	}
 
 	@Override
@@ -101,185 +118,193 @@ public class ThresholdScreen extends Screen {
 		buttons.clear();
 		actions.clear();
 		long now = System.currentTimeMillis();
-		g.fillGradient(0, 0, width, height, 0xE8180614, 0xF4060208);
-		for (int i = 0; i < 40; i++) {
+		float in = Ui.ease(opened, 260);
+		Ui.dim(g, width, height, in);
+		for (int i = 0; i < 24; i++) {
 			double s = (now / 30.0 + i * 83) % height;
 			int sx = (int) ((i * 157 + Math.sin(now / 800.0 + i) * 30) % width + width) % width;
-			g.fill(sx, height - (int) s, sx + 1, height - (int) s + 1, i % 2 == 0 ? 0x90C27BFF : 0x80FF3D6E);
+			g.fill(sx, height - (int) s, sx + 1, height - (int) s + 1, 0x70C85BFF);
 		}
-		g.pose().pushMatrix();
-		g.pose().translate(width / 2.0F, 8);
-		g.pose().scale(1.5F, 1.5F);
-		g.centeredText(font, "◆ THE ALTAR OF ECHOES ◆", 0, 0, 0xFFC27BFF);
-		g.pose().popMatrix();
-		g.centeredText(font, "◆ " + shards + " Rift Shards  •  earned every run (deeper, elites, bosses and Heat give more)", width / 2, 24, 0xFFFFC02E);
-		// The Codex: everything you've found.
-		button(g, width - 74, 6, 68, 14, "\u2726 CODEX", 0xFFFFC02E, false, mouseX, mouseY, "codex", "open");
-		button(g, 6, 6, 74, 14, page == 0 ? "EXTRAS \u25B6" : "\u25C0 THE RUN", 0xFF66E0FF, page == 1, mouseX, mouseY, "page", "flip");
-		if (page == 1) {
-			extras(g, mouseX, mouseY);
-			return;
+		int pw = Math.min(440, width - 16);
+		int px = (width - pw) / 2;
+		int py = 46;
+		int ph = height - py - 22;
+		Ui.emblem(g, "rift", px, 6, 24);
+		Ui.heading(g, "Altar of Echoes", px + 30, 9, Ui.TEXT, 1.5F, false);
+		button(g, px + pw - 62, 8, 62, 16, "Codex", Ui.GOLD, false, mouseX, mouseY, "codex", "open");
+		String shardText = shards + " Rift Shards";
+		int sx = px + pw - 70 - font.width(shardText) - 12;
+		Ui.icon(g, Ui.Icon.GEM, sx, 11);
+		Ui.text(g, shardText, sx + 12, 12, Ui.GOLD);
+		Ui.panel(g, px, py, pw, ph);
+		int tx = px + 8;
+		for (int i = 0; i < TABS.length; i++) {
+			int tw = font.width(TABS[i]) + 18;
+			Ui.tab(g, TABS[i], tx, py - 15, tw, page == i, mouseX, mouseY);
+			buttons.add(new int[] {tx, py - 15, tw, 16});
+			actions.add(new String[] {"page", String.valueOf(i)});
+			tx += tw + 3;
 		}
-		int colW = Math.min(170, (width - 32) / 3);
-		int top = 40;
-		int x1 = width / 2 - colW * 3 / 2 - 8;
-		int x2 = x1 + colW + 8;
-		int x3 = x2 + colW + 8;
-		// Loadouts.
-		g.text(font, "LOADOUT", x1, top, 0xFFFF3D6E, true);
-		int y = top + 12;
-		int abilityRows = (abilities.size() + 1) / 2;
-		int rowH = Math.max(25, Math.min(36, (height - top - 30 - 16 - abilityRows * 15) / Math.max(1, loadouts.size())));
-		List<Component> tip = null;
-		for (String[] l : loadouts) {
-			if (mouseX >= x1 && mouseX < x1 + colW - 60 && mouseY >= y && mouseY < y + rowH - 3) {
-				tip = List.of(Component.literal(l[2]).withColor(0xFF3D6E), Component.literal(l[4]).withColor(0xE0D8E8));
+		List<String> tip = null;
+		int x0 = px + 10;
+		int w0 = pw - 20;
+		int top = py + 10;
+		int bottom = py + ph - 8;
+		switch (page) {
+			case 0 -> {
+				// Loadouts on the left, abilities on the right.
+				int lw = w0 * 3 / 5;
+				Ui.section(g, "Loadout", x0, top, lw);
+				int y = top + 13;
+				int rowH = Math.max(22, Math.min(30, (bottom - y) / Math.max(1, loadouts.size()) - 2));
+				for (String[] l : loadouts) {
+					boolean selected = l[6].equals("selected");
+					boolean locked = l[6].equals("locked");
+					if (row(g, x0, y, lw, rowH, l[3], l[2], locked ? Ui.MUTED : Ui.TEXT, l[4], Ui.RIFT, selected, mouseX, mouseY)) {
+						tip = List.of(l[2], l[4]);
+					}
+					if (selected) {
+						Ui.tag(g, "Selected", x0 + lw - 62, y + (rowH - 11) / 2, Ui.GREEN);
+					} else {
+						button(g, x0 + lw - 62, y + (rowH - 14) / 2, 56, 14, locked ? "Unlock " + l[5] : "Select", locked ? Ui.GOLD : Ui.RIFT, false, mouseX,
+								mouseY, "loadout", l[1]);
+					}
+					y += rowH + 2;
+				}
+				int ax = x0 + lw + 10;
+				int aw = w0 - lw - 10;
+				String key = net.minecraft.client.Minecraft.getInstance().options.keySwapOffhand.getTranslatedKeyMessage().getString();
+				Ui.section(g, "Ability (" + key + ")", ax, top, aw);
+				int bw = (aw - 4) / 2;
+				int ay = top + 13;
+				String about = null;
+				for (int i = 0; i < abilities.size(); i++) {
+					String[] a = abilities.get(i);
+					int bx = ax + (i % 2) * (bw + 4);
+					int by = ay + (i / 2) * 18;
+					boolean on = a.length > 5 && a[5].equals("selected");
+					button(g, bx, by, bw, 16, a[2], Ui.GOLD, on, mouseX, mouseY, "pick_ability", a[1]);
+					if (Ui.inside(mouseX, mouseY, bx, by, bw, 16) || on && about == null) {
+						about = a[2] + ": " + a[4];
+					}
+				}
+				int dy = ay + (abilities.size() + 1) / 2 * 18 + 6;
+				if (about != null) {
+					Ui.inset(g, ax, dy, aw, Math.max(24, bottom - dy));
+					Ui.wrap(g, about, ax + 6, dy + 6, aw - 12, Ui.DIM, bottom - 2);
+				}
 			}
-			boolean selected = l[6].equals("selected");
-			boolean locked = l[6].equals("locked");
-			g.fill(x1, y, x1 + colW, y + rowH - 3, selected ? 0xD0402030 : 0xB0140C14);
-			g.outline(x1, y, colW, rowH - 3, selected ? 0xFFFFC02E : 0xFF402838);
-			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(l[3]))), x1 + 3, y + 3);
-			g.text(font, font.plainSubstrByWidth(l[2], colW - 84), x1 + 22, y + 3, locked ? 0xFFD0C4DC : 0xFFFFFFFF, false);
-			g.text(font, font.plainSubstrByWidth(l[4], colW - 26), x1 + 22, y + 14, 0xFFDCD2E6, false);
-			String label = selected ? "SELECTED" : locked ? "◆ " + l[5] : "SELECT";
-			button(g, x1 + colW - 58, y + 2, 54, 10, label, locked ? 0xFFFFC02E : 0xFFFF3D6E, selected, mouseX, mouseY, "loadout", l[1]);
-			y += rowH;
-		}
-		// Abilities (Z in the Rift).
-		y += 2;
-		g.text(font, "ABILITY  (" + net.minecraft.client.Minecraft.getInstance().options.keySwapOffhand.getTranslatedKeyMessage().getString() + ")", x1, y, 0xFFFFC02E, true);
-		y += 11;
-		int bw = (colW - 4) / 2;
-		for (int i = 0; i < abilities.size(); i++) {
-			String[] a = abilities.get(i);
-			int bx = x1 + (i % 2) * (bw + 4);
-			int by = y + (i / 2) * 15;
-			boolean on = a.length > 5 && a[5].equals("selected");
-			button(g, bx, by, bw, 13, a[2], 0xFFFFC02E, on, mouseX, mouseY, "pick_ability", a[1]);
-			if (mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 13) {
-				tip = List.of(Component.literal(a[2]).withColor(0xFFC02E), Component.literal(a[4]).withColor(0xE0D8E8));
+			case 1 -> {
+				// Relics to unlock, as a grid.
+				Ui.section(g, "New relics", x0, top, w0);
+				int cols = 2;
+				int cw = (w0 - 6) / cols;
+				int rows = (relics.size() + cols - 1) / cols;
+				int rh = Math.max(24, Math.min(32, (bottom - top - 14) / Math.max(1, rows) - 2));
+				for (int i = 0; i < relics.size(); i++) {
+					String[] r = relics.get(i);
+					int x = x0 + (i % cols) * (cw + 6);
+					int y = top + 13 + (i / cols) * (rh + 2);
+					boolean owned = r[6].equals("owned");
+					int tier = RiftClient.tierColor(r.length > 7 ? r[7] : "RARE");
+					if (row(g, x, y, cw, rh, r[3], r[2], tier, r[4], tier, owned, mouseX, mouseY)) {
+						tip = List.of(r[2], r[4]);
+					}
+					if (owned) {
+						Ui.tag(g, "Owned", x + cw - 46, y + (rh - 11) / 2, Ui.GREEN);
+					} else {
+						int price = Integer.parseInt(r[5]);
+						button(g, x + cw - 56, y + (rh - 14) / 2, 50, 14, "Buy " + price, shards >= price ? Ui.GOLD : 0xFF6A3036, false, mouseX, mouseY, "unlock",
+								r[1]);
+					}
+				}
 			}
-		}
-		// Relics to unlock.
-		g.text(font, "NEW RELICS", x2, top, 0xFF4FA8FF, true);
-		y = top + 12;
-		int rh = Math.max(26, Math.min(38, (height - top - 30) / Math.max(1, relics.size())));
-		for (String[] r : relics) {
-			if (mouseX >= x2 && mouseX < x2 + colW - 60 && mouseY >= y && mouseY < y + rh - 3) {
-				tip = List.of(Component.literal(r[2]).withColor(RiftClient.tierColor(r.length > 7 ? r[7] : "RARE") & 0xFFFFFF),
-						Component.literal(r[4]).withColor(0xE0D8E8));
+			case 2 -> {
+				// Heat on the left, the Daily Rift and the Endless Descent on the right.
+				int hw = w0 / 2 - 5;
+				Ui.section(g, "Heat", x0, top, hw);
+				int y = top + 13;
+				for (int h = 0; h <= 5; h++) {
+					boolean locked = h > maxHeat;
+					if (locked) {
+						Ui.inset(g, x0, y, hw, 16);
+						Ui.icon(g, Ui.Icon.LOCK, x0 + 4, y + 4);
+						Ui.text(g, HEAT[h] + " (win at Heat " + (h - 1) + ")", x0 + 16, y + 4, hw - 20, Ui.MUTED);
+					} else {
+						button(g, x0, y, hw, 16, h + ". " + HEAT[h], h == 0 ? 0xFF8A93A0 : h < 3 ? Ui.AMBER : Ui.RED, h == heat, mouseX, mouseY, "heat",
+								String.valueOf(h));
+					}
+					y += 19;
+				}
+				y += 4;
+				Ui.inset(g, x0, y, hw, Math.max(26, bottom - y));
+				Ui.wrap(g, HEAT_ABOUT[heat] + (heat > 0 ? " Shards x" + String.format("%.2f", 1 + 0.25 * heat) + "." : ""), x0 + 6, y + 6, hw - 12, Ui.DIM,
+						bottom - 2);
+				int dx = x0 + hw + 10;
+				Ui.section(g, "Daily Rift", dx, top, hw);
+				y = top + 13;
+				button(g, dx, y, hw, 16, daily ? "On: today's run for all" : "Off: click to turn on", Ui.RIFT, daily, mouseX, mouseY, "daily", "toggle");
+				y += 22;
+				Ui.text(g, "Today's best", dx, y, Ui.DIM);
+				y += 11;
+				if (dailyTop.isEmpty()) {
+					Ui.text(g, "Nobody yet", dx + 6, y, Ui.MUTED);
+					y += 10;
+				}
+				for (String s : dailyTop) {
+					Ui.text(g, s, dx + 6, y, hw - 6, Ui.TEXT);
+					y += 10;
+				}
+				y += 8;
+				Ui.section(g, "Endless Descent", dx, y, hw);
+				y += 13;
+				Ui.text(g, "Win a run, then keep going down!", dx, y, hw, Ui.DIM);
+				y += 11;
+				if (deepest.isEmpty()) {
+					Ui.text(g, "Nobody yet", dx + 6, y, Ui.MUTED);
+				}
+				for (String s : deepest) {
+					Ui.text(g, s, dx + 6, y, hw - 6, Ui.TEXT);
+					y += 10;
+				}
 			}
-			boolean owned = r[6].equals("owned");
-			int tier = RiftClient.tierColor(r.length > 7 ? r[7] : "RARE");
-			float shine = (float) (0.5 + 0.5 * Math.sin(now / 300.0 + y));
-			g.fill(x2, y, x2 + colW, y + rh - 3, owned ? 0xC0102018 : 0xB0140C14);
-			g.outline(x2, y, colW, rh - 3, owned ? 0xFF5BE37D : (int) (120 + 135 * shine) << 24 | tier & 0xFFFFFF);
-			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(r[3]))), x2 + 3, y + 3);
-			g.text(font, font.plainSubstrByWidth(r[2], colW - 84), x2 + 22, y + 3, tier, false);
-			g.text(font, font.plainSubstrByWidth(r[4], colW - 26), x2 + 22, y + 14, 0xFFDCD2E6, false);
-			if (owned) {
-				g.text(font, "✔ OWNED", x2 + colW - font.width("✔ OWNED") - 4, y + 3, 0xFF5BE37D, false);
-			} else {
-				button(g, x2 + colW - 58, y + 2, 54, 10, "◆ " + r[5], shards >= Integer.parseInt(r[5]) ? 0xFFFFC02E : 0xFF804040, false, mouseX, mouseY,
-						"unlock", r[1]);
-			}
-			y += rh;
-		}
-		// Heat and the Daily Rift.
-		g.text(font, "HEAT", x3, top, 0xFFFF7A2E, true);
-		y = top + 12;
-		for (int h = 0; h <= 5; h++) {
-			boolean locked = h > maxHeat;
-			String label = (locked ? "🔒 " : "") + h + "  " + HEAT[h];
-			if (locked) {
-				g.fill(x3, y, x3 + colW, y + 13, 0x80101010);
-				g.text(font, font.plainSubstrByWidth(h + "  " + HEAT[h] + "  (win at Heat " + (h - 1) + ")", colW - 4), x3 + 2, y + 3, 0xFF605060, false);
-			} else {
-				button(g, x3, y, colW, 13, h + "  " + HEAT[h], h == 0 ? 0xFFB8C4D0 : h < 3 ? 0xFFFFB040 : 0xFFFF4040, h == heat, mouseX, mouseY, "heat",
-						String.valueOf(h));
-			}
-			y += 15;
-		}
-		for (var line : font.split(Component.literal(HEAT_ABOUT[heat] + (heat > 0 ? "  Shards x" + String.format("%.2f", 1 + 0.25 * heat) : "")), colW)) {
-			g.text(font, line, x3, y, 0xFFFFC080, false);
-			y += 10;
-		}
-		y += 8;
-		g.text(font, "DAILY RIFT", x3, y, 0xFFC27BFF, true);
-		y += 12;
-		button(g, x3, y, colW, 14, daily ? "ON: today's run for everyone" : "OFF (click to turn on)", 0xFFC27BFF, daily, mouseX, mouseY, "daily", "toggle");
-		y += 18;
-		g.text(font, "Today's best:", x3, y, 0xFFDCD2E6, false);
-		y += 10;
-		if (dailyTop.isEmpty()) {
-			g.text(font, "  nobody yet", x3, y, 0xFF706070, false);
-		}
-		for (String s : dailyTop) {
-			g.text(font, "  " + s, x3, y, 0xFFFFFFFF, false);
-			y += 10;
-		}
-		y += 8;
-		g.text(font, "ENDLESS DESCENT", x3, y, 0xFFC27BFF, true);
-		y += 11;
-		g.text(font, font.plainSubstrByWidth("Win a run, then keep going down!", colW), x3, y, 0xFFDCD2E6, false);
-		y += 10;
-		if (deepest.isEmpty()) {
-			g.text(font, "  nobody yet", x3, y, 0xFF706070, false);
-		}
-		for (String s : deepest) {
-			g.text(font, "  " + s, x3, y, 0xFFFFFFFF, false);
-			y += 10;
+			default -> tip = extras(g, mouseX, mouseY, x0, w0, top, bottom);
 		}
 		if (tip != null) {
-			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
+			Ui.tooltip(g, tip, mouseX, mouseY, width, height);
 		}
-		g.centeredText(font, "Choices here are for the next run. Step into the portal when everyone's ready.", width / 2, height - 12, 0xFFD0C4DC);
+		g.centeredText(font, "Choices here are for the next run. Step into the portal when everyone's ready.", width / 2, height - 14, Ui.MUTED);
 	}
 
-	/** The EXTRAS page: your companion (left) and the team's mutators (right). */
-	private void extras(GuiGraphicsExtractor g, int mouseX, int mouseY) {
-		int colW = Math.min(230, (width - 40) / 2);
-		int x1 = width / 2 - colW - 8;
-		int x2 = width / 2 + 8;
-		int top = 40;
-		List<Component> tip = null;
-		g.text(font, "YOUR COMPANION", x1, top, 0xFF66E0FF, true);
-		int y = top + 12;
-		int rh = Math.max(22, Math.min(30, (height - top - 40) / Math.max(1, companions.size())));
+	/** The Extras tab: your companion (left) and the team's mutators (right). Returns a tooltip, or null. */
+	private List<String> extras(GuiGraphicsExtractor g, int mouseX, int mouseY, int x0, int w0, int top, int bottom) {
+		int colW = w0 / 2 - 5;
+		int x1 = x0;
+		int x2 = x0 + colW + 10;
+		List<String> tip = null;
+		Ui.section(g, "Your companion", x1, top, colW);
+		int y = top + 13;
+		int rh = Math.max(22, Math.min(28, (bottom - y) / Math.max(1, companions.size()) - 2));
 		for (String[] c : companions) {
 			boolean on = c.length > 5 && c[5].equals("selected");
-			g.fill(x1, y, x1 + colW, y + rh - 3, on ? 0xD0203040 : 0xB0140C14);
-			g.outline(x1, y, colW, rh - 3, on ? 0xFF66E0FF : 0xFF402838);
-			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c[3]))), x1 + 3, y + (rh - 3 - 16) / 2);
-			g.text(font, c[2], x1 + 22, y + 3, 0xFFFFFFFF, false);
-			g.text(font, font.plainSubstrByWidth(c[4], colW - 84), x1 + 22, y + 13, 0xFFDCD2E6, false);
-			button(g, x1 + colW - 58, y + 2, 54, 10, on ? "WITH YOU" : "CHOOSE", 0xFF66E0FF, on, mouseX, mouseY, "companion", c[1]);
-			if (mouseX >= x1 && mouseX < x1 + colW - 60 && mouseY >= y && mouseY < y + rh - 3) {
-				tip = List.of(Component.literal(c[2]).withColor(0x66E0FF), Component.literal(c[4]).withColor(0xE0D8E8));
+			if (row(g, x1, y, colW, rh, c[3], c[2], Ui.TEXT, c[4], Ui.BLUE, on, mouseX, mouseY)) {
+				tip = List.of(c[2], c[4]);
 			}
-			y += rh;
+			button(g, x1 + colW - 62, y + (rh - 14) / 2, 56, 14, on ? "With you" : "Choose", Ui.BLUE, on, mouseX, mouseY, "companion", c[1]);
+			y += rh + 2;
 		}
-		g.text(font, "MUTATORS (whole team)", x2, top, 0xFFFF7AE0, true);
-		y = top + 12;
-		rh = Math.max(22, Math.min(30, (height - top - 40) / Math.max(1, mutators.size())));
+		Ui.section(g, "Mutators (whole team)", x2, top, colW);
+		y = top + 13;
+		rh = Math.max(22, Math.min(28, (bottom - y) / Math.max(1, mutators.size()) - 2));
 		for (String[] m : mutators) {
 			boolean on = m.length > 5 && m[5].equals("on");
-			g.fill(x2, y, x2 + colW, y + rh - 3, on ? 0xD0402040 : 0xB0140C14);
-			g.outline(x2, y, colW, rh - 3, on ? 0xFFFF7AE0 : 0xFF402838);
-			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(m[3]))), x2 + 3, y + (rh - 3 - 16) / 2);
-			g.text(font, m[2], x2 + 22, y + 3, 0xFFFFFFFF, false);
-			g.text(font, font.plainSubstrByWidth(m[4], colW - 84), x2 + 22, y + 13, 0xFFDCD2E6, false);
-			button(g, x2 + colW - 58, y + 2, 54, 10, on ? "ON" : "OFF", 0xFFFF7AE0, on, mouseX, mouseY, "mutator", m[1]);
-			if (mouseX >= x2 && mouseX < x2 + colW - 60 && mouseY >= y && mouseY < y + rh - 3) {
-				tip = List.of(Component.literal(m[2]).withColor(0xFF7AE0), Component.literal(m[4]).withColor(0xE0D8E8));
+			if (row(g, x2, y, colW, rh, m[3], m[2], Ui.TEXT, m[4], Ui.RIFT, on, mouseX, mouseY)) {
+				tip = List.of(m[2], m[4]);
 			}
-			y += rh;
+			button(g, x2 + colW - 44, y + (rh - 14) / 2, 38, 14, on ? "On" : "Off", Ui.RIFT, on, mouseX, mouseY, "mutator", m[1]);
+			y += rh + 2;
 		}
-		if (tip != null) {
-			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
-		}
-		g.centeredText(font, "Companions level up with your kills. Mutators are just for fun. Hover for details.", width / 2, height - 12, 0xFFD0C4DC);
+		return tip;
 	}
 
 	@Override
@@ -288,7 +313,7 @@ public class ThresholdScreen extends Screen {
 			int[] b = buttons.get(i);
 			if (event.x() >= b[0] && event.x() < b[0] + b[2] && event.y() >= b[1] && event.y() < b[1] + b[3]) {
 				if (actions.get(i)[0].equals("page")) {
-					page = 1 - page;
+					page = Integer.parseInt(actions.get(i)[1]);
 					if (minecraft != null && minecraft.player != null) {
 						minecraft.player.playSound(net.minecraft.sounds.SoundEvents.BOOK_PAGE_TURN, 0.6F, 1.1F);
 					}

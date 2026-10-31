@@ -3,6 +3,9 @@ package dev.rubymod.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import dev.rubymod.client.ui.Ui;
+import dev.rubymod.client.ui.UiButton;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -17,8 +20,11 @@ import net.minecraft.network.chat.Component;
  * the same /squad commands you could type.
  */
 public class SquadScreen extends Screen {
+	private static final int W = 300;
+	private static final int H = 190;
 	private EditBox name;
 	private final List<Button> inviteButtons = new ArrayList<>();
+	private final long opened = System.currentTimeMillis();
 
 	public SquadScreen() {
 		super(Component.literal("Squad"));
@@ -34,11 +40,11 @@ public class SquadScreen extends Screen {
 	}
 
 	private int left() {
-		return width / 2 - 150;
+		return width / 2 - W / 2;
 	}
 
 	private int top() {
-		return height / 2 - 95;
+		return height / 2 - H / 2;
 	}
 
 	@Override
@@ -47,18 +53,18 @@ public class SquadScreen extends Screen {
 		int x = left();
 		int y = top();
 		if (squad().isEmpty()) {
-			name = new EditBox(font, x + 10, y + 40, 180, 18, Component.literal("Squad name"));
+			name = new EditBox(font, x + 16, y + 52, 168, 12, Component.literal("Squad name"));
 			name.setMaxLength(16);
+			name.setBordered(false);
 			name.setHint(Component.literal("Squad name"));
 			addRenderableWidget(name);
-			addRenderableWidget(Button.builder(Component.literal("Create squad"), b -> {
+			addRenderableWidget(new UiButton(x + 196, y + 46, 92, 20, "Create squad", Ui.RUBY, b -> {
 				if (!name.getValue().isBlank()) {
 					run("squad create " + name.getValue().trim());
 				}
-			}).bounds(x + 196, y + 39, 94, 20).build());
+			}));
 		} else {
-			addRenderableWidget(Button.builder(Component.literal("Leave squad"), b -> run("squad leave"))
-					.bounds(x + 206, y + 166, 84, 20).build());
+			addRenderableWidget(new UiButton(x + W - 96, y + H - 28, 84, 18, "Leave squad", 0xFF5A606C, b -> run("squad leave")));
 		}
 		// Invite buttons for everyone online who isn't you or already a squadmate.
 		var connection = Minecraft.getInstance().getConnection();
@@ -68,13 +74,13 @@ public class SquadScreen extends Screen {
 			for (PlayerInfo info : connection.getOnlinePlayers()) {
 				String player = info.getProfile().name();
 				boolean mate = ClientState.map != null && ClientState.map.mates().stream().anyMatch(m -> m.name().equals(player));
-				if (player.equals(me) || mate || i >= 8) {
+				if (player.equals(me) || mate || i >= 6) {
 					continue;
 				}
-				Button b = Button.builder(Component.literal("Invite " + player), btn -> {
+				Button b = new UiButton(x + 160, y + 48 + i * 20, 128, 18, "Invite " + player, Ui.GREEN, btn -> {
 					run("squad invite " + player);
 					btn.active = false;
-				}).bounds(x + 160, y + 46 + i * 22, 130, 20).build();
+				});
 				inviteButtons.add(b);
 				addRenderableWidget(b);
 				i++;
@@ -92,40 +98,41 @@ public class SquadScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
+		float in = Ui.ease(opened, 220);
+		Ui.dim(g, width, height, in);
 		int x = left();
 		int y = top();
-		g.fill(x + 3, y + 3, x + 303, y + 193, 0x66000000);
-		g.fillGradient(x, y, x + 300, y + 190, 0xF0232830, 0xF0171A1F);
-		g.outline(x, y, 300, 190, 0xFF7A0A2A);
-		g.fill(x + 1, y + 1, x + 299, y + 16, 0xFF1A1E24);
-		g.fill(x + 1, y + 16, x + 299, y + 17, 0xFFD0154A);
+		Ui.panel(g, x, y, W, H);
 		String squad = squad();
-		g.text(font, squad.isEmpty() ? "SQUAD" : "SQUAD: " + squad.toUpperCase(), x + 8, y + 5, 0xFFE8EAED, false);
+		Ui.heading(g, squad.isEmpty() ? "Squad" : squad, x + 12, y + 10, Ui.TEXT, 1.5F, false);
 		if (squad.isEmpty()) {
-			g.text(font, "You're not in a squad.", x + 10, y + 24, 0xFF8B93A1, false);
-			g.text(font, "Make one, or join with an invite:", x + 10, y + 66, 0xFF8B93A1, false);
-			g.text(font, "/squad join <name>", x + 10, y + 78, 0xFFC8D0D8, false);
-			g.text(font, "Squads of up to 4 share claims, Hearts,", x + 10, y + 100, 0xFF8B93A1, false);
-			g.text(font, "research and the win. No friendly fire.", x + 10, y + 112, 0xFF8B93A1, false);
+			Ui.text(g, "You're not in a squad yet.", x + 12, y + 30, Ui.DIM);
+			Ui.inset(g, x + 10, y + 46, 180, 20);
+			Ui.section(g, "Join one", x + 12, y + 82, W - 24);
+			Ui.text(g, "Ask a friend to invite you, or type", x + 12, y + 96, Ui.DIM);
+			Ui.text(g, "/squad join <name>", x + 12, y + 108, Ui.GOLD);
+			Ui.section(g, "Why squad up?", x + 12, y + 128, W - 24);
+			Ui.wrap(g, "Up to 4 of you share claims, Hearts, upgrades and the win. You can't hurt each other.", x + 12, y + 142, W - 24, Ui.DIM,
+					y + H - 6);
 		} else {
-			g.text(font, "MEMBERS NEARBY", x + 10, y + 26, 0xFFFF5A82, false);
-			int my = y + 42;
-			g.text(font, Minecraft.getInstance().player.getName().getString() + " (you)", x + 10, my, 0xFFFFFFFF, false);
-			my += 14;
+			Ui.section(g, "Members", x + 12, y + 32, 132);
+			int my = y + 48;
+			Ui.icon(g, Ui.Icon.CROWN, x + 12, my - 1);
+			Ui.text(g, Minecraft.getInstance().player.getName().getString() + " (you)", x + 24, my, Ui.TEXT);
+			my += 16;
 			if (ClientState.map != null) {
 				for (var mate : ClientState.map.mates()) {
-					g.text(font, mate.name(), x + 10, my, 0xFF7CF59A, false);
-					int bw = 50;
-					g.fill(x + 96, my + 2, x + 96 + bw, my + 6, 0xFF2A2F35);
-					g.fill(x + 96, my + 2, x + 96 + Math.round(bw * Math.max(0, Math.min(1, mate.health()))), my + 6, 0xFF5BE37D);
-					my += 14;
+					Ui.icon(g, Ui.Icon.HEART, x + 12, my - 1);
+					Ui.text(g, mate.name(), x + 24, my, 80, Ui.TEXT);
+					Ui.bar(g, x + 106, my + 1, 40, 6, Math.max(0, Math.min(1, mate.health())), Ui.GREEN);
+					my += 16;
 				}
 			}
-			g.text(font, "INVITE", x + 160, y + 26, 0xFFFF5A82, false);
+			Ui.section(g, "Invite", x + 160, y + 32, W - 172);
 			if (inviteButtons.isEmpty()) {
-				g.text(font, "Nobody else online", x + 160, y + 46, 0xFF8B93A1, false);
+				Ui.text(g, "Nobody else is online.", x + 160, y + 50, Ui.MUTED);
 			}
-			g.text(font, "Chat to your squad: /sc <message>", x + 10, y + 172, 0xFF8B93A1, false);
+			Ui.text(g, "Squad chat: /sc <message>", x + 12, y + H - 22, Ui.MUTED);
 		}
 		super.extractRenderState(g, mouseX, mouseY, partial);
 	}

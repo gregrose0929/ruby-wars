@@ -7,6 +7,8 @@ import dev.rubymod.net.MorePayloads;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -55,60 +57,47 @@ public class ConvoyScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
-		long now = System.currentTimeMillis();
-		g.centeredText(font, source.title(), width / 2, 18, 0xFFFFC040);
-		g.centeredText(font, source.kind().equals("role") ? "Everyone gets iron armor, grenades and endless ammo. Pick what you'll do:"
-				: "Your pick goes on the convoy for the rest of the job.", width / 2, 32, 0xFFD8DEE4);
+		float in = Ui.ease(opened, 240);
+		Ui.dim(g, width, height, in);
+		Ui.emblem(g, "convoy", width / 2 - 12, 8, 24);
+		Ui.heading(g, source.title(), width / 2, 36, Ui.TEXT, 1.5F, true);
+		g.centeredText(font, source.kind().equals("role") ? "Everyone gets iron armor, grenades and endless ammo."
+				: "Your pick stays on the convoy for the rest of the job.", width / 2, 52, Ui.DIM);
 		int n = Math.max(1, cards.size());
 		int gap = 8;
-		int cw = Math.min(124, (width - 20 - gap * (n - 1)) / n);
-		int ch = Math.min(150, height - 80);
+		int cw = Math.min(118, (width - 20 - gap * (n - 1)) / n);
+		int ch = Math.min(150, height - 96);
 		int total = n * cw + (n - 1) * gap;
 		int x0 = (width - total) / 2;
-		int y0 = 48;
+		int y0 = 68;
 		boxes.clear();
 		for (int i = 0; i < cards.size(); i++) {
 			Card c = cards.get(i);
-			float rise = Math.min(1, Math.max(0, (now - opened - i * 90) / 220F));
+			float rise = Ui.ease(opened + 70L * i, 260);
 			int x = x0 + i * (cw + gap);
-			int y = y0 + (int) ((1 - rise) * 24);
+			int y = y0 + Math.round((1 - rise) * 18);
 			boxes.add(new int[] {x, y, cw, ch});
-			boolean hover = mouseX >= x && mouseX < x + cw && mouseY >= y && mouseY < y + ch;
-			g.fill(x + 3, y + 3, x + cw + 3, y + ch + 3, 0x66000000);
-			g.fill(x, y, x + cw, y + ch, hover ? 0xF0262E36 : 0xF0161B20);
-			g.outline(x, y, cw, ch, hover ? 0xFFFFFFFF : c.color());
-			g.fill(x + 1, y + 1, x + cw - 1, y + 4, c.color());
-			// The icon, big.
+			boolean hover = Ui.inside(mouseX, mouseY, x, y, cw, ch);
+			float hv = Ui.hover("convoycard:" + c.id(), hover);
+			Ui.card(g, x, y, cw, ch, c.color(), hv);
+			int lift = Math.round(hv * 2);
+			// The icon, big, on a sunken plate.
+			Ui.inset(g, x + cw / 2 - 20, y + 10 - lift, 40, 40);
 			g.pose().pushMatrix();
-			g.pose().translate(x + cw / 2F - 16, y + 12);
+			g.pose().translate(x + cw / 2F - 16, y + 14 - lift);
 			g.pose().scale(2.0F, 2.0F);
 			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c.icon()))), 0, 0);
 			g.pose().popMatrix();
-			int ty = y + 50;
+			int ty = y + 58 - lift;
 			for (FormattedCharSequence line : font.split(Component.literal(c.title()), cw - 10)) {
 				g.centeredText(font, line, x + cw / 2, ty, c.color());
 				ty += 10;
 			}
-			ty += 4;
-			for (FormattedCharSequence line : font.split(Component.literal(c.about()), cw - 12)) {
-				if (ty > y + ch - 24) {
-					break;
-				}
-				g.text(font, line, x + 6, ty, 0xFFFFFFFF, false);
-				ty += 10;
-			}
-			int by = y + ch - 18;
-			g.fill(x + 6, by, x + cw - 6, by + 13, hover ? c.color() : darker(c.color()));
-			g.centeredText(font, "TAKE IT", x + cw / 2, by + 3, 0xFFFFFFFF);
+			ty += 3;
+			Ui.wrap(g, c.about(), x + 7, ty, cw - 14, Ui.DIM, y + ch - 24);
+			Ui.button(g, source.kind().equals("role") ? "Pick" : "Take it", x + 7, y + ch - 22 - lift, cw - 14, 16, mouseX, mouseY, c.color(), true);
 		}
-		g.centeredText(font, "Esc to look around first (J brings this back)", width / 2, height - 14, 0xFF8A949E);
-	}
-
-	private static int darker(int argb) {
-		int r = (argb >> 16 & 0xFF) * 5 / 10;
-		int gg = (argb >> 8 & 0xFF) * 5 / 10;
-		int b = (argb & 0xFF) * 5 / 10;
-		return 0xFF000000 | r << 16 | gg << 8 | b;
+		g.centeredText(font, "Esc to look around first (J brings this back)", width / 2, height - 14, Ui.MUTED);
 	}
 
 	@Override
