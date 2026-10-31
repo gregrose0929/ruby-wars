@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import dev.rubymod.client.ui.Ui;
 import dev.rubymod.net.MorePayloads;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -240,6 +241,28 @@ public final class RiftClient {
 
 	// ----- On screen -----
 
+	/** "ACT 1  •  FLOOR 1/8  •  CRYSTAL CAVERNS" as "Act 1, floor 1/8, Crystal Caverns". */
+	static String calm(String header) {
+		StringBuilder out = new StringBuilder();
+		for (String part : header.split("\u2022")) {
+			String p = part.trim();
+			if (p.isEmpty()) {
+				continue;
+			}
+			StringBuilder words = new StringBuilder();
+			for (String w : p.split(" +")) {
+				if (w.isEmpty()) {
+					continue;
+				}
+				boolean caps = w.equals(w.toUpperCase()) && w.chars().anyMatch(Character::isLetter);
+				String word = caps ? w.charAt(0) + w.substring(1).toLowerCase() : w;
+				words.append(words.length() > 0 ? " " : "").append(word);
+			}
+			out.append(out.length() > 0 ? ", " : "").append(words);
+		}
+		return out.toString();
+	}
+
 	public static final class Hud implements HudElement {
 		@Override
 		public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker delta) {
@@ -256,20 +279,23 @@ public final class RiftClient {
 			int w = g.guiWidth();
 			int h = g.guiHeight();
 			long now = System.currentTimeMillis();
-			// The run: one clean card, top left.
+			// The run: one card, top left.
+			String header = calm(hud.header());
 			String gold = String.valueOf(hud.gold());
-			int pw = Math.max(font.width(hud.header()) + 12, 100);
+			int pw = Math.max(font.width(header) + 34, 120);
 			// On narrow screens, below the boss bars instead of beside them.
-			int top = 4 + pw > w / 2 - 92 ? 42 : 4;
-			g.fill(4, top, 4 + pw, top + 28, 0xE0100810);
-			g.fill(4, top, 4 + pw, top + 1, 0xFFFF3D6E);
-			g.text(font, "RUBY RIFT", 9, top + 5, 0xFFFF5A82, true);
-			g.item(new ItemStack(net.minecraft.world.item.Items.GOLD_NUGGET), 4 + pw - font.width(gold) - 22, top + 1);
-			g.text(font, gold, 4 + pw - font.width(gold) - 5, top + 5, 0xFFFFD040, true);
-			g.text(font, hud.header(), 9, top + 16, 0xFFF0E6F6, true);
+			int top = 4 + pw > w / 2 - 92 ? 44 : 4;
+			Ui.panel(g, 4, top, pw, 30);
+			Ui.emblem(g, "rift", 9, top + 7, 16);
+			Ui.text(g, "Ruby Rift", 29, top + 6, Ui.RIFT);
+			Ui.text(g, header, 29, top + 17, pw - 32, Ui.TEXT);
+			Ui.icon(g, Ui.Icon.GEM, 4 + pw - font.width(gold) - 18, top + 5);
+			Ui.text(g, gold, 4 + pw - font.width(gold) - 6, top + 6, Ui.GOLD);
 			// The team (only when there is one).
-			int y = top + 32;
+			int y = top + 33;
 			if (hud.team().size() > 1) {
+				Ui.panel(g, 4, y, 112, 6 + hud.team().size() * 12);
+				int ty = y + 4;
 				for (String line : hud.team()) {
 					String[] f = line.split("[|]");
 					if (f.length < 4) {
@@ -277,21 +303,19 @@ public final class RiftClient {
 					}
 					boolean down = f[3].equals("down");
 					float hp = Mth.clamp(Float.parseFloat(f[1]) / Math.max(1, Float.parseFloat(f[2])), 0, 1);
-					g.fill(4, y, 110, y + 14, 0xC0100810);
-					g.text(font, font.plainSubstrByWidth(f[0], 58), 8, y + 3, down ? 0xFFFF6060 : 0xFFFFFFFF, true);
+					Ui.text(g, f[0], 10, ty + 1, 56, down ? Ui.RED : Ui.TEXT);
 					if (down) {
-						g.text(font, "DOWN", 72, y + 3, (now / 300) % 2 == 0 ? 0xFFFF3030 : 0xFFA02020, true);
+						Ui.icon(g, Ui.Icon.SKULL, 70, ty);
+						Ui.text(g, "Down", 82, ty + 1, Ui.mix(Ui.RED, 0xFFFFA0A0, Ui.pulse(600)));
 					} else {
-						int col = hp > 0.5F ? 0xFF5BE37D : hp > 0.25F ? 0xFFFFB040 : 0xFFFF4040;
-						g.fill(70, y + 5, 106, y + 9, 0xFF301018);
-						g.fill(70, y + 5, 70 + (int) (36 * hp), y + 9, col);
+						Ui.bar(g, 70, ty + 2, 40, 5, hp, hp > 0.5F ? Ui.GREEN : hp > 0.25F ? Ui.AMBER : Ui.RED);
 					}
-					y += 16;
+					ty += 12;
 				}
 			}
-			// Your relics: a small grid in the top-right corner, framed in their tier's colour (the full list: E).
+			// Your relics: a small grid in the top-right corner, each on a slot in its tier's colour (the full list: E).
 			java.util.List<String> owned = relicLines();
-			int cell = 13;
+			int cell = 14;
 			int rows = Math.max(4, Math.min(owned.size(), (h - 90) / cell));
 			int cols = 3;
 			int shown = Math.min(owned.size(), rows * cols);
@@ -306,51 +330,51 @@ public final class RiftClient {
 				int x = w - 4 - cell * (1 + n / rows);
 				int ry = 4 + (n % rows) * cell;
 				int tier = tierColor(f[2]);
-				float pulse = 0.55F + 0.45F * (float) Math.sin(now / 450.0 + n);
-				g.fill(x, ry, x + cell - 1, ry + cell - 1, 0xC0100810);
-				g.outline(x, ry, cell - 1, cell - 1, (int) (pulse * 255) << 24 | tier & 0xFFFFFF);
+				Ui.inset(g, x, ry, cell - 1, cell - 1);
+				g.fill(x + 1, ry + 1, x + cell - 2, ry + cell - 2, Ui.alpha(tier, 0.22F + 0.12F * (float) Math.sin(now / 450.0 + n)));
 				g.pose().pushMatrix();
-				g.pose().translate(x + 1, ry + 1);
-				g.pose().scale(0.65F, 0.65F);
+				g.pose().translate(x + 1.5F, ry + 1.5F);
+				g.pose().scale(0.625F, 0.625F);
 				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[1]))), 0, 0);
 				g.pose().popMatrix();
 			}
 			if (owned.size() > shown) {
 				int x = w - 4 - cell * (1 + shown / rows);
 				int ry = 4 + (shown % rows) * cell;
-				g.fill(x, ry, x + cell - 1, ry + cell - 1, 0xE0302030);
-				g.centeredText(font, "+" + (owned.size() - shown), x + cell / 2, ry + 3, 0xFFFFC02E);
+				Ui.inset(g, x, ry, cell - 1, cell - 1);
+				g.centeredText(font, "+" + (owned.size() - shown), x + cell / 2, ry + 3, Ui.GOLD);
 			}
-			// Your ability (Z): icon, name, and a cooldown sweep; it flashes when it's ready.
+			// Your ability (F): icon, name, and a cooldown sweep; it glows when it's ready.
 			String[] ab = abilityLine();
 			if (ab != null && ab.length >= 6) {
 				int left = Math.max(0, Integer.parseInt(ab[4]) - (int) ((now - hudAt) / 50));
 				int max = Math.max(1, Integer.parseInt(ab[5]));
 				boolean ready = left == 0;
-				int ax = w / 2 - 91 - 66;
-				int ay = h - 22;
-				g.fill(ax, ay, ax + 62, ay + 20, 0xD0100810);
-				int edge = ready ? ((now / 300) % 2 == 0 ? 0xFFFFC02E : 0xFFFF3D6E) : 0xFF403040;
-				g.outline(ax, ay, 62, 20, edge);
-				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(ab[3]))), ax + 2, ay + 2);
+				int ax = w / 2 - 91 - 68;
+				int ay = h - 23;
+				Ui.panel(g, ax, ay, 64, 22);
+				if (ready) {
+					g.outline(ax, ay, 64, 22, Ui.alpha(Ui.GOLD, 0.4F + 0.6F * Ui.pulse(800)));
+				}
+				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(ab[3]))), ax + 3, ay + 3);
 				if (!ready) {
 					int cover = (int) (16 * left / (float) max);
-					g.fill(ax + 2, ay + 2 + 16 - cover, ax + 18, ay + 18, 0xA0000000);
+					g.fill(ax + 3, ay + 3 + 16 - cover, ax + 19, ay + 19, 0xA0000000);
 				}
-				g.text(font, "[" + net.minecraft.client.Minecraft.getInstance().options.keySwapOffhand.getTranslatedKeyMessage().getString() + "]", ax + 21, ay + 2, ready ? 0xFFFFC02E : 0xFF8A7A9A, false);
-				String label = ready ? "READY" : (left + 19) / 20 + "s";
-				g.text(font, label, ax + 21, ay + 11, ready ? 0xFF7CF59A : 0xFFB8A8C8, false);
-				g.text(font, font.plainSubstrByWidth(ab[2], 60), ax + 1, ay - 9, 0xFFEDE6F2, true);
+				String key = net.minecraft.client.Minecraft.getInstance().options.keySwapOffhand.getTranslatedKeyMessage().getString();
+				Ui.text(g, key, ax + 23, ay + 4, ready ? Ui.GOLD : Ui.MUTED);
+				Ui.text(g, ready ? "Ready" : (left + 19) / 20 + "s", ax + 23, ay + 13, ready ? Ui.GREEN : Ui.DIM);
+				Ui.text(g, ab[2], ax + 1, ay - 10, 66, Ui.TEXT);
 			}
 			// What to do next, in a pill above the hotbar.
 			if (lastScreen != null && mc.gui.screen() == null) {
 				String hint = "Press J to " + (lastScreen.kind().equals("map") ? "choose the next room" : lastScreen.kind().equals("shop")
 						? "open the shop" : lastScreen.kind().equals("threshold") ? "open the Altar of Echoes" : "choose your relic");
-				int tw = font.width(hint);
-				int hy = h - 74;
-				g.fill(w / 2 - tw / 2 - 8, hy - 4, w / 2 + tw / 2 + 8, hy + 12, 0xE0100810);
-				g.outline(w / 2 - tw / 2 - 8, hy - 4, tw + 16, 16, (now / 400) % 2 == 0 ? 0xFFFFC02E : 0xFFFF3D6E);
-				g.centeredText(font, hint, w / 2, hy, 0xFFFFFFFF);
+				int tw = font.width(hint) + 14;
+				int hy = h - 78;
+				Ui.panel(g, w / 2 - tw / 2, hy, tw, 18);
+				g.fill(w / 2 - tw / 2 + 2, hy + 2, w / 2 - tw / 2 + 4, hy + 16, Ui.mix(Ui.GOLD, Ui.RIFT, Ui.pulse(900)));
+				Ui.text(g, hint, w / 2 - tw / 2 + 9, hy + 5, Ui.TEXT);
 			}
 		}
 	}

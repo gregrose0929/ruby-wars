@@ -94,7 +94,7 @@ public class ConvoyScreen extends Screen {
 				ty += 10;
 			}
 			ty += 3;
-			Ui.wrap(g, c.about(), x + 7, ty, cw - 14, Ui.DIM, y + ch - 24);
+			Ui.wrap(g, c.about(), x + 7, ty, cw - 14, Ui.DIM, y + ch - 26);
 			Ui.button(g, source.kind().equals("role") ? "Pick" : "Take it", x + 7, y + ch - 22 - lift, cw - 14, 16, mouseX, mouseY, c.color(), true);
 		}
 		g.centeredText(font, "Esc to look around first (J brings this back)", width / 2, height - 14, Ui.MUTED);

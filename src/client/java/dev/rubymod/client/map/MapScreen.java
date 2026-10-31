@@ -59,9 +59,8 @@ public class MapScreen extends Screen {
 		int y0 = 24;
 		double span = size * zoom;
 		upload(span);
-		g.fill(x0 - 3, y0 - 3, x0 + size + 3, y0 + size + 3, 0xF0101418);
+		dev.rubymod.client.ui.Ui.panel(g, x0 - 6, y0 - 6, size + 12, size + 12);
 		g.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, x0, y0, 0.0F, 0.0F, size, size, size, size);
-		g.outline(x0 - 1, y0 - 1, size + 2, size + 2, 0xFF5A6470);
 		g.enableScissor(x0, y0, x0 + size, y0 + size);
 		MorePayloads.MapSync map = ClientState.map;
 		if (map != null) {
@@ -92,16 +91,27 @@ public class MapScreen extends Screen {
 			g.fill(p[0] - 2, p[1] - 2, p[0] + 3, p[1] + 3, 0xFFFFFFFF);
 		}
 		g.disableScissor();
-		g.centeredText(font, "MAP  -  scroll: zoom, drag: pan, right-click: add/remove a waypoint  (" + (int) Math.round(span) + " blocks)", w / 2, 8, 0xFFDDE6EE);
+		dev.rubymod.client.ui.Ui.heading(g, "Map", x0 - 6, 6, dev.rubymod.client.ui.Ui.TEXT, 1.0F, false);
+		String help = "Scroll to zoom, drag to move, right-click for a waypoint. " + (int) Math.round(span) + " blocks across";
+		g.text(font, font.plainSubstrByWidth(help, x0 + size - (x0 + 24)), x0 + 24, 6, dev.rubymod.client.ui.Ui.MUTED, false);
 		// Legend
 		String[] names = {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart", "Squad Heart"};
 		int lx = x0 + size + 10;
-		if (lx + 80 < w) {
+		if (lx + 92 < w) {
+			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, 118);
 			for (int i = 0; i < names.length; i++) {
-				g.fill(lx, y0 + i * 12 + 2, lx + 5, y0 + i * 12 + 7, Markers.color((byte) i));
-				g.text(font, names[i], lx + 9, y0 + i * 12, 0xFFCCCCCC, true);
+				g.fill(lx + 2, y0 + i * 12 + 2, lx + 7, y0 + i * 12 + 7, Markers.color((byte) i));
+				g.text(font, names[i], lx + 11, y0 + i * 12, dev.rubymod.client.ui.Ui.DIM, false);
 			}
-			g.text(font, "Claims: yours / squad / other", lx, y0 + 80, 0xFFAAAAAA, true);
+			g.text(font, "Claims", lx + 2, y0 + 78, dev.rubymod.client.ui.Ui.GOLD, false);
+			int[] cc = {0xFF5BE37D, 0xFF55AAFF, 0xFFFF5050};
+			String[] cn = {"Yours", "Squad", "Other"};
+			int cx = lx + 2;
+			for (int i = 0; i < 3; i++) {
+				g.outline(cx, y0 + 91, 5, 5, cc[i]);
+				g.text(font, cn[i], cx + 7, y0 + 90, dev.rubymod.client.ui.Ui.DIM, false);
+				cx += font.width(cn[i]) + 11;
+			}
 		}
 	}
 

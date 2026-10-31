@@ -8,6 +8,8 @@ import dev.rubymod.game.Shop;
 import dev.rubymod.gun.GunItem;
 import dev.rubymod.gun.GunStats;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -29,14 +31,10 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 	private static final int W = 368;
 	private static final int H = 178;
 	private static final int PANEL_X = 216;
-	private static final int BG_TOP = 0xFF232830;
-	private static final int BG_BOTTOM = 0xFF171A1F;
-	private static final int RUBY = 0xFFD0154A;
-	private static final int RUBY_DARK = 0xFF7A0A2A;
-	private static final int TEXT = 0xFFE8EAED;
-	private static final int MUTED = 0xFF8B93A1;
-	private static final int GREEN = 0xFF5BE37D;
-	private static final int LOCK = 0xFF4FB3C8;
+	private static final int RUBY = Ui.RUBY;
+	private static final int TEXT = Ui.TEXT;
+	private static final int MUTED = Ui.MUTED;
+	private static final int GREEN = Ui.GREEN;
 	private static final String[] TABS = {"Weapons & Base", "Vehicles & Air", "Industry", "Gear & Support"};
 	/** The card last clicked (shown when nothing is hovered); public so tests can pick one. */
 	public int selected = -1;
@@ -76,19 +74,18 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 		super.extractBackground(g, mouseX, mouseY, a);
 		int x = leftPos;
 		int y = topPos;
-		g.fill(x + 3, y + 3, x + W + 3, y + H + 3, 0x66000000);
-		g.fillGradient(x, y, x + W, y + H, BG_TOP, BG_BOTTOM);
-		g.outline(x, y, W, H, RUBY_DARK);
-		g.fill(x + 1, y + 1, x + W - 1, y + 16, 0xFF1A1E24);
-		g.fill(x + 1, y + 16, x + W - 1, y + 17, RUBY);
+		Ui.panel(g, x, y, W, H);
 		// Tabs
 		int tx = x + 8;
 		for (int p = 0; p < 4; p++) {
 			String name = TABS[p];
 			int tw = font.width(name) + 10;
 			boolean on = p == menu.page();
-			boolean hover = mouseX >= tx && mouseX < tx + tw && mouseY >= y + 18 && mouseY < y + 28;
-			g.fill(tx, y + 18, tx + tw, y + 28, on ? RUBY : hover ? 0xFF3A2430 : 0xFF262B33);
+			boolean hover = mouseX >= tx && mouseX < tx + tw && mouseY >= y + 17 && mouseY < y + 29;
+			g.fill(tx, y + 17, tx + tw, y + 29, on ? 0xFF3A2430 : hover ? 0xFF2A2E36 : 0xFF1A1D23);
+			if (on) {
+				g.fill(tx, y + 27, tx + tw, y + 29, RUBY);
+			}
 			tx += tw + 3;
 		}
 		// Item cards
@@ -96,29 +93,30 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			int cx = x + ArmoryMenu.GRID_X + (i % 9) * ArmoryMenu.CELL;
 			int cy = y + ArmoryMenu.GRID_Y + (i / 9) * ArmoryMenu.CELL;
 			ItemStack stack = menu.display(i);
+			Ui.inset(g, cx, cy, 20, 20);
 			if (stack.isEmpty()) {
-				g.fill(cx, cy, cx + 20, cy + 20, 0xFF14171B);
 				continue;
 			}
-			boolean lock = locked(stack);
-			boolean sel = i == selected;
-			g.fill(cx, cy, cx + 20, cy + 20, sel ? RUBY : lock ? 0xFF1F3238 : 0xFF3A414D);
-			g.fill(cx + 1, cy + 1, cx + 19, cy + 19, lock ? 0xFF0F1A1D : 0xFF0E1013);
+			if (i == selected) {
+				g.outline(cx, cy, 20, 20, RUBY);
+			} else if (locked(stack)) {
+				g.fill(cx + 1, cy + 1, cx + 19, cy + 19, 0x30000000);
+			}
 		}
 		// Detail panel
-		g.fill(x + PANEL_X, y + 30, x + W - 8, y + H - 8, 0xFF12151A);
-		g.outline(x + PANEL_X, y + 30, W - 8 - PANEL_X, H - 38, 0xFF2E3440);
+		Ui.inset(g, x + PANEL_X, y + 30, W - 8 - PANEL_X, H - 38);
 	}
 
 	@Override
 	protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
-		g.text(font, "ARMORY", 8, 5, TEXT, false);
+		g.text(font, "Armory", 9, 6, TEXT, false);
 		String r = rubies() + " rubies";
-		g.text(font, r, W - 8 - font.width(r), 5, 0xFFFF5A82, false);
+		Ui.icon(g, Ui.Icon.GEM, W - 20 - font.width(r), 5);
+		g.text(font, r, W - 8 - font.width(r), 6, Ui.GOLD, false);
 		int tx = 8;
 		for (int p = 0; p < 4; p++) {
 			String name = TABS[p];
-			g.text(font, name, tx + 5, 19, p == menu.page() ? 0xFFFFFFFF : MUTED, false);
+			g.text(font, name, tx + 5, 19, p == menu.page() ? TEXT : MUTED, false);
 			tx += font.width(name) + 13;
 		}
 		// Price tags and padlocks on the cards (items themselves are drawn by the slots).
@@ -138,7 +136,7 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 					g.pose().pushMatrix();
 					g.pose().translate(cx + 20 - font.width(s) * 0.5F - 1, cy + 1.5F);
 					g.pose().scale(0.5F, 0.5F);
-					g.text(font, s, 0, 0, 0xFFFF7A98, true);
+					g.text(font, s, 0, 0, Ui.GOLD, true);
 					g.pose().popMatrix();
 				}
 			}
@@ -167,7 +165,7 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 		}
 		boolean lock = locked(stack);
 		int price = price(stack);
-		g.text(font, lock ? "LOCKED" : price >= 0 ? price + " rubies" : "", tx2, ny + 2, lock ? LOCK : 0xFFFF5A82, false);
+		g.text(font, lock ? "Locked" : price >= 0 ? price + " rubies" : "", tx2, ny + 2, lock ? MUTED : Ui.GOLD, false);
 		int ly = 82;
 		List<Component> lines = new ArrayList<>();
 		ItemLore lore = stack.get(DataComponents.LORE);
@@ -201,29 +199,24 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 				if (ly > H - 22) {
 					break;
 				}
-				g.text(font, line, px, ly, lock ? LOCK : MUTED, false);
+				g.text(font, line, px, ly, lock ? MUTED : Ui.DIM, false);
 				ly += 10;
 			}
 		}
-		g.text(font, lock ? "Press J for research" : "Click to buy", px, H - 20, lock ? LOCK : GREEN, false);
+		g.text(font, lock ? "Unlock it with stars (J)" : "Click to buy", px, H - 20, lock ? MUTED : GREEN, false);
 	}
 
 	private int bar(GuiGraphicsExtractor g, int x, int y, String label, float value, float max, String text) {
 		g.text(font, label, x, y, MUTED, false);
 		int bx = x + 52;
 		int bw = W - 14 - bx - 40;
-		g.fill(bx, y + 2, bx + bw, y + 6, 0xFF262B33);
-		g.fill(bx, y + 2, bx + Math.round(bw * Math.max(0.04F, Math.min(1.0F, value / max))), y + 6, RUBY);
+		Ui.bar(g, bx, y + 1, bw, 6, Math.max(0.04F, Math.min(1.0F, value / max)), RUBY);
 		g.text(font, text, bx + bw + 4, y, TEXT, false);
 		return y + 11;
 	}
 
 	private static void padlock(GuiGraphicsExtractor g, int x, int y) {
-		g.fill(x + 1, y - 3, x + 2, y, LOCK);
-		g.fill(x + 4, y - 3, x + 5, y, LOCK);
-		g.fill(x + 1, y - 4, x + 5, y - 3, LOCK);
-		g.fill(x, y, x + 6, y + 5, LOCK);
-		g.fill(x + 2, y + 2, x + 4, y + 3, 0xFF0F1A1D);
+		Ui.icon(g, Ui.Icon.LOCK, x - 2, y - 3);
 	}
 
 	@Override

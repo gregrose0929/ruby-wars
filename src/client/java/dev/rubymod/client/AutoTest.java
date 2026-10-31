@@ -1751,7 +1751,6 @@ public final class AutoTest {
 		}
 		if (mode.equals("uimenus")) {
 			// Just the hub's menus (quick look while restyling).
-			then(0, mc -> command(mc, "execute as @p run hub"));
 			then(100, mc -> mc.gui.setScreen(new ModeScreen()));
 			then(5, mc -> onServer(mc, server -> {
 				try {
@@ -1761,6 +1760,14 @@ public final class AutoTest {
 					e.printStackTrace();
 				}
 			}));
+			then(5, mc -> {
+				log("can send mode select: {}", net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.rubymod.net.MorePayloads.ModeSelect.TYPE));
+				try {
+					net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect(""));
+				} catch (RuntimeException e) {
+					log("send failed: {}", e.toString());
+				}
+			});
 			then(30, mc -> {
 				log("mode info: {}", ModeScreen.info);
 				shot(mc, "ui-modes");
@@ -1788,7 +1795,7 @@ public final class AutoTest {
 			});
 			then(100, mc -> shot(mc, "ui-hub-hud"));
 			then(5, mc -> mc.gui.setScreen(new ModeScreen()));
-			then(30, mc -> shot(mc, "ui-modes"));
+			then(120, mc -> shot(mc, "ui-modes"));
 			then(5, mc -> {
 				ManualScreen m = new ManualScreen();
 				mc.gui.setScreen(m);
@@ -1806,6 +1813,17 @@ public final class AutoTest {
 			then(30, mc -> shot(mc, "ui-guide"));
 			then(5, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));
 			then(30, mc -> shot(mc, "ui-map"));
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				IntegratedServer server = mc.getSingleplayerServer();
+				server.execute(() -> Shop.open(server.getPlayerList().getPlayers().get(0), 0));
+			});
+			then(15, mc -> {
+				if (mc.gui.screen() instanceof ArmoryScreen armory) {
+					armory.selected = 1;
+				}
+			});
+			then(10, mc -> shot(mc, "ui-armory"));
 			then(5, mc -> mc.gui.setScreen(null));
 			// Co-op Horde: the HUD and the shop.
 			then(5, mc -> command(mc, "execute as @p run play horde normal"));
@@ -1832,6 +1850,9 @@ public final class AutoTest {
 			then(10, mc -> shot(mc, "ui-rift-hud"));
 			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("codex", "open")));
 			then(20, mc -> shot(mc, "ui-rift-codex"));
+			then(5, mc -> mc.gui.setScreen(null));
+			then(5, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "win")));
+			then(40, mc -> shot(mc, "ui-rift-summary"));
 			then(5, mc -> mc.gui.setScreen(null));
 			// Ruby Convoy: the job cards and the HUD.
 			then(5, mc -> command(mc, "execute as @p run play convoy"));

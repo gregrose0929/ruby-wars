@@ -350,8 +350,7 @@ public final class Horde {
 	/** Into the outpost (from the hub). Starts a game (at this difficulty) if nobody's playing. */
 	public static void join(ServerPlayer player, Challenge difficulty) {
 		if (state == State.IDLE) {
-			player.sendSystemMessage(Component.literal("Co-op Horde: you have 2 minutes to build a base around the Ruby Core before the first wave. "
-					+ "Spend the team's rubies at the Armory next to it: ").withStyle(ChatFormatting.GOLD).append(shopButton()));
+			player.sendSystemMessage(Component.literal("2 minutes to build before the first wave. ").withStyle(ChatFormatting.GOLD).append(shopButton()));
 		}
 		MinecraftServer server = player.level().getServer();
 		ServerLevel arena = server.getLevel(Duels.ARENA);
@@ -382,9 +381,8 @@ public final class Horde {
 		if (state == State.COUNTDOWN || state == State.BREAK) {
 			player.sendSystemMessage(Component.literal("Ready when you are: ").withStyle(ChatFormatting.GRAY).append(readyButton()));
 		}
-		player.sendSystemMessage(Component.literal("Co-op Horde (" + challenge.title + "): build a base, defend the Ruby Core. Kills and waves earn the team "
-				+ "rubies to spend at the Armory. If a teammate goes down, crouch next to them to bring them back. H or /hub to leave.")
-				.withStyle(ChatFormatting.GOLD));
+		player.sendSystemMessage(Component.literal("Co-op Horde (" + challenge.title + "): defend the Ruby Core together. Crouch by a downed teammate to "
+				+ "help them up. H to leave.").withStyle(ChatFormatting.GOLD));
 		if (starting && difficulty == null) {
 			player.sendSystemMessage(difficultyPicker());
 		}
@@ -1042,7 +1040,7 @@ public final class Horde {
 		int left = toSpawn + bosses + MOBS.size();
 		switch (state) {
 			case WAVE -> {
-				BAR.setName(Component.literal("Wave " + wave + (fogWave ? " (fog)" : "") + "   •   " + left + " enemies left"));
+				BAR.setName(Component.literal("Wave " + wave + (fogWave ? " (fog)" : "") + ": " + left + " enemies left"));
 				BAR.setColor(BossEvent.BossBarColor.RED);
 				BAR.setProgress(total == 0 ? 0 : Math.min(1.0F, left / (float) total));
 			}
@@ -1051,11 +1049,12 @@ public final class Horde {
 				BAR.setProgress(0);
 			}
 			default -> {
-				String head = (wave == 0 ? "Build your base! (" + challenge.title + ")" : "Wave " + wave + " cleared!") + "   \u2022   " + bank() + " rubies";
 				long ready = FIGHTERS.values().stream().filter(x -> x.ready).count();
 				int secs = Math.max(0, timer / 20);
-				BAR.setName(Component.literal(head + "   Next wave in " + secs / 60 + ":" + String.format("%02d", secs % 60)
-						+ "   \u2022   " + ready + "/" + FIGHTERS.size() + " ready (/horde ready)"));
+				String time = secs / 60 + ":" + String.format("%02d", secs % 60);
+				String head = wave == 0 ? "Build your base: wave 1 in " + time : "Wave " + wave + " cleared! Next wave in " + time;
+				head += ". Bank: " + bank() + " rubies";
+				BAR.setName(Component.literal(head + (FIGHTERS.size() > 1 ? ", " + ready + " of " + FIGHTERS.size() + " ready" : "")));
 				BAR.setColor(BossEvent.BossBarColor.GREEN);
 				BAR.setProgress(Math.min(1.0F, Math.max(0, timer) / (float) (wave == 0 ? BUILD_TICKS : BREAK_TICKS)));
 			}

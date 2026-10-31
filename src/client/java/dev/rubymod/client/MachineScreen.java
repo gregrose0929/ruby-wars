@@ -27,12 +27,10 @@ import net.minecraft.world.item.ItemStack;
  * so every machine shares one consistent look.
  */
 public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
-	private static final int BG_TOP = 0xFF232830;
-	private static final int BG_BOTTOM = 0xFF171A1F;
-	private static final int RUBY = 0xFFD0154A;
+	private static final int RUBY = 0xFFE0294A;
 	private static final int RUBY_DARK = 0xFF7A0A2A;
-	private static final int TEXT = 0xFFE8EAED;
-	private static final int MUTED = 0xFF8B93A1;
+	private static final int TEXT = 0xFFF2EEE8;
+	private static final int MUTED = 0xFF6E7480;
 	private static final int GREEN = 0xFF5BE37D;
 	private static final int AMBER = 0xFFF2B33D;
 	private static final int RED = 0xFFF0506E;
@@ -78,13 +76,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		int y = topPos;
 		int w = imageWidth;
 		int h = imageHeight;
-		// Drop shadow, panel, ruby frame.
-		g.fill(x + 3, y + 3, x + w + 3, y + h + 3, 0x66000000);
-		g.fillGradient(x, y, x + w, y + h, BG_TOP, BG_BOTTOM);
-		g.outline(x, y, w, h, RUBY_DARK);
-		g.outline(x + 1, y + 1, w - 2, h - 2, 0xFF2E3440);
-		g.fill(x + 1, y + 1, x + w - 1, y + 16, 0xFF1A1E24);
-		g.fill(x + 1, y + 16, x + w - 1, y + 17, RUBY);
+		dev.rubymod.client.ui.Ui.panel(g, x, y, w, h);
 		// Divider above the inventory.
 		g.fill(x + 7, y + MachineMenu.INVENTORY_Y - 6, x + w - 7, y + MachineMenu.INVENTORY_Y - 5, 0xFF2E3440);
 		// Slot wells.
@@ -92,8 +84,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			int sx = x + slot.x - 1;
 			int sy = y + slot.y - 1;
 			boolean machineSlot = slot.index < kind().slots();
-			g.fill(sx, sy, sx + 18, sy + 18, machineSlot ? SLOT_EDGE : 0xFF2A2F38);
-			g.fill(sx + 1, sy + 1, sx + 17, sy + 17, SLOT_BG);
+			dev.rubymod.client.ui.Ui.inset(g, sx, sy, 18, 18);
 			if (machineSlot && slot.index >= kind().inputs) {
 				g.fill(sx + 1, sy + 16, sx + 17, sy + 17, 0xFF5A1028); // outputs get a ruby underline
 			}
@@ -111,8 +102,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		g.text(font, kind.title, 8, 5, TEXT, false);
 		String badge = MachineKind.TIER_NAMES[Math.min(tier, MachineKind.MAX_TIER) - 1].toUpperCase(Locale.ROOT);
 		int bw = font.width(badge) + 8;
-		g.fill(imageWidth - bw - 6, 3, imageWidth - 6, 14, RUBY);
-		g.text(font, badge, imageWidth - bw - 2, 5, 0xFFFFFFFF, false);
+		dev.rubymod.client.ui.Ui.tag(g, MachineKind.TIER_NAMES[Math.min(tier, MachineKind.MAX_TIER) - 1], imageWidth - bw - 6, 4, RUBY);
 
 		drawStatus(g);
 		drawPowerGauge(g, mouseX - leftPos, mouseY - topPos);
@@ -305,14 +295,11 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		boolean hover = b.over(mx, my);
 		int cost = kind().upgradeCost(menu.tier());
 		boolean disabled = b.id() == MachineMenu.BUTTON_UPGRADE && cost < 0;
-		int base = disabled ? 0xFF2A2F38 : hover ? 0xFFE0275C : RUBY_DARK;
-		g.fill(b.x(), b.y(), b.x() + b.w(), b.y() + b.h(), base);
-		g.fill(b.x(), b.y(), b.x() + b.w(), b.y() + 1, disabled ? 0xFF3A414D : 0xFFFF6E93);
 		String label = b.label();
 		if (b.id() == MachineMenu.BUTTON_RECIPE) {
 			label = Recipes.AMMO.get(Math.floorMod(menu.get(11), Recipes.AMMO.size())).name() + "  >";
 		}
-		g.text(font, label, b.x() + (b.w() - font.width(label)) / 2, b.y() + 3, disabled ? MUTED : 0xFFFFFFFF, false);
+		dev.rubymod.client.ui.Ui.button(g, label, b.x(), b.y(), b.w(), b.h(), mx, my, RUBY, !disabled);
 		if (hover && b.id() == MachineMenu.BUTTON_UPGRADE && cost >= 0) {
 			MachineKind kind = kind();
 			int next = menu.tier() + 1;

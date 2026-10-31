@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -80,117 +82,114 @@ public class CodexScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		long now = System.currentTimeMillis();
-		g.fillGradient(0, 0, width, height, 0xEC140A10, 0xF6060208);
-		// Pages of an old book: a warm glow behind the grid.
-		g.fillGradient(width / 2 - 170, 30, width / 2 + 170, height - 20, 0x30C27BFF, 0x10FF3D6E);
-		g.pose().pushMatrix();
-		g.pose().translate(width / 2.0F, 8);
-		g.pose().scale(1.5F, 1.5F);
-		g.centeredText(font, "✦ THE CODEX ✦", 0, 0, 0xFFFFC02E);
-		g.pose().popMatrix();
+		float in = Ui.ease(opened, 260);
+		Ui.dim(g, width, height, in);
 		int total = 0;
 		int got = 0;
 		for (int[] c : counts.values()) {
 			got += c[0];
 			total += c[1];
 		}
-		g.centeredText(font, "Everything you've found in the Rift: " + got + " of " + total, width / 2, 22, 0xFFB8A8C8);
+		int pw = Math.min(400, width - 16);
+		int px = (width - pw) / 2;
+		int py = 46;
+		int ph = height - py - 22;
+		Ui.emblem(g, "rift", px, 6, 24);
+		Ui.heading(g, "The Codex", px + 30, 9, Ui.TEXT, 1.5F, false);
+		String count = got + " of " + total + " found";
+		Ui.text(g, count, px + pw - font.width(count), 13, Ui.GOLD);
+		Ui.panel(g, px, py, pw, ph);
 		// Tabs.
 		tabs.clear();
-		int tw = Math.min(80, (width - 20) / SECTIONS.length);
-		int tx = width / 2 - tw * SECTIONS.length / 2;
+		// The counts go on the tabs when they all fit.
+		int needed = 0;
 		for (int i = 0; i < SECTIONS.length; i++) {
 			int[] c = counts.getOrDefault(SECTIONS[i], new int[] {found, nextAt});
-			boolean on = i == tab;
-			boolean hover = mouseX >= tx && mouseX < tx + tw - 2 && mouseY >= 34 && mouseY < 50;
-			g.fill(tx, 34, tx + tw - 2, 50, on ? 0xF0402030 : hover ? 0xD0281828 : 0xC0181018);
-			g.outline(tx, 34, tw - 2, 16, on ? 0xFFFFC02E : 0xFF503848);
-			String label = SECTIONS[i].equals("rewards") ? NAMES[i] : NAMES[i] + " " + c[0] + "/" + c[1];
-			float fit = Math.min(1F, (tw - 6) / (float) font.width(label));
-			g.pose().pushMatrix();
-			g.pose().translate(tx + tw / 2F - 1, 38 + (1 - fit) * 4);
-			g.pose().scale(fit, fit);
-			g.centeredText(font, label, 0, 0, on ? 0xFFFFE680 : 0xFFD0C0D8);
-			g.pose().popMatrix();
-			tabs.add(new int[] {tx, 34, tw - 2, 16, i});
-			tx += tw;
+			needed += font.width(SECTIONS[i].equals("rewards") ? NAMES[i] : NAMES[i] + " " + c[0] + "/" + c[1]) + 14;
+		}
+		boolean withCounts = needed <= pw - 12;
+		int tx = px + 6;
+		for (int i = 0; i < SECTIONS.length; i++) {
+			int[] c = counts.getOrDefault(SECTIONS[i], new int[] {found, nextAt});
+			String label = SECTIONS[i].equals("rewards") || !withCounts ? NAMES[i] : NAMES[i] + " " + c[0] + "/" + c[1];
+			int tw = font.width(label) + 12;
+			Ui.tab(g, label, tx, py - 15, tw, i == tab, mouseX, mouseY);
+			tabs.add(new int[] {tx, py - 15, tw, 16, i});
+			tx += tw + 2;
 		}
 		if (SECTIONS[tab].equals("rewards")) {
-			rewards(g);
-			g.centeredText(font, "Click a tab. Esc to close.", width / 2, height - 12, 0xFFD0C4DC);
+			rewards(g, px + 12, py + 12, pw - 24);
+			g.centeredText(font, "Click a tab. Esc to close.", width / 2, height - 14, Ui.MUTED);
 			return;
 		}
 		// The grid.
 		List<Entry> page = entries.stream().filter(e -> e.section().equals(SECTIONS[tab])).toList();
-		int cell = 26;
-		int cols = Math.max(1, Math.min(14, (width - 40) / cell));
-		int gx = width / 2 - cols * cell / 2;
-		int gy = 58;
+		int cell = 24;
+		int cols = Math.max(1, (pw - 20) / cell);
+		int gx = px + (pw - cols * cell) / 2;
+		int gy = py + 10;
 		Entry hovered = null;
 		for (int i = 0; i < page.size(); i++) {
 			Entry e = page.get(i);
 			int x = gx + (i % cols) * cell;
 			int y = gy + (i / cols) * cell;
-			if (y + cell > height - 14) {
+			if (y + cell > py + ph - 6) {
 				break;
 			}
-			boolean hover = mouseX >= x && mouseX < x + cell - 2 && mouseY >= y && mouseY < y + cell - 2;
+			boolean hover = Ui.inside(mouseX, mouseY, x, y, cell - 2, cell - 2);
 			if (hover) {
 				hovered = e;
 			}
 			int c = color(e.tier());
+			Ui.inset(g, x, y, cell - 2, cell - 2);
 			if (e.found()) {
-				float shine = (float) (0.5 + 0.5 * Math.sin(now / 400.0 + i));
-				g.fill(x, y, x + cell - 2, y + cell - 2, hover ? 0xF0302838 : 0xE0181420);
-				g.outline(x, y, cell - 2, cell - 2, (int) (150 + 105 * shine) << 24 | c & 0xFFFFFF);
+				g.fill(x + 1, y + 1, x + cell - 3, y + cell - 3, Ui.alpha(c, 0.15F + 0.1F * (float) Math.sin(now / 400.0 + i)));
 				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(e.icon()))), x + (cell - 18) / 2, y + (cell - 18) / 2);
 			} else {
-				g.fill(x, y, x + cell - 2, y + cell - 2, hover ? 0xE0201820 : 0xC0100C10);
-				g.outline(x, y, cell - 2, cell - 2, 0xFF302830);
-				g.centeredText(font, "?", x + cell / 2 - 1, y + cell / 2 - 5, 0xFF504050);
+				Ui.icon(g, Ui.Icon.LOCK, x + (cell - 11) / 2, y + (cell - 11) / 2);
+			}
+			if (hover) {
+				g.outline(x, y, cell - 2, cell - 2, e.found() ? c : Ui.DIM);
 			}
 		}
 		if (hovered != null) {
-			List<Component> tip = new ArrayList<>();
+			List<String> tip = new ArrayList<>();
 			if (hovered.found()) {
-				tip.add(Component.literal(hovered.title()).withColor(color(hovered.tier()) & 0xFFFFFF).withStyle(net.minecraft.ChatFormatting.BOLD));
-				tip.addAll(RelicScreen.wrap(hovered.about(), 0xE0E0E0));
+				tip.add(hovered.title());
+				tip.add(hovered.about());
 			} else {
-				tip.add(Component.literal("???").withColor(0x8A7A9A).withStyle(net.minecraft.ChatFormatting.BOLD));
-				tip.add(Component.literal(switch (SECTIONS[tab]) {
+				tip.add("Not found yet");
+				tip.add(switch (SECTIONS[tab]) {
 					case "combos" -> "A combo you haven't switched on yet.";
 					case "legendaries" -> "A legendary nobody's forged yet. Try fusing weapons at the Arsenal.";
 					case "bosses" -> "A boss you haven't beaten yet.";
 					case "charms" -> "A charm you haven't found yet.";
 					default -> "A relic you haven't held yet.";
-				}).withColor(0xA898B8));
+				});
 			}
-			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
+			Ui.tooltip(g, tip, mouseX, mouseY, width, height);
 		}
-		g.centeredText(font, "Click a tab. Hover a tile to read it. Esc to close.", width / 2, height - 12, 0xFFD0C4DC);
+		g.centeredText(font, "Hover a tile to read it. Esc to close.", width / 2, height - 14, Ui.MUTED);
 	}
 
 	/** The Rewards tab: the next milestone, and what each finished section gives you. */
-	private void rewards(GuiGraphicsExtractor g) {
-		int bar = Math.min(380, width - 40);
-		int x = width / 2 - bar / 2;
-		int y = 60;
-		g.text(font, "Every 10 things you find: +50 Rift Shards", x, y, 0xFFFFC02E, true);
-		y += 12;
-		float into = (found % 10) / 10F;
-		g.fill(x, y, x + bar, y + 10, 0xFF301828);
-		g.fill(x, y, x + (int) (bar * into), y + 10, 0xFFFFC02E);
-		g.centeredText(font, found + " found  \u2022  next reward at " + nextAt, x + bar / 2, y + 1, 0xFFFFFFFF);
-		y += 22;
-		g.text(font, "Finish a whole section for a perk in every run:", x, y, 0xFFFF7AE0, true);
+	private void rewards(GuiGraphicsExtractor g, int x, int y, int w) {
+		Ui.section(g, "Every 10 things you find: +50 Rift Shards", x, y, w);
+		y += 14;
+		Ui.bar(g, x, y, w, 10, Ui.glide("codex:next", (found % 10) / 10F), Ui.GOLD);
+		y += 13;
+		Ui.text(g, found + " found, next reward at " + nextAt, x, y, Ui.DIM);
+		y += 18;
+		Ui.section(g, "Finish a whole section for a perk in every run", x, y, w);
 		y += 14;
 		for (String[] p : perks) {
 			boolean done = p[3].equals("1");
-			g.fill(x, y, x + bar, y + 20, done ? 0xD0203820 : 0xB0181018);
-			g.outline(x, y, bar, 20, done ? 0xFF6EE38A : 0xFF403040);
-			g.text(font, (done ? "\u2714 " : "\u2610 ") + p[1].substring(0, 1).toUpperCase() + p[1].substring(1), x + 6, y + 6, done ? 0xFF6EE38A : 0xFFB8A8C8, false);
-			g.text(font, font.plainSubstrByWidth(p[2], bar - 96), x + 90, y + 6, done ? 0xFFFFFFFF : 0xFFB8A8C8, false);
-			y += 24;
+			Ui.card(g, x, y, w, 20, done ? Ui.GREEN : 0xFF3A3F48, 0);
+			Ui.icon(g, done ? Ui.Icon.CHECK : Ui.Icon.LOCK, x + 6, y + 6);
+			String name = p[1].substring(0, 1).toUpperCase() + p[1].substring(1);
+			Ui.text(g, name, x + 20, y + 7, done ? Ui.GREEN : Ui.DIM);
+			Ui.text(g, p[2], x + 96, y + 7, w - 102, done ? Ui.TEXT : Ui.MUTED);
+			y += 23;
 		}
 	}
 

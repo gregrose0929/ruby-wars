@@ -253,8 +253,7 @@ public final class Convoy {
 		}
 		offerRoles(player);
 		tell(server, Component.literal(player.getName().getString() + " joined the Ruby Convoy.").withStyle(ChatFormatting.GOLD));
-		player.sendSystemMessage(Component.literal("RUBY CONVOY: get the Ruby Truck to the vault! It only drives while you stay close to it, and stops "
-				+ "while enemies crowd it. Crouch next to it to repair it. Right-click the top of it to ride. H or /hub to leave.")
+		player.sendSystemMessage(Component.literal("Ruby Convoy: stay close to the truck to keep it moving. Crouch beside it to repair it. H to leave.")
 				.withStyle(ChatFormatting.GOLD));
 	}
 

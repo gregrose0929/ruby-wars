@@ -3,6 +3,8 @@ package dev.rubymod.client.rift;
 import java.util.ArrayList;
 import java.util.List;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -73,86 +75,83 @@ public class SummaryScreen extends Screen {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		long now = System.currentTimeMillis();
 		boolean won = !title.equals("RUN OVER");
-		g.fillGradient(0, 0, width, height, won ? 0xEC201008 : 0xEC140608, 0xF6060208);
+		Ui.dim(g, width, height, Ui.ease(opened, 260));
 		// Confetti for a win, slow embers for a loss.
-		for (int i = 0; i < 60; i++) {
+		for (int i = 0; i < 50; i++) {
 			double s = (now / (won ? 18.0 : 40.0) + i * 53) % height;
 			int sx = (int) ((i * 97 + Math.sin(now / 700.0 + i) * 25) % width + width) % width;
-			int c = won ? new int[] {0xC0FFC02E, 0xC0FF3D6E, 0xC066E0FF, 0xC06EE38A}[i % 4] : 0x60FF5030;
+			int c = won ? new int[] {0xC0F5C542, 0xC0E0294A, 0xC04FA8FF, 0xC05BD27A}[i % 4] : 0x60E5484D;
 			g.fill(sx, (int) s, sx + 2, (int) s + 2, c);
 		}
-		g.pose().pushMatrix();
-		g.pose().translate(width / 2.0F, 10);
-		float pop = Math.min(1, (now - opened) / 400F);
-		g.pose().scale(2.2F * pop, 2.2F * pop);
-		g.centeredText(font, title, 0, 0, won ? 0xFFFFC02E : 0xFFFF5050);
-		g.pose().popMatrix();
-		g.centeredText(font, where + "   •   " + time, width / 2, 34, 0xFFE0D0E8);
-		g.centeredText(font, rooms + " rooms   •   " + elites + " elites   •   " + bosses + " bosses" + (keys > 0 ? "   •   " + keys + "/3 Rift Keys" : ""),
-				width / 2, 45, 0xFFB8A8C8);
+		float pop = Ui.ease(opened, 400);
+		String heading = won ? "Victory!" : "Run over";
+		Ui.heading(g, heading, width / 2, 8, won ? Ui.GOLD : Ui.RED, 1.0F + 1.2F * pop, true);
+		String line = where + ", " + time + ".  " + rooms + " rooms, " + elites + " elites, " + bosses + " bosses" + (keys > 0 ? ", " + keys + " of 3 Rift Keys" : "");
+		g.centeredText(font, line, width / 2, 34, Ui.DIM);
 		int n = Math.max(1, cards.size());
 		int gap = 8;
-		int cw = Math.min(180, (width - 20 - gap * (n - 1)) / n);
-		int ch = height - 90;
+		int cw = Math.min(170, (width - 20 - gap * (n - 1)) / n);
+		int ch = height - 72;
 		int x0 = width / 2 - (cw * n + gap * (n - 1)) / 2;
 		for (int i = 0; i < cards.size(); i++) {
 			Card c = cards.get(i);
 			int x = x0 + i * (cw + gap);
-			int y = 60 + (int) Math.max(0, 30 - (now - opened - i * 150) / 8.0);
-			int frame = c.mvp() ? ((now / 250) % 2 == 0 ? 0xFFFFC02E : 0xFFFFE680) : 0xFF603848;
-			g.fill(x, y, x + cw, y + ch, 0xE0100810);
-			g.outline(x, y, cw, ch, frame);
-			int ty = y + 6;
-			g.centeredText(font, (c.mvp() ? "♔ " : "") + c.name() + (c.mvp() ? " ♔" : ""), x + cw / 2, ty, c.mvp() ? 0xFFFFC02E : 0xFFFFFFFF);
-			ty += 10;
+			int y = 50 + Math.round((1 - Ui.ease(opened + 150L * i, 320)) * 24);
+			Ui.card(g, x, y, cw, ch, c.mvp() ? Ui.mix(Ui.GOLD, 0xFFFFF0B0, Ui.pulse(900)) : Ui.RIFT, 0);
+			int ty = y + 8;
 			if (c.mvp()) {
-				g.centeredText(font, "MVP", x + cw / 2, ty, 0xFFFFE680);
-				ty += 10;
+				Ui.icon(g, Ui.Icon.CROWN, x + 7, ty - 1);
+				Ui.tag(g, "MVP", x + cw - 30, ty - 2, Ui.GOLD);
 			}
-			g.text(font, "Kills", x + 8, ty + 2, 0xFFB8A8C8, false);
-			g.text(font, String.valueOf(c.kills()), x + cw - 8 - font.width(String.valueOf(c.kills())), ty + 2, 0xFFFFFFFF, false);
-			ty += 11;
-			g.text(font, "Damage", x + 8, ty + 2, 0xFFB8A8C8, false);
-			g.text(font, String.valueOf(c.damage()), x + cw - 8 - font.width(String.valueOf(c.damage())), ty + 2, 0xFFFF7A2E, false);
+			Ui.text(g, c.name(), x + (c.mvp() ? 19 : 8), ty, cw - 44, Ui.TEXT);
 			ty += 14;
-			g.text(font, "Relics (" + c.relics().size() + ")", x + 8, ty, 0xFFFF3D6E, false);
-			ty += 10;
-			int per = Math.max(1, (cw - 12) / 17);
+			Ui.text(g, "Kills", x + 8, ty, Ui.DIM);
+			Ui.text(g, String.valueOf(c.kills()), x + cw - 8 - font.width(String.valueOf(c.kills())), ty, Ui.TEXT);
+			ty += 11;
+			Ui.text(g, "Damage", x + 8, ty, Ui.DIM);
+			Ui.text(g, String.valueOf(c.damage()), x + cw - 8 - font.width(String.valueOf(c.damage())), ty, Ui.AMBER);
+			ty += 15;
+			Ui.section(g, "Relics (" + c.relics().size() + ")", x + 8, ty, cw - 16);
+			ty += 12;
+			int per = Math.max(1, (cw - 12) / 18);
 			for (int k = 0; k < c.relics().size(); k++) {
 				String[] r = c.relics().get(k);
-				int rx = x + 6 + (k % per) * 17;
-				int ry = ty + (k / per) * 17;
+				int rx = x + 7 + (k % per) * 18;
+				int ry = ty + (k / per) * 18;
 				if (ry > y + ch - 60) {
 					break;
 				}
-				int tier = RiftClient.tierColor(r.length > 1 ? r[1] : "COMMON");
-				g.outline(rx, ry, 16, 16, tier);
+				Ui.inset(g, rx, ry, 17, 17);
+				g.fill(rx + 1, ry + 1, rx + 16, ry + 16, Ui.alpha(RiftClient.tierColor(r.length > 1 ? r[1] : "COMMON"), 0.25F));
 				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(r[0]))), rx, ry);
 			}
-			ty += ((c.relics().size() + per - 1) / per) * 17 + 4;
+			ty += ((c.relics().size() + per - 1) / per) * 18 + 6;
 			if (!c.combos().isEmpty() && ty < y + ch - 30) {
-				g.text(font, "Combos", x + 8, ty, 0xFFFF9A2E, false);
-				ty += 10;
+				Ui.section(g, "Combos", x + 8, ty, cw - 16);
+				ty += 12;
 				for (String combo : c.combos()) {
 					if (ty > y + ch - 20) {
 						break;
 					}
-					g.text(font, font.plainSubstrByWidth("⚡ " + combo, cw - 14), x + 10, ty, 0xFFFFC080, false);
-					ty += 9;
+					Ui.icon(g, Ui.Icon.BOLT, x + 8, ty - 1);
+					Ui.text(g, combo, x + 20, ty, cw - 26, Ui.TEXT);
+					ty += 10;
 				}
+				ty += 4;
 			}
 			if (!c.legends().isEmpty() && ty < y + ch - 20) {
-				g.text(font, "Legendary", x + 8, ty + 2, 0xFFFFC02E, false);
+				Ui.section(g, "Legendary", x + 8, ty, cw - 16);
 				ty += 12;
 				for (String l : c.legends()) {
 					if (ty > y + ch - 10) {
 						break;
 					}
-					g.text(font, font.plainSubstrByWidth("★ " + l, cw - 14), x + 10, ty, 0xFFFFE680, false);
-					ty += 9;
+					Ui.icon(g, Ui.Icon.STAR, x + 8, ty - 1);
+					Ui.text(g, l, x + 20, ty, cw - 26, Ui.GOLD);
+					ty += 10;
 				}
 			}
 		}
-		g.centeredText(font, "Esc to close. Back to the Threshold for another run!", width / 2, height - 14, 0xFFD0C4DC);
+		g.centeredText(font, "Esc to close. Back to the Threshold for another run!", width / 2, height - 14, Ui.MUTED);
 	}
 }

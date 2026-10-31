@@ -19,10 +19,10 @@ import net.minecraft.world.item.ItemStack;
  * ammo counter, reload bar, hit markers, and the radar panel.
  */
 public class GameHud implements HudElement {
-	private static final int WHITE = 0xFFFFFFFF;
+	private static final int WHITE = 0xFFF2EEE8;
 	private static final int GRAY = 0xFFAAAAAA;
-	private static final int RED = 0xFFFF4040;
-	private static final int GOLD = 0xFFFFC040;
+	private static final int RED = 0xFFE5484D;
+	private static final int GOLD = 0xFFF5C542;
 	private static final int PANEL = 0x90000000;
 
 	@Override
@@ -145,13 +145,12 @@ public class GameHud implements HudElement {
 		}
 		int hp = ClientState.hud.heartHp();
 		int max = Math.max(1, ClientState.hud.heartMaxHp());
-		String label = hp < 0 ? (ClientState.phase().isBattle() ? "Heart: DESTROYED" : "Heart: not placed") : "Heart " + hp + "/" + max;
-		panel(g, 4, 4, 96, 22);
-		g.text(font, label, 8, 6, hp < 0 ? RED : WHITE);
+		String label = hp < 0 ? (ClientState.phase().isBattle() ? "Heart destroyed" : "Heart not placed") : "Heart " + hp + " / " + max;
+		panel(g, 4, 4, 100, 24);
+		dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.HEART, 8, 7);
+		g.text(font, label, 20, 8, hp < 0 ? RED : WHITE, false);
 		if (hp >= 0) {
-			int barWidth = (int) (84.0 * hp / max);
-			g.fill(8, 16, 92, 19, 0xFF400000);
-			g.fill(8, 16, 8 + barWidth, 19, RED);
+			dev.rubymod.client.ui.Ui.bar(g, 8, 17, 88, 4, dev.rubymod.client.ui.Ui.glide("heart", hp / (float) max), RED);
 		}
 	}
 
@@ -164,16 +163,15 @@ public class GameHud implements HudElement {
 			return;
 		}
 		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY && ClientState.inRubyWarsWorld() ? 24 : 4;
-		panel(g, 4, y, 96, y + 30);
-		g.item(new ItemStack(dev.rubymod.registry.ModItems.RUBY), 6, y + 1);
-		g.text(font, String.format(java.util.Locale.ROOT, "%,d", e.bank()), 24, y + 5, 0xFFFF5A82);
+		panel(g, 4, y, 100, y + 30);
+		g.item(new ItemStack(dev.rubymod.registry.ModItems.RUBY), 7, y + 3);
+		g.text(font, String.format(java.util.Locale.ROOT, "%,d", e.bank()), 26, y + 7, 0xFFFF6A84, false);
 		long cap = Math.max(1, e.capacity());
-		int fill = (int) (84 * Math.min(1.0, e.charge() / (double) cap));
-		g.fill(8, y + 20, 92, y + 26, 0xFF2A2410);
-		g.fillGradient(8, y + 20, 8 + fill, y + 26, 0xFFFFE066, 0xFFE09A1A);
+		dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.BOLT, 7, y + 18);
+		dev.rubymod.client.ui.Ui.bar(g, 18, y + 20, 78, 5, (float) Math.min(1.0, e.charge() / (double) cap), 0xFFF5C542);
 		long net = e.produced() - e.consumed();
 		String rate = (net >= 0 ? "+" : "") + net + "/s";
-		g.text(font, rate, 92 - font.width(rate), y + 10, net >= 0 ? 0xFF5BE37D : RED);
+		g.text(font, rate, 96 - font.width(rate), y + 7, net >= 0 ? 0xFF5BD27A : RED, false);
 	}
 
 	/**
@@ -233,25 +231,24 @@ public class GameHud implements HudElement {
 		int lines = Math.min(3, hint.size());
 		boolean bar = progress != null && progress[1] > 1;
 		int height = (s == null ? 0 : 26 + lines * 9 + (bar ? 5 : 0)) + (bounties.isEmpty() ? 0 : 13 + bounties.size() * 13) + (s == null ? 2 : 11);
-		panel(g, 4, y, 190, y + height);
-		g.fill(4, y, 6, y + height, GOLD);
-		int ly = y + 3;
+		panel(g, 4, y, 190, y + height + 2);
+		g.fill(6, y + 2, 8, y + height, GOLD);
+		int ly = y + 4;
 		if (s != null) {
-			g.text(font, "NEXT STEP  " + (step + 1) + "/" + Guide.STEPS.stream().filter(st -> !st.optional()).count(), 10, ly, GOLD, false);
+			g.text(font, "Next step, " + (step + 1) + " of " + Guide.STEPS.stream().filter(st -> !st.optional()).count(), 12, ly, GOLD, false);
 			String count = bar ? progress[0] + "/" + progress[1] : "";
-			g.text(font, font.plainSubstrByWidth(s.title(), 176 - font.width(count)), 10, ly + 11, WHITE, true);
+			g.text(font, font.plainSubstrByWidth(s.title(), 172 - font.width(count)), 12, ly + 11, WHITE, false);
 			if (bar) {
 				g.text(font, count, 186 - font.width(count), ly + 11, GOLD, false);
 			}
 			ly += 23;
 			for (int i = 0; i < lines; i++) {
-				g.text(font, hint.get(i), 10, ly, 0xFFB8C0C8, false);
+				g.text(font, hint.get(i), 12, ly, 0xFFAAB0BA, false);
 				ly += 9;
 			}
 			if (bar) {
-				g.fill(10, ly + 1, 186, ly + 3, 0xFF2A2F35);
-				g.fill(10, ly + 1, 10 + Math.round(176 * Math.min(1.0F, progress[0] / (float) progress[1])), ly + 3, GOLD);
-				ly += 5;
+				dev.rubymod.client.ui.Ui.bar(g, 12, ly + 1, 174, 4, Math.min(1.0F, progress[0] / (float) progress[1]), GOLD);
+				ly += 6;
 			}
 		}
 		// Today's bounties: small extra jobs for rubies.
@@ -260,7 +257,7 @@ public class GameHud implements HudElement {
 				g.fill(10, ly + 2, 186, ly + 3, 0x40FFFFFF);
 				ly += 5;
 			}
-			g.text(font, "TODAY'S BOUNTIES", 10, ly, 0xFF8B93A1, false);
+			g.text(font, "Today's bounties", 12, ly, GOLD, false);
 			ly += 11;
 			for (String line : bounties) {
 				String[] p = line.split("[|]");
@@ -280,7 +277,7 @@ public class GameHud implements HudElement {
 			}
 		}
 		if (s != null) {
-			g.text(font, "J: the full guide", 10, ly + 1, 0xFF7A838C, false);
+			g.text(font, "J for the full guide", 12, ly + 1, 0xFF6E7480, false);
 		}
 	}
 
@@ -317,11 +314,10 @@ public class GameHud implements HudElement {
 		int ph = 44;
 		int x = w - pw - 4;
 		int y = h - ph - 4;
-		g.fillGradient(x, y, x + pw, y + ph, 0xC0181C22, 0xC00E1013);
-		g.fill(x, y, x + 2, y + ph, 0xFFD0154A);
-		String name = font.plainSubstrByWidth(held.getHoverName().getString().toUpperCase(java.util.Locale.ROOT), pw - 16 - font.width(mode));
-		g.text(font, name, x + 7, y + 4, 0xFF8B93A1, false);
-		g.text(font, mode, x + pw - 5 - font.width(mode), y + 4, 0xFF5A6370, false);
+		panel(g, x, y, x + pw, y + ph);
+		String name = font.plainSubstrByWidth(held.getHoverName().getString(), pw - 18 - font.width(mode));
+		g.text(font, name, x + 7, y + 5, 0xFFAAB0BA, false);
+		g.text(font, mode, x + pw - 7 - font.width(mode), y + 5, 0xFF6E7480, false);
 		boolean low = ammo == 0 || magazine > 1 && ammo <= magazine / 4;
 		boolean blink = (System.currentTimeMillis() / 300) % 2 == 0;
 		int color = ammo == 0 ? (blink ? RED : 0xFF7A1F2A) : low ? GOLD : WHITE;
@@ -329,7 +325,8 @@ public class GameHud implements HudElement {
 		g.pose().pushMatrix();
 		g.pose().translate(x + 7, y + 15);
 		g.pose().scale(2.0F, 2.0F);
-		g.text(font, count, 0, 0, color, true);
+		g.text(font, count, 1, 1, 0xFF0A0B0F, false);
+		g.text(font, count, 0, 0, color, false);
 		g.pose().popMatrix();
 		int rx = x + 9 + font.width(count) * 2;
 		g.text(font, "/ " + (creative ? "∞" : reserve), rx, y + 22, 0xFF8B93A1, false);
@@ -342,7 +339,7 @@ public class GameHud implements HudElement {
 			if (pxx > x + pw - 6) {
 				break;
 			}
-			g.fill(pxx, y + 36, pxx + 2, y + 40, i < filled ? (low ? GOLD : 0xFFDDE2E8) : 0xFF2A2F36);
+			g.fill(pxx, y + 35, pxx + 2, y + 39, i < filled ? (low ? GOLD : 0xFFF2EEE8) : 0xFF2A2F36);
 		}
 		// Attachments
 		int ax = x + pw - 6;
@@ -362,7 +359,7 @@ public class GameHud implements HudElement {
 		}
 		// Prompt under the crosshair.
 		if (ClientState.reloadTicks <= 0 && low && magazine > 1) {
-			String prompt = !creative && reserve == 0 ? "NO AMMO" : "RELOAD [" + RubyModClient.reloadKey.getTranslatedKeyMessage().getString() + "]";
+			String prompt = !creative && reserve == 0 ? "No ammo" : "Reload (" + RubyModClient.reloadKey.getTranslatedKeyMessage().getString() + ")";
 			g.centeredText(font, prompt, w / 2, h / 2 + 22, !creative && reserve == 0 ? RED : GOLD);
 		}
 	}
@@ -500,10 +497,9 @@ public class GameHud implements HudElement {
 		}
 	}
 
-	/** The HUD's panel style: a dark gradient with a ruby accent on the left. */
+	/** The HUD's panels: the mod's stone panel (see Ui). */
 	private static void panel(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1) {
-		g.fillGradient(x0, y0, x1, y1, 0xC0181C22, 0xC00E1013);
-		g.fill(x0, y0, x0 + 2, y1, 0xFFD0154A);
+		dev.rubymod.client.ui.Ui.panel(g, x0, y0, x1 - x0, y1 - y0);
 	}
 
 	private static String compass(int bearing) {

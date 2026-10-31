@@ -300,8 +300,8 @@ public final class Rift {
 					.withStyle(ChatFormatting.LIGHT_PURPLE));
 		}
 		tell(server, Component.literal(player.getName().getString() + " entered the Rift.").withStyle(ChatFormatting.LIGHT_PURPLE));
-		player.sendSystemMessage(Component.literal("RUBY RIFT: a co-op roguelike. Fight room to room, pick a relic after each one, and beat the boss at the "
-				+ "bottom. If you go down, a teammate can crouch next to you to bring you back. H or /hub to leave.").withStyle(ChatFormatting.LIGHT_PURPLE));
+		player.sendSystemMessage(Component.literal("Ruby Rift: fight room to room and pick a relic after each. Press J at the Altar. H to leave.")
+				.withStyle(ChatFormatting.LIGHT_PURPLE));
 	}
 
 	public static void leave(ServerPlayer player) {
@@ -507,7 +507,7 @@ public final class Rift {
 				if (WORK.isEmpty()) {
 					timer--;
 					if (timer % 20 == 0) {
-						BAR.setName(Component.literal("Ruby Rift  •  The run starts in " + timer / 20 + "s  (step into the portal to start now)"));
+						BAR.setName(Component.literal("The run starts in " + timer / 20 + "s (or step into the portal now)"));
 						BAR.setProgress(Math.max(0, timer) / (float) STAGING_TICKS);
 					}
 					if (timer <= 0) {
@@ -518,7 +518,7 @@ public final class Rift {
 			case VOTE -> {
 				timer--;
 				if (timer % 20 == 0) {
-					BAR.setName(Component.literal("Choose the next room  •  " + timer / 20 + "s"));
+					BAR.setName(Component.literal("Choose the next room: " + timer / 20 + "s"));
 					BAR.setProgress(Math.max(0, timer) / (float) VOTE_TICKS);
 				}
 				boolean all = RUNNERS.values().stream().allMatch(r -> r.vote >= 0);
@@ -1046,11 +1046,11 @@ public final class Rift {
 			BAR.setProgress(Math.max(0, Math.min(1, RiftRooms.progress(level))));
 		} else if (ticks % 20 == 0 && boss == null) {
 			if (RiftObjectives.kind != RiftObjectives.Kind.NONE) {
-				BAR.setName(Component.literal(RiftObjectives.bar() + "  •  Wave " + wave + (waves < 99 ? "/" + waves : "") + "  •  " + (alive + PENDING.size())
+				BAR.setName(Component.literal(RiftObjectives.bar() + ". Wave " + wave + (waves < 99 ? "/" + waves : "") + ", " + (alive + PENDING.size())
 						+ " enemies"));
 				BAR.setProgress(RiftObjectives.barProgress());
 			} else {
-				BAR.setName(Component.literal(node.theme.title + "  •  Wave " + wave + "/" + waves + "  •  " + (alive + PENDING.size()) + " enemies"));
+				BAR.setName(Component.literal(node.theme.title + ". Wave " + wave + "/" + waves + ", " + (alive + PENDING.size()) + " enemies"));
 				BAR.setProgress(Math.min(1, wave / (float) Math.max(1, waves)));
 			}
 		}
@@ -1217,7 +1217,7 @@ public final class Rift {
 		state = State.CALM;
 		timer = REWARD_TICKS;
 		BAR.setVisible(true);
-		BAR.setName(Component.literal("Act " + act + " cleared!  \u2022  choose a relic, then step into the portal"));
+		BAR.setName(Component.literal("Act " + act + " cleared! Choose a relic, then step into the portal"));
 		BAR.setProgress(1);
 		openPortal(level);
 	}
@@ -1276,7 +1276,7 @@ public final class Rift {
 		}
 		state = State.CALM;
 		timer = REWARD_TICKS;
-		BAR.setName(Component.literal("Room cleared  •  choose a relic, then step into the portal"));
+		BAR.setName(Component.literal("Room cleared! Choose a relic, then step into the portal"));
 		BAR.setProgress(1);
 		openPortal(level);
 	}
@@ -1872,7 +1872,7 @@ public final class Rift {
 			Alerts.title(p, "ENDLESS DESCENT", "Depth " + endless + ": step into the portal", ChatFormatting.DARK_PURPLE);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.8F, 0.6F);
 		}
-		BAR.setName(Component.literal("Endless Descent  \u2022  depth " + endless + "  \u2022  step into the portal"));
+		BAR.setName(Component.literal("Endless Descent: depth " + endless + ". Step into the portal"));
 		openPortal(level);
 	}
 

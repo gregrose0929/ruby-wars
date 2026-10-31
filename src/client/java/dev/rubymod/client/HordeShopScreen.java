@@ -7,6 +7,8 @@ import dev.rubymod.net.MorePayloads;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+import dev.rubymod.client.ui.Ui;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -34,6 +36,7 @@ public class HordeShopScreen extends Screen {
 	private final List<String> cardIds = new ArrayList<>();
 	private int[] readyButton;
 	private boolean ready;
+	private final long opened = System.currentTimeMillis();
 
 	private HordeShopScreen() {
 		super(Component.literal("Horde Armory"));
@@ -74,85 +77,86 @@ public class HordeShopScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
-		int panelW = Math.min(width - 20, 420);
+		Ui.dim(g, width, height, Ui.ease(opened, 240));
+		int panelW = Math.min(width - 16, 430);
 		int left = (width - panelW) / 2;
-		int top = 12;
-		g.centeredText(font, "HORDE ARMORY", width / 2, top, 0xFFFFC040);
-		g.centeredText(font, "Team bank: " + bank + " rubies   •   Waves cleared: " + cleared + "   •   Kills and waves fill the bank", width / 2, top + 12, 0xFFFF6070);
+		Ui.emblem(g, "horde", left, 6, 24);
+		Ui.heading(g, "Horde Armory", left + 30, 9, Ui.TEXT, 1.5F, false);
+		Ui.text(g, "Kills and cleared waves fill the bank", left + 30, 24, Ui.MUTED);
+		String bankText = bank + " rubies";
+		Ui.icon(g, Ui.Icon.GEM, left + panelW - font.width(bankText) - 12, 9);
+		Ui.text(g, bankText, left + panelW - font.width(bankText), 10, Ui.GOLD);
+		String waves = "Waves cleared: " + cleared;
+		Ui.text(g, waves, left + panelW - font.width(waves), 22, Ui.DIM);
+		int top = 50;
+		int bottom = height - 32;
+		Ui.panel(g, left, top, panelW, bottom - top);
 		// Tabs.
 		tabBoxes.clear();
-		int tabY = top + 28;
-		int tabW = panelW / TABS.length;
+		int tx = left + 6;
 		for (int i = 0; i < TABS.length; i++) {
-			int x = left + i * tabW;
-			boolean on = i == tab;
-			boolean hover = mouseX >= x && mouseX < x + tabW - 2 && mouseY >= tabY && mouseY < tabY + 16;
-			g.fill(x, tabY, x + tabW - 2, tabY + 16, on ? 0xF0A03040 : hover ? 0xE0402830 : 0xD0201418);
-			g.outline(x, tabY, tabW - 2, 16, on ? 0xFFFF6070 : 0xFF603038);
-			g.centeredText(font, font.plainSubstrByWidth(TABS[i][1], tabW - 6), x + (tabW - 2) / 2, tabY + 4, 0xFFFFFFFF);
-			tabBoxes.add(new int[] {x, tabY, tabW - 2, 16});
+			int tw = font.width(TABS[i][1]) + 16;
+			Ui.tab(g, TABS[i][1], tx, top - 15, tw, i == tab, mouseX, mouseY);
+			tabBoxes.add(new int[] {tx, top - 15, tw, 16});
+			tx += tw + 2;
 		}
 		// Cards for this tab.
 		cardBoxes.clear();
 		cardIds.clear();
-		int y0 = tabY + 22;
+		int inner = panelW - 16;
+		int y0 = top + 8;
 		int count = (int) entries.stream().filter(f -> f[1].equals(TABS[tab][0])).count();
-		int cols = panelW >= 330 ? 3 : 2;
+		int cols = inner >= 330 ? 3 : 2;
 		int rows = Math.max(1, (count + cols - 1) / cols);
-		int cardW = (panelW - (cols - 1) * 4) / cols;
-		int cardH = Math.max(22, Math.min(34, (height - 36 - y0) / rows - 4));
-		String tooltip = null;
+		int cardW = (inner - (cols - 1) * 4) / cols;
+		int cardH = Math.max(22, Math.min(30, (bottom - 8 - y0) / rows - 4));
 		String[] tipEntry = null;
 		int n = 0;
 		for (String[] f : entries) {
 			if (!f[1].equals(TABS[tab][0])) {
 				continue;
 			}
-			int x = left + (n % cols) * (cardW + 4);
+			int x = left + 8 + (n % cols) * (cardW + 4);
 			int y = y0 + (n / cols) * (cardH + 4);
 			n++;
 			int price = Integer.parseInt(f[4]);
 			int wave = Integer.parseInt(f[5]);
 			boolean locked = cleared < wave;
 			boolean afford = bank >= price;
-			boolean hover = mouseX >= x && mouseX < x + cardW && mouseY >= y && mouseY < y + cardH;
-			g.fill(x, y, x + cardW, y + cardH, locked ? 0xD0101214 : hover ? 0xF0303A44 : 0xE0182028);
-			g.outline(x, y, cardW, cardH, locked ? 0xFF33383E : hover ? 0xFFFFFFFF : afford ? 0xFFD8A030 : 0xFF703030);
-			g.item(icon(f[3]), x + 4, y + (cardH - 16) / 2);
+			boolean hover = Ui.inside(mouseX, mouseY, x, y, cardW, cardH);
+			if (locked) {
+				Ui.inset(g, x, y, cardW, cardH);
+			} else {
+				Ui.card(g, x, y, cardW, cardH, afford ? Ui.GOLD : Ui.RED, Ui.hover("horde:" + f[0], hover));
+			}
+			g.item(icon(f[3]), x + 5, y + (cardH - 16) / 2);
+			if (locked) {
+				g.fill(x + 5, y + (cardH - 16) / 2, x + 21, y + (cardH - 16) / 2 + 16, 0x90101216);
+			}
 			int ty = y + cardH / 2 - 9;
-			g.text(font, font.plainSubstrByWidth(f[2], cardW - 26), x + 24, ty, locked ? 0xFF6A727A : 0xFFFFFFFF, false);
-			String cost = locked ? "After wave " + wave : price + " rubies";
-			g.text(font, cost, x + 24, ty + 10, locked ? 0xFF6A727A : afford ? 0xFFFFC040 : 0xFFE05050, false);
+			Ui.text(g, f[2], x + 25, ty, cardW - 29, locked ? Ui.MUTED : Ui.TEXT);
+			if (locked) {
+				Ui.icon(g, Ui.Icon.LOCK, x + 25, ty + 9);
+				Ui.text(g, "After wave " + wave, x + 36, ty + 10, Ui.MUTED);
+			} else {
+				Ui.text(g, price + " rubies", x + 25, ty + 10, afford ? Ui.GOLD : Ui.RED);
+			}
 			cardBoxes.add(new int[] {x, y, cardW, cardH});
 			cardIds.add(f[0]);
 			if (hover) {
-				tooltip = f[6];
 				tipEntry = f;
 			}
 		}
 		// Ready for the next wave.
-		int bw = 200;
+		int bw = 210;
 		int bx = (width - bw) / 2;
 		int by = height - 26;
-		readyButton = new int[] {bx, by, bw, 16};
-		boolean over = mouseX >= bx && mouseX < bx + bw && mouseY >= by && mouseY < by + 16;
-		g.fill(bx, by, bx + bw, by + 16, over ? 0xFFD8A030 : 0xC0A07820);
-		g.centeredText(font, ready ? "You're ready! Waiting for the others" : "I'm ready: start the next wave", width / 2, by + 4, 0xFFFFFFFF);
+		readyButton = new int[] {bx, by, bw, 18};
+		Ui.button(g, ready ? "You're ready! Waiting for the others" : "I'm ready: start the next wave", bx, by, bw, 18, mouseX, mouseY, Ui.HORDE, !ready);
 		if (tipEntry != null) {
-			List<Component> lines = new ArrayList<>();
-			lines.add(Component.literal(tipEntry[2]).withStyle(net.minecraft.ChatFormatting.GOLD));
-			for (var line : font.split(Component.literal(tooltip), 220)) {
-				StringBuilder b = new StringBuilder();
-				line.accept((index, style, codePoint) -> {
-					b.appendCodePoint(codePoint);
-					return true;
-				});
-				lines.add(Component.literal(b.toString()).withStyle(net.minecraft.ChatFormatting.GRAY));
-			}
 			int wave = Integer.parseInt(tipEntry[5]);
-			lines.add(cleared < wave ? Component.literal("Unlocks after wave " + wave).withStyle(net.minecraft.ChatFormatting.DARK_GRAY)
-					: Component.literal(tipEntry[4] + " rubies: click to buy").withStyle(net.minecraft.ChatFormatting.YELLOW));
-			g.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
+			Ui.tooltip(g, List.of(tipEntry[2], tipEntry[6], cleared < wave ? "Unlocks after wave " + wave : tipEntry[4] + " rubies: click to buy"),
+					mouseX, mouseY, width, height);
 		}
 	}
 

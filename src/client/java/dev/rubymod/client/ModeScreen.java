@@ -133,7 +133,7 @@ public class ModeScreen extends Screen {
 			int es = cardH >= 44 ? 32 : 24;
 			Ui.emblem(g, game.emblem(), x + 6, y + (cardH - es) / 2, es);
 			int tx = x + 12 + es;
-			int textW = colW - (tx - x) - 62;
+			int textW = colW - (tx - x) - (choose ? 112 : 62);
 			Ui.heading(g, game.title(), tx, y + 7, Ui.TEXT, 1.0F, false);
 			if (cardH >= 40) {
 				Ui.text(g, game.about(), tx, y + 19, textW + 56, Ui.DIM);

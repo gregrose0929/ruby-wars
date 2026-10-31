@@ -50,10 +50,10 @@ public class ProfileScreen extends Screen {
 		int colW = Math.min(214, width / 2 - 12);
 		int leftX = width / 2 - colW - 3;
 		int rightX = width / 2 + 3;
-		int top = 34 + Math.round((1 - in) * 8);
+		int top = 40 + Math.round((1 - in) * 8);
 		int bottom = height - 22;
-		Ui.heading(g, name, width / 2, 10, Ui.TEXT, 1.5F, true);
-		g.centeredText(font, "Your profile", width / 2, 26, Ui.MUTED);
+		Ui.heading(g, name, width / 2, 8, Ui.TEXT, 1.5F, true);
+		g.centeredText(font, "Your profile", width / 2, 25, Ui.MUTED);
 		// Stats.
 		Ui.panel(g, leftX, top, colW, bottom - top);
 		Ui.section(g, "Stats", leftX + 10, top + 9, colW - 20);
