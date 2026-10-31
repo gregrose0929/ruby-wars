@@ -101,7 +101,7 @@ public final class Rift {
 		float damage;
 		/** Shrine of Blessings: "speed", "health", "power" (for the run). */
 		final Set<String> blessings = new java.util.HashSet<>();
-		/** The active ability (Z), and when it's ready again. */
+		/** The active ability (F), and when it's ready again. */
 		RiftAbilities.Ability ability = RiftAbilities.Ability.DASH;
 		long abilityReadyAt;
 
@@ -2074,6 +2074,12 @@ public final class Rift {
 	public static String hubStatus(MinecraftServer server) {
 		int n = players(server).size();
 		return n == 0 ? "Nobody in yet" : state == State.STAGING || state == State.IDLE ? n + " getting ready" : n + " in a run";
+	}
+
+	/** For autotests: ticks until this player's ability is ready again (0: ready). */
+	public static long abilityWait(ServerPlayer p) {
+		Runner r = RUNNERS.get(p.getUUID());
+		return r == null ? -1 : Math.max(0, r.abilityReadyAt - level(p.level().getServer()).getGameTime());
 	}
 
 	/** For autotests: the team's mutators. */

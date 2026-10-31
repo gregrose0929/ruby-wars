@@ -148,7 +148,7 @@ public class ThresholdScreen extends Screen {
 		}
 		// Abilities (Z in the Rift).
 		y += 2;
-		g.text(font, "ABILITY  (Z)", x1, y, 0xFFFFC02E, true);
+		g.text(font, "ABILITY  (" + net.minecraft.client.Minecraft.getInstance().options.keySwapOffhand.getTranslatedKeyMessage().getString() + ")", x1, y, 0xFFFFC02E, true);
 		y += 11;
 		int bw = (colW - 4) / 2;
 		for (int i = 0; i < abilities.size(); i++) {

@@ -55,7 +55,7 @@ public final class Stats {
 		/** The Ruby Rift Codex: everything found ("relic:id", "duo:id", "legend:name", "boss:ID", "charm:ID"). */
 		public Set<String> riftCodex = new HashSet<>();
 		public String riftLoadout = "soldier";
-		/** The Rift ability picked at the Altar of Echoes (Z). */
+		/** The Rift ability picked at the Altar of Echoes (F). */
 		public String riftAbility = "dash";
 		public int riftHeatUnlocked;
 		/** The Rift companion picked at the Altar ("none", "hound", "fox", "pebble", "buzz"). */

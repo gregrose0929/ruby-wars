@@ -1545,6 +1545,47 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("fkey")) {
+			// F in the Rift: your ability, and your hands don't swap.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty peaceful");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(200, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("pick_ability", "nova")));
+			then(10, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			for (int i = 0; i < 30; i++) {
+				then(20, mc -> {
+					if (dev.rubymod.game.rift.Rift.debugState().startsWith("VOTE")) {
+						net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+								new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode()));
+					}
+				});
+			}
+			then(5, mc -> onServer(mc, server -> {
+				var me = me(server);
+				me.getInventory().setSelectedSlot(0);
+				log("before F: main {} | off {} | ability wait {} | {}", me.getMainHandItem().getItem(), me.getOffhandItem().getItem(),
+						dev.rubymod.game.rift.Rift.abilityWait(me), dev.rubymod.game.rift.Rift.debugState());
+			}));
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				net.minecraft.client.KeyMapping.click(mc.options.keySwapOffhand.getDefaultKey());
+			});
+			then(10, mc -> onServer(mc, server -> {
+				var me = me(server);
+				log("after F: main {} | off {} | ability wait {}", me.getMainHandItem().getItem(), me.getOffhandItem().getItem(),
+						dev.rubymod.game.rift.Rift.abilityWait(me));
+			}));
+			then(10, mc -> shot(mc, "fkey-hud"));
+			then(400, mc -> net.minecraft.client.KeyMapping.click(dev.rubymod.client.RubyModClient.autopilotKey.getDefaultKey()));
+			then(10, mc -> onServer(mc, server -> log("after Z (once F's cooldown is over): ability wait {}", dev.rubymod.game.rift.Rift.abilityWait(me(server)))));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("hubtour")) {
 			// The hub from a few angles (silent: the test client's sound is off).
 			then(0, mc -> {

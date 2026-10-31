@@ -63,6 +63,14 @@ public class RubyModClient implements ClientModInitializer {
 		flaresKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.flares", InputConstants.KEY_X, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
 
+		// In the Rift the swap-hands key (F, right by WASD) is your ability: taken before the game would swap your hands.
+		ClientTickEvents.START_CLIENT_TICK.register(client -> {
+			if (client.player != null && dev.rubymod.client.rift.RiftClient.active() && client.gui.screen() == null) {
+				while (client.options.keySwapOffhand.consumeClick()) {
+					ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("ability", "active"));
+				}
+			}
+		});
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			dev.rubymod.client.rift.RiftClient.tick(client);
 			while (reloadKey.consumeClick()) {
@@ -105,7 +113,7 @@ public class RubyModClient implements ClientModInitializer {
 				}
 			}
 			while (autopilotKey.consumeClick()) {
-				// In the Rift, Z is your ability; anywhere else, the aircraft autopilot.
+				// In the Rift, Z also works for your ability (F is the main key); anywhere else, the aircraft autopilot.
 				if (dev.rubymod.client.rift.RiftClient.active() && client.gui.screen() == null) {
 					ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("ability", "active"));
 				} else {

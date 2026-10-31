@@ -25,7 +25,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Active abilities (Z in the Rift, picked at the Altar of Echoes): a move on a cooldown,
+ * Active abilities (F in the Rift, or Z; picked at the Altar of Echoes): a move on a cooldown,
  * on top of your relics. Dash, Ruby Nova, Shield Dome, Grapple Hook, Overdrive, Rally Banner.
  */
 public final class RiftAbilities {
@@ -78,7 +78,7 @@ public final class RiftAbilities {
 	private RiftAbilities() {
 	}
 
-	/** Z pressed. */
+	/** The ability key pressed (F, or Z). */
 	static void use(ServerPlayer p, Rift.Runner r) {
 		if (!(p.level() instanceof ServerLevel level) || p.isSpectator()) {
 			return;

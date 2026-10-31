@@ -337,7 +337,7 @@ public final class RiftClient {
 					int cover = (int) (16 * left / (float) max);
 					g.fill(ax + 2, ay + 2 + 16 - cover, ax + 18, ay + 18, 0xA0000000);
 				}
-				g.text(font, "[Z]", ax + 21, ay + 2, ready ? 0xFFFFC02E : 0xFF8A7A9A, false);
+				g.text(font, "[" + net.minecraft.client.Minecraft.getInstance().options.keySwapOffhand.getTranslatedKeyMessage().getString() + "]", ax + 21, ay + 2, ready ? 0xFFFFC02E : 0xFF8A7A9A, false);
 				String label = ready ? "READY" : (left + 19) / 20 + "s";
 				g.text(font, label, ax + 21, ay + 11, ready ? 0xFF7CF59A : 0xFFB8A8C8, false);
 				g.text(font, font.plainSubstrByWidth(ab[2], 60), ax + 1, ay - 9, 0xFFEDE6F2, true);
