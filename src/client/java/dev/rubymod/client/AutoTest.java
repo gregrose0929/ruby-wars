@@ -85,6 +85,9 @@ public final class AutoTest {
 		}
 	}
 
+	private static net.minecraft.world.entity.item.ItemEntity arenaLantern;
+	private static net.minecraft.world.entity.item.ItemEntity arenaRock;
+
 	private static void logPanels(Minecraft mc, String name) {
 		StringBuilder b = new StringBuilder();
 		for (var e : mc.level.entitiesForRendering()) {
@@ -2073,6 +2076,65 @@ public final class AutoTest {
 				body.teleportTo(-65000 + 130, dev.rubymod.game.Duels.GROUND + 1, 10);
 			}));
 			then(40, mc -> onServer(mc, server -> log("tanks: after going out, at {}", me(server).blockPosition().toShortString())));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("hubfix")) {
+			// Signs saved in their old places move back over the gates; loose lanterns don't stay.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "execute as @p run hub");
+			});
+			// Wait until the signs are there (they're made while someone's in the hub).
+			then(300, mc -> onServer(mc, server -> {
+				var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+				int moved = 0;
+				for (var d : hub.getEntitiesOfClass(net.minecraft.world.entity.Display.TextDisplay.class, new net.minecraft.world.phys.AABB(-40, 60, -40, 40, 160, 40))) {
+					if (d.entityTags().contains("label_ruby_title")) {
+						d.teleportTo(-8.5, d.getY(), d.getZ());
+						moved++;
+					} else if (d.entityTags().contains("label_rift_title")) {
+						d.teleportTo(0.5, d.getY(), d.getZ());
+						moved++;
+					} else if (d.entityTags().contains("label_horde_title")) {
+						d.teleportTo(9.5, d.getY(), d.getZ());
+						moved++;
+					}
+				}
+				log("signs pushed to their old spots: {}", moved);
+				var hubItem = new net.minecraft.world.entity.item.ItemEntity(hub, 0.5, 105, 4.5, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN));
+				hub.addFreshEntity(hubItem);
+				log("loose lantern in the hub removed: {}", hubItem.isRemoved());
+				var arena = server.getLevel(dev.rubymod.game.Duels.ARENA);
+				arena.setChunkForced(0, 0, true);
+				arenaLantern = new net.minecraft.world.entity.item.ItemEntity(arena, 4.5, 70, 4.5, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN));
+				arena.addFreshEntity(arenaLantern);
+				arenaRock = new net.minecraft.world.entity.item.ItemEntity(arena, 6.5, 70, 4.5, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE));
+				arena.addFreshEntity(arenaRock);
+			}));
+			then(100, mc -> onServer(mc, server -> {
+				var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+				for (var d : hub.getEntitiesOfClass(net.minecraft.world.entity.Display.TextDisplay.class, new net.minecraft.world.phys.AABB(-40, 60, -40, 40, 160, 40))) {
+					if (d.entityTags().stream().anyMatch(t -> t.endsWith("_title"))) {
+						log("sign {} at x {}", d.entityTags(), d.getX());
+					}
+				}
+				log("arena: loose lantern removed {}, other item removed {}", arenaLantern.isRemoved(), arenaRock.isRemoved());
+				server.getLevel(dev.rubymod.game.Duels.ARENA).setChunkForced(0, 0, false);
+			}));
+			then(20, mc -> onServer(mc, server -> {
+				var me = me(server);
+				me.setNoGravity(true);
+				me.teleportTo(0.5, dev.rubymod.game.Hub.FLOOR + 6, 12);
+			}));
+			then(30, mc -> {
+				mc.player.setYRot(180);
+				mc.player.setXRot(-8);
+			});
+			then(20, mc -> shot(mc, "hub-signs"));
 			then(20, mc -> {
 				log("done");
 				mc.stop();

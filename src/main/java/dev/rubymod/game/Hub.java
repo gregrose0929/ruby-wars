@@ -1021,6 +1021,9 @@ public final class Hub {
 						new Vector3f(label.scale(), label.scale(), label.scale()), new Quaternionf()));
 				((TextDisplayAccessor) display).rubymod$setBackground(label.scale() > 2 ? 0 : 0x90000000);
 				hub.addFreshEntity(display);
+			} else if (display.getX() != label.x() || display.getY() != label.y() || display.getZ() != label.z()) {
+				// A sign saved with the world from before the gates moved: over to where it belongs now.
+				display.teleportTo(label.x(), label.y(), label.z());
 			}
 			Component text = labelText(hub.getServer(), label.key());
 			if (!text.equals(((TextDisplayAccessor) display).rubymod$getText())) {

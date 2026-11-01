@@ -66,6 +66,17 @@ public final class GameEvents {
 				entity.discard();
 				return;
 			}
+			// Rebuilding a map clears the post under a lantern, and the lantern pops off as an item (or anything else in the hub,
+			// like flowers): nobody dropped those, so they don't stay. Things players throw have an owner and aren't touched.
+			if (entity instanceof net.minecraft.world.entity.item.ItemEntity loose && loose.getOwner() == null) {
+				boolean hub = world.dimension() == Hub.HUB;
+				boolean gameMap = world.dimension() == Duels.ARENA || world.dimension() == dev.rubymod.game.party.RubyRush.RUSH;
+				boolean lantern = loose.getItem().getItem() instanceof net.minecraft.world.item.BlockItem b && b.getBlock() instanceof net.minecraft.world.level.block.LanternBlock;
+				if (hub || gameMap && lantern) {
+					entity.discard();
+					return;
+				}
+			}
 			// No baby slimes in the Rift: a slime that dies there stays dead.
 			if (entity instanceof net.minecraft.world.entity.monster.cubemob.AbstractCubeMob && !entity.entityTags().contains(dev.rubymod.game.rift.Rift.TAG)
 					&& dev.rubymod.game.rift.Rift.protects(world, entity.blockPosition())) {
