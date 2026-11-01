@@ -664,7 +664,8 @@ public final class RelicEffects {
 					}
 				}
 			}
-			p.teleportTo(to.x, to.y - p.getEyeHeight() + 0.2, to.z);
+			Vec3 landing = RiftAbilities.safeLanding(level, p, new Vec3(to.x, to.y - p.getEyeHeight() + 0.2, to.z));
+			p.teleportTo(landing.x, landing.y, landing.z);
 			p.resetFallDistance();
 			r.fx.blinkAt = now(level) + 60 - 15 * r.level(Relic.BLINK);
 			RiftFx.line(level, from.add(0, 1, 0), p.position().add(0, 1, 0), ParticleTypes.REVERSE_PORTAL, 0.3);
@@ -1879,11 +1880,11 @@ public final class RelicEffects {
 		}
 		if (t % 20 == 0) {
 			boolean inferno = team(level, Relic.TOXIC_INFERNO);
-			for (Iterator<Map.Entry<UUID, Poison>> it = POISONED.entrySet().iterator(); it.hasNext();) {
-				var e = it.next();
+			// A copy: a poison tick can kill, and a kill can poison others.
+			for (var e : new java.util.ArrayList<>(POISONED.entrySet())) {
 				Poison v = e.getValue();
 				if (t >= v.until() || !(level.getEntity(e.getKey()) instanceof LivingEntity mob) || !mob.isAlive()) {
-					it.remove();
+					POISONED.remove(e.getKey());
 					continue;
 				}
 				ServerPlayer p = server.getPlayerList().getPlayer(v.owner());

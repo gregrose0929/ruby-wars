@@ -53,7 +53,15 @@ public class ResearchScreen extends Screen {
 		return (width - pw()) / 2;
 	}
 
-	private static final int PY = 44;
+	private static final int PANEL_H = 230;
+
+	private int py() {
+		return Ui.centre(height, PANEL_H + 44 + 8) + 44;
+	}
+
+	private int panelH() {
+		return Math.min(PANEL_H, height - py() - 8);
+	}
 
 	private void layout() {
 		boxes.clear();
@@ -71,7 +79,7 @@ public class ResearchScreen extends Screen {
 			int row = 0;
 			for (Research.Node n : Research.NODES.values()) {
 				if (n.branch().equals(branches.get(b))) {
-					boxes.put(n, new int[] {x0 + b * (nodeW + gap), PY + 24 + row * (NODE_H + 10)});
+					boxes.put(n, new int[] {x0 + b * (nodeW + gap), py() + 24 + row * (NODE_H + 10)});
 					row++;
 				}
 			}
@@ -90,16 +98,17 @@ public class ResearchScreen extends Screen {
 		int points = ClientState.research == null ? 0 : ClientState.research.points();
 		int px = px();
 		int pw = pw();
-		Ui.heading(g, "Your season", px + 2, 10, Ui.TEXT, 1.5F, false);
+		int py = py();
+		Ui.heading(g, "Your season", px + 2, py - 34, Ui.TEXT, 1.5F, false);
 		String stars = points + " star" + (points == 1 ? "" : "s") + " to spend";
-		Ui.icon(g, Ui.Icon.STAR, px + pw - font.width(stars) - 14, 13);
-		Ui.text(g, stars, px + pw - font.width(stars) - 2, 14, Ui.GOLD);
-		Ui.panel(g, px, PY, pw, height - PY - 8);
+		Ui.icon(g, Ui.Icon.STAR, px + pw - font.width(stars) - 14, py - 31);
+		Ui.text(g, stars, px + pw - font.width(stars) - 2, py - 30, Ui.GOLD);
+		Ui.panel(g, px, py, pw, panelH());
 		int tx = px + 8;
 		for (int i = 0; i < 3; i++) {
 			int tw = font.width(TABS[i]) + 20;
-			tabBoxes[i] = new int[] {tx, PY - 15, tw, 16};
-			Ui.tab(g, TABS[i], tx, PY - 15, tw, tab == i, mouseX, mouseY);
+			tabBoxes[i] = new int[] {tx, py - 15, tw, 16};
+			Ui.tab(g, TABS[i], tx, py - 15, tw, tab == i, mouseX, mouseY);
 			tx += tw + 3;
 		}
 		float fade = Ui.ease(switched, 160);
@@ -173,7 +182,7 @@ public class ResearchScreen extends Screen {
 		int total = pw - 20;
 		int colW = (total - (cols - 1) * 8) / cols;
 		int x0 = px + 10;
-		int y0 = PY + 12;
+		int y0 = py() + 12;
 		y0 = Ui.wrap(g, Guide.season(), x0, y0, total, Ui.alpha(Ui.DIM, fade), height) + 6;
 		int n = Guide.STEPS.size();
 		int rows = (n + cols - 1) / cols;
@@ -223,7 +232,7 @@ public class ResearchScreen extends Screen {
 			Ui.text(g, "Every step done! Keep growing your base and get ready for Battle Day.", x0 + 12, y + 1, Ui.GREEN);
 			y += 14;
 		}
-		Ui.wrap(g, "Any time, press H to try Free Roam, the party games, Co-op Horde, the Rift or the Convoy.", x0, y, total, Ui.MUTED, height - 10);
+		Ui.wrap(g, "Any time, press H to try Free Roam, the party games, Co-op Horde, the Rift or the Convoy.", x0, y, total, Ui.MUTED, py() + panelH() - 4);
 		if (tip != null) {
 			Ui.tooltip(g, tip, mouseX, mouseY, width, height);
 		}
@@ -239,7 +248,8 @@ public class ResearchScreen extends Screen {
 		int x0 = px + 10;
 		int rowH = 17;
 		int rows = (goals.size() + cols - 1) / cols;
-		int y0 = PY + 12;
+		int y0 = py() + 12;
+		int end = py() + panelH();
 		for (int i = 0; i < goals.size(); i++) {
 			String[] f = goals.get(i).split("\\|");
 			if (f.length < 6) {
@@ -251,7 +261,7 @@ public class ResearchScreen extends Screen {
 			boolean done = Boolean.parseBoolean(f[5]);
 			int x = x0 + (i / rows) * (colW + 8);
 			int y = y0 + (i % rows) * rowH;
-			if (y + rowH > height - 24) {
+			if (y + rowH > end - 16) {
 				continue;
 			}
 			if (i % rows % 2 == 0) {
@@ -274,7 +284,7 @@ public class ResearchScreen extends Screen {
 				Ui.bar(g, x + 16, y + 11, colW - 26 - starW, 3, Math.min(1.0F, progress / (float) target), Ui.GOLD);
 			}
 		}
-		g.centeredText(font, "Each goal counts once. Squadmates share unlocks.", width / 2, height - 20, Ui.MUTED);
+		g.centeredText(font, "Each goal counts once. Squadmates share unlocks.", width / 2, end - 13, Ui.MUTED);
 	}
 
 	@Override

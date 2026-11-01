@@ -85,6 +85,19 @@ public final class AutoTest {
 		}
 	}
 
+	private static void logPanels(Minecraft mc, String name) {
+		StringBuilder b = new StringBuilder();
+		for (var e : mc.level.entitiesForRendering()) {
+			if (e instanceof net.minecraft.world.entity.Display.BlockDisplay) {
+				b.append(e.blockPosition().toShortString()).append("; ");
+			}
+		}
+		log("{}: me {} yaw {} pitch {} panels on client: {}", name, mc.player.blockPosition().toShortString(), Math.round(mc.player.getYRot()), Math.round(mc.player.getXRot()), b);
+		var server = mc.getSingleplayerServer();
+		server.execute(() -> log("{}: server sees me {} | {}", name, me(server).blockPosition().toShortString(), pg("air").debugState()));
+		shot(mc, name);
+	}
+
 	/** Ruby Convoy tests: move the truck (and the player) to Z, then ride it again. */
 	private static void convoyGoto(String z) {
 		then(5, mc -> onServer(mc, server -> {
@@ -761,13 +774,68 @@ public final class AutoTest {
 					var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
 					log("AA guns: {}", level.getEntitiesOfClass(dev.rubymod.entity.HeavyAAGunEntity.class, me(server).getBoundingBox().inflate(400)).size());
 				}));
+				then(5, mc -> onServer(mc, server -> {
+					var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+					java.util.Map<String, Integer> found = new java.util.TreeMap<>();
+					for (int x = -30; x <= 30; x++) {
+						for (int z = -60; z <= 60; z++) {
+							for (int y = 1; y <= 30; y++) {
+								var st = level.getBlockState(new net.minecraft.core.BlockPos(-82000 + x, dev.rubymod.game.Duels.GROUND + y, z));
+								if (!st.isAir()) {
+									found.merge(st.getBlock().getName().getString() + " y+" + y + " x" + x / 10 * 10 + " z" + z / 10 * 10, 1, Integer::sum);
+								}
+							}
+						}
+					}
+					log("blocks over the middle: {}", found);
+					log("entities near the middle: {}", level.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(-82030, 60, -60, -81970, 110, 60), e -> true));
+				}));
+				// Take off: full throttle down the runway, then pull up.
+				then(5, mc -> {
+					mc.player.setXRot(0);
+					mc.options.keyUp.setDown(true);
+				});
+				for (int i = 0; i < 14; i++) {
+					int n = i;
+					then(20, mc -> {
+						if (n == 8) {
+							mc.player.setXRot(-20);
+						}
+						var a2 = aircraft(mc);
+						log("takeoff {}: {}", n, a2 == null ? "not in an aircraft, at " + mc.player.blockPosition()
+								: "y " + Math.round(a2.getY()) + " z " + Math.round(a2.getZ()) + " speed " + String.format("%.2f", a2.speed()) + " throttle "
+										+ String.format("%.2f", a2.throttle()));
+					});
+				}
+				then(5, mc -> {
+					mc.options.keyUp.setDown(false);
+					shot(mc, "party-air-flying");
+				});
 				// Fly off the edge: five seconds to turn back, then you're out.
+				// The edge of the battle, on foot so the camera stays put: a wall, then the ceiling.
 				then(5, mc -> onServer(mc, server -> {
 					var me = me(server);
-					var ride = me.getVehicle() != null ? me.getVehicle() : me;
-					ride.teleportTo(-75000 + 360, 140, 0);
+					me.stopRiding();
+					me.setNoGravity(true);
+					me.teleportTo(-82000 + 575, 120, -100);
 				}));
-				then(40, mc -> shot(mc, "party-air-edge"));
+				then(160, mc -> {
+					mc.player.setYRot(-90);
+					mc.player.setXRot(0);
+				});
+				then(10, mc -> logPanels(mc, "party-air-wall"));
+				then(5, mc -> onServer(mc, server -> me(server).teleportTo(-82000, dev.rubymod.game.Duels.GROUND + 1 + 120, 100)));
+				then(100, mc -> {
+					mc.player.setYRot(0);
+					mc.player.setXRot(-55);
+				});
+				then(10, mc -> logPanels(mc, "party-air-ceiling"));
+				then(5, mc -> onServer(mc, server -> {
+					var me = me(server);
+					me.setNoGravity(false);
+					me.teleportTo(-82000 + 680, 140, 0);
+				}));
+				then(40, mc -> logPanels(mc, "party-air-edge"));
 				then(90, mc -> log("after leaving the area: {} health {}", pg("air").debugState(), mc.player.getHealth()));
 			});
 		}
@@ -1848,6 +1916,28 @@ public final class AutoTest {
 			then(30, mc -> shot(mc, "ui-rift-relics"));
 			then(5, mc -> mc.gui.setScreen(null));
 			then(10, mc -> shot(mc, "ui-rift-hud"));
+			// Your relics beside the inventory, hovering the first one.
+			then(5, mc -> mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)));
+			then(5, mc -> onServer(mc, server -> {
+				dev.rubymod.game.rift.Rift.testSkip(server, "chain_lightning");
+				dev.rubymod.game.rift.Rift.testSkip(server, "napalm");
+			}));
+			then(5, mc -> {
+				var w = mc.getWindow();
+				int sw = w.getGuiScaledWidth();
+				int sh = w.getGuiScaledHeight();
+				dev.rubymod.client.rift.RiftClient.testMouse = new int[] {Math.max(4, (sw - 176) / 2 - 96) + 14, (sh - 166) / 2 + 24};
+			});
+			then(15, mc -> {
+				if (!(mc.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen)) {
+					mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
+				}
+			});
+			then(15, mc -> shot(mc, "ui-rift-inventory"));
+			then(5, mc -> {
+				dev.rubymod.client.rift.RiftClient.testMouse = null;
+				mc.gui.setScreen(null);
+			});
 			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("codex", "open")));
 			then(20, mc -> shot(mc, "ui-rift-codex"));
 			then(5, mc -> mc.gui.setScreen(null));
@@ -1870,6 +1960,119 @@ public final class AutoTest {
 				mc.player.setYRot(0);
 				shot(mc, "ui-convoy-hud");
 			});
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
+		if (mode.equals("feedback")) {
+			// Player feedback: Rift relics stacking, dash, dropping, Time Loop; Gun Game spawns; Tank Battle's walls.
+			then(0, mc -> {
+				command(mc, "time set noon");
+				command(mc, "difficulty normal");
+			});
+			then(20, mc -> command(mc, "execute as @p run play rift"));
+			then(200, mc -> onServer(mc, server -> dev.rubymod.game.rift.Rift.testSkip(server, "start")));
+			for (int i = 0; i < 30; i++) {
+				then(20, mc -> {
+					if (dev.rubymod.game.rift.Rift.debugState().startsWith("VOTE")) {
+						net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("vote", riftOpenNode()));
+					}
+				});
+			}
+			then(5, mc -> {
+				mc.gui.setScreen(null);
+				onServer(mc, server -> {
+					var me = me(server);
+					me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 4, false, false));
+					dev.rubymod.game.rift.Rift.testSkip(server, "black_hole");
+					log("one black hole: {}", dev.rubymod.game.rift.Rift.relicState(me));
+					dev.rubymod.game.rift.Rift.testSkip(server, "black_hole");
+					log("two black holes: {}", dev.rubymod.game.rift.Rift.relicState(me));
+					dev.rubymod.game.rift.Rift.testSkip(server, "time_loop");
+				});
+			});
+			// Dash, looking at the floor, three times.
+			for (int i = 0; i < 3; i++) {
+				then(120, mc -> {
+					mc.gui.setScreen(null);
+					mc.player.setXRot(70);
+					mc.player.setYRot(mc.player.getYRot() + 100);
+				});
+				then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("ability", "active")));
+				then(3, mc -> onServer(mc, server -> {
+					var me = me(server);
+					log("after dash: at {} stuck {} | ability wait {}", me.blockPosition().toShortString(), !me.level().noCollision(me, me.getBoundingBox().deflate(0.05)),
+							dev.rubymod.game.rift.Rift.abilityWait(me));
+				}));
+			}
+			// Throw your gun away.
+			then(10, mc -> {
+				mc.player.getInventory().setSelectedSlot(0);
+			});
+			then(5, mc -> onServer(mc, server -> log("before drop: holding {}", me(server).getMainHandItem().getItem())));
+			then(5, mc -> net.minecraft.client.KeyMapping.click(mc.options.keyDrop.getDefaultKey()));
+			then(20, mc -> onServer(mc, server -> {
+				log("after drop: holding {} | client {}", me(server).getMainHandItem().getItem(), mc.player.getMainHandItem().getItem());
+			}));
+			// Time Loop: the whole team down.
+			then(5, mc -> command(mc, "kill @p"));
+			then(40, mc -> onServer(mc, server -> {
+				var me = me(server);
+				log("after time loop: at {} stuck {} sees sky {} room {} | {}", me.blockPosition().toShortString(), !me.level().noCollision(me, me.getBoundingBox().deflate(0.05)),
+						me.level().canSeeSky(me.blockPosition()), dev.rubymod.game.rift.Rift.roomCenter(), me.isSpectator());
+			}));
+			then(5, mc -> command(mc, "execute as @p run hub"));
+			// Gun Game spawns.
+			then(60, mc -> {
+				log("=== gungame ===");
+				command(mc, "execute as @p run play gungame");
+			});
+			then(10, mc -> onServer(mc, server -> dev.rubymod.game.party.PartyGames.addTestPlayer(pg("gungame"), partyBuddy(server))));
+			for (int i = 0; i < 20; i++) {
+				then(i == 0 ? 10 : 40, mc -> onServer(mc, server -> pg("gungame").skipLobby()));
+			}
+			for (int i = 0; i < 8; i++) {
+				then(100, mc -> onServer(mc, server -> {
+					var me = me(server);
+					double nearest = 999;
+					for (var e : me.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, me.getBoundingBox().inflate(80), e -> e != me && e.isAlive())) {
+						nearest = Math.min(nearest, e.distanceTo(me));
+					}
+					log("gun game spawn: at {} stuck {} nearest {} {}", me.blockPosition().toShortString(), !me.level().noCollision(me, me.getBoundingBox().deflate(0.05)),
+							Math.round(nearest), me.isSpectator());
+					me.kill((net.minecraft.server.level.ServerLevel) me.level());
+				}));
+			}
+			then(100, mc -> onServer(mc, server -> {
+				if (pg("gungame").contains(partyBuddy(server))) {
+					pg("gungame").leave(partyBuddy(server));
+				}
+			}));
+			then(5, mc -> command(mc, "execute as @p run hub"));
+			// Tank Battle: the wall holds, and out of bounds comes back.
+			then(60, mc -> {
+				log("=== tanks ===");
+				command(mc, "execute as @p run play tanks");
+			});
+			then(10, mc -> onServer(mc, server -> dev.rubymod.game.party.PartyGames.addTestPlayer(pg("tanks"), partyBuddy(server))));
+			for (int i = 0; i < 20; i++) {
+				then(i == 0 ? 10 : 40, mc -> onServer(mc, server -> pg("tanks").skipLobby()));
+			}
+			then(60, mc -> onServer(mc, server -> {
+				var level = server.getLevel(dev.rubymod.game.Duels.ARENA);
+				var wall = new net.minecraft.core.BlockPos(-65000 + 121, dev.rubymod.game.Duels.GROUND + 2, 10);
+				var inside = new net.minecraft.core.BlockPos(-65000 + 60, dev.rubymod.game.Duels.GROUND + 1, 10);
+				log("tanks: wall block {} breakable {} | inside breakable {}", level.getBlockState(wall).getBlock().getName().getString(),
+						dev.rubymod.game.Rules.canWeaponBreak(level, wall, level.getBlockState(wall)),
+						dev.rubymod.game.Rules.canWeaponBreak(level, inside, level.getBlockState(inside)));
+				var me = me(server);
+				log("tanks: spawned at {} riding {}", me.blockPosition().toShortString(), me.getVehicle());
+				var body = me.getVehicle() != null ? me.getVehicle() : me;
+				body.teleportTo(-65000 + 130, dev.rubymod.game.Duels.GROUND + 1, 10);
+			}));
+			then(40, mc -> onServer(mc, server -> log("tanks: after going out, at {}", me(server).blockPosition().toShortString())));
 			then(20, mc -> {
 				log("done");
 				mc.stop();

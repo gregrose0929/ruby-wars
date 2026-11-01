@@ -49,39 +49,63 @@ public final class RiftClient {
 		return hud != null && !hud.header().isEmpty();
 	}
 
-	/** The RELICS panel left of the inventory: icons framed in their tier's colour, hover for the description. */
+	/** For autotests: pretend the mouse is here over the inventory's relics. */
+	public static int[] testMouse;
+
+	/** The relics panel left of the inventory: icons on slots in their tier's colour, hover for what each one does. */
 	private static void drawInventoryRelics(net.minecraft.client.gui.screens.Screen screen, GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		java.util.List<String> owned = relicLines();
 		if (!active() || owned.isEmpty()) {
 			return;
 		}
-		var font = Minecraft.getInstance().font;
+		if (testMouse != null) {
+			mouseX = testMouse[0];
+			mouseY = testMouse[1];
+		}
 		int cols = 4;
 		int rows = (owned.size() + cols - 1) / cols;
-		int pw = cols * 20 + 8;
+		int pw = cols * 20 + 10;
 		int x0 = Math.max(4, (screen.width - 176) / 2 - pw - 6);
 		int y0 = (screen.height - 166) / 2;
-		g.fill(x0, y0, x0 + pw, y0 + 16 + rows * 20, 0xE0100810);
-		g.outline(x0, y0, pw, 16 + rows * 20, 0xFFFF3D6E);
-		g.text(font, "RELICS", x0 + 5, y0 + 4, 0xFFFF3D6E, false);
-		java.util.List<net.minecraft.network.chat.Component> tip = null;
+		Ui.panel(g, x0, y0, pw, 20 + rows * 20);
+		Ui.text(g, "Relics", x0 + 6, y0 + 6, Ui.GOLD);
+		java.util.List<String> tip = null;
 		int i = 0;
 		for (String r : owned) {
 			String[] f = r.split("[|]", -1);
 			if (f.length < 4) {
 				continue;
 			}
-			int x = x0 + 4 + (i % cols) * 20;
-			int y = y0 + 14 + (i / cols) * 20;
-			g.outline(x, y, 18, 18, tierColor(f[2]));
+			int x = x0 + 5 + (i % cols) * 20;
+			int y = y0 + 16 + (i / cols) * 20;
+			boolean off = f.length > 5 && f[5].equals("off");
+			boolean boost = f.length > 5 && f[5].equals("boost");
+			Ui.inset(g, x, y, 19, 19);
+			g.fill(x + 1, y + 1, x + 18, y + 18, Ui.alpha(tierColor(f[2]), 0.25F));
 			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[1]))), x + 1, y + 1);
-			if (mouseX >= x && mouseX < x + 18 && mouseY >= y && mouseY < y + 18) {
-				tip = RelicScreen.tooltip(f[3], f[2], "NONE", f.length > 4 ? f[4] : "");
+			if (off) {
+				g.fill(x + 1, y + 1, x + 18, y + 18, 0xB0101216);
+				Ui.icon(g, Ui.Icon.CROSS, x + 5, y + 5);
+			} else if (boost) {
+				Ui.icon(g, Ui.Icon.STAR, x + 10, y);
+			}
+			if (Ui.inside(mouseX, mouseY, x, y, 19, 19)) {
+				g.outline(x, y, 19, 19, Ui.TEXT);
+				tip = new java.util.ArrayList<>();
+				tip.add(f[3]);
+				if (f.length > 4 && !f[4].isEmpty()) {
+					tip.add(f[4]);
+				}
+				if (off) {
+					tip.add("Switched off this room by Gambler's Dice.");
+				} else if (boost) {
+					tip.add("Doubled this room by Gambler's Dice.");
+				}
 			}
 			i++;
 		}
 		if (tip != null) {
-			g.setComponentTooltipForNextFrame(font, tip, mouseX, mouseY);
+			Ui.tooltip(g, tip, mouseX, mouseY, screen.width, screen.height);
 		}
 	}
 
@@ -337,6 +361,11 @@ public final class RiftClient {
 				g.pose().scale(0.625F, 0.625F);
 				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[1]))), 0, 0);
 				g.pose().popMatrix();
+				if (f.length > 5 && f[5].equals("off")) {
+					// Switched off this room (Gambler's Dice).
+					g.fill(x + 1, ry + 1, x + cell - 2, ry + cell - 2, 0xB0101216);
+					Ui.icon(g, Ui.Icon.CROSS, x + 2, ry + 2);
+				}
 			}
 			if (owned.size() > shown) {
 				int x = w - 4 - cell * (1 + shown / rows);

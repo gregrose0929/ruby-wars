@@ -32,8 +32,10 @@ public class AirBattle extends PartyGame {
 	private static final int WIN = 10;
 	private static final int ROUND_TICKS = 8 * 60 * 20;
 	/** How far the battle area reaches from the middle, and how high. */
-	private static final int AREA = 330;
-	private static final int CEILING = 170;
+	public static final int AREA = 650;
+	public static final int CEILING = 170;
+	/** The airfield's own land (the client draws the edge of the battle around it; see AirWalls). */
+	public static final int CENTER_X = -82000;
 	@SuppressWarnings("unchecked")
 	private static final EntityType<? extends Mob>[] AIRCRAFT = new EntityType[] {ModEntities.FIGHTER_JET, ModEntities.ATTACK_JET,
 			ModEntities.ATTACK_HELI, ModEntities.BOMBER};
@@ -52,7 +54,7 @@ public class AirBattle extends PartyGame {
 
 	@Override
 	protected BlockPos center() {
-		return new BlockPos(-75000, GROUND + 1, 0);
+		return new BlockPos(CENTER_X, GROUND + 1, 0);
 	}
 
 	@Override
@@ -122,9 +124,9 @@ public class AirBattle extends PartyGame {
 		ServerLevel level = level();
 		BlockPos start = runwayStart(part.team);
 		int dir = side(part.team);
-		// Somewhere along your own runway (not the same spot every time), with 5 seconds of protection.
+		// Near the start of your own runway (with all of it ahead of you to take off), with 5 seconds of protection.
 		double x = start.getX() + 0.5 + player.getRandom().nextInt(7) - 3;
-		double z = start.getZ() + 0.5 + dir * (4 + player.getRandom().nextInt(40));
+		double z = start.getZ() + 0.5 + dir * (4 + player.getRandom().nextInt(16));
 		float yaw = part.team == 0 ? 0 : 180;
 		UUID old = planes.remove(player.getUUID());
 		if (old != null && level.getEntity(old) instanceof Entity e && !e.isVehicle()) {

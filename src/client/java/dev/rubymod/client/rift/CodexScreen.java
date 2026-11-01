@@ -92,12 +92,13 @@ public class CodexScreen extends Screen {
 		}
 		int pw = Math.min(400, width - 16);
 		int px = (width - pw) / 2;
-		int py = 46;
-		int ph = height - py - 22;
-		Ui.emblem(g, "rift", px, 6, 24);
-		Ui.heading(g, "The Codex", px + 30, 9, Ui.TEXT, 1.5F, false);
+		int oy = Ui.centre(height, 280);
+		int py = oy + 46;
+		int ph = Math.min(height - py - 22, 212);
+		Ui.emblem(g, "rift", px, oy + 6, 24);
+		Ui.heading(g, "The Codex", px + 30, oy + 9, Ui.TEXT, 1.5F, false);
 		String count = got + " of " + total + " found";
-		Ui.text(g, count, px + pw - font.width(count), 13, Ui.GOLD);
+		Ui.text(g, count, px + pw - font.width(count), oy + 13, Ui.GOLD);
 		Ui.panel(g, px, py, pw, ph);
 		// Tabs.
 		tabs.clear();
@@ -119,7 +120,7 @@ public class CodexScreen extends Screen {
 		}
 		if (SECTIONS[tab].equals("rewards")) {
 			rewards(g, px + 12, py + 12, pw - 24);
-			g.centeredText(font, "Click a tab. Esc to close.", width / 2, height - 14, Ui.MUTED);
+			g.centeredText(font, "Click a tab. Esc to close.", width / 2, py + ph + 8, Ui.MUTED);
 			return;
 		}
 		// The grid.
@@ -169,7 +170,7 @@ public class CodexScreen extends Screen {
 			}
 			Ui.tooltip(g, tip, mouseX, mouseY, width, height);
 		}
-		g.centeredText(font, "Hover a tile to read it. Esc to close.", width / 2, height - 14, Ui.MUTED);
+		g.centeredText(font, "Hover a tile to read it. Esc to close.", width / 2, py + ph + 8, Ui.MUTED);
 	}
 
 	/** The Rewards tab: the next milestone, and what each finished section gives you. */

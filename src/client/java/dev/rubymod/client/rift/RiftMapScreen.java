@@ -175,8 +175,10 @@ public class RiftMapScreen extends Screen {
 	}
 
 	private int[] pos(Node n, int floors) {
-		int top = 34;
-		int bottom = height - 50;
+		int h = Math.min(height, 330);
+		int oy = Ui.centre(height, h);
+		int top = oy + 34;
+		int bottom = oy + h - 50;
 		int span = Math.min(width - 160, 300);
 		int left = (width - span) / 2;
 		double across = n.cols() == 1 ? 0.5 : n.col() / (double) (n.cols() - 1);
@@ -194,28 +196,31 @@ public class RiftMapScreen extends Screen {
 		// The map sits on one big panel.
 		int span = Math.min(width - 160, 300);
 		int mapX = (width - span) / 2 - 34;
-		Ui.panel(g, mapX, 26, span + 68, height - 26 - 30);
+		int mapH = Math.min(height, 330);
+		int oy = Ui.centre(height, mapH);
+		Ui.panel(g, mapX, oy + 22, span + 68, mapH - 22 - 28);
 		// Header: the emblem, the act's boss, the Rift Keys.
-		Ui.emblem(g, "rift", 6, 5, 16);
-		Ui.heading(g, "The Rift", 26, 9, Ui.TEXT, 1.0F, false);
+		Ui.emblem(g, "rift", mapX, oy + 3, 16);
+		Ui.heading(g, "The Rift", mapX + 20, oy + 7, Ui.TEXT, 1.0F, false);
 		if (!bossName.isEmpty()) {
-			Ui.icon(g, Ui.Icon.SKULL, 26 + font.width("The Rift") + 10, 8);
-			Ui.text(g, "Boss: " + bossName, 26 + font.width("The Rift") + 22, 9, Ui.RED);
+			Ui.icon(g, Ui.Icon.SKULL, mapX + 20 + font.width("The Rift") + 10, oy + 6);
+			int bx = mapX + 20 + font.width("The Rift") + 22;
+			Ui.text(g, "Boss: " + bossName, bx, oy + 7, mapX + span + 68 - 84 - bx, Ui.RED);
 		}
 		{
 			String[] names = {"flame", "gold", "life"};
 			int[] colors = {0xFFFF7A2E, 0xFFFFC02E, 0xFF6EE38A};
-			int kx = width - 62;
-			Ui.text(g, "Keys", kx - 26, 9, Ui.MUTED);
+			int kx = mapX + span + 68 - 54;
+			Ui.text(g, "Keys", kx - 26, oy + 7, Ui.MUTED);
 			for (int i = 0; i < 3; i++) {
 				boolean got = keys.contains(names[i]);
-				Ui.inset(g, kx + i * 18, 4, 16, 16);
+				Ui.inset(g, kx + i * 18, oy + 2, 16, 16);
 				if (got) {
-					g.fill(kx + i * 18 + 2, 6, kx + i * 18 + 14, 18, colors[i]);
-					Ui.icon(g, Ui.Icon.STAR, kx + i * 18 + 3, 7);
+					g.fill(kx + i * 18 + 2, oy + 4, kx + i * 18 + 14, oy + 16, colors[i]);
+					Ui.icon(g, Ui.Icon.STAR, kx + i * 18 + 3, oy + 5);
 				}
 			}
-			if (Ui.inside(mouseX, mouseY, kx - 30, 4, 84, 18)) {
+			if (Ui.inside(mouseX, mouseY, kx - 30, oy + 2, 84, 18)) {
 				Ui.tooltip(g, List.of("Rift Keys: " + keys.size() + " of 3", "Flame: beat a Burning Elite.", "Gold: steal 100+ gold in a Vault Heist.",
 						"Life: take it at a Ruby Spring (instead of a gift).", "All three open a secret fourth act."), mouseX, mouseY, width, height);
 			}
@@ -309,7 +314,7 @@ public class RiftMapScreen extends Screen {
 				boxes.put(n.id(), new int[] {p[0] - r - 2, p[1] - r - 2, r * 2 + 4, r * 2 + 4});
 			}
 		}
-		g.centeredText(font, "Click a glowing room to vote for it. Rooms in flames hold Burning Elites.", width / 2, height - 20, Ui.DIM);
+		Ui.foot(g, "Click a glowing room to vote for it. Rooms in flames hold Burning Elites.", width, oy + mapH - 20, Ui.DIM);
 		if (hovered != null) {
 			List<String> tip = new ArrayList<>();
 			tip.add(hovered.type().equals("BOSS") && !bossName.isEmpty() ? "Boss: " + bossName : hovered.burning() ? "Burning Elite" : title(hovered.type()));

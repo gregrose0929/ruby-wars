@@ -200,7 +200,14 @@ public final class HordeShop {
 			return "The team needs " + entry.price() + " rubies for that (it has " + Horde.bank() + ").";
 		}
 		entry.give().accept(player);
-		player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.6F, 1.2F);
+		// Something for the ears and eyes: a chime, a burst of sparkles round you, and what you got.
+		player.level().playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.7F, 1.6F);
+		player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
+		if (player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+			level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, player.getX(), player.getY() + 1, player.getZ(), 24, 0.6, 0.7, 0.6, 0.1);
+			level.sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING, player.getX(), player.getY() + 1, player.getZ(), 30, 0.5, 0.6, 0.5, 0.25);
+		}
+		player.sendOverlayMessage(Component.literal("Bought " + entry.name() + "!").withStyle(ChatFormatting.GREEN));
 		Horde.tellAll(player.level().getServer(), Component.literal(player.getName().getString() + " bought " + entry.name() + " (-" + entry.price()
 				+ " rubies, " + Horde.bank() + " left)").withStyle(ChatFormatting.AQUA));
 		syncAll(player.level().getServer(), false);

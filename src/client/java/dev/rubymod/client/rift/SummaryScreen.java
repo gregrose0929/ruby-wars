@@ -85,18 +85,19 @@ public class SummaryScreen extends Screen {
 		}
 		float pop = Ui.ease(opened, 400);
 		String heading = won ? "Victory!" : "Run over";
-		Ui.heading(g, heading, width / 2, 8, won ? Ui.GOLD : Ui.RED, 1.0F + 1.2F * pop, true);
+		int ch = Math.min(200, height - 72);
+		int oy = Ui.centre(height, ch + 72);
+		Ui.heading(g, heading, width / 2, oy + 8, won ? Ui.GOLD : Ui.RED, 1.0F + 1.2F * pop, true);
 		String line = where + ", " + time + ".  " + rooms + " rooms, " + elites + " elites, " + bosses + " bosses" + (keys > 0 ? ", " + keys + " of 3 Rift Keys" : "");
-		g.centeredText(font, line, width / 2, 34, Ui.DIM);
+		g.centeredText(font, line, width / 2, oy + 34, Ui.DIM);
 		int n = Math.max(1, cards.size());
 		int gap = 8;
 		int cw = Math.min(170, (width - 20 - gap * (n - 1)) / n);
-		int ch = height - 72;
 		int x0 = width / 2 - (cw * n + gap * (n - 1)) / 2;
 		for (int i = 0; i < cards.size(); i++) {
 			Card c = cards.get(i);
 			int x = x0 + i * (cw + gap);
-			int y = 50 + Math.round((1 - Ui.ease(opened + 150L * i, 320)) * 24);
+			int y = oy + 50 + Math.round((1 - Ui.ease(opened + 150L * i, 320)) * 24);
 			Ui.card(g, x, y, cw, ch, c.mvp() ? Ui.mix(Ui.GOLD, 0xFFFFF0B0, Ui.pulse(900)) : Ui.RIFT, 0);
 			int ty = y + 8;
 			if (c.mvp()) {
@@ -152,6 +153,6 @@ public class SummaryScreen extends Screen {
 				}
 			}
 		}
-		g.centeredText(font, "Esc to close. Back to the Threshold for another run!", width / 2, height - 14, Ui.MUTED);
+		g.centeredText(font, "Esc to close. Back to the Threshold for another run!", width / 2, oy + 50 + ch + 8, Ui.MUTED);
 	}
 }

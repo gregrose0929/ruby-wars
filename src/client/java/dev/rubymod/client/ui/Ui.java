@@ -47,7 +47,25 @@ public final class Ui {
 	public enum Icon { HEART, SHIELD, STAR, GEM, SKULL, CLOCK, FLAG, WRENCH, WARN, CHECK, CROSS, LOCK, TRUCK, RIGHT, LEFT, DOWN, BOLT, CROWN, DOT }
 
 	private static final Map<String, Identifier> SPRITES = new HashMap<>();
-	private static final Map<Object, float[]> HOVER = new HashMap<>();
+	/** An animated value and when it last moved. */
+	private static final class Motion {
+		float value;
+		long at = System.nanoTime();
+
+		Motion(float value) {
+			this.value = value;
+		}
+
+		/** Seconds since the last frame (never negative, never a big jump). */
+		float step() {
+			long now = System.nanoTime();
+			float dt = Math.max(0, Math.min(0.1F, (now - at) / 1.0E9F));
+			at = now;
+			return dt;
+		}
+	}
+
+	private static final Map<Object, Motion> HOVER = new HashMap<>();
 
 	private Ui() {
 	}
@@ -94,8 +112,9 @@ public final class Ui {
 		g.blitSprite(RenderPipelines.GUI_TEXTURED, sprite("button"), x, y, w, h, tint);
 		Font font = font();
 		int ty = y + (h - 2 - 8) / 2;
-		g.centeredText(font, label, x + w / 2, ty + 1, 0x60000000);
-		g.centeredText(font, label, x + w / 2, ty, enabled ? 0xFFFFFFFF : 0xFF9AA0AA);
+		String shown = font.width(label) <= w - 4 ? label : font.plainSubstrByWidth(label, w - 4);
+		g.centeredText(font, shown, x + w / 2, ty + 1, 0x60000000);
+		g.centeredText(font, shown, x + w / 2, ty, enabled ? 0xFFFFFFFF : 0xFF9AA0AA);
 		return over;
 	}
 
@@ -165,6 +184,11 @@ public final class Ui {
 			return s;
 		}
 		return font.plainSubstrByWidth(s, Math.max(0, w - font.width("..."))) + "...";
+	}
+
+	/** A centred line at the foot of a screen, cut to fit. */
+	public static void foot(GuiGraphicsExtractor g, String s, int screenWidth, int y, int color) {
+		g.centeredText(font(), fit(s, screenWidth - 8), screenWidth / 2, y, color);
 	}
 
 	/** A heading: larger, with a dark drop under it. */
@@ -244,6 +268,16 @@ public final class Ui {
 		g.fillGradient(0, 0, w, h, alpha(0xFF08090C, 0.55F * amount), alpha(0xFF08090C, 0.75F * amount));
 	}
 
+	// ----- Layout -----
+
+	/**
+	 * How far down to start something {@code wanted} tall so it sits in the middle of the screen. Screens are designed for a
+	 * small window and capped there: on a big display they stay the same size in the middle, not stretched or stuck at the top.
+	 */
+	public static int centre(int screenHeight, int wanted) {
+		return Math.max(0, (screenHeight - wanted) / 2);
+	}
+
 	// ----- Motion -----
 
 	/** 0 to 1 over {@code ms} since {@code start}, easing out. */
@@ -254,25 +288,27 @@ public final class Ui {
 
 	/** A hover that fades in and out (keyed by whatever identifies the thing). */
 	public static float hover(Object key, boolean on) {
-		float[] v = HOVER.computeIfAbsent(key, k -> new float[] {0, System.nanoTime()});
-		long now = System.nanoTime();
-		float dt = Math.min(0.1F, (now - (long) v[1]) / 1.0E9F);
-		v[1] = now;
-		v[0] = Mth.clamp(v[0] + (on ? dt * 8 : -dt * 6), 0, 1);
-		if (HOVER.size() > 400) {
-			HOVER.clear();
-		}
-		return v[0];
+		Motion m = HOVER.computeIfAbsent(key, k -> new Motion(0));
+		float dt = m.step();
+		m.value = Mth.clamp(m.value + (on ? dt * 8 : -dt * 6), 0, 1);
+		forgetOld();
+		return m.value;
 	}
 
 	/** A value that glides toward its target (bars). */
 	public static float glide(Object key, float target) {
-		float[] v = HOVER.computeIfAbsent("glide:" + key, k -> new float[] {target, System.nanoTime()});
-		long now = System.nanoTime();
-		float dt = Math.min(0.1F, (now - (long) v[1]) / 1.0E9F);
-		v[1] = now;
-		v[0] += (target - v[0]) * Math.min(1, dt * 8);
-		return v[0];
+		Motion m = HOVER.computeIfAbsent("glide:" + key, k -> new Motion(target));
+		m.value += (target - m.value) * Math.min(1, m.step() * 8);
+		forgetOld();
+		return m.value;
+	}
+
+	/** Things not drawn for a while are forgotten (only those: the rest carry on smoothly). */
+	private static void forgetOld() {
+		if (HOVER.size() > 400) {
+			long now = System.nanoTime();
+			HOVER.values().removeIf(m -> now - m.at > 2_000_000_000L);
+		}
 	}
 
 	/** A slow 0..1..0 pulse. */

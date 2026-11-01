@@ -105,7 +105,7 @@ final class RelicOffers {
 				case ELITE -> roll(random, 0, 55, 22, 23);
 				default -> roll(random, 38, 52, 0, 10);
 			};
-			java.util.function.Predicate<Relic> owned = x -> r != null && r.has(x);
+			java.util.function.Predicate<Relic> owned = x -> r != null && r.relics.contains(x);
 			Relic pick = pick(r, tier, out, random, owned);
 			if (pick == null) {
 				pick = pick(r, Relic.Tier.RARE, out, random, owned);
@@ -156,7 +156,7 @@ final class RelicOffers {
 	/** The merchant's stock: two commons, a rare or two, and sometimes a legendary; never one the whole team already has. */
 	static List<Relic> shopStock(RandomSource random, java.util.Collection<Rift.Runner> team) {
 		List<Relic> out = new ArrayList<>();
-		java.util.function.Predicate<Relic> owned = x -> !team.isEmpty() && team.stream().allMatch(m -> m.has(x) && !m.canCombine(x));
+		java.util.function.Predicate<Relic> owned = x -> !team.isEmpty() && team.stream().allMatch(m -> m.relics.contains(x) && !m.canCombine(x));
 		for (Relic.Tier t : new Relic.Tier[] {Relic.Tier.COMMON, Relic.Tier.COMMON, Relic.Tier.RARE, Relic.Tier.RARE,
 				random.nextFloat() < 0.4F ? Relic.Tier.LEGENDARY : Relic.Tier.CURSED}) {
 			Relic r = pick(null, t, out, random, owned);

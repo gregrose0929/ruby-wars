@@ -80,9 +80,24 @@ public class TankBattle extends PartyGame {
 		ServerLevel level = level();
 		BlockPos c = center();
 		int dir = part.team == 0 ? 1 : -1;
-		// Anywhere along your own back line (not the same spot every time), with 5 seconds of protection.
-		double x = c.getX() + 0.5 + player.getRandom().nextInt(101) - 50;
+		// Along your own back line, at the spot farthest from the other team (and your own tanks), with 5 seconds of protection.
+		double x = c.getX() + 0.5;
 		double z = c.getZ() - dir * (96 + player.getRandom().nextInt(10)) + 0.5;
+		double best = -1;
+		for (int tries = 0; tries < 10; tries++) {
+			double tx = c.getX() + 0.5 + player.getRandom().nextInt(161) - 80;
+			double nearest = 999;
+			for (ServerPlayer o : online()) {
+				if (o != player && !o.isSpectator()) {
+					nearest = Math.min(nearest, Math.hypot(o.getX() - tx, o.getZ() - z) * (players.get(o.getUUID()) != null && players.get(o.getUUID()).team == part.team
+							? 2.5 : 1.0));
+				}
+			}
+			if (nearest > best) {
+				best = nearest;
+				x = tx;
+			}
+		}
 		float yaw = part.team == 0 ? 0 : 180;
 		UUID old = tanks.remove(player.getUUID());
 		if (old != null && level.getEntity(old) instanceof Entity e && !e.isVehicle()) {
@@ -109,6 +124,36 @@ public class TankBattle extends PartyGame {
 		}
 	}
 
+	/** The stadium's perimeter wall (and a little either side of it). */
+	@Override
+	protected boolean wallAt(int dx, int dy, int dz) {
+		int h = dev.rubymod.game.Duels.Mode.VEHICLES.half;
+		return Math.max(Math.abs(dx), Math.abs(dz)) >= h - 1 && dy >= -2;
+	}
+
+	/** Out past the wall (through a gap, over it, anyhow): back inside, tank and all. */
+	private void keepInside() {
+		BlockPos c = center();
+		int h = dev.rubymod.game.Duels.Mode.VEHICLES.half;
+		for (ServerPlayer p : online()) {
+			if (p.isSpectator()) {
+				continue;
+			}
+			Entity body = p.getVehicle() != null ? p.getVehicle() : p;
+			double dx = body.getX() - c.getX();
+			double dz = body.getZ() - c.getZ();
+			if (Math.abs(dx) <= h - 2 && Math.abs(dz) <= h - 2 && body.getY() < c.getY() + 30) {
+				continue;
+			}
+			double x = c.getX() + Math.max(-(h - 8), Math.min(h - 8, dx));
+			double z = c.getZ() + Math.max(-(h - 8), Math.min(h - 8, dz));
+			double y = dev.rubymod.game.Hub.safeY(level(), x, c.getY(), z);
+			body.teleportTo(x, y, z);
+			body.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+			p.sendOverlayMessage(Component.literal("Stay inside the arena!").withStyle(ChatFormatting.RED));
+		}
+	}
+
 	@Override
 	protected void onDowned(ServerPlayer victim, Part part, Entity killer) {
 		part.respawnIn = 100;
@@ -129,6 +174,9 @@ public class TankBattle extends PartyGame {
 
 	@Override
 	protected void tickRound() {
+		if (roundTicks % 10 == 0) {
+			keepInside();
+		}
 		ServerLevel level = level();
 		for (var it = boardIn.entrySet().iterator(); it.hasNext();) {
 			var e = it.next();

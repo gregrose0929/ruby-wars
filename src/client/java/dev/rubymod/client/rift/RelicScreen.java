@@ -122,25 +122,27 @@ public class RelicScreen extends Screen {
 			int sy = height - (int) s;
 			g.fill(sx, sy, sx + 2, sy + 2, anyLegend && i % 2 == 0 ? 0x60F5C542 : 0x40C85BFF);
 		}
-		Ui.emblem(g, "rift", width / 2 - 12, 6, 24);
-		Ui.heading(g, heading, width / 2, 33, kind.equals("shop") ? Ui.GOLD : Ui.TEXT, 1.5F, true);
-		if (kind.equals("shop")) {
-			String goldText = gold + " gold (the whole team's)";
-			int gw = font.width(goldText) + 12;
-			Ui.icon(g, Ui.Icon.GEM, width / 2 - gw / 2, 47);
-			Ui.text(g, goldText, width / 2 - gw / 2 + 12, 48, Ui.GOLD);
-		}
 		int n = cards.size();
-		if (n == 0) {
-			return;
-		}
-		int cols = Math.min(n, 3);
-		int rows = (n + cols - 1) / cols;
+		int cols = Math.max(1, Math.min(n, 3));
+		int rows = Math.max(1, (n + cols - 1) / cols);
 		int gap = 10;
 		int cardW = Math.min(128, (width - 40 - gap * (cols - 1)) / cols);
 		int cardH = Math.min(rows == 1 ? 180 : 116, (height - 84 - gap * (rows - 1)) / rows);
+		int block = cardH * rows + gap * (rows - 1);
+		int oy = Ui.centre(height, block + 84);
+		Ui.emblem(g, "rift", width / 2 - 12, oy + 6, 24);
+		Ui.heading(g, heading, width / 2, oy + 33, kind.equals("shop") ? Ui.GOLD : Ui.TEXT, 1.5F, true);
+		if (kind.equals("shop")) {
+			String goldText = gold + " gold (the whole team's)";
+			int gw = font.width(goldText) + 12;
+			Ui.icon(g, Ui.Icon.GEM, width / 2 - gw / 2, oy + 47);
+			Ui.text(g, goldText, width / 2 - gw / 2 + 12, oy + 48, Ui.GOLD);
+		}
+		if (n == 0) {
+			return;
+		}
 		int x0 = (width - (cardW * cols + gap * (cols - 1))) / 2;
-		int y0 = kind.equals("shop") ? 62 : Math.max(56, (height - cardH * rows - gap * (rows - 1)) / 2 + 12);
+		int y0 = oy + 62;
 		boxes.clear();
 		Card tipCard = null;
 		for (int i = 0; i < n; i++) {
@@ -231,9 +233,9 @@ public class RelicScreen extends Screen {
 				boxes.add(new int[] {x, y, cardW, cardH, i});
 			}
 		}
-		String foot = kind.equals("shop") ? "Buy as many as the team's gold allows. Esc when you're done, then step into the portal."
-				: kind.equals("event") ? "Choose wisely." : "Relics last the whole run. Esc to look around first (J brings this back).";
-		g.centeredText(font, foot, width / 2, height - 14, Ui.MUTED);
+		String foot = kind.equals("shop") ? "Buy what the team's gold allows. Esc when you're done."
+				: kind.equals("event") ? "Choose wisely." : "Relics last the whole run. Esc to look around (J brings this back).";
+		Ui.foot(g, foot, width, y0 + block + 8, Ui.MUTED);
 		// Hover a card whose text didn't fit (or that completes a combo): all of it.
 		if (tipCard != null) {
 			List<String> tip = new ArrayList<>();

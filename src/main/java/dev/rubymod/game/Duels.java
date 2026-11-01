@@ -90,7 +90,7 @@ public final class Duels {
 		public final String id;
 		public final String title;
 		/** Half the arena's width (walls for guns and vehicles; a warning line for planes). */
-		final int half;
+		public final int half;
 		/** Each side's spawn, this far from the centre along z. */
 		public final int spawnZ;
 
@@ -1155,7 +1155,7 @@ public final class Duels {
 			for (int s : new int[] {1, -1}) {
 				int start = -z0 * s;
 				int a = start - 12 * s;
-				int b = start + 150 * s;
+				int b = start + 235 * s;
 				flatten(level, c, -14, Math.min(a, b) - 2, 14, Math.max(a, b) + 2, 20, Blocks.GRASS_BLOCK.defaultBlockState());
 				box(level, c, -7, 0, a, 7, 0, b, runway);
 				box(level, c, -7, 0, a, -7, 0, b, edge);

@@ -59,17 +59,18 @@ public class ConvoyScreen extends Screen {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		float in = Ui.ease(opened, 240);
 		Ui.dim(g, width, height, in);
-		Ui.emblem(g, "convoy", width / 2 - 12, 8, 24);
-		Ui.heading(g, source.title(), width / 2, 36, Ui.TEXT, 1.5F, true);
+		int ch = Math.min(150, height - 96);
+		int oy = Ui.centre(height, ch + 96);
+		Ui.emblem(g, "convoy", width / 2 - 12, oy + 8, 24);
+		Ui.heading(g, source.title(), width / 2, oy + 36, Ui.TEXT, 1.5F, true);
 		g.centeredText(font, source.kind().equals("role") ? "Everyone gets iron armor, grenades and endless ammo."
-				: "Your pick stays on the convoy for the rest of the job.", width / 2, 52, Ui.DIM);
+				: "Your pick stays on the convoy for the rest of the job.", width / 2, oy + 52, Ui.DIM);
 		int n = Math.max(1, cards.size());
 		int gap = 8;
 		int cw = Math.min(118, (width - 20 - gap * (n - 1)) / n);
-		int ch = Math.min(150, height - 96);
 		int total = n * cw + (n - 1) * gap;
 		int x0 = (width - total) / 2;
-		int y0 = 68;
+		int y0 = oy + 68;
 		boxes.clear();
 		for (int i = 0; i < cards.size(); i++) {
 			Card c = cards.get(i);
@@ -97,7 +98,7 @@ public class ConvoyScreen extends Screen {
 			Ui.wrap(g, c.about(), x + 7, ty, cw - 14, Ui.DIM, y + ch - 26);
 			Ui.button(g, source.kind().equals("role") ? "Pick" : "Take it", x + 7, y + ch - 22 - lift, cw - 14, 16, mouseX, mouseY, c.color(), true);
 		}
-		g.centeredText(font, "Esc to look around first (J brings this back)", width / 2, height - 14, Ui.MUTED);
+		g.centeredText(font, "Esc to look around first (J brings this back)", width / 2, y0 + ch + 8, Ui.MUTED);
 	}
 
 	@Override

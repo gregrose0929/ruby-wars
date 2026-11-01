@@ -167,6 +167,19 @@ public final class PartyGames {
 		}
 	}
 
+	/** The party arenas' outer walls: no blasting your way out. */
+	public static boolean protects(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+		if (!(level instanceof net.minecraft.server.level.ServerLevel server)) {
+			return false;
+		}
+		for (PartyGame game : ALL) {
+			if (game.server != null && game.protectsWall(server, pos)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static Boolean canHurt(Player attacker, Player victim) {
 		PartyGame a = of(attacker);
 		PartyGame v = of(victim);

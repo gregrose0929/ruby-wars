@@ -107,7 +107,8 @@ public final class RiftAbilities {
 
 	private static boolean dash(ServerLevel level, ServerPlayer p, Rift.Runner r) {
 		Vec3 look = p.getLookAngle();
-		Vec3 dir = new Vec3(look.x, Math.max(-0.2, Math.min(0.35, look.y)), look.z).normalize();
+		// On the ground you dash along it, however far down you're looking.
+		Vec3 dir = new Vec3(look.x, Math.max(p.onGround() ? 0 : -0.2, Math.min(0.35, look.y)), look.z).normalize();
 		Vec3 from = p.position().add(0, 0.6, 0);
 		var hit = level.clip(new ClipContext(from, from.add(dir.scale(7)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
 		Vec3 to = hit.getType() == HitResult.Type.MISS ? from.add(dir.scale(7)) : hit.getLocation().subtract(dir.scale(0.7));
@@ -126,7 +127,8 @@ public final class RiftAbilities {
 				level.sendParticles(ParticleTypes.SWEEP_ATTACK, c.x, c.y, c.z, 1, 0, 0, 0, 0);
 			}
 		}
-		p.teleportTo(to.x, to.y - 0.6, to.z);
+		Vec3 landing = safeLanding(level, p, new Vec3(to.x, to.y - 0.6, to.z));
+		p.teleportTo(landing.x, landing.y, landing.z);
 		p.setDeltaMovement(dir.scale(0.6));
 		p.needsSync = true;
 		p.resetFallDistance();
@@ -134,6 +136,24 @@ public final class RiftAbilities {
 		level.playSound(null, p.blockPosition(), SoundEvents.BREEZE_WIND_CHARGE_BURST.value(), SoundSource.PLAYERS, 1.0F, 1.4F);
 		level.playSound(null, p.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 0.8F, 0.8F);
 		return true;
+	}
+
+	/**
+	 * Where someone really ends up going to {@code want}: the furthest point along the way where they fit, lifted a little if
+	 * that gets them out of the floor. Never inside a block.
+	 */
+	static Vec3 safeLanding(ServerLevel level, ServerPlayer p, Vec3 want) {
+		Vec3 from = p.position();
+		for (int i = 20; i >= 0; i--) {
+			Vec3 at = from.lerp(want, i / 20.0);
+			for (double up : new double[] {0, 0.5, 1.0, 1.5}) {
+				Vec3 lifted = at.add(0, up, 0);
+				if (level.noCollision(p, p.getBoundingBox().move(lifted.subtract(from)))) {
+					return lifted;
+				}
+			}
+		}
+		return from;
 	}
 
 	// ----- Ruby Nova -----

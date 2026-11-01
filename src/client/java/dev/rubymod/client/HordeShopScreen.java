@@ -36,6 +36,12 @@ public class HordeShopScreen extends Screen {
 	private final List<String> cardIds = new ArrayList<>();
 	private int[] readyButton;
 	private boolean ready;
+	/** The card just clicked, waiting to hear whether it worked; then what was bought (or refused), and when. */
+	private String clicked;
+	private String flashId;
+	private boolean flashGood;
+	private long flashAt;
+	private int spent;
 	private final long opened = System.currentTimeMillis();
 
 	private HordeShopScreen() {
@@ -60,6 +66,13 @@ public class HordeShopScreen extends Screen {
 		} else {
 			return;
 		}
+		if (screen.clicked != null && sync.bank() < screen.bank) {
+			screen.flashId = screen.clicked;
+			screen.flashGood = true;
+			screen.flashAt = System.currentTimeMillis();
+			screen.spent = screen.bank - sync.bank();
+			screen.clicked = null;
+		}
 		screen.bank = sync.bank();
 		screen.cleared = sync.cleared();
 		screen.entries = sync.entries().stream().map(s -> s.split("[|]", 7)).filter(f -> f.length == 7).toList();
@@ -80,16 +93,17 @@ public class HordeShopScreen extends Screen {
 		Ui.dim(g, width, height, Ui.ease(opened, 240));
 		int panelW = Math.min(width - 16, 430);
 		int left = (width - panelW) / 2;
-		Ui.emblem(g, "horde", left, 6, 24);
-		Ui.heading(g, "Horde Armory", left + 30, 9, Ui.TEXT, 1.5F, false);
-		Ui.text(g, "Kills and cleared waves fill the bank", left + 30, 24, Ui.MUTED);
+		int oy = Ui.centre(height, 270);
+		Ui.emblem(g, "horde", left, oy + 6, 24);
+		Ui.heading(g, "Horde Armory", left + 30, oy + 9, Ui.TEXT, 1.5F, false);
+		Ui.text(g, "Kills and cleared waves fill the bank", left + 30, oy + 24, Ui.MUTED);
 		String bankText = bank + " rubies";
-		Ui.icon(g, Ui.Icon.GEM, left + panelW - font.width(bankText) - 12, 9);
-		Ui.text(g, bankText, left + panelW - font.width(bankText), 10, Ui.GOLD);
+		Ui.icon(g, Ui.Icon.GEM, left + panelW - font.width(bankText) - 12, oy + 9);
+		Ui.text(g, bankText, left + panelW - font.width(bankText), oy + 10, Ui.GOLD);
 		String waves = "Waves cleared: " + cleared;
-		Ui.text(g, waves, left + panelW - font.width(waves), 22, Ui.DIM);
-		int top = 50;
-		int bottom = height - 32;
+		Ui.text(g, waves, left + panelW - font.width(waves), oy + 22, Ui.DIM);
+		int top = oy + 50;
+		int bottom = Math.min(height - 32, top + 188);
 		Ui.panel(g, left, top, panelW, bottom - top);
 		// Tabs.
 		tabBoxes.clear();
@@ -130,6 +144,17 @@ public class HordeShopScreen extends Screen {
 				Ui.card(g, x, y, cardW, cardH, afford ? Ui.GOLD : Ui.RED, Ui.hover("horde:" + f[0], hover));
 			}
 			g.item(icon(f[3]), x + 5, y + (cardH - 16) / 2);
+			// Just bought (green, a tick, and the rubies rising off it) or refused (a red flash).
+			if (f[0].equals(flashId)) {
+				float t = (System.currentTimeMillis() - flashAt) / 900F;
+				if (t < 1) {
+					g.fill(x + 1, y + 1, x + cardW - 1, y + cardH - 1, Ui.alpha(flashGood ? Ui.GREEN : Ui.RED, 0.55F * (1 - t)));
+					if (flashGood) {
+						Ui.icon(g, Ui.Icon.CHECK, x + cardW - 13, y + 4);
+						g.text(font, "-" + spent, x + cardW - 30, y + 8 - Math.round(t * 18), Ui.alpha(Ui.GOLD, 1 - t), true);
+					}
+				}
+			}
 			if (locked) {
 				g.fill(x + 5, y + (cardH - 16) / 2, x + 21, y + (cardH - 16) / 2 + 16, 0x90101216);
 			}
@@ -150,7 +175,7 @@ public class HordeShopScreen extends Screen {
 		// Ready for the next wave.
 		int bw = 210;
 		int bx = (width - bw) / 2;
-		int by = height - 26;
+		int by = bottom + 6;
 		readyButton = new int[] {bx, by, bw, 18};
 		Ui.button(g, ready ? "You're ready! Waiting for the others" : "I'm ready: start the next wave", bx, by, bw, 18, mouseX, mouseY, Ui.HORDE, !ready);
 		if (tipEntry != null) {
@@ -158,6 +183,15 @@ public class HordeShopScreen extends Screen {
 			Ui.tooltip(g, List.of(tipEntry[2], tipEntry[6], cleared < wave ? "Unlocks after wave " + wave : tipEntry[4] + " rubies: click to buy"),
 					mouseX, mouseY, width, height);
 		}
+	}
+
+	private boolean canAfford(String id) {
+		for (String[] f : entries) {
+			if (f[0].equals(id)) {
+				return bank >= Integer.parseInt(f[4]) && cleared >= Integer.parseInt(f[5]);
+			}
+		}
+		return false;
 	}
 
 	private static boolean inside(MouseButtonEvent event, int[] box) {
@@ -174,6 +208,11 @@ public class HordeShopScreen extends Screen {
 		}
 		for (int i = 0; i < cardBoxes.size(); i++) {
 			if (inside(event, cardBoxes.get(i))) {
+				clicked = cardIds.get(i);
+				// The server answers with the new bank if it worked. Until then, assume no.
+				flashId = clicked;
+				flashGood = false;
+				flashAt = canAfford(clicked) ? 0 : System.currentTimeMillis();
 				ClientPlayNetworking.send(new MorePayloads.HordeBuy(cardIds.get(i)));
 				return true;
 			}

@@ -604,6 +604,73 @@ public abstract class PartyGame {
 		player.resetFallDistance();
 	}
 
+	/**
+	 * A good place to (re)spawn within {@code radius} of the middle: standing room for a player (nothing to get stuck in),
+	 * solid ground underfoot, not in water, and as far from everyone else in the game as the tries allow.
+	 */
+	protected BlockPos smartSpawn(int radius, net.minecraft.world.entity.Entity self) {
+		ServerLevel level = level();
+		BlockPos c = center();
+		net.minecraft.util.RandomSource random = level.getRandom();
+		List<net.minecraft.world.entity.Entity> others = level.getEntities(self, new AABB(c).inflate(radius + 24, 32, radius + 24),
+				e -> e instanceof net.minecraft.world.entity.LivingEntity l && l.isAlive()
+						&& (e instanceof ServerPlayer p ? !p.isSpectator() && players.containsKey(p.getUUID()) : spawned.contains(e.getUUID())));
+		BlockPos best = null;
+		double bestDistance = -1;
+		for (int tries = 0; tries < 48; tries++) {
+			BlockPos p = standingRoom(level, c.getX() + random.nextInt(radius * 2 + 1) - radius, c.getZ() + random.nextInt(radius * 2 + 1) - radius, c.getY());
+			if (p == null) {
+				continue;
+			}
+			net.minecraft.world.phys.Vec3 at = net.minecraft.world.phys.Vec3.atBottomCenterOf(p);
+			double nearest = 999;
+			for (net.minecraft.world.entity.Entity e : others) {
+				nearest = Math.min(nearest, e.position().distanceTo(at));
+			}
+			if (nearest > bestDistance) {
+				bestDistance = nearest;
+				best = p;
+			}
+			if (nearest >= radius * 0.9) {
+				break;
+			}
+		}
+		return best != null ? best : c;
+	}
+
+	/** The ground near height {@code y0} at x, z where a player fits (and isn't on top of cover or a roof), or null. */
+	protected static BlockPos standingRoom(ServerLevel level, int x, int z, int y0) {
+		for (int y = y0 + 2; y >= y0 - 6; y--) {
+			BlockPos p = new BlockPos(x, y, z);
+			BlockPos below = p.below();
+			if (!level.getBlockState(below).isFaceSturdy(level, below, net.minecraft.core.Direction.UP) || !level.getFluidState(p).isEmpty()
+					|| !level.getFluidState(below).isEmpty()) {
+				continue;
+			}
+			if (level.noCollision(new AABB(x + 0.1, y, z + 0.1, x + 0.9, y + 1.95, z + 0.9))) {
+				return p;
+			}
+		}
+		return null;
+	}
+
+	/** Blocks of this game's arena that weapons can't break (its outer walls). Relative to the middle. */
+	protected boolean wallAt(int dx, int dy, int dz) {
+		return false;
+	}
+
+	/** Is pos part of a wall of this game's arena? */
+	public boolean protectsWall(ServerLevel level, BlockPos pos) {
+		if (level != level()) {
+			return false;
+		}
+		BlockPos c = center();
+		int r = reach();
+		int dx = pos.getX() - c.getX();
+		int dz = pos.getZ() - c.getZ();
+		return Math.abs(dx) <= r && Math.abs(dz) <= r && wallAt(dx, pos.getY() - c.getY(), dz);
+	}
+
 	/** Anyone inside blocks (an arena rebuilt around them, a bad spawn) is lifted out on top. */
 	private void unstick() {
 		ServerLevel level = level();

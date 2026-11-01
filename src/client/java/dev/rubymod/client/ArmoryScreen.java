@@ -43,6 +43,13 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 		super(menu, inventory, title, W, H);
 	}
 
+	/** On the narrowest screens (it's wider than they are), at least the left of it stays on screen: that's the buying part. */
+	@Override
+	protected void init() {
+		super.init();
+		leftPos = Math.max(0, leftPos);
+	}
+
 	private static boolean locked(ItemStack stack) {
 		return stack.getHoverName().getString().startsWith("[Locked]");
 	}

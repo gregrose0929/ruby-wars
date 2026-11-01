@@ -110,10 +110,11 @@ public class ModeScreen extends Screen {
 		}
 		float in = Ui.ease(opened, 260);
 		Ui.dim(g, width, height, in);
-		Ui.logo(g, width / 2, 6 - Math.round((1 - in) * 8), 1);
-		g.centeredText(font, "Choose a game", width / 2, 33, Ui.alpha(Ui.DIM, in));
-		int top = 46;
-		int bottom = height - 30;
+		int oy = Ui.centre(height, 280);
+		Ui.logo(g, width / 2, oy + 6 - Math.round((1 - in) * 8), 1);
+		g.centeredText(font, "Choose a game", width / 2, oy + 33, Ui.alpha(Ui.DIM, in));
+		int top = oy + 46;
+		int bottom = Math.min(height - 30, top + 204);
 		int colW = Math.min(230, width / 2 - 14);
 		int leftX = width / 2 - colW - 4;
 		int rightX = width / 2 + 4;
@@ -136,7 +137,8 @@ public class ModeScreen extends Screen {
 			int textW = colW - (tx - x) - (choose ? 112 : 62);
 			Ui.heading(g, game.title(), tx, y + 7, Ui.TEXT, 1.0F, false);
 			if (cardH >= 40) {
-				Ui.text(g, game.about(), tx, y + 19, textW + 56, Ui.DIM);
+				// Clear of the button, on a short card.
+				Ui.text(g, game.about(), tx, y + 19, cardH >= 50 ? textW + 56 : textW, Ui.DIM);
 			}
 			Ui.icon(g, Ui.Icon.DOT, tx - 2, y + cardH - 14);
 			Ui.text(g, status(game.id()), tx + 8, y + cardH - 13, textW, here ? Ui.GREEN : Ui.GOLD);
@@ -198,10 +200,13 @@ public class ModeScreen extends Screen {
 			g.pose().scale(0.75F, 0.75F);
 			g.item(icon(f[3]), 0, 0);
 			g.pose().popMatrix();
-			int nameW = Ui.font().width(f[1]);
-			Ui.text(g, f[1], rightX + 25, y + (rowH - 8) / 2, here ? Ui.GREEN : Ui.TEXT);
+			int room = colW - 35 - (hasBots ? botW + 4 : 0);
+			int nameW = Math.min(room, Ui.font().width(f[1]));
+			Ui.text(g, f[1], rightX + 25, y + (rowH - 8) / 2, room, here ? Ui.GREEN : Ui.TEXT);
 			String s = here ? "You're here" : f[2];
-			Ui.text(g, s, rightX + 31 + nameW, y + (rowH - 8) / 2, colW - 46 - nameW - (hasBots ? botW + 4 : 0), Ui.MUTED);
+			if (room - nameW > 30) {
+				Ui.text(g, s, rightX + 31 + nameW, y + (rowH - 8) / 2, room - nameW - 6, Ui.MUTED);
+			}
 			if (over) {
 				tooltip = List.of(f[1], f[4]);
 			}
@@ -222,7 +227,7 @@ public class ModeScreen extends Screen {
 		boolean inHub = where().equals("HUB");
 		int bw = 132;
 		int bx = (width - bw) / 2;
-		int by = height - 24;
+		int by = bottom + 6;
 		Ui.button(g, inHub ? "You're in the hub" : "Back to the hub", bx, by, bw, 18, mouseX, mouseY, Ui.HUB, !inHub);
 		if (!inHub) {
 			click(bx, by, bw, 18, "hub");

@@ -72,6 +72,22 @@ public final class GameEvents {
 				entity.discard();
 				return;
 			}
+			// Thrown away in the Rift or on the Convoy: it comes straight back.
+			if (entity instanceof net.minecraft.world.entity.item.ItemEntity thrown && thrown.getOwner() instanceof ServerPlayer owner
+					&& (dev.rubymod.game.rift.Rift.playing(owner) || dev.rubymod.game.convoy.Convoy.playing(owner))) {
+				var inv = owner.getInventory();
+				ItemStack stack = thrown.getItem().copy();
+				if (inv.getSelectedItem().isEmpty()) {
+					inv.setItem(inv.getSelectedSlot(), stack);
+				} else {
+					inv.add(stack);
+				}
+				owner.inventoryMenu.sendAllDataToRemote();
+				owner.containerMenu.sendAllDataToRemote();
+				owner.sendOverlayMessage(Component.literal("You can't drop things here.").withStyle(ChatFormatting.GRAY));
+				entity.discard();
+				return;
+			}
 			// Nothing drops in the Rift (no loot, no experience).
 			if ((entity instanceof net.minecraft.world.entity.item.ItemEntity || entity instanceof net.minecraft.world.entity.ExperienceOrb)
 					&& dev.rubymod.game.rift.Rift.protects(world, entity.blockPosition())) {

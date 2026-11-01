@@ -97,21 +97,14 @@ public class GunGame extends PartyGame {
 	}
 
 	/** A random open spot in the arena. */
+	/** Somewhere open, away from everyone else (see PartyGame.smartSpawn). */
 	private BlockPos randomSpawn(RandomSource random) {
-		BlockPos c = center();
-		ServerLevel level = level();
-		for (int tries = 0; tries < 30; tries++) {
-			BlockPos p = c.offset(random.nextInt(45) - 22, 0, random.nextInt(45) - 22);
-			if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir() && !level.getBlockState(p.below()).isAir()) {
-				return p;
-			}
-		}
-		return c.offset(0, 0, random.nextBoolean() ? 26 : -26);
+		return smartSpawn(22, null);
 	}
 
 	@Override
 	protected void spawn(ServerPlayer player, Part part) {
-		BlockPos at = randomSpawn(player.getRandom());
+		BlockPos at = smartSpawn(22, player);
 		teleport(player, at.getX() + 0.5, at.getY(), at.getZ() + 0.5, player.getRandom().nextFloat() * 360);
 		ready(player);
 		kit(player, part);
@@ -130,6 +123,11 @@ public class GunGame extends PartyGame {
 		player.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
 		player.setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.IRON_LEGGINGS));
 		player.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.IRON_BOOTS));
+		if (weapon == ModItems.RUBY_SWORD) {
+			// The last rung: two or three hits to finish someone, and quick feet to get to them.
+			player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH, -1, 1, false, false));
+			player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SPEED, -1, 0, false, false));
+		}
 		player.getInventory().setSelectedSlot(0);
 		player.inventoryMenu.broadcastChanges();
 	}

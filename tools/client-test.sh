@@ -23,7 +23,10 @@ if [ -f run/options.txt ]; then
 else
 	printf 'onboardAccessibility:false\npauseOnLostFocus:false\nsoundCategory_master:0.0\n' > run/options.txt
 fi
+# Other screens: CLIENT_SIZE=1920x1080 GUI_SCALE=2 tools/client-test.sh uitour (GUI_SCALE 0 is Auto).
+sed -i -E "s/^guiScale:.*/guiScale:${GUI_SCALE:-0}/" run/options.txt
+grep -q '^guiScale:' run/options.txt || echo "guiScale:${GUI_SCALE:-0}" >> run/options.txt
 rm -f run/screenshots/autotest-*.png
-RUBYMOD_AUTOTEST="$MODE" timeout ${CLIENT_TIMEOUT:-900} ./gradlew runClient --no-daemon -q --args="--quickPlaySingleplayer autotest" > run/client-test.log 2>&1 || true
+RUBYMOD_AUTOTEST="$MODE" timeout ${CLIENT_TIMEOUT:-900} ./gradlew runClient --no-daemon -q --args="--quickPlaySingleplayer autotest ${CLIENT_SIZE:+--width ${CLIENT_SIZE%x*} --height ${CLIENT_SIZE#*x}}" > run/client-test.log 2>&1 || true
 grep -E 'autotest\]' run/client-test.log | grep -v screenshot | cut -c1-200
 ls run/screenshots | grep autotest | tr '\n' ' '; echo

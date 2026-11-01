@@ -400,9 +400,8 @@ public final class Rift {
 		ServerLevel level = level(player.level().getServer());
 		Runner r = RUNNERS.get(player.getUUID());
 		RandomSource random = player.getRandom();
-		double x = at.x + random.nextInt(5) - 2;
-		double z = at.z - random.nextInt(2);
-		player.teleportTo(level, x, Hub.safeY(level, x, at.y, z), z, Set.<Relative>of(), 180, 0, true);
+		Vec3 spot = openSpot(level, player, at, random);
+		player.teleportTo(level, spot.x, spot.y, spot.z, Set.<Relative>of(), 180, 0, true);
 		player.setGameMode(GameType.ADVENTURE);
 		player.clearFire();
 		player.resetFallDistance();
@@ -411,6 +410,25 @@ public final class Rift {
 			r.placed = true;
 			r.alive = true;
 		}
+	}
+
+	/**
+	 * Somewhere to stand near {@code at}: open, and in sight of it (so not through a wall, and never up on top of the room,
+	 * which is where searching upward from inside a pillar ends up). The room's entrance if there's nothing better.
+	 */
+	private static Vec3 openSpot(ServerLevel level, ServerPlayer player, Vec3 at, RandomSource random) {
+		for (int tries = 0; tries < 16; tries++) {
+			Vec3 c = at.add(tries == 15 ? 0 : random.nextInt(5) - 2 + (random.nextDouble() - 0.5), 0, tries == 15 ? 0 : random.nextInt(5) - 2 + (random.nextDouble() - 0.5));
+			for (double up : new double[] {0, 1, 2}) {
+				Vec3 lifted = c.add(0, up, 0);
+				if (level.noCollision(player, player.getBoundingBox().move(lifted.subtract(player.position())))
+						&& level.clip(new net.minecraft.world.level.ClipContext(at.add(0, 1, 0), lifted.add(0, 1, 0), net.minecraft.world.level.ClipContext.Block.COLLIDER,
+								net.minecraft.world.level.ClipContext.Fluid.NONE, player)).getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
+					return lifted;
+				}
+			}
+		}
+		return room != null && at != room.entry ? openSpot(level, player, room.entry, random) : at;
 	}
 
 	private static ItemStack gun(Item item) {
@@ -1373,7 +1391,7 @@ public final class Rift {
 		List<String> lines = new ArrayList<>();
 		lines.add("title|" + title);
 		for (Relic relic : r.offer) {
-			lines.add(hinted(relic.line(-1, r.has(relic) ? r.level(relic) + 1 : 0), r, relic));
+			lines.add(hinted(relic.line(-1, r.relics.contains(relic) ? r.levels.getOrDefault(relic, 1) + 1 : 0), r, relic));
 		}
 		Net.send(p, new MorePayloads.RiftScreen("offer", lines));
 	}
@@ -1386,8 +1404,8 @@ public final class Rift {
 		for (Map.Entry<Relic, Integer> e : SHOP.entrySet()) {
 			// Yours already: buy another copy to combine them, or OWNED (-2) once it can't go higher.
 			Relic relic = e.getKey();
-			if (me != null && me.has(relic)) {
-				lines.add(me.canCombine(relic) ? relic.line(e.getValue(), me.level(relic) + 1) : relic.line(-2));
+			if (me != null && me.relics.contains(relic)) {
+				lines.add(me.canCombine(relic) ? relic.line(e.getValue(), me.levels.getOrDefault(relic, 1) + 1) : relic.line(-2));
 			} else {
 				lines.add(hinted(relic.line(e.getValue()), me, relic));
 			}
@@ -1427,7 +1445,8 @@ public final class Rift {
 
 	/** A second copy of a relic you have: the two fuse into one with another star. */
 	private static void combine(ServerPlayer p, Runner r, Relic relic) {
-		int level = r.level(relic) + 1;
+		// The stars you really have: the Dice can have this one switched off (0) or doubled just for this room.
+		int level = r.levels.getOrDefault(relic, 1) + 1;
 		r.levels.put(relic, level);
 		RelicEffects.apply(p, r);
 		ServerLevel level0 = (ServerLevel) p.level();
@@ -1452,7 +1471,7 @@ public final class Rift {
 
 	/** Gain a relic, with all the flash it deserves. */
 	static void give(ServerPlayer p, Runner r, Relic relic) {
-		if (r.has(relic)) {
+		if (r.relics.contains(relic)) {
 			if (r.canCombine(relic)) {
 				combine(p, r, relic);
 			}
@@ -1521,7 +1540,7 @@ public final class Rift {
 		} else {
 			Relic relic = Relic.byId(id);
 			Integer price = relic == null ? null : SHOP.get(relic);
-			if (price == null || r.has(relic) && !r.canCombine(relic)) {
+			if (price == null || r.relics.contains(relic) && !r.canCombine(relic)) {
 				return;
 			}
 			if (gold < price) {
@@ -2039,8 +2058,9 @@ public final class Rift {
 		}
 		for (ServerPlayer p : players(server)) {
 			Runner r = RUNNERS.get(p.getUUID());
-			List<String> relics = new ArrayList<>(r.relics.stream().map(x -> x.id() + "|" + x.icon + "|" + x.tier.name() + "|" + x.title(r.level(x)) + "|" + x.about
-					+ (r.level(x) > 1 ? " Combined: " + x.upgrade(r.level(x)) : "")).toList());
+			List<String> relics = new ArrayList<>(r.relics.stream().map(x -> x.id() + "|" + x.icon + "|" + x.tier.name() + "|" + x.title(r.levels.getOrDefault(x, 1)) + "|" + x.about
+					+ (r.levels.getOrDefault(x, 1) > 1 ? " Combined: " + x.upgrade(r.levels.getOrDefault(x, 1)) : "") + "|"
+					+ (x == r.disabled ? "off" : x == r.boosted ? "boost" : "")).toList());
 			// Your ability and how long until it's ready: "@ability|id|title|icon|ticks left|cooldown".
 			relics.addAll(RelicCombos.hudLines(r));
 			relics.add("@ability|" + r.ability.id() + "|" + r.ability.title + "|" + r.ability.icon + "|"
@@ -2080,6 +2100,12 @@ public final class Rift {
 	public static long abilityWait(ServerPlayer p) {
 		Runner r = RUNNERS.get(p.getUUID());
 		return r == null ? -1 : Math.max(0, r.abilityReadyAt - level(p.level().getServer()).getGameTime());
+	}
+
+	/** For autotests: a player's relics and their stars. */
+	public static String relicState(ServerPlayer p) {
+		Runner r = RUNNERS.get(p.getUUID());
+		return r == null ? "not in" : r.relics + " levels " + r.levels + " off " + r.disabled;
 	}
 
 	/** For autotests: the team's mutators. */

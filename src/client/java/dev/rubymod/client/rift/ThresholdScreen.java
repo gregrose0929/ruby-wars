@@ -127,15 +127,16 @@ public class ThresholdScreen extends Screen {
 		}
 		int pw = Math.min(440, width - 16);
 		int px = (width - pw) / 2;
-		int py = 46;
-		int ph = height - py - 22;
-		Ui.emblem(g, "rift", px, 6, 24);
-		Ui.heading(g, "Altar of Echoes", px + 30, 9, Ui.TEXT, 1.5F, false);
-		button(g, px + pw - 62, 8, 62, 16, "Codex", Ui.GOLD, false, mouseX, mouseY, "codex", "open");
+		int oy = Ui.centre(height, 300);
+		int py = oy + 46;
+		int ph = Math.min(height - py - 22, 232);
+		Ui.emblem(g, "rift", px, oy + 6, 24);
+		Ui.heading(g, "Altar of Echoes", px + 30, oy + 9, Ui.TEXT, 1.5F, false);
+		button(g, px + pw - 62, oy + 8, 62, 16, "Codex", Ui.GOLD, false, mouseX, mouseY, "codex", "open");
 		String shardText = shards + " Rift Shards";
 		int sx = px + pw - 70 - font.width(shardText) - 12;
-		Ui.icon(g, Ui.Icon.GEM, sx, 11);
-		Ui.text(g, shardText, sx + 12, 12, Ui.GOLD);
+		Ui.icon(g, Ui.Icon.GEM, sx, oy + 11);
+		Ui.text(g, shardText, sx + 12, oy + 12, Ui.GOLD);
 		Ui.panel(g, px, py, pw, ph);
 		int tx = px + 8;
 		for (int i = 0; i < TABS.length; i++) {
@@ -273,7 +274,7 @@ public class ThresholdScreen extends Screen {
 		if (tip != null) {
 			Ui.tooltip(g, tip, mouseX, mouseY, width, height);
 		}
-		g.centeredText(font, "Choices here are for the next run. Step into the portal when everyone's ready.", width / 2, height - 14, Ui.MUTED);
+		Ui.foot(g, "Choices are for the next run. Step into the portal when ready.", width, py + ph + 8, Ui.MUTED);
 	}
 
 	/** The Extras tab: your companion (left) and the team's mutators (right). Returns a tooltip, or null. */
