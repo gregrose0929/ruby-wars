@@ -14,7 +14,8 @@
 		"SpecialModelRenderersAccessor",
 		"FirstPersonHandsInvoker",
 		"FirstPersonHandsMixin",
-		"DeathScreenMixin"
+		"DeathScreenMixin",
+		"ToastMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

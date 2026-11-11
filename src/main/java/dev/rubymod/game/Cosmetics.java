@@ -38,25 +38,40 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Cosmetics, earned by playing (they never change how anything plays): a hat that
- * floats above your head, a trail of particles when you move, and an effect when you
- * get a kill. Unlocked by stats (win a party game, reach a Horde wave...), picked on the
- * profile screen (I). Hidden while you're hiding in Hide & Seek, invisible, or watching.
+ * Cosmetics, earned by playing (they never change how anything plays):
+ *
+ * <ul>
+ * <li>Armor sets: a look for whatever armor you're wearing (the armor itself, and what it protects, stays the same).
+ * In the hub, where nobody wears armor, you get a set to show it off; it's gone when you leave.</li>
+ * <li>A trail of particles when you move, and an effect when you get a kill.</li>
+ * <li>Paint for your Ruby Convoy truck.</li>
+ * </ul>
+ *
+ * Unlocked by your level (XP comes from every game mode) and by feats (deliver a convoy, win a Rift run...), and
+ * picked on the profile screen (I). Hidden while you're invisible or watching.
  */
 public final class Cosmetics {
-	public enum Kind { HAT, TRAIL, KILL }
+	public enum Kind { ARMOR, TRAIL, KILL, PAINT }
 
 	public record Cosmetic(String id, Kind kind, String name, String icon, String how, Predicate<Stats.Record> earned) {
 	}
 
+	private static Predicate<Stats.Record> level(int n) {
+		return r -> Stats.level(r.xp)[0] >= n;
+	}
+
 	public static final List<Cosmetic> ALL = List.of(
-			new Cosmetic("hat_ruby", Kind.HAT, "Floating Ruby", "rubymod:ruby", "Win any party game", r -> r.totalWins() >= 1),
-			new Cosmetic("hat_cake", Kind.HAT, "Cake Hat", "minecraft:cake", "Play 10 party games", r -> r.totalPlayed() >= 10),
-			new Cosmetic("hat_pumpkin", Kind.HAT, "Pumpkin Head", "minecraft:carved_pumpkin", "Win Holo Hide & Seek", r -> r.wins("hideseek") >= 1),
-			new Cosmetic("hat_tank", Kind.HAT, "Mini Tank", "rubymod:tank", "Win Tank Battle", r -> r.wins("tanks") >= 1),
-			new Cosmetic("hat_diamond", Kind.HAT, "Diamond", "minecraft:diamond", "Win 10 party games", r -> r.totalWins() >= 10),
-			new Cosmetic("hat_heart", Kind.HAT, "Ruby Heart", "rubymod:ruby_heart", "Reach wave 10 in Co-op Horde", r -> r.hordeBestWave >= 10),
-			new Cosmetic("hat_crown", Kind.HAT, "Golden Crown", "minecraft:golden_helmet", "Win a Ruby Wars season", r -> r.seasonsWon >= 1),
+			new Cosmetic("set_recruit", Kind.ARMOR, "Recruit Fatigues", "minecraft:iron_chestplate", "Reach level 2", level(2)),
+			new Cosmetic("set_ranger", Kind.ARMOR, "Forest Ranger", "minecraft:fern", "Reach level 5", level(5)),
+			new Cosmetic("set_frost", Kind.ARMOR, "Frost Guard", "minecraft:packed_ice", "Reach level 10", level(10)),
+			new Cosmetic("set_shadow", Kind.ARMOR, "Shadow Ops", "minecraft:netherite_chestplate", "Reach level 15", level(15)),
+			new Cosmetic("set_champion", Kind.ARMOR, "Ruby Champion", "rubymod:ruby_chestplate", "Reach level 25", level(25)),
+			new Cosmetic("set_hauler", Kind.ARMOR, "Convoy Hauler", "rubymod:jeep", "Deliver a Ruby Convoy", r -> r.convoyWins >= 1),
+			new Cosmetic("set_legion", Kind.ARMOR, "Iron Legion", "rubymod:tank", "Deliver a Ruby Convoy on Hard", r -> r.convoyHardWins >= 1),
+			new Cosmetic("set_riftwalker", Kind.ARMOR, "Rift Walker", "minecraft:end_crystal", "Win a Ruby Rift run", r -> r.riftWins >= 1),
+			new Cosmetic("set_breaker", Kind.ARMOR, "Horde Breaker", "minecraft:bone", "Reach wave 10 in Co-op Horde", r -> r.hordeBestWave >= 10),
+			new Cosmetic("set_star", Kind.ARMOR, "Party Star", "minecraft:nether_star", "Win 5 party games", r -> r.totalWins() >= 5),
+			new Cosmetic("set_victor", Kind.ARMOR, "Season Victor", "minecraft:golden_chestplate", "Win a Ruby Wars season", r -> r.seasonsWon >= 1),
 			new Cosmetic("trail_ruby", Kind.TRAIL, "Ruby Sparkles", "rubymod:ruby", "Everyone starts with this one", r -> true),
 			new Cosmetic("trail_hearts", Kind.TRAIL, "Hearts", "minecraft:red_dye", "Revive a teammate in Horde", r -> r.hordeRevives >= 1),
 			new Cosmetic("trail_snow", Kind.TRAIL, "Snowflakes", "minecraft:snowball", "Reach wave 5 in Co-op Horde", r -> r.hordeBestWave >= 5),
@@ -67,14 +82,15 @@ public final class Cosmetics {
 			new Cosmetic("kill_confetti", Kind.KILL, "Confetti", "minecraft:firework_rocket", "Everyone starts with this one", r -> true),
 			new Cosmetic("kill_hearts", Kind.KILL, "Heart Burst", "minecraft:pink_dye", "Get 50 kills in party games", r -> r.partyKills >= 50),
 			new Cosmetic("kill_lightning", Kind.KILL, "Lightning", "minecraft:lightning_rod", "Win Gun Game", r -> r.wins("gungame") >= 1),
-			new Cosmetic("kill_ruby", Kind.KILL, "Ruby Explosion", "rubymod:ruby_block", "Win Ruby Rush", r -> r.wins("rush") >= 1));
+			new Cosmetic("kill_ruby", Kind.KILL, "Ruby Explosion", "rubymod:ruby_block", "Win Ruby Rush", r -> r.wins("rush") >= 1),
+			new Cosmetic("paint_red", Kind.PAINT, "Ruby Red", "minecraft:red_concrete", "Everyone starts with this one", r -> true),
+			new Cosmetic("paint_blue", Kind.PAINT, "Deep Blue", "minecraft:blue_concrete", "Deliver a Ruby Convoy", r -> r.convoyWins >= 1),
+			new Cosmetic("paint_black", Kind.PAINT, "Night Black", "minecraft:black_concrete", "Deliver 3 Ruby Convoys", r -> r.convoyWins >= 3),
+			new Cosmetic("paint_gold", Kind.PAINT, "Gold", "minecraft:yellow_concrete", "Deliver a Ruby Convoy on Hard", r -> r.convoyHardWins >= 1));
 
-	/** Each player's hat display entity, and the world it's in. */
-	private record Hat(UUID entity, net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> level) {
-	}
-
-	private static final Map<UUID, Hat> HATS = new HashMap<>();
 	private static final String HAT_TAG = "rubymod_hat";
+	/** Marks the armor lent to you in the hub to show your set off. */
+	private static final String LENT = "rubymod_cosmetic";
 
 	private Cosmetics() {
 	}
@@ -89,12 +105,12 @@ public final class Cosmetics {
 	}
 
 	public static void reset() {
-		HATS.clear();
 	}
 
 	/** Unlock anything newly earned, and say so. */
 	public static void checkUnlocks(ServerPlayer player) {
 		Stats.Record r = Stats.get(player);
+		List<Cosmetic> fresh = new ArrayList<>();
 		for (Cosmetic c : ALL) {
 			if (!r.unlocked.contains(c.id()) && c.earned().test(r)) {
 				r.unlocked.add(c.id());
@@ -104,34 +120,53 @@ public final class Cosmetics {
 					r.trail = c.id();
 				} else if (free && c.kind() == Kind.KILL && r.killEffect.isEmpty()) {
 					r.killEffect = c.id();
+				} else if (free && c.kind() == Kind.PAINT && r.paint.isEmpty()) {
+					r.paint = c.id();
 				}
 				if (!free) {
-					player.sendSystemMessage(Component.literal("✨ New " + kindName(c.kind()) + " unlocked: " + c.name() + "! Press I to wear it.")
-							.withStyle(ChatFormatting.LIGHT_PURPLE));
-					player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.5F, 1.4F);
+					fresh.add(c);
 				}
 			}
 		}
+		if (fresh.isEmpty()) {
+			return;
+		}
+		// One line, however many it was (the first time after levels arrived, it can be a dozen).
+		String what = fresh.size() <= 2
+				? "New " + kindName(fresh.get(0).kind()) + " unlocked: " + fresh.get(0).name()
+						+ (fresh.size() == 2 ? ", and " + fresh.get(1).name() : "") + "!"
+				: fresh.size() + " new things unlocked (" + fresh.get(0).name() + ", " + fresh.get(1).name() + " and more)!";
+		player.sendSystemMessage(Component.literal(what + " Press I to use " + (fresh.size() == 1 ? "it." : "them.")).withStyle(ChatFormatting.LIGHT_PURPLE));
+		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.5F, 1.4F);
 	}
 
 	public static String kindName(Kind kind) {
 		return switch (kind) {
-			case HAT -> "hat";
+			case ARMOR -> "armor set";
 			case TRAIL -> "trail";
 			case KILL -> "kill effect";
+			case PAINT -> "truck paint";
 		};
 	}
 
-	/** Wear (or take off, with "none:HAT" etc.) a cosmetic. Returns an error or null. */
+	/** Wear (or take off, with "none:ARMOR" etc.) a cosmetic. Returns an error or null. */
 	public static String select(ServerPlayer player, String id) {
 		Stats.Record r = Stats.get(player);
 		if (id.startsWith("none:")) {
-			switch (Kind.valueOf(id.substring(5))) {
-				case HAT -> r.hat = "";
+			Kind kind;
+			try {
+				kind = Kind.valueOf(id.substring(5));
+			} catch (IllegalArgumentException e) {
+				return null;
+			}
+			switch (kind) {
+				case ARMOR -> r.armor = "";
 				case TRAIL -> r.trail = "";
 				case KILL -> r.killEffect = "";
+				case PAINT -> r.paint = "paint_red";
 			}
 			Stats.markDirty();
+			dress(player);
 			return null;
 		}
 		Cosmetic c = byId(id);
@@ -139,11 +174,13 @@ public final class Cosmetics {
 			return "You haven't unlocked that yet.";
 		}
 		switch (c.kind()) {
-			case HAT -> r.hat = id;
+			case ARMOR -> r.armor = id;
 			case TRAIL -> r.trail = id;
 			case KILL -> r.killEffect = id;
+			case PAINT -> r.paint = id;
 		}
 		Stats.markDirty();
+		dress(player);
 		return null;
 	}
 
@@ -152,10 +189,20 @@ public final class Cosmetics {
 		Stats.Record r = Stats.get(player);
 		List<String> lines = new ArrayList<>();
 		for (Cosmetic c : ALL) {
-			boolean wearing = c.id().equals(r.hat) || c.id().equals(r.trail) || c.id().equals(r.killEffect);
+			boolean wearing = c.id().equals(r.armor) || c.id().equals(r.trail) || c.id().equals(r.killEffect) || c.id().equals(r.paint);
 			lines.add(c.id() + "|" + c.kind() + "|" + c.name() + "|" + c.icon() + "|" + c.how() + "|" + r.unlocked.contains(c.id()) + "|" + wearing);
 		}
 		return lines;
+	}
+
+	/** The colour of this player's convoy truck. */
+	public static net.minecraft.world.item.DyeColor paint(ServerPlayer player) {
+		return switch (Stats.get(player).paint) {
+			case "paint_blue" -> net.minecraft.world.item.DyeColor.BLUE;
+			case "paint_black" -> net.minecraft.world.item.DyeColor.BLACK;
+			case "paint_gold" -> net.minecraft.world.item.DyeColor.YELLOW;
+			default -> net.minecraft.world.item.DyeColor.RED;
+		};
 	}
 
 	/** Cosmetics are hidden while hiding, invisible or watching. */
@@ -163,7 +210,7 @@ public final class Cosmetics {
 		return player.isSpectator() || player.hasEffect(MobEffects.INVISIBILITY) || player.isDeadOrDying();
 	}
 
-	// ----- Hats and trails -----
+	// ----- Armor sets and trails -----
 
 	public static void tick(MinecraftServer server) {
 		int t = server.getTickCount();
@@ -182,29 +229,82 @@ public final class Cosmetics {
 		}
 		if (t % 20 == 0) {
 			for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-				keepHat(p);
+				dress(p);
 			}
-			for (var it = HATS.entrySet().iterator(); it.hasNext();) {
-				var e = it.next();
-				if (server.getPlayerList().getPlayer(e.getKey()) == null) {
-					ServerLevel where = server.getLevel(e.getValue().level());
-					Entity old = where == null ? null : where.getEntity(e.getValue().entity());
-					if (old != null) {
-						old.discard();
-					}
-					it.remove();
+		}
+	}
+
+	private static final net.minecraft.world.entity.EquipmentSlot[] ARMOR_SLOTS = {net.minecraft.world.entity.EquipmentSlot.HEAD,
+			net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET};
+	private static final net.minecraft.world.item.Item[] LENT_ITEMS = {net.minecraft.world.item.Items.LEATHER_HELMET,
+			net.minecraft.world.item.Items.LEATHER_CHESTPLATE, net.minecraft.world.item.Items.LEATHER_LEGGINGS, net.minecraft.world.item.Items.LEATHER_BOOTS};
+
+	private static boolean lent(ItemStack stack) {
+		var data = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+		return data != null && data.copyTag().contains(LENT);
+	}
+
+	/** Lent hub armor on the ground (someone threw it): it doesn't stay. */
+	public static boolean lentItem(Entity e) {
+		return e instanceof net.minecraft.world.entity.item.ItemEntity item && lent(item.getItem());
+	}
+
+	/**
+	 * Make this player's armor look like their set: every piece of real armor they have on is drawn with the set's
+	 * texture (or its own again, with no set). Nothing about the armor itself changes. In the hub, with no armor on,
+	 * they're lent a set to show; lent armor never leaves the hub.
+	 */
+	public static void dress(ServerPlayer player) {
+		Stats.Record r = Stats.get(player);
+		String set = r.armor == null ? "" : r.armor;
+		boolean hub = player.level().dimension() == Hub.HUB;
+		var inv = player.getInventory();
+		// Lent armor: only on your body, only in the hub, only with a set chosen.
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack stack = inv.getItem(i);
+			if (!stack.isEmpty() && lent(stack)) {
+				boolean worn = false;
+				for (var slot : ARMOR_SLOTS) {
+					worn |= player.getItemBySlot(slot) == stack;
+				}
+				if (!worn || !hub || set.isEmpty()) {
+					inv.setItem(i, ItemStack.EMPTY);
 				}
 			}
 		}
-		// Hats follow their wearer's head (smoothed over 2 ticks on the client).
-		for (var e : HATS.entrySet()) {
-			ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
-			if (p == null) {
+		if (hub && !set.isEmpty() && !player.isSpectator()) {
+			for (int i = 0; i < ARMOR_SLOTS.length; i++) {
+				if (player.getItemBySlot(ARMOR_SLOTS[i]).isEmpty()) {
+					ItemStack piece = new ItemStack(LENT_ITEMS[i]);
+					var tag = new net.minecraft.nbt.CompoundTag();
+					tag.putBoolean(LENT, true);
+					piece.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+					// For show only: it protects from nothing.
+					piece.set(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS, net.minecraft.world.item.component.ItemAttributeModifiers.EMPTY);
+					piece.set(net.minecraft.core.component.DataComponents.ITEM_NAME, Component.literal("Your armor set (for show)"));
+					player.setItemSlot(ARMOR_SLOTS[i], piece);
+				}
+			}
+		}
+		for (var slot : ARMOR_SLOTS) {
+			ItemStack stack = player.getItemBySlot(slot);
+			if (stack.isEmpty()) {
 				continue;
 			}
-			Entity hat = ((ServerLevel) p.level()).getEntity(e.getValue().entity());
-			if (hat != null) {
-				hat.teleportTo(p.getX(), p.getY() + p.getBbHeight() + 0.3, p.getZ());
+			var own = stack.getPrototype().get(net.minecraft.core.component.DataComponents.EQUIPPABLE);
+			// Real armor only: something with its own armor texture (not an elytra, a jetpack or a pumpkin).
+			if (own == null || own.assetId().isEmpty() || own.slot() != slot || stack.is(net.minecraft.world.item.Items.ELYTRA)
+					|| stack.is(dev.rubymod.registry.ModItems.JETPACK)) {
+				continue;
+			}
+			var want = own;
+			if (!set.isEmpty() && !hidden(player)) {
+				var asset = net.minecraft.resources.ResourceKey.create(net.minecraft.world.item.equipment.EquipmentAssets.ROOT_ID, dev.rubymod.RubyMod.id(set));
+				want = new net.minecraft.world.item.equipment.Equippable(own.slot(), own.equipSound(), java.util.Optional.of(asset), own.cameraOverlay(),
+						own.allowedEntities(), own.dispensable(), own.swappable(), own.damageOnHurt(), own.equipOnInteract(), own.canBeSheared(), own.shearingSound());
+			}
+			if (!want.equals(stack.get(net.minecraft.core.component.DataComponents.EQUIPPABLE))) {
+				stack.set(net.minecraft.core.component.DataComponents.EQUIPPABLE, want);
 			}
 		}
 	}
@@ -222,67 +322,9 @@ public final class Cosmetics {
 		level.sendParticles(particle, at.x, at.y, at.z, 1, 0.15, 0.05, 0.15, 0.0);
 	}
 
-	/** Keep the player's hat (a floating item riding them) in place, or take it away. */
-	private static void keepHat(ServerPlayer player) {
-		Stats.Record r = Stats.get(player);
-		Hat existing = HATS.get(player.getUUID());
-		Entity display = null;
-		if (existing != null) {
-			ServerLevel where = player.level().getServer().getLevel(existing.level());
-			display = where == null ? null : where.getEntity(existing.entity());
-			if (display != null && display.level() != player.level()) {
-				display.discard(); // left behind in another world
-				display = null;
-			}
-		}
-		boolean want = !r.hat.isEmpty() && !hidden(player);
-		if (!want) {
-			if (display != null) {
-				display.discard();
-			}
-			HATS.remove(player.getUUID());
-			return;
-		}
-		Cosmetic c = byId(r.hat);
-		if (c == null) {
-			return;
-		}
-		ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(c.icon())));
-		if (display instanceof Display.ItemDisplay item && item.isAlive()) {
-			((ItemDisplayAccessor) item).rubymod$setItemStack(stack);
-			return;
-		}
-		if (display != null) {
-			display.discard();
-		}
-		Display.ItemDisplay hat = EntityTypes.ITEM_DISPLAY.create(player.level(), EntitySpawnReason.EVENT);
-		if (hat == null) {
-			return;
-		}
-		hat.snapTo(player.getX(), player.getY() + player.getBbHeight() + 0.3, player.getZ(), 0, 0);
-		((DisplayAccessor) hat).rubymod$setPosRotInterpolationDuration(2);
-		((ItemDisplayAccessor) hat).rubymod$setItemStack(stack);
-		((DisplayAccessor) hat).rubymod$setBillboard(Display.BillboardConstraints.VERTICAL);
-		((DisplayAccessor) hat).rubymod$setTransformation(new Transformation(new Vector3f(0, 0, 0), new Quaternionf(),
-				new Vector3f(0.55F, 0.55F, 0.55F), new Quaternionf()));
-		hat.addTag(HAT_TAG);
-		// Register it before it's added, or the stray-hat cleanup would take it straight away.
-		HATS.put(player.getUUID(), new Hat(hat.getUUID(), player.level().dimension()));
-		player.level().addFreshEntity(hat);
-		HATS.put(player.getUUID(), new Hat(hat.getUUID(), player.level().dimension()));
-	}
-
-	/** Old hats left behind (a restart, a crash): clean them up as they load. */
+	/** Hats are gone: any left floating from before are cleaned up as they load. */
 	public static boolean strayHat(Entity e) {
-		if (!e.entityTags().contains(HAT_TAG)) {
-			return false;
-		}
-		for (Hat hat : HATS.values()) {
-			if (hat.entity().equals(e.getUUID())) {
-				return false;
-			}
-		}
-		return true;
+		return e.entityTags().contains(HAT_TAG);
 	}
 
 	// ----- Kill effects -----

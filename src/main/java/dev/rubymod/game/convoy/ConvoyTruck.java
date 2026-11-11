@@ -99,7 +99,8 @@ final class ConvoyTruck {
 	private int t;
 	private float lastYaw;
 
-	static ConvoyTruck spawn(ServerLevel level, double z, float maxHp) {
+	static ConvoyTruck spawn(ServerLevel level, double z, float maxHp, DyeColor paint) {
+		BlockState painted = Blocks.CONCRETE.pick(paint).defaultBlockState();
 		ConvoyTruck truck = new ConvoyTruck();
 		truck.z = z;
 		truck.maxHp = maxHp;
@@ -113,7 +114,7 @@ final class ConvoyTruck {
 				continue;
 			}
 			d.snapTo(at.x, at.y, at.z, yaw, 0);
-			((BlockDisplayAccessor) d).rubymod$setBlockState(p.block());
+			((BlockDisplayAccessor) d).rubymod$setBlockState(p.block() == BODY ? painted : p.block());
 			((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(p.ox(), p.oy(), p.oz()), new Quaternionf(),
 					new Vector3f(p.sx(), p.sy(), p.sz()), new Quaternionf()));
 			((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(3);

@@ -205,15 +205,37 @@ public final class Convoy {
 
 	/** Bigger teams: the truck takes a little less from each hit (it's got more defenders, and more coming at it). */
 	static float damageScale() {
-		return 1.0F;
+		return difficulty == 0 ? 0.65F : difficulty == 2 ? 1.3F : 1.0F;
+	}
+
+	/** 0 easy, 1 normal, 2 hard: chosen by whoever starts the job. */
+	private static int difficulty = 1;
+	private static final String[] DIFFICULTY_NAMES = {"Easy", "Normal", "Hard"};
+	/** The truck's colour: the paint of whoever started the job. */
+	private static net.minecraft.world.item.DyeColor paint = net.minecraft.world.item.DyeColor.RED;
+
+	/** How much tougher (or weaker) the enemies are on this difficulty. */
+	static double enemyScale() {
+		return difficulty == 0 ? 0.75 : difficulty == 2 ? 1.3 : 1.0;
+	}
+
+	public static boolean idle() {
+		return state == State.IDLE;
+	}
+
+	/** Pick the difficulty ("easy", "normal", "hard") for the next job; only counts while nobody is on the road. */
+	public static void choose(String name) {
+		if (state == State.IDLE) {
+			difficulty = name.equalsIgnoreCase("easy") ? 0 : name.equalsIgnoreCase("hard") ? 2 : 1;
+		}
 	}
 
 	public static String status() {
 		return switch (state) {
 			case IDLE -> "Nobody on the road";
-			case STAGING -> CREW.size() + " loading the truck";
+			case STAGING -> CREW.size() + " loading the truck  •  " + DIFFICULTY_NAMES[difficulty];
 			case OVER -> won ? "Rubies delivered!" : "Job over";
-			default -> CREW.size() + " on the road  •  " + ConvoyRoute.NAMES[stage];
+			default -> CREW.size() + " on the road  •  " + DIFFICULTY_NAMES[difficulty] + "  •  " + ConvoyRoute.NAMES[stage];
 		};
 	}
 
@@ -244,7 +266,10 @@ public final class Convoy {
 		player.getInventory().clearContent();
 		player.removeAllEffects();
 		if (state == State.IDLE) {
+			paint = dev.rubymod.game.Cosmetics.paint(player);
 			startStaging(server);
+			tell(server, Component.literal("This job is on " + DIFFICULTY_NAMES[difficulty] + (difficulty == 2 ? ": tougher enemies, fewer spare trucks, more XP."
+					: difficulty == 0 ? ": weaker enemies and an extra spare truck." : ".")).withStyle(ChatFormatting.GRAY));
 		}
 		if (ready && truck != null) {
 			place(player);
@@ -634,7 +659,7 @@ public final class Convoy {
 		won = false;
 		bossBeaten = false;
 		stage = 0;
-		spares = SPARES;
+		spares = SPARES + 1 - difficulty;
 		wrecks = 0;
 		UPGRADES.clear();
 		java.util.Arrays.fill(VISITED, false);
@@ -657,7 +682,7 @@ public final class Convoy {
 	private static void firstStretchBuilt(MinecraftServer server) {
 		ServerLevel level = level(server);
 		ready = true;
-		truck = ConvoyTruck.spawn(level, PARK, 300 * (1 + 0.3F * Math.max(0, CREW.size() - 1)));
+		truck = ConvoyTruck.spawn(level, PARK, 300 * (1 + 0.3F * Math.max(0, CREW.size() - 1)), paint);
 		hold(level);
 		for (ServerPlayer p : players(server)) {
 			place(p);
@@ -1030,7 +1055,7 @@ public final class Convoy {
 		float max = truck.maxHp;
 		truck.remove(level);
 		double z = stage == 0 ? PARK : ConvoyRoute.DEPOT[stage] + PARK;
-		truck = ConvoyTruck.spawn(level, z, max);
+		truck = ConvoyTruck.spawn(level, z, max, paint);
 		hold(level);
 		state = State.DEPOT;
 		timer = 12 * 20;
@@ -1070,7 +1095,7 @@ public final class Convoy {
 	private static void record(MinecraftServer server, boolean delivered) {
 		for (ServerPlayer p : players(server)) {
 			Crew c = CREW.get(p.getUUID());
-			Stats.convoy(p.getUUID(), p.getName().getString(), stage + 1, delivered, c == null ? 0 : c.kills);
+			Stats.convoy(p.getUUID(), p.getName().getString(), stage + 1, delivered, c == null ? 0 : c.kills, difficulty, (int) ((ticks - runStart) / 20));
 		}
 	}
 
@@ -1078,7 +1103,7 @@ public final class Convoy {
 		long secs = (ticks - runStart) / 20;
 		tell(server, Component.literal("══ RUBY CONVOY " + (delivered ? "DELIVERED" : "LOST") + " ══").withStyle(ChatFormatting.GOLD,
 				ChatFormatting.BOLD));
-		tell(server, Component.literal("Reached: " + ConvoyRoute.NAMES[stage] + "  •  time " + secs / 60 + ":" + String.format("%02d", secs % 60)
+		tell(server, Component.literal(DIFFICULTY_NAMES[difficulty] + "  •  reached: " + ConvoyRoute.NAMES[stage] + "  •  time " + secs / 60 + ":" + String.format("%02d", secs % 60)
 				+ "  •  trucks wrecked: " + wrecks).withStyle(ChatFormatting.WHITE));
 		for (Crew c : CREW.values()) {
 			tell(server, Component.literal("  " + c.name + (c.role == null ? "" : " (" + c.role.title + ")") + ": " + c.kills + " kills, "

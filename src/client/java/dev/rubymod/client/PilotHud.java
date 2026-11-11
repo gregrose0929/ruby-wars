@@ -51,27 +51,80 @@ public class PilotHud implements HudElement {
 			drawWeaponCam(g, font, mc, w, h);
 			return;
 		}
-		drawPitchLadder(g, font, camera, aircraft, w, h);
-		drawFlightPath(g, camera, aircraft, w, h);
-		drawSpeedTape(g, font, aircraft, w, h);
-		drawAltitudeTape(g, font, mc, aircraft, w, h);
-		drawHeading(g, font, aircraft, w);
-		drawStatus(g, font, aircraft, kind, w, h);
+		// The simple cockpit: two panels (your aircraft, your weapon) and a line saying what to do. The full instruments
+		// (pitch ladder, tapes, heading) are still here for anyone who wants them: fullInstruments.
+		if (fullInstruments) {
+			drawPitchLadder(g, font, camera, aircraft, w, h);
+			drawFlightPath(g, camera, aircraft, w, h);
+			drawSpeedTape(g, font, aircraft, w, h);
+			drawAltitudeTape(g, font, mc, aircraft, w, h);
+			drawHeading(g, font, aircraft, w);
+			drawStatus(g, font, aircraft, kind, w, h);
+		} else {
+			drawSimple(g, font, mc, aircraft, kind, w, h);
+		}
 		drawWeapons(g, font, camera, aircraft, w, h);
 		drawContacts(g, font, camera, mc, w, h);
 		drawLandingAid(g, font, camera, mc, aircraft, kind, w, h);
 		drawDesignation(g, font, camera, aircraft, w, h);
 		drawWarnings(g, font, mc, aircraft, kind, w, h);
 		drawAutopilot(g, font, aircraft, w, h);
-		String zoom = Vehicles.zoom > 1 ? "ZOOM " + Vehicles.zoom + "x  [scroll]" : "scroll: zoom";
-		g.text(font, zoom, w - 96, h - 46, Vehicles.zoom > 1 ? GREEN : DIM, false);
+		if (Vehicles.zoom > 1) {
+			g.text(font, "Zoom " + Vehicles.zoom + "x", w - 96, h - 46, GREEN, false);
+		}
+	}
+
+	/** Every flight instrument, for those who like them (off: the simple cockpit). */
+	public static boolean fullInstruments;
+
+	/** The simple cockpit: your aircraft (hull, speed, height) bottom left, and one line of what to do next. */
+	private void drawSimple(GuiGraphicsExtractor g, Font font, Minecraft mc, AircraftEntity aircraft, AircraftType kind, int w, int h) {
+		int x = 4;
+		int y = h - 62;
+		int pw = 132;
+		dev.rubymod.client.ui.Ui.panel(g, x, y, pw, 58);
+		dev.rubymod.client.ui.Ui.text(g, kind.name(), x + 7, y + 6, dev.rubymod.client.ui.Ui.TEXT);
+		float hull = aircraft.getHealth() / aircraft.getMaxHealth();
+		dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.HEART, x + 7, y + 17);
+		dev.rubymod.client.ui.Ui.bar(g, x + 19, y + 18, pw - 27, 6, hull, hull < 0.3F ? dev.rubymod.client.ui.Ui.RED : hull < 0.6F ? dev.rubymod.client.ui.Ui.AMBER : dev.rubymod.client.ui.Ui.GREEN);
+		int kmh = (int) Math.round(aircraft.speed() * 72.0);
+		int agl = heightAboveGround(mc, aircraft);
+		dev.rubymod.client.ui.Ui.text(g, "Speed", x + 7, y + 30, dev.rubymod.client.ui.Ui.MUTED);
+		dev.rubymod.client.ui.Ui.text(g, String.valueOf(kmh), x + 40, y + 30, dev.rubymod.client.ui.Ui.TEXT);
+		dev.rubymod.client.ui.Ui.text(g, "Height", x + 68, y + 30, dev.rubymod.client.ui.Ui.MUTED);
+		dev.rubymod.client.ui.Ui.text(g, agl < 0 ? "high" : String.valueOf(agl), x + 104, y + 30, agl >= 0 && agl < 15 && !aircraft.onGround() ? dev.rubymod.client.ui.Ui.AMBER : dev.rubymod.client.ui.Ui.TEXT);
+		dev.rubymod.client.ui.Ui.text(g, "Power", x + 7, y + 43, dev.rubymod.client.ui.Ui.MUTED);
+		dev.rubymod.client.ui.Ui.bar(g, x + 40, y + 44, pw - 48, 6, aircraft.throttle(), dev.rubymod.client.ui.Ui.GOLD);
+		// What to do right now.
+		String tip = null;
+		int tipColor = dev.rubymod.client.ui.Ui.TEXT;
+		if (kind.rotorcraft()) {
+			if (aircraft.onGround()) {
+				tip = "Hold Space to lift off. WASD to fly, Ctrl to go down.";
+			}
+		} else if (aircraft.onGround()) {
+			int vr = (int) Math.round(kind.rotateSpeed() * 72.0);
+			if (kmh >= vr) {
+				tip = "Fast enough: look up to take off!";
+				tipColor = dev.rubymod.client.ui.Ui.GOLD;
+			} else {
+				tip = "Hold W to speed up (take off at " + vr + ")";
+			}
+		} else if (!aircraft.gearDown() && agl >= 0 && agl < 25) {
+			tip = "Wheels are up: press G before landing";
+			tipColor = dev.rubymod.client.ui.Ui.AMBER;
+		}
+		if (tip != null) {
+			int tw = font.width(tip) + 14;
+			dev.rubymod.client.ui.Ui.panel(g, w / 2 - tw / 2, h - 104, tw, 18);
+			dev.rubymod.client.ui.Ui.text(g, tip, w / 2 - tw / 2 + 7, h - 99, tipColor);
+		}
 	}
 
 	/** "AUTOPILOT" banner with the held heading and altitude, and how to get out of it. */
 	private void drawAutopilot(GuiGraphicsExtractor g, Font font, AircraftEntity aircraft, int w, int h) {
 		String key = RubyModClient.autopilotKey == null ? "Z" : RubyModClient.autopilotKey.getTranslatedKeyMessage().getString();
 		if (!Vehicles.autopilot) {
-			g.text(font, key + ": autopilot", w - 96, h - 58, DIM, false);
 			return;
 		}
 		int heading = Math.floorMod(Math.round(Vehicles.autopilotHeading + 180.0F), 360);
@@ -271,22 +324,27 @@ public class PilotHud implements HudElement {
 
 	private void drawWeapons(GuiGraphicsExtractor g, Font font, Camera camera, AircraftEntity aircraft, int w, int h) {
 		Weapon weapon = aircraft.selectedWeapon();
-		int x = w - 112;
-		int y = 34;
+		int pw = 128;
+		int x = w - pw - 4;
+		int y = h - 62;
+		dev.rubymod.client.ui.Ui.panel(g, x, y, pw, 58);
 		if (weapon == null) {
-			g.text(font, "NO WEAPONS", x, y, DIM, false);
+			dev.rubymod.client.ui.Ui.text(g, "No weapons", x + 7, y + 6, dev.rubymod.client.ui.Ui.MUTED);
 		} else {
 			int ammo = aircraft.ammo(weapon);
-			g.text(font, weapon.title.toUpperCase(), x, y, GREEN, false);
-			g.text(font, (weapon == Weapon.CANNON ? "RNDS " : "x") + ammo, x, y + 10, ammo == 0 ? RED : GREEN, false);
+			dev.rubymod.client.ui.Ui.text(g, weapon.title, x + 7, y + 6, pw - 44, dev.rubymod.client.ui.Ui.TEXT);
+			String count = String.valueOf(ammo);
+			dev.rubymod.client.ui.Ui.text(g, count, x + pw - 7 - font.width(count), y + 6, ammo == 0 ? dev.rubymod.client.ui.Ui.RED : dev.rubymod.client.ui.Ui.GOLD);
 			if (weapon == Weapon.ROCKETS) {
 				// Rockets fly straight to whatever is under the crosshair.
 				g.outline(w / 2 - 8, h / 2 - 8, 16, 16, GREEN);
 			}
-			g.text(font, "R: next weapon", x, y + 31, DIM, false);
+			dev.rubymod.client.ui.Ui.text(g, "Click to fire, R to switch", x + 7, y + 19, pw - 12, dev.rubymod.client.ui.Ui.MUTED);
 		}
-		g.text(font, "FLARES " + aircraft.flares() + (aircraft.kind().rotorcraft() ? "  [X]" : "  [Space/X]"), x, y + 20,
-				aircraft.flares() == 0 ? RED : GREEN, false);
+		dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.SHIELD, x + 7, y + 31);
+		String flareKey = aircraft.kind().rotorcraft() ? "X" : "Space";
+		dev.rubymod.client.ui.Ui.text(g, "Flares " + aircraft.flares() + " (" + flareKey + ")", x + 19, y + 32, aircraft.flares() == 0 ? dev.rubymod.client.ui.Ui.RED : dev.rubymod.client.ui.Ui.DIM);
+		dev.rubymod.client.ui.Ui.text(g, "Scroll to zoom", x + 7, y + 44, dev.rubymod.client.ui.Ui.MUTED);
 		if (weapon == null) {
 			return;
 		}
@@ -487,7 +545,9 @@ public class PilotHud implements HudElement {
 	private void drawDesignation(GuiGraphicsExtractor g, Font font, Camera camera, AircraftEntity aircraft, int w, int h) {
 		Vec3 target = Designation.target();
 		if (target == null) {
-			g.text(font, "T: designate target", 6, h / 2 + 70, DIM, false);
+			if (fullInstruments) {
+				g.text(font, "T: designate target", 6, h / 2 + 70, DIM, false);
+			}
 			return;
 		}
 		int d = (int) Math.round(target.distanceTo(aircraft.position()));

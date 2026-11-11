@@ -576,7 +576,7 @@ public final class AutoTest {
 			dev.rubymod.game.Stats.skyRace(me.getUUID(), me.getName().getString(), 1300);
 			log("unlocked: {}", dev.rubymod.game.Stats.get(me).unlocked);
 		}));
-		then(10, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.CosmeticSelect("hat_tank")));
+		then(10, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.CosmeticSelect("set_recruit")));
 		then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.CosmeticSelect("trail_snow")));
 		then(5, mc -> mc.gui.setScreen(new ProfileScreen()));
 		then(30, mc -> shot(mc, "extras-profile"));
@@ -590,7 +590,7 @@ public final class AutoTest {
 				var me = me(server);
 				var hats = ((net.minecraft.server.level.ServerLevel) me.level()).getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class,
 						me.getBoundingBox().inflate(5));
-				log("hat check: wearing '{}', displays near: {}", dev.rubymod.game.Stats.get(me).hat, hats.stream().map(h -> h.position().toString()).toList());
+				log("armor set check: wearing '{}', displays near: {}", dev.rubymod.game.Stats.get(me).armor, hats.stream().map(h -> h.position().toString()).toList());
 			});
 			log("client sees item displays: {}", mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class,
 					mc.player.getBoundingBox().inflate(5)).size());
@@ -4498,6 +4498,7 @@ public final class AutoTest {
 				log("ghost shape for {} blocks took {} ms", data.blocks(), (System.nanoTime() - t0) / 1_000_000);
 			});
 			case "vehicles" -> vehiclesScript();
+			case "progress" -> progressScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
 			case "showcase" -> showcaseScript();
@@ -4514,6 +4515,107 @@ public final class AutoTest {
 			log("done");
 			mc.stop();
 		});
+	}
+
+	/** Levels and XP, armor sets (lent in the hub, and over real armor), the profile, the game picker, the simple tank and aircraft displays. */
+	private static void progressScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(60, mc -> onServer(mc, server -> {
+			var me = me(server);
+			String n = me.getName().getString();
+			dev.rubymod.game.Stats.Record r = dev.rubymod.game.Stats.get(me);
+			log("level at the start: {} xp {}", dev.rubymod.game.Stats.level(r.xp)[0], r.xp);
+			dev.rubymod.game.Stats.won(me.getUUID(), n, "gungame");
+			dev.rubymod.game.Stats.horde(me.getUUID(), n, 11, 40, 2);
+			dev.rubymod.game.Stats.convoy(me.getUUID(), n, 5, true, 30, 2, 754);
+			dev.rubymod.game.Stats.rift(me.getUUID(), n, 9, true);
+			dev.rubymod.game.Stats.addXp(me.getUUID(), n, 2600);
+			log("level now: {} xp {} unlocked {}", dev.rubymod.game.Stats.level(r.xp)[0], r.xp, r.unlocked);
+		}));
+		then(30, mc -> shot(mc, "progress-levelup"));
+		then(5, mc -> mc.gui.setScreen(new ProfileScreen()));
+		then(120, mc -> shot(mc, "progress-profile"));
+		String[] sets = {"set_shadow", "set_hauler", "set_riftwalker", "set_legion", "set_frost", "set_breaker", "set_ranger", "set_recruit"};
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ ~ 10");
+		});
+		for (String set : sets) {
+			then(5, mc -> ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.CosmeticSelect(set)));
+			then(25, mc -> shot(mc, "progress-" + set));
+		}
+		then(5, mc -> onServer(mc, server -> {
+			var me = me(server);
+			log("lent in the hub: {} {}", me.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST),
+					me.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).get(net.minecraft.core.component.DataComponents.EQUIPPABLE));
+		}));
+		// Real armor keeps its numbers and takes the set's look.
+		then(5, mc -> {
+			command(mc, "item replace entity @p armor.chest with minecraft:diamond_chestplate");
+			command(mc, "item replace entity @p armor.head with minecraft:iron_helmet");
+		});
+		then(30, mc -> {
+			shot(mc, "progress-real-armor");
+			onServer(mc, server -> {
+				var me = me(server);
+				var chest = me.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
+				log("real armor: {} asset {} armor value {}", chest, chest.get(net.minecraft.core.component.DataComponents.EQUIPPABLE).assetId(), me.getArmorValue());
+			});
+		});
+		then(5, mc -> ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.CosmeticSelect("none:ARMOR")));
+		then(30, mc -> {
+			shot(mc, "progress-no-set");
+			onServer(mc, server -> {
+				var me = me(server);
+				var chest = me.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST);
+				log("set off: {} asset {} legs '{}' inventory {}", chest, chest.get(net.minecraft.core.component.DataComponents.EQUIPPABLE).assetId(),
+						me.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS), me.getInventory().getContainerSize());
+			});
+		});
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			mc.gui.setScreen(new ModeScreen());
+		});
+		then(30, mc -> shot(mc, "progress-picker"));
+		// The convoy on Hard, with the gold truck.
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.CosmeticSelect("paint_gold"));
+		});
+		then(10, mc -> ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect("convoy:hard")));
+		for (int i = 0; i < 12; i++) {
+			then(40, mc -> onServer(mc, server -> log("convoy: {} | {}", dev.rubymod.game.convoy.Convoy.status(), dev.rubymod.game.convoy.Convoy.debugState())));
+		}
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(30, mc -> shot(mc, "progress-gold-truck"));
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			command(mc, "execute as @p run hub");
+		});
+		// The simple displays, out in the open.
+		then(40, mc -> command(mc, "execute as @p run play rubywars"));
+		then(60, mc -> {
+			command(mc, "gamemode creative @a");
+			command(mc, "execute as @p at @s run tp @s ~ 200 ~");
+			command(mc, "execute at @p run fill ~-6 198 ~-6 ~6 198 ~90 minecraft:stone");
+		});
+		then(20, mc -> command(mc, "execute at @p run summon rubymod:tank ~ ~ ~8 {Rotation:[0f,0f]}"));
+		then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:tank,limit=1,sort=nearest]"));
+		then(40, mc -> shot(mc, "progress-tank-hud"));
+		then(5, mc -> command(mc, "ride @p dismount"));
+		then(5, mc -> command(mc, "kill @e[type=rubymod:tank]"));
+		then(5, mc -> command(mc, "execute at @p run summon rubymod:fighter_jet ~ ~ ~6 {Rotation:[0f,0f]}"));
+		then(10, mc -> command(mc, "ride @p mount @e[type=rubymod:fighter_jet,limit=1,sort=nearest]"));
+		then(40, mc -> shot(mc, "progress-jet-hud"));
+		then(5, mc -> command(mc, "ride @p dismount"));
 	}
 
 	private static final String[] GUNS = {"service_pistol", "arr_rifle", "combat_shotgun", "longshot_sniper", "ruby_blaster", "rocket_launcher"};

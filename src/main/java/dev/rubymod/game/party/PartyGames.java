@@ -61,7 +61,42 @@ public final class PartyGames {
 	/** Which games have bots switched on: world/rubywars/party_bots.txt. */
 	private static java.nio.file.Path botsFile;
 
+	/**
+	 * Every map in the arena world has its own stretch of it. Two on the same ground wreck each other (Air Battle once
+	 * shared Build Battle's, and jets flew into its invisible walls), so say so loudly at startup if it ever happens again.
+	 * Returns what overlaps (empty: all clear).
+	 */
+	public static List<String> overlaps() {
+		record Zone(String name, int x, int reach) {
+		}
+		List<Zone> zones = new ArrayList<>();
+		for (PartyGame game : ALL) {
+			if (!(game instanceof RubyRush)) {
+				zones.add(new Zone(game.title, game.center().getX(), game.reach()));
+			}
+		}
+		zones.add(new Zone("Co-op Horde", dev.rubymod.game.Horde.CX, 120));
+		zones.add(new Zone("Ruby Rift", -90000, 200));
+		zones.add(new Zone("Ruby Convoy", dev.rubymod.game.convoy.ConvoyRoute.X0, 220));
+		List<String> found = new ArrayList<>();
+		for (int i = 0; i < zones.size(); i++) {
+			for (int j = i + 1; j < zones.size(); j++) {
+				Zone a = zones.get(i);
+				Zone b = zones.get(j);
+				// Games that share a map on purpose (the two town games) are the same class of thing: same middle, same reach.
+				boolean shared = a.x() == b.x() && a.reach() == b.reach() && a.reach() < 100;
+				if (!shared && Math.abs(a.x() - b.x()) < a.reach() + b.reach() + 64) {
+					found.add(a.name() + " and " + b.name());
+				}
+			}
+		}
+		return found;
+	}
+
 	public static void reset(MinecraftServer server) {
+		for (String clash : overlaps()) {
+			dev.rubymod.RubyMod.LOGGER.error("MAPS OVERLAP: {} are built on the same ground. Move one of them.", clash);
+		}
 		TEST_PLAYERS.clear();
 		botsFile = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("rubywars").resolve("party_bots.txt");
 		List<String> on = new ArrayList<>();

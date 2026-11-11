@@ -110,7 +110,12 @@ public class Infection extends PartyGame {
 
 	@Override
 	protected void spawn(ServerPlayer player, Part part) {
-		BlockPos at = spot(part.team == ZOMBIE);
+		// Somewhere you fit, away from the other side (zombies come in at the edge of town).
+		boolean zombie = part.team == ZOMBIE;
+		BlockPos at = farthest(() -> spot(zombie), player, o -> players.get(o.getUUID()) != null && players.get(o.getUUID()).team != part.team);
+		if (at == null) {
+			at = spot(zombie);
+		}
 		teleport(player, at.getX() + 0.5, at.getY(), at.getZ() + 0.5, player.getRandom().nextFloat() * 360);
 		ready(player);
 		clearPlayer(player);

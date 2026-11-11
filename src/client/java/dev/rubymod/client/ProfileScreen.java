@@ -62,6 +62,19 @@ public class ProfileScreen extends Screen {
 		if (data != null) {
 			int row = 0;
 			for (String line : data.stats()) {
+				if (line.startsWith("@level|")) {
+					// Your level, with the way to the next one.
+					String[] lv = line.split("[|]");
+					int have = Integer.parseInt(lv[2]);
+					int need = Math.max(1, Integer.parseInt(lv[3]));
+					Ui.icon(g, Ui.Icon.STAR, leftX + 10, y - 1);
+					Ui.text(g, "Level " + lv[1], leftX + 22, y, Ui.GOLD);
+					String xp = have + " / " + need + " XP";
+					Ui.text(g, xp, leftX + colW - 10 - font.width(xp), y, Ui.MUTED);
+					Ui.bar(g, leftX + 10, y + 11, colW - 20, 6, have / (float) need, Ui.BLUE);
+					y += 24;
+					continue;
+				}
 				String[] f = line.split("[|]", 2);
 				boolean sub = f[0].startsWith("  ");
 				int split = colW * 9 / 20;
@@ -84,9 +97,10 @@ public class ProfileScreen extends Screen {
 		List<String> tip = null;
 		if (data != null) {
 			int sy = top + 24;
-			for (String kind : new String[] {"HAT", "TRAIL", "KILL"}) {
-				Ui.text(g, kind.equals("HAT") ? "Hats" : kind.equals("TRAIL") ? "Trails" : "Kill effects", rightX + 10, sy, Ui.DIM);
-				sy += 11;
+			for (String kind : new String[] {"ARMOR", "TRAIL", "KILL", "PAINT"}) {
+				Ui.text(g, kind.equals("ARMOR") ? "Armor sets" : kind.equals("TRAIL") ? "Trails" : kind.equals("KILL") ? "Kill effects" : "Convoy truck paint",
+						rightX + 10, sy, Ui.DIM);
+				sy += 10;
 				int sx = rightX + 10;
 				for (String line : data.cosmetics()) {
 					String[] f = line.split("[|]");
@@ -95,7 +109,7 @@ public class ProfileScreen extends Screen {
 					}
 					if (sx + 22 > rightX + colW - 8) {
 						sx = rightX + 10;
-						sy += 24;
+						sy += 22;
 					}
 					boolean unlocked = f[5].equals("true");
 					boolean wearing = f[6].equals("true");
@@ -114,16 +128,17 @@ public class ProfileScreen extends Screen {
 						Ui.icon(g, Ui.Icon.LOCK, sx + 6, sy + 6);
 					}
 					if (over) {
-						tip = List.of(f[2], wearing ? "You're wearing it. Click to take it off." : unlocked ? "Click to wear it." : "To unlock: " + f[4]);
+						tip = List.of(f[2], wearing ? (kind.equals("PAINT") ? "Your truck's paint." : "You're using it. Click to take it off.")
+								: unlocked ? "Click to use it." : "To unlock: " + f[4]);
 					}
 					sx += 23;
 				}
-				sy += 30;
+				sy += 23;
 			}
 		} else {
 			Ui.text(g, "Loading...", rightX + 10, top + 26, Ui.MUTED);
 		}
-		g.centeredText(font, "Win games and set records to unlock more.", width / 2, bottom + 8, Ui.MUTED);
+		g.centeredText(font, "Every game gives XP. Armor sets change how your armor looks, nothing else.", width / 2, bottom + 8, Ui.MUTED);
 		if (tip != null) {
 			Ui.tooltip(g, tip, mouseX, mouseY, width, height);
 		}

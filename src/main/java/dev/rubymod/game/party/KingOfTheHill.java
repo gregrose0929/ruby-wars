@@ -164,7 +164,11 @@ public class KingOfTheHill extends PartyGame {
 
 	@Override
 	protected void spawn(ServerPlayer player, Part part) {
-		BlockPos at = edge();
+		// On the edge, at the spot farthest from everyone else.
+		BlockPos at = farthest(this::edge, player, o -> true);
+		if (at == null) {
+			at = edge();
+		}
 		teleport(player, at.getX() + 0.5, at.getY(), at.getZ() + 0.5, player.getRandom().nextFloat() * 360);
 		ready(player);
 		clearPlayer(player);

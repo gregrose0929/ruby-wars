@@ -61,6 +61,12 @@ public class GunGame extends PartyGame {
 		Duels.ArenaBuilder.buildQueued(level, Duels.Mode.GUNS, center(), this::later);
 	}
 
+	/** The arena's outer walls can't be blasted open. */
+	@Override
+	protected boolean wallAt(int dx, int dy, int dz) {
+		return Math.max(Math.abs(dx), Math.abs(dz)) >= Duels.Mode.GUNS.half && dy >= -2;
+	}
+
 	private static String weaponName(int level) {
 		return new ItemStack(LADDER[Math.min(level, LADDER.length - 1)]).getHoverName().getString();
 	}

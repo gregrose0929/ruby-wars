@@ -638,6 +638,44 @@ public abstract class PartyGame {
 		return best != null ? best : c;
 	}
 
+	/**
+	 * The best of a dozen spots from {@code candidates}: one a player fits in, as far as possible from the players in
+	 * {@code avoid} (and from this game's bots). Null if none of them had standing room.
+	 */
+	protected BlockPos farthest(java.util.function.Supplier<BlockPos> candidates, ServerPlayer self, java.util.function.Predicate<ServerPlayer> avoid) {
+		ServerLevel level = level();
+		List<net.minecraft.world.phys.Vec3> others = new java.util.ArrayList<>();
+		for (ServerPlayer o : online()) {
+			if (o != self && !o.isSpectator() && avoid.test(o)) {
+				others.add(o.position());
+			}
+		}
+		for (UUID id : spawned) {
+			if (level.getEntity(id) instanceof net.minecraft.world.entity.LivingEntity l && l.isAlive()) {
+				others.add(l.position());
+			}
+		}
+		BlockPos best = null;
+		double bestDistance = -1;
+		for (int tries = 0; tries < 12; tries++) {
+			BlockPos raw = candidates.get();
+			BlockPos p = standingRoom(level, raw.getX(), raw.getZ(), raw.getY());
+			if (p == null) {
+				continue;
+			}
+			net.minecraft.world.phys.Vec3 at = net.minecraft.world.phys.Vec3.atBottomCenterOf(p);
+			double nearest = 999;
+			for (net.minecraft.world.phys.Vec3 o : others) {
+				nearest = Math.min(nearest, o.distanceTo(at));
+			}
+			if (nearest > bestDistance) {
+				bestDistance = nearest;
+				best = p;
+			}
+		}
+		return best;
+	}
+
 	/** The ground near height {@code y0} at x, z where a player fits (and isn't on top of cover or a roof), or null. */
 	protected static BlockPos standingRoom(ServerLevel level, int x, int z, int y0) {
 		for (int y = y0 + 2; y >= y0 - 6; y--) {

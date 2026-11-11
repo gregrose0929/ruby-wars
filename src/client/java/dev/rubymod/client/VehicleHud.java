@@ -52,12 +52,10 @@ public class VehicleHud implements HudElement {
 		int barW = 120;
 		int x0 = w / 2 - barW / 2;
 		int y0 = h - 22;
-		g.fill(x0 - 2, y0 - 12, x0 + barW + 2, y0 + 8, PANEL);
-		int col = health < 0.25F ? RED : health < 0.5F ? AMBER : GREEN;
-		g.fill(x0, y0, x0 + Math.round(barW * health), y0 + 6, col);
-		g.outline(x0 - 1, y0 - 1, barW + 2, 8, DIM);
-		String name = vehicle.isTank() ? "TANK" : "JEEP";
-		g.text(font, name + " ARMOR " + Math.round(health * 100) + "%", x0, y0 - 10, col, false);
+		dev.rubymod.client.ui.Ui.panel(g, x0 - 6, y0 - 16, barW + 12, 28);
+		int col = health < 0.25F ? dev.rubymod.client.ui.Ui.RED : health < 0.5F ? dev.rubymod.client.ui.Ui.AMBER : dev.rubymod.client.ui.Ui.GREEN;
+		dev.rubymod.client.ui.Ui.text(g, (vehicle.isTank() ? "Tank" : "Jeep") + " armor", x0, y0 - 11, dev.rubymod.client.ui.Ui.TEXT);
+		dev.rubymod.client.ui.Ui.bar(g, x0, y0, barW, 7, health, col);
 
 		if (!vehicle.isTank() || !driver) {
 			return;
@@ -65,20 +63,20 @@ public class VehicleHud implements HudElement {
 		// Reload bar.
 		int reload = vehicle.reloadLeft();
 		int rx = w / 2 + barW / 2 + 10;
-		g.fill(rx - 2, y0 - 12, rx + 72, y0 + 8, PANEL);
+		dev.rubymod.client.ui.Ui.panel(g, rx - 2, y0 - 16, 84, 28);
 		if (reload > 0) {
 			float done = 1.0F - reload / (float) VehicleEntity.RELOAD_TICKS;
-			g.fill(rx, y0, rx + Math.round(70 * done), y0 + 6, AMBER);
-			g.text(font, "RELOADING", rx, y0 - 10, AMBER, false);
+			dev.rubymod.client.ui.Ui.text(g, "Reloading", rx + 4, y0 - 11, dev.rubymod.client.ui.Ui.AMBER);
+			dev.rubymod.client.ui.Ui.bar(g, rx + 4, y0, 72, 7, done, dev.rubymod.client.ui.Ui.AMBER);
 		} else {
-			g.fill(rx, y0, rx + 70, y0 + 6, GREEN);
-			g.text(font, "GUN READY", rx, y0 - 10, GREEN, false);
+			dev.rubymod.client.ui.Ui.text(g, "Gun ready", rx + 4, y0 - 11, dev.rubymod.client.ui.Ui.GREEN);
+			dev.rubymod.client.ui.Ui.bar(g, rx + 4, y0, 72, 7, 1, dev.rubymod.client.ui.Ui.GREEN);
 		}
 
 		// Turret indicator: the hull (fixed, pointing up) and where the turret points relative to it.
-		int cx = w / 2 - barW / 2 - 30;
-		int cy = y0 - 6;
-		g.fill(cx - 16, cy - 16, cx + 16, cy + 16, PANEL);
+		int cx = w / 2 - barW / 2 - 32;
+		int cy = y0 - 2;
+		dev.rubymod.client.ui.Ui.panel(g, cx - 17, cy - 17, 34, 34);
 		g.outline(cx - 6, cy - 9, 12, 18, DIM);
 		float rel = (float) Math.toRadians(Mth.wrapDegrees(vehicle.turretYaw() - vehicle.getYRot()));
 		for (int i = 0; i < 13; i++) {
@@ -89,11 +87,12 @@ public class VehicleHud implements HudElement {
 		g.fill(cx - 2, cy - 2, cx + 2, cy + 2, GREEN);
 
 		int smoke = vehicle.smokeCharges();
-		g.text(font, "SMOKE x" + smoke + " [Space]", rx, y0 - 22, smoke > 0 ? GREEN : RED, false);
+		String hint = "Click to fire. Right-click: sight. Space: smoke (" + smoke + ")";
+		int hw = font.width(hint) + 14;
+		dev.rubymod.client.ui.Ui.panel(g, w / 2 - hw / 2, y0 - 38, hw, 18);
+		dev.rubymod.client.ui.Ui.text(g, hint, w / 2 - hw / 2 + 7, y0 - 33, dev.rubymod.client.ui.Ui.MUTED);
 		if (zoomed(mc)) {
 			drawSight(g, font, w, h, reload == 0);
-		} else {
-			g.text(font, "Hold right-click: gunner sight", 6, h - 12, DIM, false);
 		}
 	}
 

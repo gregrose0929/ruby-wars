@@ -62,7 +62,7 @@ public final class GameEvents {
 	public static void register() {
 		// No hostile mobs (config: hostileMobs); raid soldiers, guards and animals are unaffected.
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-			if (Cosmetics.strayHat(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world) || dev.rubymod.game.convoy.Convoy.stale(entity)) {
+			if (Cosmetics.strayHat(entity) || Cosmetics.lentItem(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world) || dev.rubymod.game.convoy.Convoy.stale(entity)) {
 				entity.discard();
 				return;
 			}
@@ -124,6 +124,8 @@ public final class GameEvents {
 			server.getCommands().performPrefixedCommand(quiet, "time set day");
 			// Nobody sees where other players are (the locator bar), unless a drone or ping spots them.
 			server.getCommands().performPrefixedCommand(quiet, "gamerule locator_bar false");
+			// "X has made the advancement [Suit Up]" means nothing here (Ruby Wars has its own goals).
+			server.getCommands().performPrefixedCommand(quiet, "gamerule show_advancement_messages false");
 			GameConfig.load();
 			SeasonData.load(server);
 			dev.rubymod.industry.Grid.load(server);

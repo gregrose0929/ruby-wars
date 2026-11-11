@@ -83,10 +83,10 @@ public class ModeScreen extends Screen {
 		};
 	}
 
-	/** No Horde game yet: its card offers Easy / Normal / Hard instead of one Play button. */
+	/** No Horde game (or convoy job) yet: the card offers Easy / Normal / Hard instead of one Play button. */
 	private boolean pickDifficulty(Game game) {
 		String[] f = fields(game.id());
-		return game.id().equals("horde") && f != null && f.length >= 4 && f[3].equals("false") && !here(game.id());
+		return (game.id().equals("horde") || game.id().equals("convoy")) && f != null && f.length >= 4 && f[3].equals("false") && !here(game.id());
 	}
 
 	private static ItemStack icon(String id) {
@@ -149,9 +149,12 @@ public class ModeScreen extends Screen {
 					int dx = x + colW - 6 - (3 - d) * 34;
 					String label = DIFFICULTIES[d].substring(0, 1).toUpperCase() + DIFFICULTIES[d].substring(1);
 					if (Ui.button(g, label, dx, by - 2, 32, 16, mouseX, mouseY, DIFFICULTY_COLORS[d], true)) {
-						tooltip = List.of(label + " Horde", d == 0 ? "Fewer, weaker monsters." : d == 1 ? "The usual fight." : "More monsters, and tougher.");
+						tooltip = game.id().equals("convoy")
+								? List.of(label + " Convoy", d == 0 ? "Weaker enemies, and an extra spare truck." : d == 1 ? "The usual job."
+										: "Tougher enemies, one less spare truck. More XP.")
+								: List.of(label + " Horde", d == 0 ? "Fewer, weaker monsters." : d == 1 ? "The usual fight." : "More monsters, and tougher.");
 					}
-					click(dx, by - 2, 32, 16, "horde:" + DIFFICULTIES[d]);
+					click(dx, by - 2, 32, 16, game.id() + ":" + DIFFICULTIES[d]);
 				}
 			} else if (here) {
 				Ui.tag(g, "You're here", x + colW - 6 - Ui.font().width("You're here") - 6, y + 7, Ui.GREEN);

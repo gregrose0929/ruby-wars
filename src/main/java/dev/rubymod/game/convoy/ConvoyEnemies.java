@@ -122,7 +122,7 @@ final class ConvoyEnemies {
 
 	/** How tough everything is: stage by stage, and per extra player. */
 	static double toughness(int stage, int players) {
-		return (1 + stage * 0.2) * (1 + 0.4 * (players - 1));
+		return (1 + stage * 0.2) * (1 + 0.4 * (players - 1)) * Convoy.enemyScale();
 	}
 
 	/** Make one and put it in the world (null if it couldn't be made). */

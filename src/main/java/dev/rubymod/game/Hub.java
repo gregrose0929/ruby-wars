@@ -196,6 +196,10 @@ public final class Hub {
 			challenge = Horde.Challenge.byName(target.substring(6));
 			target = "horde";
 		}
+		if (target.startsWith("convoy:")) {
+			dev.rubymod.game.convoy.Convoy.choose(target.substring(7));
+			target = "convoy";
+		}
 		Where from = where(player);
 		if (from == Where.HORDE && target.equals("horde") && challenge != null) {
 			return Horde.setDifficulty(player, challenge);
@@ -1038,7 +1042,7 @@ public final class Hub {
 		lines.add("rubywars|Ruby Wars|" + rubyWarsStatus(server));
 		lines.add("horde|Co-op Horde|" + Horde.status() + "|" + Horde.running());
 		lines.add("rift|Ruby Rift|" + dev.rubymod.game.rift.Rift.status() + "|" + dev.rubymod.game.rift.Rift.running());
-		lines.add("convoy|Ruby Convoy|" + dev.rubymod.game.convoy.Convoy.status() + "|" + dev.rubymod.game.convoy.Convoy.running());
+		lines.add("convoy|Ruby Convoy|" + dev.rubymod.game.convoy.Convoy.status() + "|" + !dev.rubymod.game.convoy.Convoy.idle());
 		lines.addAll(dev.rubymod.game.party.PartyGames.lines());
 		return lines;
 	}

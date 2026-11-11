@@ -1,0 +1,14 @@
+{
+	"layers": {
+		"humanoid": [
+			{
+				"texture": "rubymod:set_recruit"
+			}
+		],
+		"humanoid_leggings": [
+			{
+				"texture": "rubymod:set_recruit"
+			}
+		]
+	}
+}
