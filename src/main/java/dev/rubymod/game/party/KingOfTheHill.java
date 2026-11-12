@@ -93,16 +93,53 @@ public class KingOfTheHill extends PartyGame {
 		return p;
 	}
 
+	/** How far the zone reaches from its middle: 7 across at first, 5 for its last 20 seconds, 3 for its last 10. */
+	private int zoneR() {
+		int t = (roundTicks / 20) % 60;
+		return t < 40 ? 3 : t < 50 ? 2 : 1;
+	}
+
 	private void paintZone(ServerLevel level, int i, boolean active) {
 		int[] z = ZONES[i];
-		BlockState floor = active ? Blocks.GOLD_BLOCK.defaultBlockState() : i == 0 ? Blocks.STONE_BRICKS.defaultBlockState() : Blocks.SMOOTH_STONE.defaultBlockState();
-		box(level, z[0] - 3, zoneY(i), z[1] - 3, z[0] + 3, zoneY(i), z[1] + 3, floor);
+		BlockState plain = i == 0 ? Blocks.STONE_BRICKS.defaultBlockState() : Blocks.SMOOTH_STONE.defaultBlockState();
+		box(level, z[0] - 3, zoneY(i), z[1] - 3, z[0] + 3, zoneY(i), z[1] + 3, plain);
+		if (active) {
+			int r = zoneR();
+			box(level, z[0] - r, zoneY(i), z[1] - r, z[0] + r, zoneY(i), z[1] + r, Blocks.GOLD_BLOCK.defaultBlockState());
+		}
+	}
+
+	/** When the next bolt lands on the zone (round ticks; -1: none on its way). */
+	private int strikeAt = -1;
+
+	private void lightning(ServerLevel level) {
+		BlockPos z = zoneCenter();
+		var bolt = net.minecraft.world.entity.EntityTypes.LIGHTNING_BOLT.create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT);
+		if (bolt != null) {
+			bolt.snapTo(z.getX() + 0.5, z.getY() + 1, z.getZ() + 0.5, 0, 0);
+			bolt.setVisualOnly(true);
+			level.addFreshEntity(bolt);
+		}
+		for (ServerPlayer p : online()) {
+			if (!p.isSpectator() && inZone(p)) {
+				p.hurtServer(level, level.damageSources().lightningBolt(), 9.0F);
+				p.setDeltaMovement(p.getDeltaMovement().add((p.getX() - z.getX() - 0.5) * 0.3, 0.7, (p.getZ() - z.getZ() - 0.5) * 0.3));
+				p.syncVelocity = true;
+				p.sendOverlayMessage(Component.literal("⚡ Struck by lightning!").withStyle(ChatFormatting.YELLOW));
+			}
+		}
+		for (UUID id : spawned) {
+			if (level.getEntity(id) instanceof SoldierEntity bot && bot.isAlive() && inZone(bot)) {
+				bot.hurtServer(level, level.damageSources().lightningBolt(), 9.0F);
+			}
+		}
 	}
 
 	private boolean inZone(Entity e) {
 		int[] z = ZONES[zone];
 		BlockPos c = center();
-		return Math.abs(e.getX() - (c.getX() + z[0] + 0.5)) <= 3.6 && Math.abs(e.getZ() - (c.getZ() + z[1] + 0.5)) <= 3.6
+		double r = zoneR() + 0.6;
+		return Math.abs(e.getX() - (c.getX() + z[0] + 0.5)) <= r && Math.abs(e.getZ() - (c.getZ() + z[1] + 0.5)) <= r
 				&& e.getY() >= GROUND + zoneY(zone) && e.getY() < GROUND + zoneY(zone) + 4;
 	}
 
@@ -124,6 +161,7 @@ public class KingOfTheHill extends PartyGame {
 	protected void startRound() {
 		zone = 0;
 		botScore = 0;
+		strikeAt = -1;
 		paintZone(level(), 0, true);
 		for (ServerPlayer p : online()) {
 			spawn(p, players.get(p.getUUID()));
@@ -205,9 +243,37 @@ public class KingOfTheHill extends PartyGame {
 			paintZone(level, zone, true);
 			titleAll("THE ZONE MOVED", "Find the gold!", ChatFormatting.YELLOW);
 		}
+		// The zone shrinks before it moves: 20 seconds to go, then 10.
+		if (roundTicks % 1200 == 800 || roundTicks % 1200 == 1000) {
+			paintZone(level, zone, true);
+			for (ServerPlayer p : online()) {
+				p.sendOverlayMessage(Component.literal("The hill is shrinking!").withStyle(ChatFormatting.YELLOW));
+			}
+			level.playSound(null, zoneCenter(), SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 2.0F, 0.6F);
+		}
+		// Lightning: every 25 seconds a bolt hits the zone, two and a half seconds after the warning.
+		if (roundTicks % 500 == 400) {
+			strikeAt = roundTicks + 50;
+			BlockPos z = zoneCenter();
+			level.playSound(null, z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.WEATHER, 1.5F, 1.6F);
+			for (ServerPlayer p : online()) {
+				if (inZone(p)) {
+					dev.rubymod.game.Alerts.title(p, "", "⚡ Lightning is about to hit the hill: step off!", ChatFormatting.YELLOW);
+				}
+			}
+		}
+		if (strikeAt > 0 && roundTicks < strikeAt && roundTicks % 4 == 0) {
+			BlockPos z = zoneCenter();
+			level.sendParticles(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, z.getX() + 0.5, z.getY() + 4, z.getZ() + 0.5, 30, 2, 3, 2, 0.1);
+		}
+		if (strikeAt > 0 && roundTicks >= strikeAt) {
+			strikeAt = -1;
+			lightning(level);
+		}
 		if (roundTicks % 10 == 0) {
 			BlockPos z = zoneCenter();
-			level.sendParticles(new DustParticleOptions(0xFFD700, 2.0F), z.getX() + 0.5, z.getY() + 2, z.getZ() + 0.5, 12, 2.5, 1.5, 2.5, 0);
+			double spread = zoneR() * 0.8;
+			level.sendParticles(new DustParticleOptions(0xFFD700, 2.0F), z.getX() + 0.5, z.getY() + 2, z.getZ() + 0.5, 12, spread, 1.5, spread, 0);
 		}
 		if (roundTicks % 20 != 0) {
 			return;

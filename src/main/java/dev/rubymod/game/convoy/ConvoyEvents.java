@@ -74,6 +74,50 @@ final class ConvoyEvents {
 	private static int bridgeLaid;
 	static boolean bridgeDone;
 	private static int nextAmbush;
+	/** Ember Town, past the square: the Legion cuts the lights. Only the truck's headlights show the way. */
+	private static boolean blackout;
+	private static final int BLACKOUT_FROM = 106;
+	private static final int BLACKOUT_TO = 150;
+
+	private static void tickBlackout(ServerLevel level, ConvoyTruck truck, List<ServerPlayer> targets, long ticks) {
+		double into = truck.z - ConvoyRoute.START[1];
+		boolean dark = into >= BLACKOUT_FROM && into < BLACKOUT_TO;
+		if (dark != blackout) {
+			blackout = dark;
+			for (ServerPlayer p : targets) {
+				if (dark) {
+					Alerts.title(p, "BLACKOUT!", "Stay in the truck's headlights", ChatFormatting.DARK_PURPLE);
+				} else {
+					p.removeEffect(net.minecraft.world.effect.MobEffects.DARKNESS);
+					Alerts.title(p, "", "The lights are back on", ChatFormatting.YELLOW);
+				}
+			}
+			level.playSound(null, BlockPos.containing(truck.position()), dark ? SoundEvents.BEACON_DEACTIVATE : SoundEvents.BEACON_ACTIVATE, SoundSource.NEUTRAL, 3.0F, 0.6F);
+		}
+		if (!dark) {
+			return;
+		}
+		// The headlights: two beams ahead of the truck, and a pool of light round it.
+		if (ticks % 2 == 0) {
+			for (double side : new double[] {-0.9, 0.9}) {
+				for (double f = 4.5; f < 16; f += 1.4) {
+					Vec3 p = truck.local(side * (1 + f * 0.12), 1.3 - f * 0.05, f);
+					level.sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0);
+				}
+			}
+		}
+		if (ticks % 10 == 0) {
+			for (ServerPlayer p : targets) {
+				if (truck.distanceTo(p.position()) > 11) {
+					p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DARKNESS, 70, 0, false, false));
+					p.sendOverlayMessage(Component.literal("It's pitch black out here: get back to the truck!").withStyle(ChatFormatting.DARK_PURPLE));
+				} else {
+					p.removeEffect(net.minecraft.world.effect.MobEffects.DARKNESS);
+				}
+			}
+		}
+	}
+
 	/** Monsters on their way in (red smoke first). */
 	private record Pending(BlockPos at, ConvoyEnemies.Kind kind, int[] left) {
 	}
@@ -133,6 +177,7 @@ final class ConvoyEvents {
 		bridgeLaid = 0;
 		bridgeDone = false;
 		barricadeWaves = 0;
+		blackout = false;
 		avalanched = false;
 		boulderIn = 120;
 		nextAmbush = 0;
@@ -364,6 +409,7 @@ final class ConvoyEvents {
 						Alerts.title(p, "TANKS!", "Legion tanks in the square: knock them out!", ChatFormatting.RED);
 					}
 				}
+				tickBlackout(level, truck, targets, ticks);
 			}
 			case 2 -> {
 				if (gunship == null && truck.z >= ConvoyRoute.START[2] + 26 && !bridgeDone) {

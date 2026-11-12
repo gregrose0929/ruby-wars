@@ -494,6 +494,214 @@ public final class Horde {
 		cacheMax = (int) Math.round(400 * challenge.cache);
 		cacheHp = cacheMax;
 		coreUpgrades = 0;
+		warlord = null;
+		warlordWave = 0;
+		coreGuns = 0;
+		coreAura = 0;
+		coreArmor = 0;
+		VOTES.clear();
+		voteOpen = false;
+		lastStand = false;
+		coreSafeUntil = 0;
+	}
+
+	// ----- The Warlord (every tenth wave) -----
+
+	private static UUID warlord;
+	private static int warlordWave;
+
+	/** Every second of a wave: the Warlord's war cry, and its bounty when it falls. */
+	private static void tickWarlord(MinecraftServer server, ServerLevel arena) {
+		if (warlord == null) {
+			return;
+		}
+		if (!(arena.getEntity(warlord) instanceof Mob boss) || !boss.isAlive()) {
+			warlord = null;
+			deposit(150);
+			for (ServerPlayer p : players(server)) {
+				Alerts.title(p, "WARLORD DOWN!", "+150 rubies for the team", ChatFormatting.GOLD);
+				p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 0.8F);
+			}
+			return;
+		}
+		if (server.getTickCount() % 240 != 0) {
+			return;
+		}
+		// The war cry: every monster near it is faster and hits harder for six seconds.
+		int stirred = 0;
+		for (UUID id : new ArrayList<>(MOBS)) {
+			if (arena.getEntity(id) instanceof Mob m && m.isAlive() && m != boss && m.distanceTo(boss) < 18) {
+				m.addEffect(new MobEffectInstance(MobEffects.SPEED, 120, 1, false, true));
+				m.addEffect(new MobEffectInstance(MobEffects.STRENGTH, 120, 0, false, true));
+				arena.sendParticles(ParticleTypes.ANGRY_VILLAGER, m.getX(), m.getY() + m.getBbHeight() + 0.3, m.getZ(), 2, 0.2, 0.1, 0.2, 0);
+				stirred++;
+			}
+		}
+		arena.playSound(null, boss.blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 4.0F, 0.6F);
+		arena.sendParticles(ParticleTypes.SONIC_BOOM, boss.getX(), boss.getY() + 2, boss.getZ(), 1, 0, 0, 0, 0);
+		if (stirred > 0) {
+			for (ServerPlayer p : players(server)) {
+				p.sendOverlayMessage(Component.literal("The Warlord's war cry! The horde around it is enraged. Kill the Warlord!").withStyle(ChatFormatting.DARK_RED));
+			}
+		}
+	}
+
+	// ----- The team's vote: one Core upgrade after every Brute wave -----
+
+	private static int coreGuns;
+	private static int coreAura;
+	private static int coreArmor;
+	private static final Map<UUID, String> VOTES = new HashMap<>();
+	private static boolean voteOpen;
+
+	private static Component voteButton(String id, String label, String about, ChatFormatting color) {
+		return Component.literal("[" + label + "]").withStyle(s -> s.withColor(color).withBold(true)
+				.withClickEvent(new ClickEvent.RunCommand("/horde vote " + id))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal(about))));
+	}
+
+	private static void openVote(MinecraftServer server) {
+		voteOpen = true;
+		VOTES.clear();
+		Component line = Component.literal("VOTE on a Core upgrade (click one): ").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)
+				.append(voteButton("guns", "CORE GUNS", "The Ruby Core shoots the nearest monster, once a second.", ChatFormatting.RED)).append(" ")
+				.append(voteButton("aura", "HEALING AURA", "Standing near the Core heals you, and the Core slowly repairs itself.", ChatFormatting.GREEN)).append(" ")
+				.append(voteButton("armor", "THICK ARMOR", "The Core gets 35% more health, and that much repaired now.", ChatFormatting.GOLD));
+		for (ServerPlayer p : players(server)) {
+			p.sendSystemMessage(line);
+			Alerts.title(p, "", "Vote on a Core upgrade: open chat (T) and click one", ChatFormatting.AQUA);
+		}
+	}
+
+	/** /horde vote guns|aura|armor */
+	public static String vote(ServerPlayer player, String option) {
+		Fighter f = FIGHTERS.get(player.getUUID());
+		if (f == null) {
+			return "You're not in Horde.";
+		}
+		if (!voteOpen) {
+			return "There's no vote on right now.";
+		}
+		if (!option.equals("guns") && !option.equals("aura") && !option.equals("armor")) {
+			return "Vote for guns, aura or armor.";
+		}
+		VOTES.put(player.getUUID(), option);
+		MinecraftServer server = player.level().getServer();
+		tell(server, Component.literal(f.name + " voted for " + voteName(option) + " (" + VOTES.size() + "/" + FIGHTERS.size() + ")").withStyle(ChatFormatting.AQUA));
+		if (VOTES.size() >= FIGHTERS.size()) {
+			closeVote(server);
+		}
+		return null;
+	}
+
+	private static String voteName(String option) {
+		return option.equals("guns") ? "Core Guns" : option.equals("aura") ? "Healing Aura" : "Thick Armor";
+	}
+
+	/** Count the votes (most wins; a tie goes to whichever was voted for first; nobody voting means nothing) and fit the upgrade. */
+	private static void closeVote(MinecraftServer server) {
+		if (!voteOpen) {
+			return;
+		}
+		voteOpen = false;
+		String best = null;
+		int most = 0;
+		for (String option : VOTES.values()) {
+			int n = (int) VOTES.values().stream().filter(option::equals).count();
+			if (n > most) {
+				most = n;
+				best = option;
+			}
+		}
+		VOTES.clear();
+		if (best == null) {
+			return;
+		}
+		int level;
+		switch (best) {
+			case "guns" -> level = ++coreGuns;
+			case "aura" -> level = ++coreAura;
+			default -> {
+				level = ++coreArmor;
+				int more = (int) Math.round(cacheMax * 0.35);
+				cacheMax += more;
+				cacheHp = Math.min(cacheMax, cacheHp + more);
+			}
+		}
+		for (ServerPlayer p : players(server)) {
+			Alerts.title(p, voteName(best).toUpperCase() + (level > 1 ? " " + level : ""), "The team's vote: fitted to the Ruby Core", ChatFormatting.AQUA);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.0F, 1.2F);
+		}
+		tell(server, Component.literal("The team voted: " + voteName(best) + (level > 1 ? " (level " + level + ")" : "") + " is fitted to the Core.")
+				.withStyle(ChatFormatting.AQUA));
+		updateBars();
+	}
+
+	/** Every second of a wave: the Core's guns and its healing aura. */
+	private static void tickCoreUpgrades(MinecraftServer server, ServerLevel arena) {
+		Vec3 core = cachePos();
+		if (coreGuns > 0) {
+			Mob nearest = null;
+			for (UUID id : MOBS) {
+				if (arena.getEntity(id) instanceof Mob m && m.isAlive() && m.position().distanceTo(core) < 18
+						&& (nearest == null || m.distanceToSqr(core) < nearest.distanceToSqr(core))) {
+					nearest = m;
+				}
+			}
+			if (nearest != null) {
+				Vec3 from = core.add(0, 2.2, 0);
+				Vec3 to = nearest.position().add(0, nearest.getBbHeight() * 0.6, 0);
+				dev.rubymod.game.rift.RiftFx.line(arena, from, to, dev.rubymod.game.rift.RiftFx.dust(0xFFFF3050, 1.2F), 0.6);
+				arena.playSound(null, center(), SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.BLOCKS, 0.7F, 1.7F);
+				nearest.hurtServer(arena, arena.damageSources().magic(), 5.0F * coreGuns);
+			}
+		}
+		if (coreAura > 0 && server.getTickCount() % 40 == 0) {
+			for (ServerPlayer p : players(server)) {
+				if (FIGHTERS.get(p.getUUID()).alive && !p.isSpectator() && p.position().distanceTo(core) < 10) {
+					p.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, coreAura - 1, false, false));
+				}
+			}
+			dev.rubymod.game.rift.RiftFx.ring(arena, core.add(0, 0.2, 0), 10, ParticleTypes.HAPPY_VILLAGER, 30);
+			if (server.getTickCount() % 100 == 0) {
+				cacheHp = Math.min(cacheMax, cacheHp + Math.max(1, cacheMax / 100) * coreAura);
+			}
+		}
+	}
+
+	// ----- The last stand: once a game, the Core saves itself -----
+
+	private static boolean lastStand;
+	private static long coreSafeUntil;
+
+	private static void lastStand(MinecraftServer server, ServerLevel arena) {
+		lastStand = true;
+		cacheHp = Math.max(cacheHp, cacheMax / 5);
+		coreSafeUntil = arena.getGameTime() + 8 * 20;
+		Vec3 core = cachePos();
+		arena.sendParticles(ParticleTypes.EXPLOSION_EMITTER, core.x, core.y + 1, core.z, 3, 1, 0.5, 1, 0);
+		for (double r = 4; r <= 22; r += 6) {
+			dev.rubymod.game.rift.RiftFx.ring(arena, core.add(0, 0.6, 0), r, dev.rubymod.game.rift.RiftFx.dust(0xFFFF3050, 2.0F), (int) (r * 5));
+		}
+		arena.playSound(null, center(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.BLOCKS, 4.0F, 0.7F);
+		arena.playSound(null, center(), SoundEvents.TOTEM_USE, SoundSource.BLOCKS, 3.0F, 0.8F);
+		for (UUID id : new ArrayList<>(MOBS)) {
+			if (arena.getEntity(id) instanceof Mob m && m.isAlive() && m.position().distanceTo(core) < 22) {
+				Vec3 away = m.position().subtract(core).multiply(1, 0, 1);
+				away = away.lengthSqr() < 0.01 ? new Vec3(1, 0, 0) : away.normalize();
+				m.setDeltaMovement(away.scale(1.6).add(0, 0.6, 0));
+				m.hurtServer(arena, arena.damageSources().magic(), 30.0F + wave * 2.0F);
+			}
+		}
+		for (ServerPlayer p : players(server)) {
+			Fighter f = FIGHTERS.get(p.getUUID());
+			if (!f.alive) {
+				revive(arena, p, f, null);
+			}
+			Alerts.title(p, "LAST STAND!", "The Core fights back: everyone's up, and it can't be hurt for 8 seconds", ChatFormatting.RED);
+		}
+		tell(server, Component.literal("THE RUBY CORE FIGHTS BACK! A shockwave blasts the horde, and everyone who was down is back up. This only happens once.")
+				.withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
 	}
 
 	private static int coreUpgrades;
@@ -827,6 +1035,8 @@ public final class Horde {
 				}
 				tickGunship(server, arena);
 				if (server.getTickCount() % 20 == 0) {
+					tickWarlord(server, arena);
+					tickCoreUpgrades(server, arena);
 					tidy(server, arena);
 					if (state == State.WAVE && toSpawn == 0 && bosses == 0 && MOBS.isEmpty()) {
 						waveCleared(server, arena);
@@ -894,6 +1104,7 @@ public final class Horde {
 	}
 
 	private static void startWave(MinecraftServer server, ServerLevel arena, int n) {
+		closeVote(server);
 		wave = n;
 		state = State.WAVE;
 		int p = Math.max(1, FIGHTERS.size());
@@ -963,6 +1174,9 @@ public final class Horde {
 		}
 		HordeShop.syncAll(server, false);
 		fogWave = false;
+		if (bossWave(wave)) {
+			openVote(server);
+		}
 		updateBars();
 	}
 
@@ -1342,6 +1556,24 @@ public final class Horde {
 			health.setBaseValue(health.getBaseValue() * healthScale(boss) * extraHealth);
 			mob.setHealth(mob.getMaxHealth());
 		}
+		if (boss && wave % 10 == 0 && warlordWave != wave) {
+			// The first Brute of every tenth wave is the Warlord: bigger, far tougher, and it rallies the rest.
+			warlordWave = wave;
+			warlord = mob.getUUID();
+			mob.setCustomName(Component.literal("THE WARLORD").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			mob.setGlowingTag(true);
+			if (health != null) {
+				health.setBaseValue(health.getBaseValue() * 2.5);
+				mob.setHealth(mob.getMaxHealth());
+			}
+			AttributeInstance size = mob.getAttribute(Attributes.SCALE);
+			if (size != null) {
+				size.setBaseValue(1.5);
+			}
+			for (ServerPlayer p : players(arena.getServer())) {
+				Alerts.title(p, "THE WARLORD", "Its war cry enrages the horde: bring it down first!", ChatFormatting.GOLD);
+			}
+		}
 		AttributeInstance attack = mob.getAttribute(Attributes.ATTACK_DAMAGE);
 		if (attack != null) {
 			attack.setBaseValue(attack.getBaseValue() * challenge.damage * (1 + 0.03 * (wave - 1)));
@@ -1484,10 +1716,13 @@ public final class Horde {
 	}
 
 	private static void damageCache(MinecraftServer server, ServerLevel arena, int amount) {
-		if (state != State.WAVE) {
+		if (state != State.WAVE || arena.getGameTime() < coreSafeUntil) {
 			return;
 		}
 		cacheHp -= amount;
+		if (!lastStand && cacheHp < cacheMax / 4) {
+			lastStand(server, arena);
+		}
 		Vec3 c = cachePos();
 		arena.sendParticles(ParticleTypes.CRIT, c.x, c.y + 1.2, c.z, 8, 0.4, 0.5, 0.4, 0.2);
 		if (server.getTickCount() % 40 == 0) {

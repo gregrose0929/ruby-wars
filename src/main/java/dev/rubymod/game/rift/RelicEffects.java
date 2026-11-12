@@ -280,6 +280,12 @@ public final class RelicEffects {
 		if (r.blessings.contains("power")) {
 			dmg *= 1.15F;
 		}
+		// The pacts (the Voice in the Rift).
+		if (r.blessings.contains("fury")) {
+			dmg *= 1.5F;
+		} else if (r.blessings.contains("stone")) {
+			dmg *= 0.8F;
+		}
 		if (r.has(Relic.THE_HUNTED)) {
 			dmg *= 2 + r.level(Relic.THE_HUNTED);
 		}
@@ -697,6 +703,9 @@ public final class RelicEffects {
 			if (r.blessings.contains("health")) {
 				extra += 8;
 			}
+			extra += r.blessings.contains("fury") ? -8 : r.blessings.contains("stone") ? 16 : r.blessings.contains("fortune") ? -6 : 0;
+			// Whatever was bargained away, three hearts are always left.
+			extra = Math.max(extra, 6 - health.getBaseValue());
 			if (r.has(Relic.GLASS_CANNON)) {
 				extra = 6 - health.getBaseValue();
 			}

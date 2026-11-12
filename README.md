@@ -699,8 +699,18 @@ trees for vehicles, and two runways pointing at each other for planes.
 
 ## Playing together (LAN or your own server)
 
-Everyone needs the same version of the mod. The easiest way is the modpack:
-`dist/ruby-wars-1.0.0.mrpack`. Each player installs the free
+Everyone needs the same version of the mod. The easiest way is the installer
+(Windows): each player downloads
+[Install-Ruby-Wars.cmd](https://github.com/gregrose0929/ruby-wars/releases/latest/download/Install-Ruby-Wars.cmd)
+and double-clicks it (Windows may say it protected the PC: *More info*, then
+*Run anyway*). It needs the official Minecraft Launcher, opened and signed in
+once. It puts the pack in its own folder (`%APPDATA%\.rubywars`), adds Fabric
+and a *Ruby Wars* entry to the launcher, and leaves a **Ruby Wars** shortcut on
+the desktop. That shortcut checks for a newer pack every time it's used, so
+nobody installs twice. To have it add your server to the multiplayer list, put
+the address on one line in `tools/server-address.txt` before releasing.
+
+The other way is the modpack itself: `dist/ruby-wars-1.0.0.mrpack`. Each player installs the free
 [Modrinth App](https://modrinth.com/app) (or Prism Launcher), clicks
 *Add instance -> Import*, picks the .mrpack, and plays that instance. Send them a
 new .mrpack whenever the mod changes.

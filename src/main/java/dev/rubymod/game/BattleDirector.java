@@ -150,6 +150,17 @@ public final class BattleDirector {
 			data.nextSupplyDropAt = SeasonTicker.now() + GameConfig.get().supplyDropIntervalMinutes * 60_000L;
 			supplyDrop(server.overworld());
 		}
+		// The build phase's world event: a ruby meteor, somewhere nobody has claimed. Worth racing for (and fighting over, come Battle Day).
+		if (data.phase == Phase.BUILD && data.pausedRemaining < 0 && GameConfig.get().meteorIntervalHours > 0) {
+			if (data.nextMeteorAt == 0) {
+				data.nextMeteorAt = SeasonTicker.now() + 30 * 60_000L;
+				SeasonData.markDirty();
+			} else if (SeasonTicker.now() >= data.nextMeteorAt && !server.overworld().players().isEmpty()) {
+				data.nextMeteorAt = SeasonTicker.now() + GameConfig.get().meteorIntervalHours * 3_600_000L;
+				SeasonData.markDirty();
+				meteor(server.overworld());
+			}
+		}
 		if (data.phase == Phase.FINAL_CIRCLE) {
 			if (server.getTickCount() % 300 < 20) {
 				artillery(server.overworld());
@@ -456,6 +467,73 @@ public final class BattleDirector {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 			player.level().playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.MASTER, 1.0F, pitch);
 		}
+	}
+
+	// ----- The ruby meteor -----
+
+	/** For tests and admins: bring one down now. Returns where (null if nowhere was free). */
+	public static BlockPos meteor(ServerLevel level) {
+		RandomSource random = level.getRandom();
+		WorldBorder border = level.getWorldBorder();
+		double half = Math.min(border.getSize() * 0.4, 1500);
+		SeasonData data = SeasonData.get();
+		BlockPos top = null;
+		for (int tries = 0; tries < 20 && top == null; tries++) {
+			int x = (int) (border.getCenterX() + (random.nextDouble() * 2 - 1) * half);
+			int z = (int) (border.getCenterZ() + (random.nextDouble() * 2 - 1) * half);
+			boolean free = true;
+			for (SeasonData.Claim claim : data.claims.values()) {
+				if (!claim.destroyed && Math.abs(claim.x - x) < claim.radius() + 80 && Math.abs(claim.z - z) < claim.radius() + 80) {
+					free = false;
+				}
+			}
+			if (!free) {
+				continue;
+			}
+			level.getChunk(x >> 4, z >> 4);
+			BlockPos p = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
+			if (level.getFluidState(p.below()).isEmpty()) {
+				top = p;
+			}
+		}
+		if (top == null) {
+			return null;
+		}
+		// A crater, scorched round the rim, with the meteor in the bottom: ruby blocks and ore in a shell of magma.
+		BlockPos c = top.below(2);
+		for (BlockPos p : BlockPos.betweenClosed(c.offset(-6, -3, -6), c.offset(6, 6, 6))) {
+			double d = Math.sqrt(p.distSqr(c));
+			if (level.getBlockState(p).getDestroySpeed(level, p) < 0) {
+				continue;
+			}
+			if (d < 4.6 && p.getY() >= c.getY() - 1) {
+				level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+			} else if (d < 5.8 && !level.getBlockState(p).isAir() && random.nextFloat() < 0.6F) {
+				level.setBlock(p, random.nextFloat() < 0.3F ? Blocks.MAGMA_BLOCK.defaultBlockState() : Blocks.BLACKSTONE.defaultBlockState(), 3);
+			}
+		}
+		for (BlockPos p : BlockPos.betweenClosed(c.offset(-2, -2, -2), c.offset(2, 1, 2))) {
+			double d = Math.sqrt(p.distSqr(c.below()));
+			if (d < 1.3) {
+				level.setBlock(p, dev.rubymod.registry.ModBlocks.RUBY_BLOCK.defaultBlockState(), 3);
+			} else if (d < 2.3) {
+				level.setBlock(p, random.nextFloat() < 0.45F ? dev.rubymod.registry.ModBlocks.RUBY_ORE.defaultBlockState()
+						: random.nextFloat() < 0.5F ? Blocks.MAGMA_BLOCK.defaultBlockState() : Blocks.BLACKSTONE.defaultBlockState(), 3);
+			}
+		}
+		level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, c.getX() + 0.5, c.getY() + 2, c.getZ() + 0.5, 4, 2, 1, 2, 0);
+		level.sendParticles(ParticleTypes.LAVA, c.getX() + 0.5, c.getY() + 2, c.getZ() + 0.5, 80, 3, 1, 3, 0);
+		level.playSound(null, c, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 8.0F, 0.6F);
+		ACTIVE_DROPS.add(c.above(2));
+		dropsVisibleUntil = Math.max(dropsVisibleUntil, SeasonTicker.now() + 15 * 60_000L);
+		Waypoints.global("Ruby meteor", c.above(2), 3, 15 * 60);
+		Alerts.broadcast(level.getServer(), Component.literal("☄ A RUBY METEOR has come down at " + c.getX() + ", " + c.getZ()
+				+ "! It's full of rubies, and it's on nobody's land. First there keeps them.").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		for (ServerPlayer player : level.players()) {
+			Alerts.title(player, "RUBY METEOR", "It's on your map (K): " + c.getX() + ", " + c.getZ(), ChatFormatting.RED);
+		}
+		playToAll(level.getServer(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST_FAR, 0.5F);
+		return c;
 	}
 
 	// ----- Supply drops -----

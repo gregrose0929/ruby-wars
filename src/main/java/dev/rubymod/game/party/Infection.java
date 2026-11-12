@@ -56,6 +56,72 @@ public class Infection extends PartyGame {
 		Town.build(this, level);
 	}
 
+	/** The first zombie: it can roar (crouch) to slow and reveal survivors nearby. */
+	private UUID alpha;
+	private int roarAt;
+	/** The last survivor has had their hero's weapon. */
+	private boolean lastStand;
+	private String hero;
+
+	private void roar(ServerPlayer zombie) {
+		roarAt = roundTicks + 20 * 20;
+		ServerLevel level = level();
+		level.playSound(null, zombie.blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.PLAYERS, 2.5F, 0.8F);
+		level.sendParticles(net.minecraft.core.particles.ParticleTypes.SONIC_BOOM, zombie.getX(), zombie.getY() + 1.2, zombie.getZ(), 1, 0, 0, 0, 0);
+		dev.rubymod.game.rift.RiftFx.ring(level, zombie.position().add(0, 0.3, 0), 12, net.minecraft.core.particles.ParticleTypes.SCULK_SOUL, 48);
+		int caught = 0;
+		for (ServerPlayer p : online()) {
+			Part part = players.get(p.getUUID());
+			if (part != null && part.team == SURVIVOR && !part.watching && !p.isSpectator() && p.distanceTo(zombie) <= 12) {
+				p.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 60, 1, false, true));
+				p.addEffect(new MobEffectInstance(MobEffects.GLOWING, 120, 0, false, false));
+				dev.rubymod.game.Alerts.title(p, "", "The Alpha roared: you're slowed. RUN!", ChatFormatting.DARK_GREEN);
+				caught++;
+			}
+		}
+		zombie.sendOverlayMessage(Component.literal(caught == 0 ? "ROAR! Nobody was close enough." : "ROAR! " + caught + " slowed and lit up.")
+				.withStyle(ChatFormatting.DARK_GREEN));
+	}
+
+	/** One survivor left against a crowd: they get the big gun, a glow, and the music. */
+	private void heroMoment(ServerPlayer survivor, Part part) {
+		lastStand = true;
+		hero = part.name;
+		give(survivor, gun(ModItems.RUBY_MINIGUN), new ItemStack(ModItems.HEAVY_AMMO, 64), new ItemStack(ModItems.HEAVY_AMMO, 64), new ItemStack(Items.GOLDEN_APPLE, 2));
+		survivor.addEffect(new MobEffectInstance(MobEffects.SPEED, -1, 0, false, false));
+		survivor.addEffect(new MobEffectInstance(MobEffects.RESISTANCE, -1, 0, false, false));
+		survivor.setGlowingTag(true);
+		dev.rubymod.game.Alerts.title(survivor, "LAST ONE STANDING", "Here's a Ruby Minigun. Hold out!", ChatFormatting.GOLD);
+		for (ServerPlayer p : online()) {
+			if (p != survivor) {
+				dev.rubymod.game.Alerts.title(p, "LAST SURVIVOR", part.name + " has a minigun. Get them!", ChatFormatting.RED);
+			}
+			p.level().playSound(null, p.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 0.6F, 0.7F);
+			p.level().playSound(null, p.blockPosition(), SoundEvents.MUSIC_DISC_PIGSTEP.value(), SoundSource.RECORDS, 1.0F, 1.0F);
+		}
+		tell(Component.literal(part.name + " is the LAST SURVIVOR!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+	}
+
+	private void stopMusic() {
+		for (ServerPlayer p : online()) {
+			p.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(null, SoundSource.RECORDS));
+		}
+	}
+
+	@Override
+	protected List<Component> extraAwards() {
+		stopMusic();
+		List<Component> lines = new ArrayList<>();
+		if (hero != null) {
+			lines.add(award("Last one standing", hero, ChatFormatting.GOLD));
+		}
+		Part biter = players.values().stream().filter(p -> p.score > 0).max(Comparator.comparingInt(p -> p.score)).orElse(null);
+		if (biter != null) {
+			lines.add(award("Hungriest zombie", biter.name + " (" + biter.score + (biter.score == 1 ? " bite)" : " bites)"), ChatFormatting.DARK_GREEN));
+		}
+		return lines;
+	}
+
 	private long count(int team) {
 		return players.values().stream().filter(p -> !p.watching && p.team == team).count();
 	}
@@ -79,11 +145,21 @@ public class Infection extends PartyGame {
 		for (int i = 0; i < ids.size(); i++) {
 			players.get(ids.get(i)).team = i < zombies ? ZOMBIE : SURVIVOR;
 		}
+		alpha = ids.isEmpty() ? null : ids.get(0);
+		roarAt = 15 * 20;
+		lastStand = false;
+		hero = null;
 		for (ServerPlayer p : online()) {
 			Part part = players.get(p.getUUID());
 			spawn(p, part);
-			dev.rubymod.game.Alerts.title(p, part.team == ZOMBIE ? "YOU'RE THE ZOMBIE" : "SURVIVE!",
-					part.team == ZOMBIE ? "Catch them all!" : "Don't let the zombie get you", part.team == ZOMBIE ? ChatFormatting.DARK_GREEN : ChatFormatting.GREEN);
+			boolean isAlpha = p.getUUID().equals(alpha);
+			dev.rubymod.game.Alerts.title(p, isAlpha ? "YOU'RE THE ALPHA ZOMBIE" : part.team == ZOMBIE ? "YOU'RE A ZOMBIE" : "SURVIVE!",
+					isAlpha ? "Crouch to ROAR: it slows survivors near you" : part.team == ZOMBIE ? "Catch them all!" : "Don't let the zombies get you",
+					part.team == ZOMBIE ? ChatFormatting.DARK_GREEN : ChatFormatting.GREEN);
+			if (isAlpha) {
+				p.sendSystemMessage(Component.literal("You're the Alpha: crouch to ROAR (every 20 seconds). Survivors within 12 blocks are slowed and light up.")
+						.withStyle(ChatFormatting.DARK_GREEN));
+			}
 		}
 	}
 
@@ -130,7 +206,7 @@ public class Infection extends PartyGame {
 			}
 			player.addEffect(new MobEffectInstance(MobEffects.SPEED, -1, 1, false, false));
 			player.addEffect(new MobEffectInstance(MobEffects.STRENGTH, -1, 1, false, false));
-			player.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, -1, 0, false, false));
+			player.addEffect(new MobEffectInstance(MobEffects.JUMP_BOOST, -1, player.getUUID().equals(alpha) ? 1 : 0, false, false));
 		} else {
 			give(player, gun(ModItems.SERVICE_PISTOL), gun(ModItems.COMBAT_SHOTGUN), new ItemStack(ModItems.LIGHT_AMMO, 64),
 					new ItemStack(ModItems.SHOTGUN_SHELL, 40), new ItemStack(Items.GOLDEN_APPLE, 2));
@@ -171,6 +247,9 @@ public class Infection extends PartyGame {
 
 	@Override
 	protected void onLeft(UUID id, Part part) {
+		if (id.equals(alpha)) {
+			alpha = null;
+		}
 		if (count(ZOMBIE) == 0 && count(SURVIVOR) > 0) {
 			UUID next = players.keySet().iterator().next();
 			players.get(next).team = ZOMBIE;
@@ -187,6 +266,19 @@ public class Infection extends PartyGame {
 	@Override
 	protected void tickRound() {
 		ServerLevel level = level();
+		ServerPlayer first = alpha == null ? null : PartyGames.player(server, alpha);
+		if (first != null && roundTicks >= roarAt && first.isShiftKeyDown() && !first.isSpectator() && players.get(alpha) != null
+				&& players.get(alpha).respawnIn <= 0) {
+			roar(first);
+		}
+		if (!lastStand && roundTicks % 20 == 0 && count(SURVIVOR) == 1 && count(ZOMBIE) >= 2) {
+			for (ServerPlayer p : online()) {
+				Part part = players.get(p.getUUID());
+				if (part.team == SURVIVOR && !part.watching && !p.isSpectator()) {
+					heroMoment(p, part);
+				}
+			}
+		}
 		// Wild zombies wander in to keep survivors moving.
 		if (roundTicks % 300 == 150 && level.getDifficulty() != Difficulty.PEACEFUL) {
 			long wild = spawned.stream().filter(id -> level.getEntity(id) instanceof Mob m && m.isAlive()).count();

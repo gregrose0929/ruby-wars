@@ -300,8 +300,20 @@ public class BuildBattle extends PartyGame {
 		for (ServerPlayer p : online()) {
 			teleport(p, c.getX() + plotX(best[0]) + 0.5, c.getY() + 3, c.getZ() - PLOT_HALF - 6.5, 0);
 		}
+		if (winner != null && best[1] > 0) {
+			// The winning build goes on show beside the hub, until the next winner.
+			BlockPos corner = new BlockPos(c.getX() + plotX(best[0]) - PLOT_HALF, GROUND, c.getZ() - PLOT_HALF);
+			dev.rubymod.game.Hub.showcase(level(), corner, PLOT_HALF * 2 + 1, 31, winner.name, theme);
+			tell(Component.literal(winner.name + "'s build is now on show in the hub!").withStyle(ChatFormatting.AQUA));
+		}
 		endRound((winner == null ? "SOMEONE" : winner.name.toUpperCase()) + " WINS!", "\"" + theme + "\": " + b, ChatFormatting.AQUA,
 				best[1] > 0 ? one(plotOwners.get(best[0])) : List.of());
+	}
+
+	/** The winning build is the show here. */
+	@Override
+	protected boolean showsWinners() {
+		return false;
 	}
 
 	@Override

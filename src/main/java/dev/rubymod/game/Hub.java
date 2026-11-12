@@ -38,6 +38,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.ItemStackWithSlot;
 import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Relative;
@@ -53,6 +54,7 @@ import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The hub: a floating plaza where everyone arrives when they join the server. In front of
@@ -589,6 +591,7 @@ public final class Hub {
 		}
 		if (!hub.players().isEmpty() && server.getTickCount() % 40 == 0) {
 			updateLabels(hub);
+			updateWarTable(hub);
 		}
 	}
 
@@ -716,6 +719,187 @@ public final class Hub {
 		islet(level, -28, FLOOR + 5, 22, 4);
 		islet(level, 4, FLOOR - 12, -36, 5);
 		islet(level, -6, FLOOR + 8, 36, 3);
+		galleryBase(level);
+		// The war room: a table between the Rift and Convoy gates, with the season's map on it.
+		for (int x = -1; x <= 1; x++) {
+			for (int z = WAR_Z - 1; z <= WAR_Z + 1; z++) {
+				set(level, x, FLOOR + 1, z, Blocks.POLISHED_BLACKSTONE.defaultBlockState());
+			}
+		}
+	}
+
+	// ----- The war room -----
+
+	private static final int WAR_Z = -9;
+	private static final String WAR_TAG = "rubymod_hub_war";
+	private static final ChatFormatting[] WAR_COLORS = {ChatFormatting.RED, ChatFormatting.BLUE, ChatFormatting.GREEN, ChatFormatting.YELLOW,
+			ChatFormatting.LIGHT_PURPLE, ChatFormatting.AQUA, ChatFormatting.GOLD, ChatFormatting.WHITE};
+	private static final net.minecraft.world.item.DyeColor[] WAR_DYES = {net.minecraft.world.item.DyeColor.RED, net.minecraft.world.item.DyeColor.BLUE,
+			net.minecraft.world.item.DyeColor.LIME, net.minecraft.world.item.DyeColor.YELLOW, net.minecraft.world.item.DyeColor.MAGENTA,
+			net.minecraft.world.item.DyeColor.LIGHT_BLUE, net.minecraft.world.item.DyeColor.ORANGE, net.minecraft.world.item.DyeColor.WHITE};
+	private static String warShown = "";
+
+	/** The bases still standing, in the order they were claimed (each keeps its colour all season). */
+	private static List<SeasonData.Claim> warClaims() {
+		return new ArrayList<>(SeasonData.get().claims.values());
+	}
+
+	private static Component warBoard(MinecraftServer server) {
+		SeasonData data = SeasonData.get();
+		MutableComponent text = Component.literal("⚔ WAR ROOM ⚔\n").withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
+		String phase = Rules.phase() == Phase.LOBBY ? "The season hasn't started" : "Season " + data.season + "  •  " + Rules.phase().title();
+		long left = Rules.phase() == Phase.LOBBY || data.phaseEndsAt == 0 ? 0 : SeasonTicker.remainingMillis();
+		if (left > 0) {
+			long hours = left / 3_600_000L;
+			phase += hours >= 48 ? "  •  " + hours / 24 + " days left" : hours >= 1 ? "  •  " + hours + "h left" : "  •  " + Math.max(1, left / 60_000L) + " min left";
+		}
+		text.append(Component.literal(phase + "\n").withStyle(ChatFormatting.WHITE));
+		List<SeasonData.Claim> claims = warClaims();
+		if (claims.isEmpty()) {
+			return text.append(Component.literal("No bases yet").withStyle(ChatFormatting.GRAY));
+		}
+		for (int i = 0; i < claims.size() && i < 8; i++) {
+			SeasonData.Claim c = claims.get(i);
+			if (c.destroyed) {
+				text.append(Component.literal("✖ " + c.ownerName + "  (heart destroyed)\n").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.STRIKETHROUGH));
+			} else {
+				text.append(Component.literal("■ ").withStyle(WAR_COLORS[i % WAR_COLORS.length]))
+						.append(Component.literal(c.ownerName + "  tier " + c.tier + (Rules.phase().pvp() ? "  ♥ " + c.hp + "/" + c.maxHp() : "") + "\n")
+								.withStyle(ChatFormatting.WHITE));
+			}
+		}
+		return text.append(Component.literal(Rules.phase().pvp() ? "The map below shows every base" : "Bases appear on the map on Battle Day")
+				.withStyle(ChatFormatting.GRAY));
+	}
+
+	/**
+	 * The map on the war-room table: the world inside the border, shrunk to the tabletop. On Battle Day every base is a
+	 * block in its owner's colour (grey once its heart is gone); until then where people built stays their secret.
+	 */
+	private static void updateWarTable(ServerLevel hub) {
+		MinecraftServer server = hub.getServer();
+		List<SeasonData.Claim> claims = warClaims();
+		boolean reveal = Rules.phase().pvp() || Rules.phase() == Phase.ENDED;
+		StringBuilder key = new StringBuilder(reveal + "|");
+		for (SeasonData.Claim c : claims) {
+			key.append(c.x).append(',').append(c.z).append(',').append(c.destroyed).append(';');
+		}
+		List<Entity> old = hub.getEntities((Entity) null, new AABB(-4, FLOOR, WAR_Z - 4, 4, FLOOR + 6, WAR_Z + 4), e -> e.entityTags().contains(WAR_TAG));
+		if (key.toString().equals(warShown) && !old.isEmpty()) {
+			return;
+		}
+		warShown = key.toString();
+		for (Entity e : old) {
+			e.discard();
+		}
+		double top = FLOOR + 2.0;
+		Props.block(hub, new Vec3(0.5, top + 0.03, WAR_Z + 0.5), Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.GREEN).defaultBlockState(), 2.8F, 0.06F, 2.8F, WAR_TAG);
+		Props.block(hub, new Vec3(0.5, top + 0.02, WAR_Z + 0.5), Blocks.GOLD_BLOCK.defaultBlockState(), 2.96F, 0.04F, 2.96F, WAR_TAG);
+		if (!reveal) {
+			return;
+		}
+		var border = server.overworld().getWorldBorder();
+		double size = Math.max(64, border.getSize());
+		for (int i = 0; i < claims.size() && i < 8; i++) {
+			SeasonData.Claim c = claims.get(i);
+			double fx = Math.max(-0.5, Math.min(0.5, (c.x - border.getCenterX()) / size));
+			double fz = Math.max(-0.5, Math.min(0.5, (c.z - border.getCenterZ()) / size));
+			Vec3 at = new Vec3(0.5 + fx * 2.6, top + 0.2, WAR_Z + 0.5 + fz * 2.6);
+			var block = Props.block(hub, at, c.destroyed ? Blocks.COBBLESTONE.defaultBlockState()
+					: Blocks.CONCRETE.pick(WAR_DYES[i % WAR_DYES.length]).defaultBlockState(), 0.24F, 0.3F, 0.24F, WAR_TAG);
+			if (block != null && !c.destroyed) {
+				block.setGlowingTag(true);
+			}
+			Props.text(hub, at.add(0, 0.3, 0), Component.literal(c.ownerName).withStyle(c.destroyed ? ChatFormatting.DARK_GRAY : WAR_COLORS[i % WAR_COLORS.length]),
+					0.45F, WAR_TAG);
+		}
+	}
+
+	// ----- The gallery: the last Build Battle winner's build, on its own island beside the plaza -----
+
+	private static final int GALLERY_X = -41;
+	private static final int GALLERY_Z = 6;
+	private static final int GALLERY_Y = FLOOR - 1;
+	private static String galleryText;
+
+	private static void galleryBase(ServerLevel level) {
+		level.getChunk((GALLERY_X - 11) >> 4, GALLERY_Z >> 4);
+		for (int x = -10; x <= 10; x++) {
+			for (int z = -10; z <= 10; z++) {
+				double r = Math.sqrt(x * x + z * z);
+				if (r > 10.3) {
+					continue;
+				}
+				set(level, GALLERY_X + x, GALLERY_Y - 1, GALLERY_Z + z, r > 9.2 ? ModBlocks.RUBY_BLOCK.defaultBlockState() : Blocks.POLISHED_DEEPSLATE.defaultBlockState());
+				for (int d = 2; d <= 9; d++) {
+					if (r < 10 - d * 1.2) {
+						set(level, GALLERY_X + x, GALLERY_Y - d, GALLERY_Z + z, d < 4 ? Blocks.STONE.defaultBlockState() : Blocks.DEEPSLATE.defaultBlockState());
+					}
+				}
+			}
+		}
+	}
+
+	private static java.nio.file.Path galleryFile(MinecraftServer server) {
+		return server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("rubywars").resolve("gallery.txt");
+	}
+
+	private static String galleryText(MinecraftServer server) {
+		if (galleryText == null) {
+			galleryText = "";
+			try {
+				if (java.nio.file.Files.exists(galleryFile(server))) {
+					galleryText = java.nio.file.Files.readString(galleryFile(server)).trim();
+				}
+			} catch (java.io.IOException e) {
+				RubyMod.LOGGER.warn("Couldn't read the gallery sign", e);
+			}
+		}
+		return galleryText;
+	}
+
+	/**
+	 * Put a Build Battle plot on show on the gallery island: the {@code size} x {@code height} x {@code size} blocks from
+	 * {@code corner} in {@code from}, copied over (and whatever was on show before cleared away).
+	 */
+	public static void showcase(ServerLevel from, BlockPos corner, int size, int height, String builder, String theme) {
+		MinecraftServer server = from.getServer();
+		ServerLevel hub = server.getLevel(HUB);
+		if (hub == null) {
+			return;
+		}
+		int x0 = GALLERY_X - size / 2;
+		int z0 = GALLERY_Z - size / 2;
+		for (int cx = (x0 - 1) >> 4; cx <= (x0 + size + 1) >> 4; cx++) {
+			for (int cz = (z0 - 1) >> 4; cz <= (z0 + size + 1) >> 4; cz++) {
+				hub.getChunk(cx, cz);
+			}
+		}
+		BlockPos.MutableBlockPos a = new BlockPos.MutableBlockPos();
+		BlockPos.MutableBlockPos b = new BlockPos.MutableBlockPos();
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < size; x++) {
+				for (int z = 0; z < size; z++) {
+					a.set(corner.getX() + x, corner.getY() + y, corner.getZ() + z);
+					b.set(x0 + x, GALLERY_Y + y, z0 + z);
+					BlockState state = from.getBlockState(a);
+					// Nothing that does things (or holds things) crosses over: only what it looks like.
+					if (state.hasBlockEntity() || !state.getFluidState().isEmpty()) {
+						state = Blocks.AIR.defaultBlockState();
+					}
+					if (hub.getBlockState(b) != state) {
+						hub.setBlock(b, state, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+					}
+				}
+			}
+		}
+		galleryText = builder + "|" + theme;
+		try {
+			java.nio.file.Files.createDirectories(galleryFile(server).getParent());
+			java.nio.file.Files.writeString(galleryFile(server), galleryText);
+		} catch (java.io.IOException e) {
+			RubyMod.LOGGER.warn("Couldn't save the gallery sign", e);
+		}
 	}
 
 	/** The plaza's inner circle: stone to here, the garden beyond. */
@@ -870,6 +1054,8 @@ public final class Hub {
 			new Label("party_title", 0.5, FLOOR + 13.2, PARTY_Z, 3.0F),
 			new Label("party_info", 0.5, FLOOR + 3.0, PARTY_Z - 2.1, 1.4F),
 			new Label("welcome", 0.5, FLOOR + 3.6, 0.5, 0.9F),
+			new Label("gallery", -27.5, FLOOR + 5.0, 6.5, 1.5F),
+			new Label("war", 0.5, FLOOR + 3.4, WAR_Z + 0.5, 0.8F),
 			new Label("board_party", -9.0, FLOOR + 1.0, 5.5, 1.6F),
 			new Label("board_records", 10.0, FLOOR + 1.0, 5.5, 1.6F));
 
@@ -886,6 +1072,14 @@ public final class Hub {
 			case "rift_info" -> Component.literal("Fight room to room, collect relics!\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(dev.rubymod.game.rift.Rift.hubStatus(server)).withStyle(ChatFormatting.GOLD));
 			case "party_title" -> Component.literal("PARTY GAMES").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
+			case "gallery" -> {
+				String[] f = galleryText(server).split("[|]", 2);
+				MutableComponent text = Component.literal("BUILD BATTLE GALLERY\n").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
+				yield f.length < 2 ? text.append(Component.literal("Win a Build Battle and\nyour build goes on show here!").withStyle(ChatFormatting.WHITE))
+						: text.append(Component.literal("\"" + f[1] + "\"\n").withStyle(ChatFormatting.WHITE))
+								.append(Component.literal("built by " + f[0]).withStyle(ChatFormatting.GOLD));
+			}
+			case "war" -> warBoard(server);
 			case "board_party" -> partyBoard();
 			case "board_records" -> recordsBoard(server);
 			case "party_info" -> Component.literal("9 quick games to play together\n").withStyle(ChatFormatting.WHITE)

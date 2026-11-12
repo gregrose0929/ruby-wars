@@ -82,6 +82,12 @@ public class RubyRush extends PartyGame {
 		return new BlockPos(0, 160, 0);
 	}
 
+	/** The winner is shown off up on the glass platform. */
+	@Override
+	protected net.minecraft.world.phys.Vec3 stage() {
+		return net.minecraft.world.phys.Vec3.atBottomCenterOf(lobbySpot());
+	}
+
 	@Override
 	protected void build(ServerLevel level) {
 		// A glass platform in the sky to wait on.

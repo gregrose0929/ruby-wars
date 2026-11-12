@@ -54,6 +54,8 @@ public class GameConfig {
 
 	// Battle Day
 	public int supplyDropIntervalMinutes = 15;
+	/** Build phase: a ruby meteor lands somewhere unclaimed this often (0: never). */
+	public int meteorIntervalHours = 12;
 	public int maxMissilesPerPlayer = 3;
 	public int killstreakForAirStrike = 5;
 	public int breachingChargeDamage = 50;

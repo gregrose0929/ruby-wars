@@ -50,7 +50,8 @@ import net.minecraft.world.phys.Vec3;
  * circle (usually under the truck) before it fires; its machine guns rattle at whoever's
  * closest; now and then it lobs mortars onto circles round everyone. It calls for
  * reinforcements twice, and under half health its armor cracks (it glows, and takes more
- * damage). When it blows up, so does the gate.
+ * damage) and it starts ramming the truck: hurt it enough while it revs up and the charge
+ * breaks, leaving it stalled. When it blows up, so does the gate.
  */
 final class Dreadnought {
 	private record Part(BlockState block, float sx, float sy, float sz, float ox, float oy, float oz) {
@@ -92,6 +93,77 @@ final class Dreadnought {
 	private boolean done;
 	private double drift = 1;
 	private Vec3 lastPos;
+	/** Ramming: ticks until the next charge, the wind-up left, the health it had when it revved up, and a stall afterwards. */
+	private int ramAt = 500;
+	private int ramIn;
+	private float ramHealth;
+	private int stalled;
+
+	/**
+	 * It revs up and charges the truck. Four seconds to hurt it enough (5% of its health) to break the charge, which
+	 * stalls it for five seconds; otherwise it slams into the truck. True while it's charging or stalled (no other attacks).
+	 */
+	private boolean tickRam(ServerLevel level, Mob mob, ConvoyTruck truck, List<ServerPlayer> targets) {
+		if (stalled > 0) {
+			stalled--;
+			mob.getNavigation().stop();
+			if (t % 4 == 0) {
+				level.sendParticles(ParticleTypes.ELECTRIC_SPARK, mob.getX(), mob.getY() + 3.5, mob.getZ(), 10, 1.5, 1, 1.5, 0.1);
+			}
+			return true;
+		}
+		if (ramIn > 0) {
+			ramIn--;
+			Vec3 tp = truck.position();
+			mob.getNavigation().moveTo(tp.x, tp.y, tp.z, 2.4);
+			float need = mob.getMaxHealth() * 0.05F;
+			float done = Math.max(0, ramHealth - mob.getHealth());
+			if (t % 3 == 0) {
+				RiftFx.line(level, mob.position().add(0, 1, 0), tp.add(0, 1, 0), RiftFx.dust(0xFF2020, 1.6F), 1.0);
+				level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, mob.getX(), mob.getY() + 6, mob.getZ(), 4, 0.5, 0.3, 0.5, 0.05);
+			}
+			if (ramIn % 10 == 0) {
+				level.playSound(null, mob.blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.HOSTILE, 3.0F, 0.5F + (80 - ramIn) * 0.008F);
+				for (ServerPlayer p : targets) {
+					p.sendOverlayMessage(Component.literal("Break its charge: " + Math.round(Math.min(1, done / need) * 100) + "%  (" + (ramIn / 20 + 1) + "s)")
+							.withStyle(ChatFormatting.RED));
+				}
+			}
+			if (done >= need) {
+				ramIn = 0;
+				stalled = 100;
+				level.playSound(null, mob.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 3.0F, 0.5F);
+				for (ServerPlayer p : targets) {
+					Alerts.title(p, "CHARGE BROKEN!", "It's stalled: pour it on!", ChatFormatting.GREEN);
+				}
+			} else if (ramIn == 0) {
+				level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, tp.x, tp.y + 1, tp.z, 2, 1, 0.5, 1, 0);
+				level.playSound(null, BlockPos.containing(tp), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 3.0F, 0.6F);
+				level.playSound(null, BlockPos.containing(tp), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 3.0F, 0.4F);
+				truck.hurt(level, 34, mob.position().add(0, 1, 0));
+				for (ServerPlayer p : targets) {
+					Alerts.title(p, "RAMMED!", "The truck took a big hit", ChatFormatting.RED);
+					RiftFx.shake(p, 1.6F, 16);
+					if (p.position().distanceTo(tp) < 5) {
+						p.hurtServer(level, level.damageSources().explosion(mob, mob), 6);
+					}
+				}
+			}
+			return true;
+		}
+		if (cracked && --ramAt <= 0) {
+			ramAt = 520 + level.getRandom().nextInt(120);
+			ramIn = 80;
+			ramHealth = mob.getHealth();
+			cannonIn = 0;
+			for (ServerPlayer p : targets) {
+				Alerts.title(p, "IT'S GOING TO RAM!", "Hit it hard to break the charge!", ChatFormatting.RED);
+			}
+			level.playSound(null, mob.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 4.0F, 0.5F);
+			return true;
+		}
+		return false;
+	}
 
 	private Dreadnought(UUID base) {
 		this.base = base;
@@ -204,7 +276,7 @@ final class Dreadnought {
 		if (Math.abs(mob.getX() - home.x) > 13) {
 			drift = mob.getX() > home.x ? -1 : 1;
 		}
-		if (t % 20 == 0) {
+		if (t % 20 == 0 && ramIn <= 0 && stalled <= 0) {
 			mob.getNavigation().moveTo(home.x + drift * 14, home.y, home.z + Math.sin(t * 0.01) * 3, 1.0);
 		}
 		Vec3 tp = truck.position();
@@ -244,6 +316,9 @@ final class Dreadnought {
 			for (ServerPlayer p : targets) {
 				Alerts.title(p, "ARMOR CRACKED!", "It's glowing: hit it hard now!", ChatFormatting.GOLD);
 			}
+		}
+		if (tickRam(level, mob, truck, targets)) {
+			return;
 		}
 		Vec3 muzzle = mob.position().add(Vec3.directionFromRotation(0, yaw).scale(5.5)).add(0, 4.2, 0);
 		// The big cannon.

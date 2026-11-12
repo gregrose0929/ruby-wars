@@ -95,6 +95,15 @@ public class AirBattle extends PartyGame {
 		planes.clear();
 		boardIn.clear();
 		outside.clear();
+		ace = null;
+		// Rings in the sky: fly through one to rearm and patch up without landing.
+		BlockPos mid = center();
+		int[][] rings = {{0, 0, 95}, {-260, 0, 80}, {260, 0, 80}, {0, -330, 110}, {0, 330, 110}};
+		for (int[] r : rings) {
+			net.minecraft.world.phys.Vec3 at = new net.minecraft.world.phys.Vec3(mid.getX() + r[0] + 0.5, mid.getY() + r[2], mid.getZ() + r[1] + 0.5);
+			addPickup("ring", at, new ItemStack(net.minecraft.world.item.Items.NETHER_STAR), "REARM + REPAIR", ChatFormatting.AQUA, 25 * 20, 13);
+			drawRing(at);
+		}
 		// Two Heavy AA Guns by each runway.
 		ServerLevel level = level();
 		for (int team = 0; team < 2; team++) {
@@ -117,6 +126,70 @@ public class AirBattle extends PartyGame {
 			dev.rubymod.game.Alerts.title(p, "YOU'RE " + teamName(part.team).toUpperCase(), "First team to 10 knockouts wins",
 					part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
 		}
+	}
+
+	/** The top scorer (with at least two knockouts): marked for everyone, and worth two when shot down. */
+	private UUID ace;
+
+	/** A hoop of glowing blocks around a ring's pick-up, in two directions so it reads as a ring from anywhere. */
+	private void drawRing(net.minecraft.world.phys.Vec3 at) {
+		ServerLevel level = level();
+		var block = net.minecraft.world.level.block.Blocks.SEA_LANTERN.defaultBlockState();
+		for (int i = 0; i < 20; i++) {
+			double a = i * Math.PI * 2 / 20;
+			double h = Math.cos(a) * 13;
+			double v = Math.sin(a) * 13;
+			for (net.minecraft.world.phys.Vec3 p : new net.minecraft.world.phys.Vec3[] {at.add(h, v, 0), at.add(0, v, h)}) {
+				var d = dev.rubymod.game.Props.block(level, p, block, 1.6F, 1.6F, 1.6F, tag());
+				if (d != null) {
+					d.setGlowingTag(true);
+					((dev.rubymod.mixin.DisplayAccessor) d).rubymod$setGlowColorOverride(0x40E0FF);
+				}
+			}
+		}
+	}
+
+	@Override
+	protected boolean onPickup(ServerPlayer player, Pickup pickup) {
+		if (!(player.getVehicle() instanceof dev.rubymod.entity.AircraftEntity plane)) {
+			return false;
+		}
+		plane.rearm();
+		plane.setHealth(Math.min(plane.getMaxHealth(), plane.getHealth() + plane.getMaxHealth() * 0.5F));
+		dev.rubymod.game.Alerts.title(player, "REARMED", "Weapons full, hull patched up", ChatFormatting.AQUA);
+		return true;
+	}
+
+	private void updateAce() {
+		UUID best = null;
+		int most = 1;
+		for (Map.Entry<UUID, Part> e : players.entrySet()) {
+			if (!e.getValue().watching && e.getValue().kills > most) {
+				most = e.getValue().kills;
+				best = e.getKey();
+			}
+		}
+		if (best != null && !best.equals(ace)) {
+			ace = best;
+			Part part = players.get(best);
+			tell(Component.literal("★ " + part.name + " is the ACE (" + most + " knockouts). Shoot them down for double!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			ServerPlayer p = PartyGames.player(server, best);
+			if (p != null) {
+				dev.rubymod.game.Alerts.title(p, "YOU'RE THE ACE", "Everyone can see you now", ChatFormatting.GOLD);
+			}
+		}
+		// The ace's aircraft glows.
+		for (Map.Entry<UUID, UUID> e : planes.entrySet()) {
+			if (level().getEntity(e.getValue()) instanceof Entity plane) {
+				plane.setGlowingTag(e.getKey().equals(ace));
+			}
+		}
+	}
+
+	@Override
+	protected java.util.List<Component> extraAwards() {
+		Part part = ace == null ? null : players.get(ace);
+		return part == null ? java.util.List.of() : java.util.List.of(award("Ace of the round", part.name, ChatFormatting.GOLD));
 	}
 
 	@Override
@@ -164,8 +237,16 @@ public class AirBattle extends PartyGame {
 		outside.remove(victim.getUUID());
 		int other = 1 - part.team;
 		kills[other]++; // shot down, crashed or flew off: it counts for the other side
+		boolean wasAce = victim.getUUID().equals(ace);
 		if (killer instanceof ServerPlayer k && players.containsKey(k.getUUID()) && players.get(k.getUUID()).team == other) {
 			k.sendOverlayMessage(Component.literal("Shot down " + part.name + "!").withStyle(ChatFormatting.GREEN));
+			if (wasAce) {
+				kills[other]++;
+				tell(Component.literal("★ " + k.getName().getString() + " shot down the ACE! Worth two.").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			}
+		}
+		if (wasAce) {
+			ace = null;
 		}
 		tell(Component.literal(part.name + " is down (" + kills[0] + " - " + kills[1] + ")")
 				.withStyle(part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE));
@@ -191,6 +272,9 @@ public class AirBattle extends PartyGame {
 					&& p.getVehicle() == null && p.distanceTo(plane) < 12) {
 				p.startRiding(plane, true, true);
 			}
+		}
+		if (roundTicks % 20 == 0) {
+			updateAce();
 		}
 		// The edge of the battle area: five seconds to turn back.
 		BlockPos c = center();

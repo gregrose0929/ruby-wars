@@ -134,6 +134,22 @@ public class VehicleEntity extends Mob {
 		return entityData.get(BARREL_PITCH);
 	}
 
+	private long rapidUntil;
+
+	/** The main gun reloads three times as fast for a while (a pick-up in Tank Battle). */
+	public void rapidFire(int ticks) {
+		rapidUntil = level().getGameTime() + ticks;
+		cannonCooldown = Math.min(cannonCooldown, RELOAD_TICKS / 3);
+	}
+
+	public boolean rapidFiring() {
+		return level().getGameTime() < rapidUntil;
+	}
+
+	public void refillSmoke() {
+		entityData.set(SMOKE, SMOKE_CHARGES);
+	}
+
 	/** No damage for a few seconds (spawn protection). */
 	public void shield(int ticks) {
 		shieldUntil = level().getGameTime() + ticks;
@@ -285,9 +301,9 @@ public class VehicleEntity extends Mob {
 		if (!isTank() || cannonCooldown > 0 || getControllingPassenger() != driver) {
 			return;
 		}
-		cannonCooldown = RELOAD_TICKS;
+		cannonCooldown = level().getGameTime() < rapidUntil ? RELOAD_TICKS / 3 : RELOAD_TICKS;
 		shieldUntil = 0; // firing ends spawn protection
-		entityData.set(RELOAD, RELOAD_TICKS);
+		entityData.set(RELOAD, cannonCooldown);
 		Vec3 aim = Vec3.directionFromRotation(barrelPitch(), turretYaw());
 		Vec3 muzzle = muzzlePosition();
 		RocketEntity shell = RocketEntity.tankShell(level(), driver, muzzle, aim.scale(2.6), 4.0F);

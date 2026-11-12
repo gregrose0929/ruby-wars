@@ -41,6 +41,8 @@ public class SeasonData {
 	public long pausedRemaining = -1;
 	public long buildStartedAt;
 	public long nextSupplyDropAt;
+	/** Build phase: when the next ruby meteor comes down (0: not set yet). */
+	public long nextMeteorAt;
 	public long lastBackupAt;
 	public String winner = "";
 

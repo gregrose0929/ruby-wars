@@ -128,6 +128,46 @@ public class CaptureTheFlag extends PartyGame {
 		}
 	}
 
+	/** Who's had their barricade this round (one each). */
+	private final java.util.Set<UUID> kits = new java.util.HashSet<>();
+
+	private static ItemStack barricadeKit() {
+		ItemStack stack = new ItemStack(Items.IRON_BARS);
+		stack.set(DataComponents.CUSTOM_NAME, Component.literal("Instant Barricade (right-click the ground)").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		return stack;
+	}
+
+	/** A wall of sandbags, five wide and three high, across the way the player is facing. */
+	private void barricade(ServerPlayer player, BlockPos at) {
+		ServerLevel level = level();
+		net.minecraft.core.Direction side = player.getDirection().getClockWise();
+		int placed = 0;
+		for (int i = -2; i <= 2; i++) {
+			for (int y = 0; y < 3; y++) {
+				BlockPos p = at.relative(side, i).above(y);
+				boolean flagSpot = false;
+				for (int team = 0; team < 2; team++) {
+					flagSpot |= p.closerThan(pedestal(team).above(), 2.5);
+				}
+				if (!flagSpot && level.getBlockState(p).isAir() && level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(p)).isEmpty()) {
+					level.setBlock(p, ModBlocks.SANDBAGS.defaultBlockState(), 3);
+					placed++;
+				}
+			}
+		}
+		level.playSound(null, at, SoundEvents.ANVIL_PLACE, SoundSource.BLOCKS, 0.8F, 0.7F);
+		level.sendParticles(net.minecraft.core.particles.ParticleTypes.CLOUD, at.getX() + 0.5, at.getY() + 1, at.getZ() + 0.5, 30, 1.5, 1, 1.5, 0.02);
+		player.sendOverlayMessage(Component.literal(placed > 0 ? "Barricade up!" : "No room for a barricade there.").withStyle(ChatFormatting.GOLD));
+	}
+
+	@Override
+	protected java.util.List<Component> extraAwards() {
+		Part runner = players.values().stream().filter(p -> p.score > 0).max(java.util.Comparator.comparingInt(p -> p.score)).orElse(null);
+		return runner == null ? java.util.List.of()
+				: java.util.List.of(award("Flag runner", runner.name + " (" + runner.score + (runner.score == 1 ? " capture)" : " captures)"), ChatFormatting.GOLD));
+	}
+
 	private boolean setup() {
 		return roundTicks < SETUP_TICKS;
 	}
@@ -156,6 +196,7 @@ public class CaptureTheFlag extends PartyGame {
 			dropped[t] = null;
 		}
 		midWall(true);
+		kits.clear();
 		bots.clear();
 		botRespawns.clear();
 		// Fill both teams to at least two (and even) with bots: half attack, half defend.
@@ -188,6 +229,9 @@ public class CaptureTheFlag extends PartyGame {
 		player.setItemSlot(EquipmentSlot.CHEST, dyed(Items.LEATHER_CHESTPLATE, color));
 		player.setItemSlot(EquipmentSlot.LEGS, dyed(Items.LEATHER_LEGGINGS, color));
 		player.setItemSlot(EquipmentSlot.FEET, dyed(Items.LEATHER_BOOTS, color));
+		if (kits.add(player.getUUID())) {
+			give(player, barricadeKit());
+		}
 		player.getInventory().setSelectedSlot(0);
 	}
 
@@ -347,6 +391,19 @@ public class CaptureTheFlag extends PartyGame {
 		if (roundTicks % 10 == 0) {
 			steerBots();
 		}
+		// Whoever's running a flag leaves a trail in its colour, under a column of light.
+		if (roundTicks % 3 == 0) {
+			for (int flag = 0; flag < 2; flag++) {
+				Entity runner = carrier[flag] == null ? null : findRunner(carrier[flag]);
+				if (runner != null && runner.isAlive()) {
+					int color = flag == 0 ? 0xFF3030 : 0x3060FF;
+					level.sendParticles(new DustParticleOptions(color, 1.6F), runner.getX(), runner.getY() + 0.3, runner.getZ(), 4, 0.25, 0.15, 0.25, 0);
+					if (roundTicks % 6 == 0) {
+						dev.rubymod.game.rift.RiftFx.beam(level, runner.position().add(0, 2.4, 0), 10, net.minecraft.core.particles.ParticleTypes.END_ROD, 0xFF000000 | color);
+					}
+				}
+			}
+		}
 		if (roundTicks % 4 == 0 && !setup()) {
 			java.util.List<net.minecraft.world.entity.LivingEntity> runners = new java.util.ArrayList<>();
 			for (ServerPlayer p : online()) {
@@ -425,6 +482,12 @@ public class CaptureTheFlag extends PartyGame {
 	/** Players can place their sandbags, nothing else. */
 	@Override
 	public boolean onUseBlock(ServerPlayer player, BlockPos pos, ItemStack held, BlockPos placeAt) {
+		if (phase == Phase.PLAYING && held.is(Items.IRON_BARS)) {
+			barricade(player, placeAt);
+			held.shrink(1);
+			player.inventoryMenu.broadcastChanges();
+			return true;
+		}
 		return phase == Phase.PLAYING && held.getItem() instanceof net.minecraft.world.item.BlockItem && !held.is(ModBlocks.SANDBAGS.asItem());
 	}
 }

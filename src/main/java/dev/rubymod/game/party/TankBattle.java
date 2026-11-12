@@ -67,10 +67,25 @@ public class TankBattle extends PartyGame {
 		kills[1] = 0;
 		tanks.clear();
 		boardIn.clear();
+		minesLeft.clear();
+		// Pick-ups out in the open, where it's dangerous to go and get them.
+		BlockPos c = center();
+		Object[][] spots = {{"rapid", 0, 0}, {"repair", -55, 0}, {"repair", 55, 0}, {"mines", 0, -48}, {"mines", 0, 48}, {"repair", 0, -85}, {"repair", 0, 85}};
+		for (Object[] spot : spots) {
+			String kind = (String) spot[0];
+			double x = c.getX() + (int) spot[1] + 0.5;
+			double z = c.getZ() + (int) spot[2] + 0.5;
+			net.minecraft.world.phys.Vec3 at = new net.minecraft.world.phys.Vec3(x, dev.rubymod.game.Hub.safeY(level(), x, c.getY() + 6, z) + 1.5, z);
+			switch (kind) {
+				case "rapid" -> addPickup(kind, at, new ItemStack(net.minecraft.world.item.Items.BLAZE_POWDER), "RAPID FIRE", ChatFormatting.GOLD, 45 * 20, 4.5);
+				case "mines" -> addPickup(kind, at, new ItemStack(ModItems.TANK), "MINES", ChatFormatting.RED, 40 * 20, 4.5);
+				default -> addPickup(kind, at, new ItemStack(net.minecraft.world.item.Items.ANVIL), "REPAIR", ChatFormatting.GREEN, 30 * 20, 4.5);
+			}
+		}
 		for (ServerPlayer p : online()) {
 			Part part = players.get(p.getUUID());
 			spawn(p, part);
-			dev.rubymod.game.Alerts.title(p, "YOU'RE " + teamName(part.team).toUpperCase(), "First team to 10 knockouts wins",
+			dev.rubymod.game.Alerts.title(p, "YOU'RE " + teamName(part.team).toUpperCase(), "First team to 10 knockouts. Drive over the pick-ups!",
 					part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
 		}
 	}
@@ -121,6 +136,89 @@ public class TankBattle extends PartyGame {
 			tanks.put(player.getUUID(), tank.getUUID());
 			// Climb in a moment later, once the client has the ground loaded.
 			boardIn.put(player.getUUID(), 30);
+		}
+	}
+
+	/** Mines still to drop behind each player's tank (one every second and a half). */
+	private final Map<UUID, Integer> minesLeft = new HashMap<>();
+
+	@Override
+	protected boolean onPickup(ServerPlayer player, Pickup pickup) {
+		if (!(player.getVehicle() instanceof dev.rubymod.entity.VehicleEntity tank)) {
+			return false;
+		}
+		switch (pickup.kind) {
+			case "rapid" -> {
+				tank.rapidFire(15 * 20);
+				dev.rubymod.game.Alerts.title(player, "RAPID FIRE", "Your gun reloads 3x faster for 15 seconds", ChatFormatting.GOLD);
+			}
+			case "mines" -> {
+				minesLeft.put(player.getUUID(), 3);
+				dev.rubymod.game.Alerts.title(player, "MINES", "Dropping 3 mines behind you: keep driving!", ChatFormatting.RED);
+			}
+			default -> {
+				if (tank.getHealth() >= tank.getMaxHealth() && tank.smokeCharges() >= dev.rubymod.entity.VehicleEntity.SMOKE_CHARGES) {
+					return false;
+				}
+				tank.setHealth(Math.min(tank.getMaxHealth(), tank.getHealth() + tank.getMaxHealth() * 0.6F));
+				tank.refillSmoke();
+				dev.rubymod.game.Alerts.title(player, "REPAIRED", "Armor patched up, smoke reloaded", ChatFormatting.GREEN);
+			}
+		}
+		Part part = players.get(player.getUUID());
+		tell(Component.literal(part.name + " grabbed " + pickup.kind.toUpperCase().replace("RAPID", "RAPID FIRE") + "!")
+				.withStyle(part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE));
+		return true;
+	}
+
+	/** Tanks plough through whatever isn't the stadium wall: ruins, trees, anything taller than they can climb. */
+	private void crush() {
+		ServerLevel level = level();
+		BlockPos c = center();
+		for (UUID id : tanks.values()) {
+			if (!(level.getEntity(id) instanceof dev.rubymod.entity.VehicleEntity tank) || !tank.isVehicle()
+					|| tank.getDeltaMovement().horizontalDistanceSqr() < 0.0025) {
+				continue;
+			}
+			net.minecraft.world.phys.AABB box = tank.getBoundingBox().inflate(0.6, 0, 0.6).move(tank.getDeltaMovement().multiply(3, 0, 3));
+			int y0 = (int) Math.floor(tank.getY() + 1.05);
+			boolean broke = false;
+			for (BlockPos pos : BlockPos.betweenClosed((int) Math.floor(box.minX), y0, (int) Math.floor(box.minZ), (int) Math.floor(box.maxX), y0 + 2,
+					(int) Math.floor(box.maxZ))) {
+				var state = level.getBlockState(pos);
+				if (state.isAir() || state.is(net.minecraft.world.level.block.Blocks.BARRIER) || state.getDestroySpeed(level, pos) < 0
+						|| wallAt(pos.getX() - c.getX(), pos.getY() - c.getY(), pos.getZ() - c.getZ())) {
+					continue;
+				}
+				level.destroyBlock(pos, false);
+				broke = true;
+			}
+			if (broke) {
+				tank.setDeltaMovement(tank.getDeltaMovement().multiply(0.8, 1, 0.8));
+			}
+		}
+	}
+
+	private void dropMines() {
+		ServerLevel level = level();
+		for (var it = minesLeft.entrySet().iterator(); it.hasNext();) {
+			var e = it.next();
+			ServerPlayer p = PartyGames.player(server, e.getKey());
+			if (p == null || !(p.getVehicle() instanceof dev.rubymod.entity.VehicleEntity tank)) {
+				it.remove();
+				continue;
+			}
+			net.minecraft.world.phys.Vec3 back = tank.position().subtract(net.minecraft.world.phys.Vec3.directionFromRotation(0, tank.getYRot()).scale(4.5));
+			BlockPos at = BlockPos.containing(back.x, dev.rubymod.game.Hub.safeY(level, back.x, tank.getY() + 2, back.z), back.z);
+			if (level.getBlockState(at).isAir() && level.getBlockState(at.below()).isFaceSturdy(level, at.below(), net.minecraft.core.Direction.UP)) {
+				level.setBlock(at, dev.rubymod.registry.ModBlocks.AT_MINE.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+				level.playSound(null, at, net.minecraft.sounds.SoundEvents.IRON_TRAPDOOR_CLOSE, net.minecraft.sounds.SoundSource.PLAYERS, 1.5F, 0.7F);
+				if (e.getValue() <= 1) {
+					it.remove();
+				} else {
+					e.setValue(e.getValue() - 1);
+				}
+			}
 		}
 	}
 
@@ -176,6 +274,12 @@ public class TankBattle extends PartyGame {
 	protected void tickRound() {
 		if (roundTicks % 10 == 0) {
 			keepInside();
+		}
+		if (roundTicks % 2 == 0) {
+			crush();
+		}
+		if (roundTicks % 30 == 0) {
+			dropMines();
 		}
 		ServerLevel level = level();
 		for (var it = boardIn.entrySet().iterator(); it.hasNext();) {

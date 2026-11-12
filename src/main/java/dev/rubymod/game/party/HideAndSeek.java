@@ -56,6 +56,72 @@ public class HideAndSeek extends PartyGame {
 	}
 
 	private final Map<UUID, Disguise> disguises = new HashMap<>();
+	/** When each hider may taunt again (round ticks). Part.level counts their taunts. */
+	private final Map<UUID, Integer> tauntAt = new HashMap<>();
+
+	private static ItemStack tauntItem() {
+		ItemStack stack = new ItemStack(Items.FEATHER);
+		stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("Taunt (right-click)").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+		stack.set(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		return stack;
+	}
+
+	/** A hider makes a silly noise where they are: a point for nerve, and a clue for the seekers. */
+	private void taunt(ServerPlayer player) {
+		Part part = players.get(player.getUUID());
+		if (phase != Phase.PLAYING || part == null || part.team != HIDER || part.watching) {
+			return;
+		}
+		if (hiding()) {
+			player.sendOverlayMessage(Component.literal("Taunt once the seekers are out.").withStyle(ChatFormatting.GRAY));
+			return;
+		}
+		int ready = tauntAt.getOrDefault(player.getUUID(), 0);
+		if (roundTicks < ready) {
+			player.sendOverlayMessage(Component.literal("Taunt again in " + ((ready - roundTicks) / 20 + 1) + "s").withStyle(ChatFormatting.GRAY));
+			return;
+		}
+		tauntAt.put(player.getUUID(), roundTicks + 15 * 20);
+		part.level++;
+		ServerLevel level = level();
+		var sounds = new net.minecraft.sounds.SoundEvent[] {SoundEvents.VILLAGER_NO, SoundEvents.DONKEY_AMBIENT, SoundEvents.VILLAGER_YES, SoundEvents.GOAT_SCREAMING_AMBIENT,
+				SoundEvents.SHEEP_AMBIENT};
+		level.playSound(null, player.blockPosition(), sounds[level.getRandom().nextInt(sounds.length)], SoundSource.PLAYERS, 2.5F, 1.0F);
+		level.sendParticles(ParticleTypes.NOTE, player.getX(), player.getY() + 1.4, player.getZ(), 4, 0.3, 0.2, 0.3, 0);
+		player.sendOverlayMessage(Component.literal("Taunt! +1 nerve (" + part.level + ")").withStyle(ChatFormatting.AQUA));
+		if (!PartyGames.TEST_PLAYERS.containsKey(player.getUUID())) {
+			dev.rubymod.game.Stats.addXp(player.getUUID(), part.name, 3);
+		}
+		for (ServerPlayer p : online()) {
+			Part other = players.get(p.getUUID());
+			if (other != null && other.team == SEEKER) {
+				p.sendOverlayMessage(Component.literal("A hider is taunting you! Listen...").withStyle(ChatFormatting.AQUA));
+			}
+		}
+	}
+
+	@Override
+	public boolean allowsItemUse(ServerPlayer player, ItemStack stack) {
+		if (stack.is(Items.FEATHER)) {
+			taunt(player);
+			return false;
+		}
+		return true;
+	}
+
+	@Override
+	protected List<Component> extraAwards() {
+		Part bold = players.values().stream().filter(p -> p.level > 0).max(java.util.Comparator.comparingInt(p -> p.level)).orElse(null);
+		Part seeker = players.values().stream().filter(p -> p.score > 0).max(java.util.Comparator.comparingInt(p -> p.score)).orElse(null);
+		List<Component> lines = new ArrayList<>();
+		if (bold != null) {
+			lines.add(award("Boldest hider", bold.name + " (" + bold.level + (bold.level == 1 ? " taunt)" : " taunts)"), ChatFormatting.AQUA));
+		}
+		if (seeker != null) {
+			lines.add(award("Sharpest eyes", seeker.name + " (found " + seeker.score + ")", ChatFormatting.YELLOW));
+		}
+		return lines;
+	}
 
 	public HideAndSeek() {
 		super("hideseek", "Holo Hide & Seek", "Turn into a block and hide! Seekers have to find you.", "rubymod:holo_camo",
@@ -99,6 +165,7 @@ public class HideAndSeek extends PartyGame {
 	@Override
 	protected void startRound() {
 		disguises.clear();
+		tauntAt.clear();
 		List<UUID> ids = new ArrayList<>(players.keySet());
 		Collections.shuffle(ids);
 		int seekers = Math.max(1, ids.size() / 4);
@@ -114,7 +181,8 @@ public class HideAndSeek extends PartyGame {
 				dev.rubymod.game.Alerts.title(p, "SEEKER", "Eyes shut for 40 seconds...", ChatFormatting.RED);
 			} else {
 				p.sendSystemMessage(Component.literal("You're a HIDER. Right-click any block to look like it, then hide! "
-						+ "Stand still for 2 seconds and you lock in place like a real block.").withStyle(ChatFormatting.GREEN));
+						+ "Stand still for 2 seconds and you lock in place like a real block. Feeling brave? Use the Taunt feather for bonus points.")
+						.withStyle(ChatFormatting.GREEN));
 				dev.rubymod.game.Alerts.title(p, "HIDE!", "Right-click a block to turn into it", ChatFormatting.GREEN);
 			}
 		}
@@ -142,6 +210,7 @@ public class HideAndSeek extends PartyGame {
 			player.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, -1, 0, false, false));
 			Disguise d = disguises.get(player.getUUID());
 			disguise(player, d != null ? d.state : STARTERS[player.getRandom().nextInt(STARTERS.length)]);
+			give(player, tauntItem());
 		}
 	}
 
@@ -184,6 +253,10 @@ public class HideAndSeek extends PartyGame {
 		if (phase != Phase.PLAYING || part == null || part.watching) {
 			return phase == Phase.PLAYING;
 		}
+		if (part.team == HIDER && held.is(Items.FEATHER)) {
+			taunt(player);
+			return true;
+		}
 		if (part.team == HIDER) {
 			BlockState state = level().getBlockState(pos);
 			if (!state.isAir() && state.isCollisionShapeFullBlock(level(), pos) && !state.is(Blocks.BARRIER)) {
@@ -222,6 +295,7 @@ public class HideAndSeek extends PartyGame {
 		players.get(seeker.getUUID()).score++;
 		undisguise(hider.getUUID());
 		hider.removeEffect(MobEffects.INVISIBILITY);
+		hider.getInventory().clearContent();
 		give(hider, new ItemStack(Items.IRON_SWORD));
 		hider.addEffect(new MobEffectInstance(MobEffects.SPEED, -1, 0, false, false));
 		level().sendParticles(ParticleTypes.FIREWORK, hider.getX(), hider.getY() + 1, hider.getZ(), 30, 0.4, 0.6, 0.4, 0.1);

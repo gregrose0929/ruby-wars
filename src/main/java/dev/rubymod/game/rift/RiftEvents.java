@@ -27,17 +27,18 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Mystery rooms: a choice with a catch, each runner choosing for themselves. Thirteen of
+ * Mystery rooms: a choice with a catch, each runner choosing for themselves. Fourteen of
  * them, never the same one twice in a run (until they've all come up):
  * the Blood Altar, the Gambler's Shrine, a Lost Supply Cache, the Ruby Slots, a Cursed
  * Chest, the Fountain of Wishes, a Wandering Hero, Three Doors, Double or Nothing, the
- * Shrine of Blessings, the Relic Trader, a Treasure Goblin, and the Shrine of Echoes.
+ * Shrine of Blessings, the Relic Trader, a Treasure Goblin, the Shrine of Echoes, and the
+ * Voice in the Rift (a pact that lasts the whole run: great power, at a price you keep paying).
  */
 public final class RiftEvents {
 	private RiftEvents() {
 	}
 
-	static final int COUNT = 13;
+	static final int COUNT = 14;
 	/** The ones seen this run (so they don't repeat). */
 	static final Set<Integer> SEEN = new HashSet<>();
 	/** The Treasure Goblin running loose, and when it gets away. */
@@ -101,6 +102,11 @@ public final class RiftEvents {
 			case 12 -> List.of("title|The Shrine of Echoes",
 					"echo_relic|Echo a Relic|One of your relics (at random) gains a star.|minecraft:echo_shard",
 					"echo_charms|Echo of Luck|Two charms.|minecraft:amethyst_shard");
+			case 13 -> List.of("title|A Voice in the Rift offers a pact (for the whole run)",
+					"pact_fury|Pact of Fury|You deal 50% more damage. You lose 4 hearts for good.|minecraft:blaze_rod",
+					"pact_stone|Pact of Stone|You gain 8 hearts. You deal 20% less damage.|minecraft:obsidian",
+					"pact_fortune|Pact of Fortune|A Legendary relic, right now. You lose 3 hearts for good.|minecraft:nether_star",
+					"leave|Refuse|Some voices shouldn't be answered.|minecraft:barrier");
 			default -> List.of("title|A Lost Supply Cache",
 					"gold|Take the Gold|80 gold for the team.|minecraft:gold_ingot",
 					"relic|Take the Strange Device|A free Common relic.|minecraft:compass");
@@ -190,6 +196,25 @@ public final class RiftEvents {
 				RiftFx.beam(level, p.position(), 12, ParticleTypes.END_ROD, 0xFFFFE680);
 				level.playSound(null, p.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F, 1.2F);
 				p.sendSystemMessage(Component.literal("Blessed for the rest of the run.").withStyle(ChatFormatting.GOLD));
+			}
+			case "pact_fury", "pact_stone", "pact_fortune" -> {
+				String pact = option.substring(5);
+				if (r.blessings.contains("fury") || r.blessings.contains("stone") || r.blessings.contains("fortune")) {
+					p.sendSystemMessage(Component.literal("You've made your pact already. The voice only laughs.").withStyle(ChatFormatting.DARK_PURPLE));
+					return;
+				}
+				r.blessings.add(pact);
+				RelicEffects.apply(p, r);
+				level.sendParticles(ParticleTypes.SCULK_SOUL, p.getX(), p.getY() + 1, p.getZ(), 50, 0.6, 0.9, 0.6, 0.05);
+				RiftFx.beam(level, p.position(), 12, ParticleTypes.WITCH, 0xFFB04CFF);
+				level.playSound(null, p.blockPosition(), SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 1.0F, 0.7F);
+				String title = pact.equals("fury") ? "Pact of Fury" : pact.equals("stone") ? "Pact of Stone" : "Pact of Fortune";
+				dev.rubymod.game.Alerts.title(p, title.toUpperCase(), "Sealed, for the rest of the run", ChatFormatting.DARK_PURPLE);
+				Rift.tell(level.getServer(), Component.literal(p.getName().getString() + " made the " + title + " with the voice in the Rift.")
+						.withStyle(ChatFormatting.DARK_PURPLE));
+				if (pact.equals("fortune")) {
+					grant(p, r, Relic.Tier.LEGENDARY, random);
+				}
 			}
 			case "swap" -> {
 				Relic newest = null;

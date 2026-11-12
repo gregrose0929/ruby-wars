@@ -65,6 +65,64 @@ public class SkyRace extends PartyGame {
 	private int firstFinish = -1;
 	private int bestTicks = -1;
 	private String bestName = "";
+	/** Where each racer has been, every 4 ticks since GO (the fastest ever becomes the ghost). */
+	private final Map<UUID, List<Vec3>> traces = new HashMap<>();
+	/** The record run for this kind of race, replayed as a ghost to race against. */
+	private List<Vec3> ghost = new ArrayList<>();
+	private UUID ghostItem;
+	private UUID ghostText;
+
+	/** Every third ring is a boost ring (lime): fly through it for a shove forward. */
+	private static boolean boostRing(int i) {
+		return i % 3 == 2;
+	}
+
+	/** The winners stand on the start platform. */
+	@Override
+	protected Vec3 stage() {
+		return groundStart();
+	}
+
+	private void tickGhost(ServerLevel level) {
+		int i = (roundTicks - START_TICKS) / 4;
+		if (ghost.isEmpty() || i >= ghost.size()) {
+			for (UUID id : new UUID[] {ghostItem, ghostText}) {
+				if (id != null && level.getEntity(id) instanceof Entity e) {
+					e.discard();
+				}
+			}
+			ghostItem = null;
+			ghostText = null;
+			return;
+		}
+		Vec3 at = ghost.get(i);
+		if (ghostItem == null) {
+			ItemStack icon = new ItemStack(mode == ELYTRA ? net.minecraft.world.item.Items.ELYTRA : mode == BOAT ? net.minecraft.world.item.Items.OAK_BOAT : ModItems.JETPACK);
+			var item = dev.rubymod.game.Props.item(level, at, icon, 1.4F, tag());
+			var text = dev.rubymod.game.Props.text(level, at.add(0, 1.3, 0),
+					Component.literal("Record: " + bestName + " " + time(bestTicks)).withStyle(ChatFormatting.LIGHT_PURPLE), 1.0F, tag());
+			if (item == null || text == null) {
+				return;
+			}
+			item.setGlowingTag(true);
+			((dev.rubymod.mixin.DisplayAccessor) item).rubymod$setGlowColorOverride(0xC060FF);
+			((dev.rubymod.mixin.DisplayAccessor) item).rubymod$setPosRotInterpolationDuration(4);
+			((dev.rubymod.mixin.DisplayAccessor) text).rubymod$setPosRotInterpolationDuration(4);
+			ghostItem = item.getUUID();
+			ghostText = text.getUUID();
+			spawned.add(ghostItem);
+			spawned.add(ghostText);
+		}
+		if (roundTicks % 4 == 0) {
+			if (level.getEntity(ghostItem) instanceof Entity e) {
+				e.teleportTo(at.x, at.y, at.z);
+			}
+			if (level.getEntity(ghostText) instanceof Entity e) {
+				e.teleportTo(at.x, at.y + 1.3, at.z);
+			}
+			level.sendParticles(net.minecraft.core.particles.ParticleTypes.WITCH, at.x, at.y, at.z, 2, 0.2, 0.2, 0.2, 0);
+		}
+	}
 
 	public SkyRace() {
 		super("skyrace", "Sky Race", "Race through the rings: jetpack, elytra and ice boat rounds. Fastest time wins!", "rubymod:jetpack", 1, false, false, false);
@@ -105,13 +163,13 @@ public class SkyRace extends PartyGame {
 			Vec3 c = ring(i);
 			Vec3 t = through(i);
 			Vec3 side = new Vec3(-t.z, 0, t.x);
-			BlockState a = Blocks.CONCRETE.pick(i % 2 == 0 ? DyeColor.ORANGE : DyeColor.WHITE).defaultBlockState();
+			BlockState a = Blocks.CONCRETE.pick(boostRing(i) ? DyeColor.LIME : i % 2 == 0 ? DyeColor.ORANGE : DyeColor.WHITE).defaultBlockState();
 			for (int deg = 0; deg < 360; deg += 5) {
 				double r = Math.toRadians(deg);
 				Vec3 p = c.add(side.scale(Math.cos(r) * RADIUS)).add(0, Math.sin(r) * RADIUS, 0);
 				BlockPos pos = BlockPos.containing(p);
 				if (level.getBlockState(pos).isAir()) {
-					level.setBlock(pos, deg % 30 == 0 ? Blocks.SEA_LANTERN.defaultBlockState() : a, 3);
+					level.setBlock(pos, deg % 30 == 0 ? (boostRing(i) ? Blocks.EMERALD_BLOCK : Blocks.SEA_LANTERN).defaultBlockState() : a, 3);
 				}
 			}
 			// A refuel pad under every other ring (not down on the ice track).
@@ -251,6 +309,9 @@ public class SkyRace extends PartyGame {
 		loadBest();
 		next.clear();
 		lastPos.clear();
+		traces.clear();
+		ghostItem = null;
+		ghostText = null;
 		grounded.clear();
 		finished.clear();
 		firstFinish = -1;
@@ -318,6 +379,7 @@ public class SkyRace extends PartyGame {
 			titleAll("GO!", "", ChatFormatting.GREEN);
 		}
 		ServerLevel level = level();
+		tickGhost(level);
 		int total = RINGS * LAPS;
 		for (ServerPlayer p : online()) {
 			Part part = players.get(p.getUUID());
@@ -330,6 +392,9 @@ public class SkyRace extends PartyGame {
 			}
 			Vec3 now = p.position().add(0, 0.9, 0);
 			Vec3 prev = lastPos.put(p.getUUID(), now);
+			if (roundTicks % 4 == 0) {
+				traces.computeIfAbsent(p.getUUID(), k -> new ArrayList<>()).add(now);
+			}
 			int ri = n % RINGS;
 			Vec3 c = gate(ri);
 			Vec3 t = through(ri);
@@ -342,6 +407,14 @@ public class SkyRace extends PartyGame {
 					n++;
 					next.put(p.getUUID(), n);
 					level.playSound(null, p.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.9F, 0.8F + (n % RINGS) * 0.06F);
+					if (boostRing(ri) && mode != BOAT && n < total) {
+						// A shove through and onward.
+						p.setDeltaMovement(p.getDeltaMovement().add(t.scale(1.3)).add(0, 0.2, 0));
+						p.syncVelocity = true;
+						p.sendOverlayMessage(Component.literal(">>> BOOST! >>>").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+						level.playSound(null, p.blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 1.0F, 1.4F);
+						level.sendParticles(net.minecraft.core.particles.ParticleTypes.FIREWORK, p.getX(), p.getY() + 1, p.getZ(), 20, 0.3, 0.3, 0.3, 0.15);
+					}
 					if (n >= total) {
 						int ticks = roundTicks - START_TICKS;
 						part.time = ticks;
@@ -357,6 +430,7 @@ public class SkyRace extends PartyGame {
 						if (bestTicks < 0 || ticks < bestTicks) {
 							bestTicks = ticks;
 							bestName = part.name;
+							ghost = new ArrayList<>(traces.getOrDefault(p.getUUID(), List.of()));
 							saveBest();
 							tell(Component.literal("NEW RECORD!").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
 						}
@@ -518,11 +592,19 @@ public class SkyRace extends PartyGame {
 	private void loadBest() {
 		bestTicks = -1;
 		bestName = "";
+		ghost = new ArrayList<>();
 		try {
 			if (Files.exists(bestFile())) {
 				List<String> lines = Files.readAllLines(bestFile());
 				bestTicks = Integer.parseInt(lines.get(0).trim());
 				bestName = lines.size() > 1 ? lines.get(1) : "";
+				// The run itself, a point a line ("x y z"), after the time and the name.
+				for (int i = 2; i < lines.size(); i++) {
+					String[] f = lines.get(i).trim().split(" ");
+					if (f.length == 3) {
+						ghost.add(new Vec3(Double.parseDouble(f[0]), Double.parseDouble(f[1]), Double.parseDouble(f[2])));
+					}
+				}
 			}
 		} catch (IOException | RuntimeException e) {
 			RubyMod.LOGGER.warn("Couldn't read the Sky Race record", e);
@@ -532,7 +614,11 @@ public class SkyRace extends PartyGame {
 	private void saveBest() {
 		try {
 			Files.createDirectories(bestFile().getParent());
-			Files.writeString(bestFile(), bestTicks + "\n" + bestName + "\n");
+			StringBuilder b = new StringBuilder(bestTicks + "\n" + bestName + "\n");
+			for (Vec3 v : ghost) {
+				b.append(String.format(java.util.Locale.ROOT, "%.2f %.2f %.2f\n", v.x, v.y, v.z));
+			}
+			Files.writeString(bestFile(), b.toString());
 		} catch (IOException e) {
 			RubyMod.LOGGER.warn("Couldn't save the Sky Race record", e);
 		}

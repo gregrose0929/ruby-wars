@@ -560,6 +560,9 @@ public final class GameEvents {
 				return InteractionResult.FAIL;
 			}
 			ItemStack held = player.getItemInHand(hand);
+			if (player instanceof ServerPlayer sp && dev.rubymod.game.convoy.Convoy.useItem(sp, held)) {
+				return InteractionResult.FAIL;
+			}
 			if (player instanceof ServerPlayer sp && !dev.rubymod.game.party.PartyGames.allowsItemUse(sp, held)) {
 				return InteractionResult.FAIL;
 			}

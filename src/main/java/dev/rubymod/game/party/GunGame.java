@@ -120,6 +120,10 @@ public class GunGame extends PartyGame {
 		clearPlayer(player);
 		Item weapon = LADDER[part.level];
 		ItemStack main = weapon instanceof dev.rubymod.gun.GunItem ? gun(weapon) : new ItemStack(weapon);
+		if (weapon == ModItems.RUBY_SWORD) {
+			main.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("The Golden Blade").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			main.set(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
+		}
 		give(player, main);
 		ItemStack ammo = ammoFor(weapon);
 		if (!ammo.isEmpty()) {
@@ -133,6 +137,8 @@ public class GunGame extends PartyGame {
 			// The last rung: two or three hits to finish someone, and quick feet to get to them.
 			player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.STRENGTH, -1, 1, false, false));
 			player.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SPEED, -1, 0, false, false));
+			// Everyone can see who has it: they glow, under a column of gold light.
+			player.setGlowingTag(true);
 		}
 		player.getInventory().setSelectedSlot(0);
 		player.inventoryMenu.broadcastChanges();
@@ -161,7 +167,8 @@ public class GunGame extends PartyGame {
 			return;
 		}
 		if (part.level >= LADDER.length - 1) {
-			endRound(part.name + " WINS!", part.name + " got a kill with the sword. Kills: " + kills(), ChatFormatting.GOLD, one(killer.getUUID()));
+			level().sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING, killer.getX(), killer.getY() + 1, killer.getZ(), 120, 0.5, 1, 0.5, 0.6);
+			endRound(part.name + " WINS!", part.name + " struck with the Golden Blade. Kills: " + kills(), ChatFormatting.GOLD, one(killer.getUUID()));
 			return;
 		}
 		part.level++;
@@ -170,7 +177,14 @@ public class GunGame extends PartyGame {
 				.withStyle(ChatFormatting.GREEN));
 		killer.level().playSound(null, killer.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.5F, 1.4F);
 		if (part.level == LADDER.length - 1) {
-			tell(Component.literal(part.name + " has the SWORD! One more kill and they win!").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+			tell(Component.literal(part.name + " has THE GOLDEN BLADE! One more kill and they win. Stop them!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			for (ServerPlayer p : online()) {
+				if (p != killer) {
+					dev.rubymod.game.Alerts.title(p, "GOLDEN BLADE", part.name + " is one kill from winning!", ChatFormatting.GOLD);
+				}
+				p.level().playSound(null, p.blockPosition(), SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 1.0F, 1.4F);
+			}
+			level().sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING, killer.getX(), killer.getY() + 1, killer.getZ(), 60, 0.4, 0.8, 0.4, 0.4);
 		}
 	}
 
@@ -215,6 +229,7 @@ public class GunGame extends PartyGame {
 			if (k.getMainHandItem().is(ModItems.RUBY_SWORD) && part.level > 0) {
 				part.level--;
 				victim.sendSystemMessage(Component.literal("Knifed! You drop back to " + weaponName(part.level) + ".").withStyle(ChatFormatting.RED));
+				tell(Component.literal(part.name + " was knifed by " + k.getName().getString() + " and drops a level!").withStyle(ChatFormatting.YELLOW));
 			}
 			advance(k);
 		}
@@ -239,6 +254,15 @@ public class GunGame extends PartyGame {
 			if (roundTicks >= r[0]) {
 				it.remove();
 				spawnGunBot(r[1], r[2]);
+			}
+		}
+		// The gold light over whoever holds the Golden Blade.
+		if (roundTicks % 4 == 0) {
+			for (ServerPlayer p : online()) {
+				Part part = players.get(p.getUUID());
+				if (part != null && part.level == LADDER.length - 1 && !p.isSpectator()) {
+					dev.rubymod.game.rift.RiftFx.beam(level(), p.position().add(0, 2.2, 0), 14, net.minecraft.core.particles.ParticleTypes.END_ROD, 0xFFFFD040);
+				}
 			}
 		}
 		// Bots go after whoever's closest.

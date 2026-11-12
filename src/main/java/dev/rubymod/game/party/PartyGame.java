@@ -166,6 +166,254 @@ public abstract class PartyGame {
 		return team == 0 ? "Red" : "Blue";
 	}
 
+	// ----- Pick-ups -----
+
+	/** Something floating in the arena that does something for whoever touches it (on foot or in a vehicle), then comes back later. */
+	protected static final class Pickup {
+		public final String kind;
+		public final Vec3 at;
+		final ItemStack icon;
+		final Component label;
+		final int respawn;
+		final double radius;
+		UUID item;
+		UUID text;
+		boolean out;
+		int backAt;
+
+		Pickup(String kind, Vec3 at, ItemStack icon, Component label, int respawn, double radius) {
+			this.kind = kind;
+			this.at = at;
+			this.icon = icon;
+			this.label = label;
+			this.respawn = respawn;
+			this.radius = radius;
+		}
+	}
+
+	protected final List<Pickup> pickups = new ArrayList<>();
+
+	/** Put a pick-up in the arena. It returns {@code respawnTicks} after it's taken (never, if that's negative). */
+	protected Pickup addPickup(String kind, Vec3 at, ItemStack icon, String label, ChatFormatting color, int respawnTicks, double radius) {
+		Pickup p = new Pickup(kind, at, icon, Component.literal(label).withStyle(color, ChatFormatting.BOLD), respawnTicks, radius);
+		pickups.add(p);
+		showPickup(p);
+		return p;
+	}
+
+	private void showPickup(Pickup p) {
+		ServerLevel level = level();
+		float size = (float) Math.max(1.2, Math.min(4.0, p.radius * 0.5));
+		var item = dev.rubymod.game.Props.item(level, p.at.add(0, size * 0.5, 0), p.icon, size, tag());
+		var text = dev.rubymod.game.Props.text(level, p.at.add(0, size * 1.15 + 0.4, 0), p.label, Math.max(1.0F, size * 0.6F), tag());
+		if (item != null) {
+			item.setGlowingTag(true);
+			p.item = item.getUUID();
+		}
+		p.text = text == null ? null : text.getUUID();
+		p.out = false;
+	}
+
+	private void hidePickup(Pickup p) {
+		ServerLevel level = level();
+		for (UUID id : new UUID[] {p.item, p.text}) {
+			Entity e = id == null ? null : level.getEntity(id);
+			if (e != null) {
+				e.discard();
+			}
+		}
+		p.item = null;
+		p.text = null;
+		p.out = true;
+	}
+
+	protected void clearPickups() {
+		if (level() != null) {
+			for (Pickup p : pickups) {
+				hidePickup(p);
+			}
+		}
+		pickups.clear();
+	}
+
+	/** A player touched a pick-up. Return true when they took it (it disappears until it comes back). */
+	protected boolean onPickup(ServerPlayer player, Pickup pickup) {
+		return false;
+	}
+
+	private void tickPickups() {
+		if (pickups.isEmpty()) {
+			return;
+		}
+		ServerLevel level = level();
+		List<ServerPlayer> online = online();
+		for (var it = pickups.iterator(); it.hasNext();) {
+			Pickup p = it.next();
+			if (p.out) {
+				if (roundTicks >= p.backAt) {
+					showPickup(p);
+					level.playSound(null, BlockPos.containing(p.at), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 1.0F, 1.6F);
+				}
+				continue;
+			}
+			if (roundTicks % 10 == 0) {
+				level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD, true, false, p.at.x, p.at.y + 1, p.at.z, 3, p.radius * 0.3, 0.6, p.radius * 0.3, 0.01);
+			}
+			for (ServerPlayer player : online) {
+				Part part = players.get(player.getUUID());
+				if (part == null || part.watching || part.respawnIn > 0 || player.isSpectator()) {
+					continue;
+				}
+				Entity body = player.getVehicle() != null ? player.getVehicle() : player;
+				if (body.position().distanceToSqr(p.at) <= p.radius * p.radius && onPickup(player, p)) {
+					hidePickup(p);
+					level.playSound(null, BlockPos.containing(p.at), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.5F);
+					level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, true, false, p.at.x, p.at.y + 1, p.at.z, 20, 1.5, 1, 1.5, 0);
+					if (p.respawn < 0) {
+						it.remove();
+					} else {
+						p.backAt = roundTicks + p.respawn;
+					}
+					break;
+				}
+			}
+		}
+	}
+
+	// ----- The winner's moment -----
+
+	/** False for a game that has its own way of showing who won. */
+	protected boolean showsWinners() {
+		return true;
+	}
+
+	/** Where the winners stand at the end, with everyone else looking on (null: wherever they are). */
+	protected Vec3 stage() {
+		return Vec3.atBottomCenterOf(center());
+	}
+
+	/** The winners in the middle, glowing; everyone else watching from in front. */
+	private void winnersMoment(java.util.Collection<UUID> winners) {
+		if (!showsWinners()) {
+			return;
+		}
+		List<ServerPlayer> champs = new ArrayList<>();
+		for (ServerPlayer p : online()) {
+			if (winners.contains(p.getUUID()) && !players.get(p.getUUID()).watching) {
+				champs.add(p);
+			}
+		}
+		if (champs.isEmpty()) {
+			return;
+		}
+		ServerLevel level = level();
+		Vec3 stage = stage();
+		Vec3 focus = stage;
+		for (int i = 0; i < champs.size(); i++) {
+			ServerPlayer champ = champs.get(i);
+			champ.stopRiding();
+			champ.setGameMode(GameType.ADVENTURE);
+			champ.setHealth(champ.getMaxHealth());
+			champ.clearFire();
+			champ.setGlowingTag(true);
+			SpawnShield.grant(champ);
+			if (stage != null) {
+				double x = stage.x + (i - (champs.size() - 1) / 2.0) * 1.8;
+				champ.teleportTo(level, x, Hub.safeY(level, x, stage.y, stage.z), stage.z, Set.<Relative>of(), 0, 0, true);
+				champ.resetFallDistance();
+			} else if (i == 0) {
+				focus = champ.position();
+			}
+		}
+		if (stage != null) {
+			focus = new Vec3(stage.x, Hub.safeY(level, stage.x, stage.y, stage.z), stage.z);
+		}
+		// The onlookers watch from whichever side has open air (never from inside a wall): {dx, dz, the way to face}.
+		int[][] sides = {{0, 1, 180}, {0, -1, 0}, {1, 0, 90}, {-1, 0, -90}};
+		int[] side = null;
+		for (int[] s : sides) {
+			boolean clear = true;
+			for (double d = 1.5; d <= 6.5 && clear; d += 1.0) {
+				BlockPos at = BlockPos.containing(focus.x + s[0] * d, focus.y + 2.6, focus.z + s[1] * d);
+				clear = level.getBlockState(at).getCollisionShape(level, at).isEmpty();
+			}
+			if (clear) {
+				side = s;
+				break;
+			}
+		}
+		int n = 0;
+		for (ServerPlayer p : online()) {
+			if (champs.contains(p)) {
+				continue;
+			}
+			double across = (n % 2 == 0 ? 1 : -1) * (1.2 + n / 2 * 1.4);
+			if (side == null) {
+				// Hemmed in on every side: from straight above.
+				p.teleportTo(level, focus.x + across * 0.3, focus.y + 9, focus.z, Set.<Relative>of(), 0, 88, true);
+			} else {
+				p.teleportTo(level, focus.x + side[0] * 6.5 + side[1] * across, focus.y + 2.2, focus.z + side[1] * 6.5 + side[0] * across, Set.<Relative>of(),
+						side[2], 14, true);
+			}
+			n++;
+		}
+		momentAt = focus;
+	}
+
+	private Vec3 momentAt;
+
+	/** Fireworks over the winners while the results are up. */
+	private void tickMoment() {
+		if (momentAt == null || timer % 12 != 0) {
+			return;
+		}
+		ServerLevel level = level();
+		var random = level.getRandom();
+		Vec3 at = momentAt.add((random.nextDouble() - 0.5) * 10, 5 + random.nextDouble() * 5, (random.nextDouble() - 0.5) * 6 - 2);
+		int[] colors = {0xFFFF3050, 0xFFFFD040, 0xFF40C8FF, 0xFF60FF80};
+		dev.rubymod.game.rift.RiftFx.burst(level, at, colors[random.nextInt(colors.length)], 40, 1.4);
+		level.sendParticles(net.minecraft.core.particles.ParticleTypes.FIREWORK, true, false, at.x, at.y, at.z, 30, 0.4, 0.4, 0.4, 0.2);
+		level.playSound(null, BlockPos.containing(at), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST, SoundSource.NEUTRAL, 1.5F, 0.9F + random.nextFloat() * 0.3F);
+	}
+
+	/** Two awards for the round, for a laugh: the most kills, and the most deaths. */
+	private List<Component> awards() {
+		List<Component> lines = new ArrayList<>();
+		Part gun = null;
+		Part down = null;
+		for (Part p : players.values()) {
+			if (p.watching) {
+				continue;
+			}
+			if (p.kills > 0 && (gun == null || p.kills > gun.kills)) {
+				gun = p;
+			}
+			if (p.deaths > 0 && (down == null || p.deaths > down.deaths)) {
+				down = p;
+			}
+		}
+		if (gun != null && activeCount() > 1) {
+			lines.add(Component.literal("  ★ Sharpshooter: ").withStyle(ChatFormatting.GOLD)
+					.append(Component.literal(gun.name + " (" + gun.kills + (gun.kills == 1 ? " kill)" : " kills)")).withStyle(ChatFormatting.WHITE)));
+		}
+		if (down != null && activeCount() > 1) {
+			String[] titles = {"Human Target", "Frequent Flyer", "Floor Inspector", "Most Likely to Respawn"};
+			lines.add(Component.literal("  ☠ " + titles[Math.floorMod(down.name.hashCode() + roundTicks, titles.length)] + ": ").withStyle(ChatFormatting.RED)
+					.append(Component.literal(down.name + " (" + down.deaths + (down.deaths == 1 ? " death)" : " deaths)")).withStyle(ChatFormatting.WHITE)));
+		}
+		lines.addAll(extraAwards());
+		return lines;
+	}
+
+	/** A game's own awards for the round ("Best hider", "Flag runner"...). */
+	protected List<Component> extraAwards() {
+		return List.of();
+	}
+
+	protected static Component award(String title, String who, ChatFormatting color) {
+		return Component.literal("  ✦ " + title + ": ").withStyle(color).append(Component.literal(who).withStyle(ChatFormatting.WHITE));
+	}
+
 	// ----- Lifecycle -----
 
 	public void attach(MinecraftServer server) {
@@ -176,6 +424,8 @@ public abstract class PartyGame {
 		phase = Phase.IDLE;
 		players.clear();
 		spawned.clear();
+		pickups.clear();
+		momentAt = null;
 		bar.removeAllPlayers();
 	}
 
@@ -336,6 +586,8 @@ public abstract class PartyGame {
 			e.discard();
 		}
 		spawned.clear();
+		pickups.clear();
+		momentAt = null;
 	}
 
 	/** Lobby spot: in the middle of the arena, waiting. */
@@ -374,13 +626,16 @@ public abstract class PartyGame {
 						}
 					}
 				}
+				tickPickups();
 				tickRound();
 				if (phase == Phase.PLAYING && roundTicks % 20 == 0) {
 					updateBar();
 				}
 			}
 			case ENDING -> {
+				tickMoment();
 				if (--timer <= 0) {
+					momentAt = null;
 					openLobby();
 					for (ServerPlayer p : online()) {
 						Part part = players.get(p.getUUID());
@@ -470,7 +725,9 @@ public abstract class PartyGame {
 				dev.rubymod.game.Stats.won(id, part.name, this.id);
 			}
 		});
-		timer = 8 * 20;
+		timer = 10 * 20;
+		List<Component> awards = awards();
+		clearPickups();
 		for (UUID id : new ArrayList<>(spawned)) {
 			Entity e = level().getEntity(id);
 			if (e != null && !(e instanceof Player)) {
@@ -482,10 +739,15 @@ public abstract class PartyGame {
 			Alerts.title(p, headline, detail, color);
 			p.sendSystemMessage(Component.literal("====== " + title.toUpperCase() + ": " + headline + " ======").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 			p.sendSystemMessage(Component.literal(detail).withStyle(ChatFormatting.WHITE));
-			p.sendSystemMessage(Component.literal("Next round in 8 seconds (H to leave).").withStyle(ChatFormatting.GRAY));
+			for (Component award : awards) {
+				p.sendSystemMessage(award);
+			}
+			p.sendSystemMessage(Component.literal("Next round in 10 seconds (H to leave).").withStyle(ChatFormatting.GRAY));
 			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.8F, 1.0F);
+			p.stopRiding();
 			p.setGameMode(GameType.SPECTATOR);
 		}
+		winnersMoment(winners);
 		bar.setName(Component.literal(title + ": " + headline));
 		bar.setProgress(1);
 	}
@@ -738,6 +1000,7 @@ public abstract class PartyGame {
 		player.getInventory().clearContent();
 		player.removeAllEffects();
 		player.clearFire();
+		player.setGlowingTag(false);
 		player.inventoryMenu.broadcastChanges();
 	}
 

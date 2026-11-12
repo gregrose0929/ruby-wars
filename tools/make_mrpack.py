@@ -96,6 +96,9 @@ def main():
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("modrinth.index.json", json.dumps(index, indent=2))
         z.write(jar, f"overrides/mods/rubymod-{version}.jar")
+        # The server's address, for the installer to put in the multiplayer list (tools/server-address.txt: one line).
+        if os.path.exists("tools/server-address.txt"):
+            z.write("tools/server-address.txt", "overrides/rubywars-server.txt")
     print(f"Wrote {out} (Fabric {loader}, Fabric API {api_version})")
 
 

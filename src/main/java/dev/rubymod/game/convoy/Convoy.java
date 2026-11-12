@@ -485,6 +485,7 @@ public final class Convoy {
 		inv.add(new ItemStack(ModItems.RUBY_SWORD));
 		inv.add(new ItemStack(ModItems.FRAG_GRENADE, role == ConvoyUpgrade.Role.DEMOLITION ? 10 : 4));
 		inv.add(new ItemStack(ModItems.SMOKE_GRENADE, 2));
+		inv.add(horn());
 		if (level(ConvoyUpgrade.HEAVY) > 0 && CREW.get(player.getUUID()) != null) {
 			inv.add(new ItemStack(ModItems.FRAG_GRENADE, 4));
 		}
@@ -498,6 +499,57 @@ public final class Convoy {
 		player.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.IRON_BOOTS));
 		inv.setSelectedSlot(0);
 		player.inventoryMenu.broadcastChanges();
+	}
+
+	// ----- The truck's horn -----
+
+	private static long hornAt;
+
+	private static ItemStack horn() {
+		ItemStack stack = new ItemStack(Items.GOAT_HORN);
+		stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("Truck Horn (right-click)").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		return stack;
+	}
+
+	/**
+	 * Someone on the crew used an item. The horn: the truck blasts it, and every enemy near the truck is knocked back
+	 * and staggers for three seconds. Once every 25 seconds, for the whole crew. True when it was the horn.
+	 */
+	public static boolean useItem(ServerPlayer player, ItemStack stack) {
+		if (!stack.is(Items.GOAT_HORN) || !playing(player)) {
+			return false;
+		}
+		if (truck == null || state == State.IDLE || state == State.STAGING || state == State.OVER) {
+			return true;
+		}
+		if (ticks < hornAt) {
+			player.sendOverlayMessage(Component.literal("The horn's ready again in " + ((hornAt - ticks) / 20 + 1) + "s").withStyle(ChatFormatting.GRAY));
+			return true;
+		}
+		hornAt = ticks + 25 * 20;
+		ServerLevel level = (ServerLevel) player.level();
+		Vec3 at = truck.position();
+		level.playSound(null, BlockPos.containing(at), SoundEvents.RAID_HORN.value(), SoundSource.NEUTRAL, 6.0F, 0.55F);
+		level.playSound(null, BlockPos.containing(at), SoundEvents.RAVAGER_ROAR, SoundSource.NEUTRAL, 2.0F, 1.6F);
+		dev.rubymod.game.rift.RiftFx.ring(level, at.add(0, 0.5, 0), 6, net.minecraft.core.particles.ParticleTypes.CLOUD, 40);
+		dev.rubymod.game.rift.RiftFx.ring(level, at.add(0, 0.5, 0), 12, net.minecraft.core.particles.ParticleTypes.CLOUD, 60);
+		int hit = 0;
+		for (UUID id : MOBS) {
+			if (level.getEntity(id) instanceof LivingEntity mob && mob.isAlive() && !isBoss(mob) && mob.position().distanceTo(at) < 15) {
+				Vec3 away = mob.position().subtract(at).multiply(1, 0, 1);
+				away = away.lengthSqr() < 0.01 ? new Vec3(1, 0, 0) : away.normalize();
+				mob.setDeltaMovement(away.scale(1.1).add(0, 0.45, 0));
+				mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SLOWNESS, 60, 4, false, true));
+				mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WEAKNESS, 60, 2, false, false));
+				hit++;
+			}
+		}
+		for (ServerPlayer p : players(player.level().getServer())) {
+			p.sendOverlayMessage(Component.literal("HOOOONK! " + player.getName().getString() + " hit the horn" + (hit > 0 ? ": " + hit + " knocked back" : ""))
+					.withStyle(ChatFormatting.GOLD));
+			p.getCooldowns().addCooldown(horn(), 25 * 20);
+		}
+		return true;
 	}
 
 	/** Topped up at a depot: grenades back, flares if there's air support. */

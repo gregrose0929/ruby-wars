@@ -28,7 +28,15 @@ public final class HubCommand {
 				return 0;
 			}
 			return 1;
-		})).then(Commands.literal("shop").executes(c -> {
+		})).then(Commands.literal("vote").then(Commands.argument("option", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
+			String error = dev.rubymod.game.Horde.vote(c.getSource().getPlayerOrException(),
+					com.mojang.brigadier.arguments.StringArgumentType.getString(c, "option"));
+			if (error != null) {
+				c.getSource().sendFailure(Component.literal(error));
+				return 0;
+			}
+			return 1;
+		}))).then(Commands.literal("shop").executes(c -> {
 			var player = c.getSource().getPlayerOrException();
 			if (!dev.rubymod.game.Horde.playing(player)) {
 				c.getSource().sendFailure(Component.literal("The Horde Armory is only for Co-op Horde."));

@@ -4499,6 +4499,7 @@ public final class AutoTest {
 			});
 			case "vehicles" -> vehiclesScript();
 			case "progress" -> progressScript();
+			case "special" -> specialScript();
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
 			case "showcase" -> showcaseScript();
@@ -4515,6 +4516,78 @@ public final class AutoTest {
 			log("done");
 			mc.stop();
 		});
+	}
+
+	/** The hub's gallery and war room, a ruby meteor, the convoy's horn and blackout, Horde's vote. */
+	private static void specialScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode creative @a");
+		});
+		// A meteor, out in the world.
+		then(40, mc -> onServer(mc, server -> {
+			var at = dev.rubymod.game.BattleDirector.meteor(server.overworld());
+			log("meteor at {}", at);
+			if (at != null) {
+				me(server).teleportTo(server.overworld(), at.getX() + 9.5, at.getY() + 9, at.getZ() + 0.5, java.util.Set.of(), 90, 40, true);
+			}
+		}));
+		then(60, mc -> shot(mc, "special-meteor"));
+		// The hub: something in the gallery, and the war room's table.
+		then(5, mc -> command(mc, "execute as @p run hub"));
+		then(60, mc -> onServer(mc, server -> {
+			var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+			dev.rubymod.game.Hub.showcase(hub, new net.minecraft.core.BlockPos(-7, dev.rubymod.game.Hub.FLOOR, -7), 15, 31, "Tester", "Fountain");
+		}));
+		then(10, mc -> command(mc, "execute as @p at @s run tp @s -18.5 103 6.5 90 -5"));
+		then(60, mc -> shot(mc, "special-gallery"));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s 0.5 102 -4.5 180 25"));
+		then(60, mc -> {
+			shot(mc, "special-warroom");
+			onServer(mc, server -> {
+				var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+				log("war room displays: {}", hub.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(-4, 100, -13, 4, 106, -5),
+						e -> e.entityTags().contains("rubymod_hub_war")).size());
+			});
+		});
+		// The convoy: the horn, then into Ember Town's blackout.
+		then(5, mc -> command(mc, "gamemode survival @a"));
+		then(5, mc -> command(mc, "execute as @p run play convoy"));
+		then(80, mc -> {
+			if (mc.gui.screen() instanceof dev.rubymod.client.convoy.ConvoyScreen s) {
+				s.pick(1);
+			}
+		});
+		for (int i = 0; i < 14; i++) {
+			then(40, mc -> log("waiting: {}", dev.rubymod.game.convoy.Convoy.debugState()));
+		}
+		then(5, mc -> onServer(mc, server -> {
+			var me = me(server);
+			me.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.RESISTANCE, -1, 4, false, false));
+			dev.rubymod.game.convoy.Convoy.testSkip(server, "start");
+		}));
+		then(60, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "goto:60")));
+		then(120, mc -> onServer(mc, server -> {
+			var me = me(server);
+			log("horn in kit: {}, used: {}, again: {} | {}", me.getInventory().countItem(net.minecraft.world.item.Items.GOAT_HORN),
+					dev.rubymod.game.convoy.Convoy.useItem(me, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOAT_HORN)),
+					dev.rubymod.game.convoy.Convoy.useItem(me, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOAT_HORN)),
+					dev.rubymod.game.convoy.Convoy.debugState());
+		}));
+		then(20, mc -> shot(mc, "special-horn"));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "goto:" + (202 + 112))));
+		then(100, mc -> {
+			shot(mc, "special-blackout");
+			onServer(mc, server -> log("blackout: darkness {} | {}", me(server).hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS),
+					dev.rubymod.game.convoy.Convoy.debugState()));
+		});
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s ~30 ~ ~"));
+		then(40, mc -> onServer(mc, server -> log("away from the truck: darkness {}", me(server).hasEffect(net.minecraft.world.effect.MobEffects.DARKNESS))));
+		then(5, mc -> command(mc, "execute as @p run hub"));
+		// Horde: no vote before a Brute wave; the command answers.
+		then(40, mc -> command(mc, "execute as @p run play horde"));
+		then(100, mc -> onServer(mc, server -> log("horde vote with none open: {}", dev.rubymod.game.Horde.vote(me(server), "guns"))));
+		then(5, mc -> command(mc, "execute as @p run hub"));
 	}
 
 	/** Levels and XP, armor sets (lent in the hub, and over real armor), the profile, the game picker, the simple tank and aircraft displays. */
