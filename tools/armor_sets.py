@@ -70,6 +70,13 @@ SETS = {
     'breaker': (['7a7460', '989078', 'b4ac92', 'd0c8ae', 'e8e2cc'], '4cc66a', None),
     'star': (['a8780c', 'c89414', 'e4b024', 'f5c542', 'ffe07a'], 'ffffff', speckle(hexc('fff6c8'), 0.1)),
     'victor': (['b08a10', 'd0a418', 'e8be28', 'f8d848', 'fff0a0'], 'e0294a', None),
+    'desert': (['8a744a', 'a48c5c', 'bca470', 'd2bc88', 'e6d4a4'], '6a5434', camo(hexc('7a6238'), hexc('efe2bc'))),
+    'ocean': (['0c4a5c', '126a80', '1a8ca4', '2cb0c8', '5cd4e6'], 'f2f6f8', speckle(hexc('c8f4ff'), 0.06)),
+    'ember': (['1c1412', '2a1c18', '3c2620', '54342a', '70463a'], 'ff7a1a', seams(hexc('ffb030'))),
+    'royal': (['341060', '4a1a86', '6426ac', '8238d0', 'a45cec'], 'f5c542', None),
+    'medic': (['b4bac2', 'ccd2d8', 'e0e4e8', 'f0f2f4', 'ffffff'], 'd81e2c', None),
+    'racer': (['1c56c0', '2a70dc', '4290f0', '66acff', '96c8ff'], 'ffe040', stripes(hexc('ffffff'), hexc('1c56c0'))),
+    'duelist': (['40444c', '565c66', '707884', '8c96a4', 'acb6c4'], '30c8a0', None),
 }
 
 # The Ruby armor's own colours, darkest first; anything paler is trim.

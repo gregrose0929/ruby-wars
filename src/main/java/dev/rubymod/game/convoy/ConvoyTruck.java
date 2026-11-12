@@ -41,53 +41,13 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The Ruby Truck: an armored truck loaded with rubies, built from blocks. It drives itself
+ * The Ruby Truck: an armored truck loaded with rubies (its model: tools/vehicle_models.py). It drives itself
  * along the road while someone stays close (see Convoy). Two seats on top (right-click
  * them): the roof gun at the front and the cargo bed at the back. Crouch beside it to
  * repair it. Its upgrades (from the depots) fire on their own: the roof minigun, rocket
  * pods, the tesla coil, the ram; the shield and the repair drone look after it.
  */
 final class ConvoyTruck {
-	private record Part(BlockState block, float sx, float sy, float sz, float ox, float oy, float oz) {
-	}
-
-	private static final BlockState BODY = Blocks.CONCRETE.pick(DyeColor.RED).defaultBlockState();
-	private static final BlockState DARK = Blocks.POLISHED_BLACKSTONE.defaultBlockState();
-	private static final BlockState TYRE = Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState();
-	private static final BlockState STEEL = Blocks.IRON_BLOCK.defaultBlockState();
-	private static final BlockState PLATE = Blocks.CONCRETE.pick(DyeColor.GRAY).defaultBlockState();
-	private static final BlockState GLASS = Blocks.STAINED_GLASS.pick(DyeColor.LIGHT_BLUE).defaultBlockState();
-	private static final BlockState LIGHT = Blocks.SEA_LANTERN.defaultBlockState();
-	private static final BlockState BEACON = Blocks.REDSTONE_LAMP.defaultBlockState().setValue(RedstoneLampBlock.LIT, true);
-	private static final BlockState RUBY = ModBlocks.RUBY_BLOCK.defaultBlockState();
-	/** Front is +Z. Width 3, length 7. */
-	private static final List<Part> MODEL = List.of(
-			new Part(DARK, 3.0F, 0.45F, 6.8F, -1.5F, 0.45F, -3.4F),
-			new Part(TYRE, 0.5F, 1.0F, 1.1F, -1.65F, 0.0F, 1.6F), new Part(TYRE, 0.5F, 1.0F, 1.1F, 1.15F, 0.0F, 1.6F),
-			new Part(TYRE, 0.5F, 1.0F, 1.1F, -1.65F, 0.0F, -1.1F), new Part(TYRE, 0.5F, 1.0F, 1.1F, 1.15F, 0.0F, -1.1F),
-			new Part(TYRE, 0.5F, 1.0F, 1.1F, -1.65F, 0.0F, -2.6F), new Part(TYRE, 0.5F, 1.0F, 1.1F, 1.15F, 0.0F, -2.6F),
-			// The cab.
-			new Part(BODY, 3.0F, 1.6F, 2.1F, -1.5F, 0.9F, 1.3F),
-			new Part(BODY, 3.0F, 0.6F, 0.8F, -1.5F, 0.9F, 3.4F),
-			new Part(GLASS, 2.6F, 0.7F, 0.08F, -1.3F, 1.65F, 3.38F),
-			new Part(GLASS, 0.08F, 0.6F, 1.2F, -1.53F, 1.7F, 1.9F), new Part(GLASS, 0.08F, 0.6F, 1.2F, 1.45F, 1.7F, 1.9F),
-			new Part(STEEL, 3.2F, 0.35F, 0.25F, -1.6F, 0.55F, 4.15F),
-			new Part(LIGHT, 0.5F, 0.35F, 0.08F, -1.3F, 1.05F, 4.2F), new Part(LIGHT, 0.5F, 0.35F, 0.08F, 0.8F, 1.05F, 4.2F),
-			new Part(DARK, 1.6F, 0.3F, 0.08F, -0.8F, 1.0F, 4.2F),
-			// The armored cargo box, its ruby load, and plates.
-			new Part(PLATE, 3.0F, 1.7F, 4.4F, -1.5F, 0.9F, -3.4F),
-			new Part(STEEL, 3.1F, 0.25F, 4.5F, -1.55F, 2.5F, -3.45F),
-			new Part(RUBY, 2.4F, 0.4F, 3.6F, -1.2F, 2.6F, -3.0F),
-			new Part(RUBY, 1.4F, 0.35F, 2.2F, -0.7F, 3.0F, -2.3F),
-			new Part(BODY, 3.06F, 0.3F, 4.46F, -1.53F, 1.6F, -3.43F),
-			// The roof gun on the cab, a beacon, an aerial.
-			new Part(DARK, 1.1F, 0.35F, 1.1F, -0.55F, 2.5F, 1.75F),
-			new Part(STEEL, 0.18F, 0.18F, 1.4F, -0.09F, 2.65F, 2.4F),
-			new Part(BEACON, 0.35F, 0.25F, 0.35F, 1.0F, 2.5F, 2.8F),
-			new Part(Blocks.END_ROD.defaultBlockState(), 0.1F, 1.3F, 0.1F, 1.2F, 2.75F, -3.25F));
-	/** The ruby load glows (you can see where the truck is through walls). */
-	private static final int GLOW_PART = 19;
-
 	final List<UUID> parts = new ArrayList<>();
 	UUID roofSeat;
 	UUID bedSeat;
@@ -100,31 +60,21 @@ final class ConvoyTruck {
 	private float lastYaw;
 
 	static ConvoyTruck spawn(ServerLevel level, double z, float maxHp, DyeColor paint) {
-		BlockState painted = Blocks.CONCRETE.pick(paint).defaultBlockState();
 		ConvoyTruck truck = new ConvoyTruck();
 		truck.z = z;
 		truck.maxHp = maxHp;
 		truck.hp = maxHp;
 		Vec3 at = truck.position();
 		float yaw = ConvoyRoute.yaw(z);
-		for (int i = 0; i < MODEL.size(); i++) {
-			Part p = MODEL.get(i);
-			Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
-			if (d == null) {
-				continue;
-			}
-			d.snapTo(at.x, at.y, at.z, yaw, 0);
-			((BlockDisplayAccessor) d).rubymod$setBlockState(p.block() == BODY ? painted : p.block());
-			((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(p.ox(), p.oy(), p.oz()), new Quaternionf(),
-					new Vector3f(p.sx(), p.sy(), p.sz()), new Quaternionf()));
-			((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(3);
-			((DisplayAccessor) d).rubymod$setViewRange(6.0F);
-			if (i == GLOW_PART) {
-				d.setGlowingTag(true);
-				((DisplayAccessor) d).rubymod$setGlowColorOverride(0xFF3050);
-			}
-			d.addTag(Convoy.TAG);
-			level.addFreshEntity(d);
+		// One model, in the crew's paint. It glows red through walls, so nobody loses the truck.
+		String model = paint == DyeColor.BLUE ? "convoy_truck_blue" : paint == DyeColor.BLACK ? "convoy_truck_black"
+				: paint == DyeColor.YELLOW ? "convoy_truck_gold" : paint == DyeColor.GREEN ? "convoy_truck_green" : paint == DyeColor.WHITE ? "convoy_truck_white"
+						: paint == DyeColor.PURPLE ? "convoy_truck_purple" : paint == DyeColor.LIME ? "convoy_truck_camo" : "convoy_truck_red";
+		Display.ItemDisplay d = dev.rubymod.game.Props.model(level, at, yaw, model, ConvoyModels.CONVOY_TRUCK_SIZE, ConvoyModels.CONVOY_TRUCK_Y,
+				ConvoyModels.CONVOY_TRUCK_Z, Convoy.TAG);
+		if (d != null) {
+			d.setGlowingTag(true);
+			((DisplayAccessor) d).rubymod$setGlowColorOverride(0xFF3050);
 			truck.parts.add(d.getUUID());
 		}
 		truck.roofSeat = seat(level, at);

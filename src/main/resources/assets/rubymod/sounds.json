@@ -192,5 +192,70 @@
 				"stream": false
 			}
 		]
+	},
+	"hub_theme": {
+		"sounds": [
+			{
+				"name": "rubymod:music_hub_theme",
+				"stream": true,
+				"attenuation_distance": 96
+			}
+		]
+	},
+	"win_jingle": {
+		"sounds": [
+			{
+				"name": "rubymod:music_win_jingle"
+			}
+		]
+	},
+	"lose_jingle": {
+		"sounds": [
+			{
+				"name": "rubymod:music_lose_jingle"
+			}
+		]
+	},
+	"round_start": {
+		"sounds": [
+			{
+				"name": "rubymod:music_round_start"
+			}
+		]
+	},
+	"level_up": {
+		"sounds": [
+			{
+				"name": "rubymod:music_level_up"
+			}
+		]
+	},
+	"golden": {
+		"sounds": [
+			{
+				"name": "rubymod:music_golden"
+			}
+		]
+	},
+	"boss_sting": {
+		"sounds": [
+			{
+				"name": "rubymod:music_boss_sting"
+			}
+		]
+	},
+	"alarm": {
+		"sounds": [
+			{
+				"name": "rubymod:music_alarm"
+			}
+		]
+	},
+	"pickup": {
+		"sounds": [
+			{
+				"name": "rubymod:music_pickup"
+			}
+		]
 	}
 }

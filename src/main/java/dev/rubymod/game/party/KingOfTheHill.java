@@ -57,19 +57,34 @@ public class KingOfTheHill extends PartyGame {
 		return i == 0 ? 3 : 0;
 	}
 
+	/** Which map this round is on: they take turns (the hill and its zones are the same on all three; the ground and cover aren't). */
+	private int map;
+	private int built;
+	private static final String[] MAPS = {"Green Hill", "Sandstone Ruins", "Frost Fort"};
+
 	@Override
 	protected void build(ServerLevel level) {
-		flatArena(level, HALF, HALF, 25, Blocks.GRASS_BLOCK.defaultBlockState(), true);
+		map = built++ % MAPS.length;
+		BlockState floor = map == 1 ? Blocks.SAND.defaultBlockState() : map == 2 ? Blocks.SNOW_BLOCK.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
+		BlockState slope = map == 1 ? Blocks.SANDSTONE.defaultBlockState() : map == 2 ? Blocks.PACKED_ICE.defaultBlockState() : Blocks.MOSSY_COBBLESTONE.defaultBlockState();
+		BlockState bricks = map == 1 ? Blocks.CUT_SANDSTONE.defaultBlockState() : map == 2 ? Blocks.SPRUCE_PLANKS.defaultBlockState() : Blocks.STONE_BRICKS.defaultBlockState();
+		BlockState post = map == 1 ? Blocks.CHISELED_SANDSTONE.defaultBlockState() : map == 2 ? Blocks.SPRUCE_LOG.defaultBlockState() : Blocks.OAK_LOG.defaultBlockState();
+		flatArena(level, HALF, HALF, 25, floor, true);
+		if (map == 1) {
+			// Sand needs something under it.
+			box(level, -HALF - 2, -1, -HALF - 2, HALF + 2, -1, HALF + 2, Blocks.SANDSTONE.defaultBlockState());
+		}
 		// The hill in the middle: three steps up to a flat top.
 		for (int step = 0; step < 3; step++) {
 			int r = 9 - step * 2;
-			box(level, -r, 1 + step, -r, r, 1 + step, r, step == 2 ? Blocks.STONE_BRICKS.defaultBlockState() : Blocks.MOSSY_COBBLESTONE.defaultBlockState());
+			box(level, -r, 1 + step, -r, r, 1 + step, r, step == 2 ? Blocks.STONE_BRICKS.defaultBlockState() : slope);
 		}
-		BlockState bricks = Blocks.STONE_BRICKS.defaultBlockState();
 		BlockState crate = Blocks.BARREL.defaultBlockState();
-		// Cover around the field (the same in every quarter).
+		// Cover around the field (the same in every quarter): walls two high, {x1, z1, x2, z2}.
+		int[][] pieces = map == 1 ? new int[][] {{10, 12, 14, 12}, {14, 12, 14, 15}, {26, -4, 26, 3}, {4, 27, 9, 27}, {29, 14, 31, 14}}
+				: map == 2 ? new int[][] {{13, -3, 13, 3}, {25, 12, 29, 12}, {5, 15, 5, 19}, {12, 29, 15, 29}}
+				: new int[][] {{12, 4, 12, 8}, {26, -6, 26, 6}, {8, 26, 14, 26}};
 		for (int k = 0; k < 4; k++) {
-			int[][] pieces = {{12, 4, 12, 8}, {26, -6, 26, 6}, {8, 26, 14, 26}};
 			for (int[] p : pieces) {
 				int[] a = rot(p[0], p[1], k);
 				int[] b = rot(p[2], p[3], k);
@@ -78,7 +93,24 @@ public class KingOfTheHill extends PartyGame {
 			int[] c = rot(16, 12, k);
 			set(level, c[0], 1, c[1], crate);
 			int[] c2 = rot(30, 30, k);
-			box(level, c2[0], 1, c2[1], c2[0], 3, c2[1], Blocks.OAK_LOG.defaultBlockState());
+			box(level, c2[0], 1, c2[1], c2[0], 3, c2[1], post);
+			if (map == 1) {
+				// Broken columns.
+				int[] c3 = rot(13, 26, k);
+				box(level, c3[0], 1, c3[1], c3[0], 4, c3[1], post);
+				int[] c4 = rot(27, 9, k);
+				box(level, c4[0], 1, c4[1], c4[0], 2, c4[1], post);
+			} else if (map == 2) {
+				// A lookout in each corner: a platform three up, on four posts, with a ladder.
+				int[] t = rot(27, 27, k);
+				for (int dx = -1; dx <= 1; dx += 2) {
+					for (int dz = -1; dz <= 1; dz += 2) {
+						box(level, t[0] + dx, 1, t[1] + dz, t[0] + dx, 3, t[1] + dz, post);
+					}
+				}
+				box(level, t[0] - 1, 4, t[1] - 1, t[0] + 1, 4, t[1] + 1, bricks);
+				box(level, t[0], 1, t[1], t[0], 4, t[1], Blocks.SCAFFOLDING.defaultBlockState());
+			}
 		}
 		for (int i = 0; i < ZONES.length; i++) {
 			paintZone(level, i, false);
@@ -171,6 +203,7 @@ public class KingOfTheHill extends PartyGame {
 			spawnZoneBot();
 		}
 		titleAll("KING OF THE HILL", "Stand in the gold zone to score", ChatFormatting.GOLD);
+		tell(Component.literal("Map: " + MAPS[map]).withStyle(ChatFormatting.AQUA));
 	}
 
 	private void spawnZoneBot() {

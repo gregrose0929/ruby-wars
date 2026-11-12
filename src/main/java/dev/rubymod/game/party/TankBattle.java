@@ -47,8 +47,49 @@ public class TankBattle extends PartyGame {
 	/** A fresh arena every round (craters filled, walls back up), built a little at a time. */
 	@Override
 	protected void build(ServerLevel level) {
+		map = built++ % MAPS.length;
 		Duels.ArenaBuilder.buildQueued(level, Duels.Mode.VEHICLES, center(), this::later);
+		if (map == 1) {
+			// A town in the middle: the shells of sixteen buildings, with streets between them (tanks can drive through the walls).
+			var wall = net.minecraft.world.level.block.Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.LIGHT_GRAY).defaultBlockState();
+			var trim = net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState();
+			var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+			for (int gx : new int[] {-66, -24, 24, 66}) {
+				for (int gz : new int[] {-62, -22, 22, 62}) {
+					box(level, gx - 7, 1, gz - 7, gx + 7, 5, gz + 7, air);
+					box(level, gx - 6, 1, gz - 6, gx + 6, 4, gz - 6, wall);
+					box(level, gx - 6, 1, gz + 6, gx + 6, 4, gz + 6, wall);
+					box(level, gx - 6, 1, gz - 6, gx - 6, 4, gz + 6, wall);
+					box(level, gx + 6, 1, gz - 6, gx + 6, 4, gz + 6, wall);
+					box(level, gx - 6, 5, gz - 6, gx + 6, 5, gz + 6, trim);
+					box(level, gx - 5, 5, gz - 5, gx + 5, 5, gz + 5, air);
+					// Doorways and windows.
+					box(level, gx - 1, 1, gz - 6, gx + 1, 3, gz - 6, air);
+					box(level, gx - 1, 1, gz + 6, gx + 1, 3, gz + 6, air);
+					box(level, gx - 6, 2, gz - 2, gx - 6, 3, gz + 2, air);
+					box(level, gx + 6, 2, gz - 2, gx + 6, 3, gz + 2, air);
+				}
+			}
+		} else if (map == 2) {
+			// Two long ridges across the field, with gaps to push through.
+			var dirt = net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState();
+			var grass = net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState();
+			var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+			for (int rz : new int[] {-38, 38}) {
+				box(level, -104, 1, rz - 2, 104, 3, rz + 2, dirt);
+				box(level, -104, 4, rz - 1, 104, 4, rz + 1, grass);
+				for (int gap : new int[] {-72, -30, 30, 72}) {
+					box(level, gap - 5, 1, rz - 2, gap + 5, 4, rz + 2, air);
+				}
+				box(level, -5, 1, rz - 2, 5, 4, rz + 2, air);
+			}
+		}
 	}
+
+	/** Which map this round is on: the same stadium with different things in the middle. */
+	private int map;
+	private int built;
+	private static final String[] MAPS = {"The Proving Ground", "Ghost Town", "The Ridges"};
 
 	@Override
 	protected String roundStatus() {
@@ -68,6 +109,7 @@ public class TankBattle extends PartyGame {
 		tanks.clear();
 		boardIn.clear();
 		minesLeft.clear();
+		tell(Component.literal("Map: " + MAPS[map]).withStyle(ChatFormatting.AQUA));
 		// Pick-ups out in the open, where it's dangerous to go and get them.
 		BlockPos c = center();
 		Object[][] spots = {{"rapid", 0, 0}, {"repair", -55, 0}, {"repair", 55, 0}, {"mines", 0, -48}, {"mines", 0, 48}, {"repair", 0, -85}, {"repair", 0, 85}};

@@ -96,7 +96,7 @@ public class Infection extends PartyGame {
 			if (p != survivor) {
 				dev.rubymod.game.Alerts.title(p, "LAST SURVIVOR", part.name + " has a minigun. Get them!", ChatFormatting.RED);
 			}
-			p.level().playSound(null, p.blockPosition(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 0.6F, 0.7F);
+			dev.rubymod.game.Alerts.jingle(p, dev.rubymod.registry.ModSounds.GOLDEN, 0.9F);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.MUSIC_DISC_PIGSTEP.value(), SoundSource.RECORDS, 1.0F, 1.0F);
 		}
 		tell(Component.literal(part.name + " is the LAST SURVIVOR!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));

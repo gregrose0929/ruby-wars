@@ -56,9 +56,57 @@ public class GunGame extends PartyGame {
 		return new BlockPos(-40000, GROUND + 1, 0);
 	}
 
+	/** Which map this round is on: the same arena with different things built in it. */
+	private int map;
+	private int built;
+	private static final String[] MAPS = {"The Yard", "Watchtowers", "The Trenches"};
+
 	@Override
 	protected void build(ServerLevel level) {
+		map = built++ % MAPS.length;
 		Duels.ArenaBuilder.buildQueued(level, Duels.Mode.GUNS, center(), this::later);
+		net.minecraft.world.level.block.state.BlockState planks = net.minecraft.world.level.block.Blocks.SPRUCE_PLANKS.defaultBlockState();
+		net.minecraft.world.level.block.state.BlockState logs = net.minecraft.world.level.block.Blocks.SPRUCE_LOG.defaultBlockState();
+		net.minecraft.world.level.block.state.BlockState bags = dev.rubymod.registry.ModBlocks.SANDBAGS.defaultBlockState();
+		net.minecraft.world.level.block.state.BlockState air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+		if (map == 1) {
+			// A watchtower in each quarter (climb the scaffolding), and a deck across the middle.
+			for (int sx = -1; sx <= 1; sx += 2) {
+				for (int sz = -1; sz <= 1; sz += 2) {
+					int x = 17 * sx;
+					int z = 15 * sz;
+					for (int dx = -1; dx <= 1; dx += 2) {
+						for (int dz = -1; dz <= 1; dz += 2) {
+							box(level, x + dx, 1, z + dz, x + dx, 4, z + dz, logs);
+						}
+					}
+					box(level, x - 2, 5, z - 2, x + 2, 5, z + 2, planks);
+					box(level, x - 2, 6, z - 2, x + 2, 6, z + 2, bags);
+					box(level, x - 1, 6, z - 1, x + 1, 6, z + 1, air);
+					box(level, x, 1, z, x, 5, z, net.minecraft.world.level.block.Blocks.SCAFFOLDING.defaultBlockState());
+					set(level, x, 6, z, air);
+				}
+			}
+			box(level, -6, 3, -1, 6, 3, 1, planks);
+			for (int sx = -1; sx <= 1; sx += 2) {
+				box(level, 6 * sx, 1, -1, 6 * sx, 2, -1, logs);
+				box(level, 6 * sx, 1, 1, 6 * sx, 2, 1, logs);
+				box(level, 7 * sx, 1, 0, 7 * sx, 3, 0, net.minecraft.world.level.block.Blocks.SCAFFOLDING.defaultBlockState());
+			}
+		} else if (map == 2) {
+			// Sandbag lines chest high, criss-crossing the yard, with gaps to dash through.
+			for (int s = -1; s <= 1; s += 2) {
+				box(level, 9 * s, 1, -20, 9 * s, 1, 20, bags);
+				box(level, 9 * s, 1, -13, 9 * s, 1, -11, air);
+				box(level, 9 * s, 1, -1, 9 * s, 1, 1, air);
+				box(level, 9 * s, 1, 11, 9 * s, 1, 13, air);
+				box(level, -22, 1, 9 * s, 22, 1, 9 * s, bags);
+				box(level, -17, 1, 9 * s, -15, 1, 9 * s, air);
+				box(level, -1, 1, 9 * s, 1, 1, 9 * s, air);
+				box(level, 15, 1, 9 * s, 17, 1, 9 * s, air);
+				box(level, 19 * s, 1, -4, 19 * s, 2, 4, bags);
+			}
+		}
 	}
 
 	/** The arena's outer walls can't be blasted open. */
@@ -89,7 +137,8 @@ public class GunGame extends PartyGame {
 		for (int i = 0; i < wanted; i++) {
 			spawnGunBot(i, 0);
 		}
-		titleAll("GUN GAME", "Every kill: a new weapon. Win with the sword!", ChatFormatting.GOLD);
+		titleAll("GUN GAME", "Every kill: a new weapon. Win with the Golden Blade!", ChatFormatting.GOLD);
+		tell(Component.literal("Map: " + MAPS[map]).withStyle(ChatFormatting.AQUA));
 	}
 
 	private void spawnGunBot(int i, int level) {
@@ -182,7 +231,7 @@ public class GunGame extends PartyGame {
 				if (p != killer) {
 					dev.rubymod.game.Alerts.title(p, "GOLDEN BLADE", part.name + " is one kill from winning!", ChatFormatting.GOLD);
 				}
-				p.level().playSound(null, p.blockPosition(), SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 1.0F, 1.4F);
+				dev.rubymod.game.Alerts.jingle(p, dev.rubymod.registry.ModSounds.GOLDEN, 0.9F);
 			}
 			level().sendParticles(net.minecraft.core.particles.ParticleTypes.TOTEM_OF_UNDYING, killer.getX(), killer.getY() + 1, killer.getZ(), 60, 0.4, 0.8, 0.4, 0.4);
 		}

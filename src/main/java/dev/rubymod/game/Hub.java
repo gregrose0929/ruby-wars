@@ -589,9 +589,16 @@ public final class Hub {
 				player.resetFallDistance();
 			}
 		}
+		// The plaza's tune: twenty seconds long, started again as it ends (in the Music volume, for anyone who'd rather not).
+		if (!hub.players().isEmpty() && server.getTickCount() % 400 < 20) {
+			hub.playSound(null, new BlockPos(0, FLOOR + 3, 0), dev.rubymod.registry.ModSounds.HUB_THEME, net.minecraft.sounds.SoundSource.MUSIC, 1.0F, 1.0F);
+		}
 		if (!hub.players().isEmpty() && server.getTickCount() % 40 == 0) {
 			updateLabels(hub);
 			updateWarTable(hub);
+			if (server.getTickCount() % 200 == 0) {
+				updatePodium(hub);
+			}
 		}
 	}
 
@@ -720,11 +727,83 @@ public final class Hub {
 		islet(level, 4, FLOOR - 12, -36, 5);
 		islet(level, -6, FLOOR + 8, 36, 3);
 		galleryBase(level);
+		podiumBase(level);
 		// The war room: a table between the Rift and Convoy gates, with the season's map on it.
 		for (int x = -1; x <= 1; x++) {
 			for (int z = WAR_Z - 1; z <= WAR_Z + 1; z++) {
 				set(level, x, FLOOR + 1, z, Blocks.POLISHED_BLACKSTONE.defaultBlockState());
 			}
+		}
+	}
+
+	// ----- The champions' podium: the three highest levels, as statues in their own skins and armor sets -----
+
+	private static final int PODIUM_X = 18;
+	private static final int PODIUM_Z = 1;
+	private static final String PODIUM_TAG = "rubymod_hub_podium";
+	private static String podiumShown = "";
+
+	private static void podiumBase(ServerLevel level) {
+		// Gold in the middle, silver to its left, bronze to its right (as you look at it from the plaza).
+		int[][] steps = {{0, 2}, {-2, 1}, {2, 1}};
+		BlockState[] blocks = {Blocks.GOLD_BLOCK.defaultBlockState(), Blocks.IRON_BLOCK.defaultBlockState(), Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.ORANGE).defaultBlockState()};
+		for (int i = 0; i < 3; i++) {
+			for (int dz = 0; dz <= 1; dz++) {
+				for (int dx = 0; dx <= 1; dx++) {
+					for (int y = 1; y <= 2; y++) {
+						set(level, PODIUM_X + dx, FLOOR + y, PODIUM_Z + steps[i][0] + dz, y <= steps[i][1] ? blocks[i] : Blocks.AIR.defaultBlockState());
+					}
+					set(level, PODIUM_X + dx, FLOOR + 3, PODIUM_Z + steps[i][0] + dz, Blocks.AIR.defaultBlockState());
+					set(level, PODIUM_X + dx, FLOOR + 4, PODIUM_Z + steps[i][0] + dz, Blocks.AIR.defaultBlockState());
+				}
+			}
+		}
+	}
+
+	private static void updatePodium(ServerLevel hub) {
+		List<Stats.Record> top = Stats.top(java.util.Comparator.comparingInt((Stats.Record r) -> r.xp).reversed(), 3, r -> r.xp > 0 && !r.name.isEmpty());
+		StringBuilder key = new StringBuilder();
+		for (Stats.Record r : top) {
+			key.append(r.name).append(':').append(Stats.level(r.xp)[0]).append(':').append(r.armor).append(';');
+		}
+		List<Entity> old = hub.getEntities((Entity) null, new AABB(PODIUM_X - 3, FLOOR, PODIUM_Z - 4, PODIUM_X + 5, FLOOR + 8, PODIUM_Z + 6),
+				e -> e.entityTags().contains(PODIUM_TAG));
+		if (key.toString().equals(podiumShown) && old.size() == top.size() + 1) {
+			return;
+		}
+		podiumShown = key.toString();
+		for (Entity e : old) {
+			e.discard();
+		}
+		Props.text(hub, new Vec3(PODIUM_X + 1.0, FLOOR + 6.2, PODIUM_Z + 1.0), Component.literal("★ CHAMPIONS ★").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
+				1.6F, PODIUM_TAG);
+		int[][] steps = {{0, 2}, {-2, 1}, {2, 1}};
+		String[] places = {"1st", "2nd", "3rd"};
+		ChatFormatting[] colors = {ChatFormatting.GOLD, ChatFormatting.WHITE, ChatFormatting.RED};
+		for (int i = 0; i < top.size(); i++) {
+			Stats.Record r = top.get(i);
+			var statue = EntityTypes.MANNEQUIN.create(hub, EntitySpawnReason.EVENT);
+			if (statue == null) {
+				continue;
+			}
+			statue.snapTo(PODIUM_X + 1.0, FLOOR + 1 + steps[i][1], PODIUM_Z + steps[i][0] + 1.0, 90, 0);
+			statue.yBodyRot = 90;
+			statue.yHeadRot = 90;
+			statue.getEntityData().set(dev.rubymod.mixin.MannequinAccessor.rubymod$profile(),
+					net.minecraft.world.item.component.ResolvableProfile.createUnresolved(r.name));
+			var slots = new net.minecraft.world.entity.EquipmentSlot[] {net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
+					net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET};
+			String set = r.armor == null ? "" : r.armor;
+			for (int s = set.isEmpty() ? 1 : 1; s < 4; s++) {
+				// No helmet: their face shows.
+				statue.setItemSlot(slots[s], Cosmetics.showpiece(s, set));
+			}
+			statue.setPermanentlyInvulnerable(true);
+			statue.setCustomName(Component.literal(places[i] + "  " + r.name + "  ").withStyle(colors[i], ChatFormatting.BOLD)
+					.append(Component.literal("Level " + Stats.level(r.xp)[0]).withStyle(ChatFormatting.AQUA)));
+			statue.setCustomNameVisible(true);
+			statue.addTag(PODIUM_TAG);
+			hub.addFreshEntity(statue);
 		}
 	}
 

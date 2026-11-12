@@ -43,6 +43,32 @@ public final class Props {
 		return d;
 	}
 
+	/**
+	 * One of the mod's 3D models (assets/rubymod/items/<id>.json), standing on the ground at {@code at} and turning with
+	 * the display. {@code size} is its longest side in blocks; {@code up} and {@code ahead} are where the middle of the
+	 * model is from the point it stands on. The models face backwards through an item display, hence the half turn.
+	 */
+	public static Display.ItemDisplay model(ServerLevel level, Vec3 at, float yaw, String id, float size, float up, float ahead, String tag) {
+		Display.ItemDisplay d = EntityTypes.ITEM_DISPLAY.create(level, EntitySpawnReason.EVENT);
+		if (d == null) {
+			return null;
+		}
+		d.snapTo(at.x, at.y, at.z, yaw, 0);
+		ItemStack stack = new ItemStack(net.minecraft.world.item.Items.STICK);
+		stack.set(net.minecraft.core.component.DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id(id));
+		((ItemDisplayAccessor) d).rubymod$setItemStack(stack);
+		((DisplayAccessor) d).rubymod$setViewRange(8.0F);
+		((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(3);
+		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(0, up, ahead), new Quaternionf().rotateY((float) Math.PI * MODEL_TURNS),
+				new Vector3f(size, size, size), new Quaternionf()));
+		d.addTag(tag);
+		level.addFreshEntity(d);
+		return d;
+	}
+
+	/** Half turns to add so a model's front is the display's front. */
+	private static final float MODEL_TURNS = 1;
+
 	/** A floating line of text that always faces you. */
 	public static Display.TextDisplay text(ServerLevel level, Vec3 at, Component text, float scale, String tag) {
 		Display.TextDisplay d = EntityTypes.TEXT_DISPLAY.create(level, EntitySpawnReason.EVENT);

@@ -282,6 +282,7 @@ public final class Rift {
 		r.ability = RiftAbilities.Ability.byId(RiftMeta.rec(player).riftAbility);
 		RUNNERS.put(player.getUUID(), r);
 		BAR.addPlayer(player);
+		dev.rubymod.game.HowTo.show(player, "rift");
 		if (state == State.IDLE) {
 			startStaging(server);
 		}
@@ -1963,7 +1964,7 @@ public final class Rift {
 			Alerts.title(p, act >= 4 ? "TRUE VICTORY!" : "RIFT CONQUERED!", act >= 4 ? "The Ruby Sovereign has fallen. The Rift is yours!"
 					: "The " + map.boss.title + " has fallen. You win!", ChatFormatting.GOLD);
 			RiftFx.screen(p, "flash", 0xFFFFC02E, 30);
-			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 1.0F);
+			Alerts.jingle(p, dev.rubymod.registry.ModSounds.WIN_JINGLE, 1.0F);
 			p.sendSystemMessage(Component.literal("====== VICTORY: " + r.kills + " kills, " + r.relics.size() + " relics ======")
 					.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 			dev.rubymod.game.Stats.rift(p.getUUID(), r.name, RiftMap.FLOORS + 1, true);

@@ -1,0 +1,11 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/tank",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:dreadnought",
+			"texture": "rubymod:textures/entity/vehicle/dreadnought.png"
+		}
+	}
+}

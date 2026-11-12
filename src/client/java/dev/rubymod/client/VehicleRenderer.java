@@ -63,6 +63,10 @@ public class VehicleRenderer extends EntityRenderer<VehicleEntity, VehicleRender
 	public static void registerLayers() {
 		ModelLayerRegistry.registerModelLayer(TANK, VehicleModels::tank);
 		ModelLayerRegistry.registerModelLayer(JEEP, VehicleModels::jeep);
+		// Ruby Convoy's truck and the Legion's armor: only ever drawn as items (see items/convoy_truck_red.json and friends).
+		ModelLayerRegistry.registerModelLayer(new ModelLayerLocation(dev.rubymod.RubyMod.id("convoy_truck"), "main"), VehicleModels::convoy_truck);
+		ModelLayerRegistry.registerModelLayer(new ModelLayerLocation(dev.rubymod.RubyMod.id("dreadnought"), "main"), VehicleModels::dreadnought);
+		ModelLayerRegistry.registerModelLayer(new ModelLayerLocation(dev.rubymod.RubyMod.id("legion_tank"), "main"), VehicleModels::legion_tank);
 	}
 
 	@Override

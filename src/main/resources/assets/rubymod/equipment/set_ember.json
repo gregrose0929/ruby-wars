@@ -1,0 +1,14 @@
+{
+	"layers": {
+		"humanoid": [
+			{
+				"texture": "rubymod:set_ember"
+			}
+		],
+		"humanoid_leggings": [
+			{
+				"texture": "rubymod:set_ember"
+			}
+		]
+	}
+}

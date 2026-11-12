@@ -388,18 +388,6 @@ final class ConvoyEnemies {
 
 	// ----- Enemy tanks -----
 
-	private record Part(BlockState block, float sx, float sy, float sz, float ox, float oy, float oz) {
-	}
-
-	private static final List<Part> TANK = List.of(
-			new Part(Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState(), 0.7F, 0.9F, 4.2F, -1.9F, 0.0F, -2.1F),
-			new Part(Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState(), 0.7F, 0.9F, 4.2F, 1.2F, 0.0F, -2.1F),
-			new Part(Blocks.DEEPSLATE_TILES.defaultBlockState(), 3.0F, 1.0F, 4.0F, -1.5F, 0.45F, -2.0F),
-			new Part(Blocks.POLISHED_DEEPSLATE.defaultBlockState(), 1.8F, 0.9F, 1.9F, -0.9F, 1.45F, -1.0F),
-			new Part(Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 0.32F, 0.32F, 2.7F, -0.16F, 1.75F, 0.8F),
-			new Part(Blocks.CONCRETE.pick(DyeColor.RED).defaultBlockState(), 3.04F, 0.2F, 0.4F, -1.52F, 1.2F, 1.0F),
-			new Part(Blocks.REDSTONE_LAMP.defaultBlockState().setValue(RedstoneLampBlock.LIT, true), 0.3F, 0.22F, 0.3F, -0.15F, 2.35F, -0.6F));
-
 	private static final class Tank {
 		final List<UUID> parts = new ArrayList<>();
 		int cooldown;
@@ -430,18 +418,9 @@ final class ConvoyEnemies {
 		level.addFreshEntity(base);
 		Tank tank = new Tank();
 		tank.cooldown = 60 + level.getRandom().nextInt(40);
-		for (Part p : TANK) {
-			Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
-			if (d == null) {
-				continue;
-			}
-			d.snapTo(base.getX(), base.getY(), base.getZ(), 0, 0);
-			((BlockDisplayAccessor) d).rubymod$setBlockState(p.block());
-			((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(p.ox(), p.oy(), p.oz()), new Quaternionf(),
-					new Vector3f(p.sx(), p.sy(), p.sz()), new Quaternionf()));
-			((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(3);
-			d.addTag(Convoy.TAG);
-			level.addFreshEntity(d);
+		Display.ItemDisplay d = dev.rubymod.game.Props.model(level, base.position(), 0, "legion_tank", ConvoyModels.LEGION_TANK_SIZE,
+				ConvoyModels.LEGION_TANK_Y, ConvoyModels.LEGION_TANK_Z, Convoy.TAG);
+		if (d != null) {
 			tank.parts.add(d.getUUID());
 		}
 		TANKS.put(base.getUUID(), tank);

@@ -1,0 +1,11 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/tank",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:convoy_truck",
+			"texture": "rubymod:textures/entity/vehicle/convoy_truck_white.png"
+		}
+	}
+}

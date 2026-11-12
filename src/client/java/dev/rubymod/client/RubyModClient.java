@@ -189,6 +189,7 @@ public class RubyModClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ModeInfo.TYPE, (payload, context) -> ModeScreen.info = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordeShopSync.TYPE, (payload, context) -> HordeShopScreen.show(payload));
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ProfileSync.TYPE, (payload, context) -> ProfileScreen.data = payload);
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HowTo.TYPE, (payload, context) -> HowToCard.show(payload));
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.OpenModes.TYPE, (payload, context) -> {
 			if (context.client().gui.screen() == null) {
 				context.client().gui.setScreen(new ModeScreen());
@@ -263,6 +264,7 @@ public class RubyModClient implements ClientModInitializer {
 		HudElementRegistry.addLast(RubyMod.id("markers"), new dev.rubymod.client.map.Markers());
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
 		HudElementRegistry.addLast(RubyMod.id("zoom"), new ZoomHud());
+		HudElementRegistry.addLast(RubyMod.id("how_to"), new HowToCard());
 		HudElementRegistry.addLast(RubyMod.id("jetpack"), new Jetpack.Hud());
 		net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry.registerModelLayer(Jetpack.LAYER, Jetpack::layer);
 		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {

@@ -41,6 +41,12 @@ public final class Alerts {
 				Component.literal(title).withStyle(color, ChatFormatting.BOLD)));
 	}
 
+	/** A jingle only this player hears (so a crowd standing together doesn't get it once each). */
+	public static void jingle(ServerPlayer player, net.minecraft.sounds.SoundEvent sound, float volume) {
+		player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(net.minecraft.core.Holder.direct(sound), SoundSource.PLAYERS,
+				player.getX(), player.getEyeY(), player.getZ(), volume, 1.0F, player.getRandom().nextLong()));
+	}
+
 	public static void ping(ServerPlayer player, float pitch) {
 		player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.PLAYERS, 1.0F, pitch);
 	}

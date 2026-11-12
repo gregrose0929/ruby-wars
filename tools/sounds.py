@@ -302,7 +302,11 @@ VARIANTS = {"bullet_whiz": 3, "explosion": 3, "explosion_far": 2, "rifle_shot": 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    # Keep what other tools added (tools/music.py's music and jingles).
     index = {}
+    if os.path.exists(os.path.join(OUT, "..", "sounds.json")):
+        with open(os.path.join(OUT, "..", "sounds.json")) as fh:
+            index = {k: v for k, v in json.load(fh).items() if k not in SOUNDS}
     for name, make in SOUNDS.items():
         files = []
         for v in range(VARIANTS.get(name, 1)):

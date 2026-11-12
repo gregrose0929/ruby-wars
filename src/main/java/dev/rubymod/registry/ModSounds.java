@@ -29,6 +29,16 @@ public final class ModSounds {
 	public static final SoundEvent HELI_ROTOR = register("heli_rotor");
 	public static final SoundEvent TANK_ENGINE = register("tank_engine");
 	public static final SoundEvent JEEP_ENGINE = register("jeep_engine");
+	// Music and jingles (tools/music.py).
+	public static final SoundEvent HUB_THEME = register("hub_theme");
+	public static final SoundEvent WIN_JINGLE = register("win_jingle");
+	public static final SoundEvent LOSE_JINGLE = register("lose_jingle");
+	public static final SoundEvent ROUND_START = register("round_start");
+	public static final SoundEvent LEVEL_UP = register("level_up");
+	public static final SoundEvent GOLDEN = register("golden");
+	public static final SoundEvent BOSS_STING = register("boss_sting");
+	public static final SoundEvent ALARM = register("alarm");
+	public static final SoundEvent PICKUP = register("pickup");
 
 	private ModSounds() {
 	}

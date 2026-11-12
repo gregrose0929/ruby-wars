@@ -267,7 +267,7 @@ public abstract class PartyGame {
 				Entity body = player.getVehicle() != null ? player.getVehicle() : player;
 				if (body.position().distanceToSqr(p.at) <= p.radius * p.radius && onPickup(player, p)) {
 					hidePickup(p);
-					level.playSound(null, BlockPos.containing(p.at), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.5F);
+					level.playSound(null, BlockPos.containing(p.at), dev.rubymod.registry.ModSounds.PICKUP, SoundSource.PLAYERS, 1.5F, 1.0F);
 					level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, true, false, p.at.x, p.at.y + 1, p.at.z, 20, 1.5, 1, 1.5, 0);
 					if (p.respawn < 0) {
 						it.remove();
@@ -693,10 +693,11 @@ public abstract class PartyGame {
 			}
 			startRound();
 			for (ServerPlayer p : online()) {
-				p.level().playSound(null, p.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.PLAYERS, 0.6F, 1.2F);
+				Alerts.jingle(p, dev.rubymod.registry.ModSounds.ROUND_START, 0.8F);
 				Part part = players.get(p.getUUID());
 				if (!part.watching && !PartyGames.TEST_PLAYERS.containsKey(p.getUUID())) {
 					dev.rubymod.game.Stats.played(p.getUUID(), part.name, id);
+					dev.rubymod.game.HowTo.show(p, id);
 				}
 			}
 			updateBar();
@@ -743,7 +744,7 @@ public abstract class PartyGame {
 				p.sendSystemMessage(award);
 			}
 			p.sendSystemMessage(Component.literal("Next round in 10 seconds (H to leave).").withStyle(ChatFormatting.GRAY));
-			p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.8F, 1.0F);
+			Alerts.jingle(p, winners.contains(p.getUUID()) ? dev.rubymod.registry.ModSounds.WIN_JINGLE : dev.rubymod.registry.ModSounds.LOSE_JINGLE, 0.9F);
 			p.stopRiding();
 			p.setGameMode(GameType.SPECTATOR);
 		}

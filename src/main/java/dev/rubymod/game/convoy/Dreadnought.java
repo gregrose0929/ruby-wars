@@ -59,21 +59,9 @@ final class Dreadnought {
 
 	private static final float S = 2.0F;
 	private static final BlockState CORE = Blocks.REDSTONE_LAMP.defaultBlockState().setValue(RedstoneLampBlock.LIT, true);
-	private static final List<Part> MODEL = List.of(
-			new Part(Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState(), 0.8F, 1.0F, 4.6F, -2.2F, 0.0F, -2.3F),
-			new Part(Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState(), 0.8F, 1.0F, 4.6F, 1.4F, 0.0F, -2.3F),
-			new Part(Blocks.IRON_BLOCK.defaultBlockState(), 0.9F, 0.35F, 4.7F, -2.25F, 0.95F, -2.35F),
-			new Part(Blocks.IRON_BLOCK.defaultBlockState(), 0.9F, 0.35F, 4.7F, 1.35F, 0.95F, -2.35F),
-			new Part(Blocks.DEEPSLATE_TILES.defaultBlockState(), 3.4F, 1.1F, 4.4F, -1.7F, 0.5F, -2.2F),
-			new Part(Blocks.CONCRETE.pick(DyeColor.RED).defaultBlockState(), 3.45F, 0.25F, 0.5F, -1.725F, 1.35F, 1.4F),
-			new Part(Blocks.POLISHED_DEEPSLATE.defaultBlockState(), 2.2F, 1.1F, 2.2F, -1.1F, 1.6F, -1.3F),
-			new Part(Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 0.3F, 0.3F, 3.0F, -0.55F, 2.0F, 0.6F),
-			new Part(Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 0.3F, 0.3F, 3.0F, 0.25F, 2.0F, 0.6F),
-			new Part(Blocks.IRON_BLOCK.defaultBlockState(), 0.5F, 0.5F, 0.4F, -0.25F, 2.0F, 0.3F),
-			new Part(CORE, 0.8F, 0.5F, 0.08F, -0.4F, 1.9F, 0.92F),
-			new Part(Blocks.POLISHED_BLACKSTONE.defaultBlockState(), 0.5F, 0.4F, 0.5F, 0.6F, 2.7F, -0.8F),
-			new Part(Blocks.CONCRETE.pick(DyeColor.RED).defaultBlockState(), 0.05F, 0.6F, 0.4F, -1.15F, 1.8F, -1.0F));
-	private static final int CORE_PART = 10;
+	/** The glowing core on the front of its turret (the rest is one model: tools/vehicle_models.py). */
+	private static final Part CORE_PART = new Part(CORE, 0.8F, 0.4F, 0.08F, -0.4F, 1.42F, 0.92F);
+	private UUID core;
 
 	private final UUID base;
 	private final List<UUID> parts = new ArrayList<>();
@@ -158,6 +146,7 @@ final class Dreadnought {
 			cannonIn = 0;
 			for (ServerPlayer p : targets) {
 				Alerts.title(p, "IT'S GOING TO RAM!", "Hit it hard to break the charge!", ChatFormatting.RED);
+				Alerts.jingle(p, dev.rubymod.registry.ModSounds.BOSS_STING, 1.0F);
 			}
 			level.playSound(null, mob.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 4.0F, 0.5F);
 			return true;
@@ -192,19 +181,22 @@ final class Dreadnought {
 		level.addFreshEntity(heart);
 		Convoy.MOBS.add(heart.getUUID());
 		Dreadnought boss = new Dreadnought(heart.getUUID());
-		for (Part p : MODEL) {
-			Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
-			if (d == null) {
-				continue;
-			}
+		Display.ItemDisplay model = dev.rubymod.game.Props.model(level, heart.position(), 180, "dreadnought", ConvoyModels.DREADNOUGHT_SIZE,
+				ConvoyModels.DREADNOUGHT_Y, ConvoyModels.DREADNOUGHT_Z, Convoy.TAG);
+		if (model != null) {
+			boss.parts.add(model.getUUID());
+		}
+		Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
+		if (d != null) {
 			d.snapTo(heart.getX(), heart.getY(), heart.getZ(), 180, 0);
-			((BlockDisplayAccessor) d).rubymod$setBlockState(p.block());
-			((DisplayAccessor) d).rubymod$setTransformation(transform(p));
+			((BlockDisplayAccessor) d).rubymod$setBlockState(CORE_PART.block());
+			((DisplayAccessor) d).rubymod$setTransformation(transform(CORE_PART));
 			((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(3);
 			((DisplayAccessor) d).rubymod$setViewRange(5.0F);
 			d.addTag(Convoy.TAG);
 			level.addFreshEntity(d);
 			boss.parts.add(d.getUUID());
+			boss.core = d.getUUID();
 		}
 		return boss;
 	}
@@ -306,8 +298,7 @@ final class Dreadnought {
 		if (!cracked && hp < 0.5F) {
 			cracked = true;
 			mob.removeEffect(MobEffects.RESISTANCE);
-			Entity core = level.getEntity(parts.get(CORE_PART));
-			if (core instanceof Display.BlockDisplay d) {
+			if (core != null && level.getEntity(core) instanceof Display.BlockDisplay d) {
 				((BlockDisplayAccessor) d).rubymod$setBlockState(Blocks.SHROOMLIGHT.defaultBlockState());
 				d.setGlowingTag(true);
 				((DisplayAccessor) d).rubymod$setGlowColorOverride(0xFFA020);

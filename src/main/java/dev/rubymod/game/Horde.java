@@ -363,6 +363,9 @@ public final class Horde {
 		int before = FIGHTERS.size();
 		Fighter fighter = new Fighter(player.getName().getString());
 		FIGHTERS.put(player.getUUID(), fighter);
+		if (!TEST_PLAYERS.containsKey(player.getUUID())) {
+			HowTo.show(player, "horde");
+		}
 		BAR.addPlayer(player);
 		CACHE_BAR.addPlayer(player);
 		player.stopRiding();
@@ -520,7 +523,7 @@ public final class Horde {
 			deposit(150);
 			for (ServerPlayer p : players(server)) {
 				Alerts.title(p, "WARLORD DOWN!", "+150 rubies for the team", ChatFormatting.GOLD);
-				p.level().playSound(null, p.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 1.0F, 0.8F);
+				Alerts.jingle(p, dev.rubymod.registry.ModSounds.WIN_JINGLE, 0.9F);
 			}
 			return;
 		}
@@ -699,6 +702,7 @@ public final class Horde {
 				revive(arena, p, f, null);
 			}
 			Alerts.title(p, "LAST STAND!", "The Core fights back: everyone's up, and it can't be hurt for 8 seconds", ChatFormatting.RED);
+			Alerts.jingle(p, dev.rubymod.registry.ModSounds.GOLDEN, 1.0F);
 		}
 		tell(server, Component.literal("THE RUBY CORE FIGHTS BACK! A shockwave blasts the horde, and everyone who was down is back up. This only happens once.")
 				.withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
@@ -1572,6 +1576,7 @@ public final class Horde {
 			}
 			for (ServerPlayer p : players(arena.getServer())) {
 				Alerts.title(p, "THE WARLORD", "Its war cry enrages the horde: bring it down first!", ChatFormatting.GOLD);
+				Alerts.jingle(p, dev.rubymod.registry.ModSounds.BOSS_STING, 1.0F);
 			}
 		}
 		AttributeInstance attack = mob.getAttribute(Attributes.ATTACK_DAMAGE);
@@ -1733,6 +1738,7 @@ public final class Horde {
 			cacheAlertAt = now;
 			for (ServerPlayer p : players(server)) {
 				p.sendOverlayMessage(Component.literal("⚠ The Ruby Core is under attack!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+				Alerts.jingle(p, dev.rubymod.registry.ModSounds.ALARM, 0.6F);
 			}
 		}
 		if (cacheHp <= 0) {

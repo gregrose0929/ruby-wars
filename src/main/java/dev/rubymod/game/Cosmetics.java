@@ -72,6 +72,13 @@ public final class Cosmetics {
 			new Cosmetic("set_breaker", Kind.ARMOR, "Horde Breaker", "minecraft:bone", "Reach wave 10 in Co-op Horde", r -> r.hordeBestWave >= 10),
 			new Cosmetic("set_star", Kind.ARMOR, "Party Star", "minecraft:nether_star", "Win 5 party games", r -> r.totalWins() >= 5),
 			new Cosmetic("set_victor", Kind.ARMOR, "Season Victor", "minecraft:golden_chestplate", "Win a Ruby Wars season", r -> r.seasonsWon >= 1),
+			new Cosmetic("set_desert", Kind.ARMOR, "Desert Scout", "minecraft:sand", "Reach level 7", level(7)),
+			new Cosmetic("set_ocean", Kind.ARMOR, "Deep Sea", "minecraft:prismarine_crystals", "Reach level 12", level(12)),
+			new Cosmetic("set_ember", Kind.ARMOR, "Ember Knight", "minecraft:magma_block", "Reach level 20", level(20)),
+			new Cosmetic("set_royal", Kind.ARMOR, "Royal Guard", "minecraft:amethyst_block", "Reach level 30", level(30)),
+			new Cosmetic("set_medic", Kind.ARMOR, "Field Medic", "minecraft:glistering_melon_slice", "Revive 5 teammates in Co-op Horde", r -> r.hordeRevives >= 5),
+			new Cosmetic("set_racer", Kind.ARMOR, "Sky Racer", "minecraft:elytra", "Finish a Sky Race in under a minute", r -> r.skyBest > 0 && r.skyBest < 1200),
+			new Cosmetic("set_duelist", Kind.ARMOR, "Duelist", "minecraft:iron_sword", "Win 5 duels", r -> r.duelsWon >= 5),
 			new Cosmetic("trail_ruby", Kind.TRAIL, "Ruby Sparkles", "rubymod:ruby", "Everyone starts with this one", r -> true),
 			new Cosmetic("trail_hearts", Kind.TRAIL, "Hearts", "minecraft:red_dye", "Revive a teammate in Horde", r -> r.hordeRevives >= 1),
 			new Cosmetic("trail_snow", Kind.TRAIL, "Snowflakes", "minecraft:snowball", "Reach wave 5 in Co-op Horde", r -> r.hordeBestWave >= 5),
@@ -79,14 +86,26 @@ public final class Cosmetics {
 			new Cosmetic("trail_notes", Kind.TRAIL, "Music Notes", "minecraft:note_block", "Win Build Battle", r -> r.wins("build") >= 1),
 			new Cosmetic("trail_flames", Kind.TRAIL, "Flames", "minecraft:blaze_powder", "Get 25 kills in party games", r -> r.partyKills >= 25),
 			new Cosmetic("trail_magic", Kind.TRAIL, "Magic", "minecraft:amethyst_shard", "Win 3 duels", r -> r.duelsWon >= 3),
+			new Cosmetic("trail_stars", Kind.TRAIL, "Starlight", "minecraft:end_rod", "Reach level 8", level(8)),
+			new Cosmetic("trail_sparks", Kind.TRAIL, "Sparks", "minecraft:lightning_rod", "Reach wave 15 in Co-op Horde", r -> r.hordeBestWave >= 15),
+			new Cosmetic("trail_petals", Kind.TRAIL, "Cherry Petals", "minecraft:pink_petals", "Win Hide & Seek", r -> r.wins("hideseek") >= 1),
+			new Cosmetic("trail_souls", Kind.TRAIL, "Soul Fire", "minecraft:soul_lantern", "Win 3 Ruby Rift runs", r -> r.riftWins >= 3),
 			new Cosmetic("kill_confetti", Kind.KILL, "Confetti", "minecraft:firework_rocket", "Everyone starts with this one", r -> true),
 			new Cosmetic("kill_hearts", Kind.KILL, "Heart Burst", "minecraft:pink_dye", "Get 50 kills in party games", r -> r.partyKills >= 50),
 			new Cosmetic("kill_lightning", Kind.KILL, "Lightning", "minecraft:lightning_rod", "Win Gun Game", r -> r.wins("gungame") >= 1),
 			new Cosmetic("kill_ruby", Kind.KILL, "Ruby Explosion", "rubymod:ruby_block", "Win Ruby Rush", r -> r.wins("rush") >= 1),
+			new Cosmetic("kill_frost", Kind.KILL, "Frost Burst", "minecraft:blue_ice", "Reach level 6", level(6)),
+			new Cosmetic("kill_fire", Kind.KILL, "Fireball", "minecraft:fire_charge", "Reach level 18", level(18)),
+			new Cosmetic("kill_souls", Kind.KILL, "Soul Rise", "minecraft:soul_sand", "Win Infection", r -> r.wins("infection") >= 1),
+			new Cosmetic("kill_gold", Kind.KILL, "Gold Shower", "minecraft:gold_nugget", "Win King of the Hill", r -> r.wins("koth") >= 1),
 			new Cosmetic("paint_red", Kind.PAINT, "Ruby Red", "minecraft:red_concrete", "Everyone starts with this one", r -> true),
 			new Cosmetic("paint_blue", Kind.PAINT, "Deep Blue", "minecraft:blue_concrete", "Deliver a Ruby Convoy", r -> r.convoyWins >= 1),
 			new Cosmetic("paint_black", Kind.PAINT, "Night Black", "minecraft:black_concrete", "Deliver 3 Ruby Convoys", r -> r.convoyWins >= 3),
-			new Cosmetic("paint_gold", Kind.PAINT, "Gold", "minecraft:yellow_concrete", "Deliver a Ruby Convoy on Hard", r -> r.convoyHardWins >= 1));
+			new Cosmetic("paint_gold", Kind.PAINT, "Gold", "minecraft:yellow_concrete", "Deliver a Ruby Convoy on Hard", r -> r.convoyHardWins >= 1),
+			new Cosmetic("paint_green", Kind.PAINT, "Racing Green", "minecraft:green_concrete", "Reach level 4", level(4)),
+			new Cosmetic("paint_white", Kind.PAINT, "Arctic White", "minecraft:white_concrete", "Reach level 9", level(9)),
+			new Cosmetic("paint_purple", Kind.PAINT, "Royal Purple", "minecraft:purple_concrete", "Reach level 16", level(16)),
+			new Cosmetic("paint_camo", Kind.PAINT, "Army Camo", "minecraft:moss_block", "Deliver 5 Ruby Convoys", r -> r.convoyWins >= 5));
 
 	private static final String HAT_TAG = "rubymod_hat";
 	/** Marks the armor lent to you in the hub to show your set off. */
@@ -201,6 +220,10 @@ public final class Cosmetics {
 			case "paint_blue" -> net.minecraft.world.item.DyeColor.BLUE;
 			case "paint_black" -> net.minecraft.world.item.DyeColor.BLACK;
 			case "paint_gold" -> net.minecraft.world.item.DyeColor.YELLOW;
+			case "paint_green" -> net.minecraft.world.item.DyeColor.GREEN;
+			case "paint_white" -> net.minecraft.world.item.DyeColor.WHITE;
+			case "paint_purple" -> net.minecraft.world.item.DyeColor.PURPLE;
+			case "paint_camo" -> net.minecraft.world.item.DyeColor.LIME;
 			default -> net.minecraft.world.item.DyeColor.RED;
 		};
 	}
@@ -242,6 +265,21 @@ public final class Cosmetics {
 	private static boolean lent(ItemStack stack) {
 		var data = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
 		return data != null && data.copyTag().contains(LENT);
+	}
+
+	/** A piece of armor for show (slot 0 helmet to 3 boots) in an armor set's look: what the champions' statues wear. */
+	public static ItemStack showpiece(int slot, String set) {
+		ItemStack piece = new ItemStack(set.isEmpty() ? new net.minecraft.world.item.Item[] {net.minecraft.world.item.Items.IRON_HELMET,
+				net.minecraft.world.item.Items.IRON_CHESTPLATE, net.minecraft.world.item.Items.IRON_LEGGINGS, net.minecraft.world.item.Items.IRON_BOOTS}[slot]
+				: LENT_ITEMS[slot]);
+		var own = piece.get(net.minecraft.core.component.DataComponents.EQUIPPABLE);
+		if (!set.isEmpty() && own != null) {
+			var asset = net.minecraft.resources.ResourceKey.create(net.minecraft.world.item.equipment.EquipmentAssets.ROOT_ID, dev.rubymod.RubyMod.id(set));
+			piece.set(net.minecraft.core.component.DataComponents.EQUIPPABLE, new net.minecraft.world.item.equipment.Equippable(own.slot(), own.equipSound(),
+					java.util.Optional.of(asset), own.cameraOverlay(), own.allowedEntities(), own.dispensable(), own.swappable(), own.damageOnHurt(),
+					own.equipOnInteract(), own.canBeSheared(), own.shearingSound()));
+		}
+		return piece;
 	}
 
 	/** Lent hub armor on the ground (someone threw it): it doesn't stay. */
@@ -317,6 +355,10 @@ public final class Cosmetics {
 			case "trail_notes" -> ParticleTypes.NOTE;
 			case "trail_flames" -> ParticleTypes.FLAME;
 			case "trail_magic" -> ParticleTypes.WITCH;
+			case "trail_stars" -> ParticleTypes.END_ROD;
+			case "trail_sparks" -> ParticleTypes.ELECTRIC_SPARK;
+			case "trail_petals" -> ParticleTypes.CHERRY_LEAVES;
+			case "trail_souls" -> ParticleTypes.SOUL_FIRE_FLAME;
 			default -> new DustParticleOptions(0xE0202A, 1.0F);
 		};
 		level.sendParticles(particle, at.x, at.y, at.z, 1, 0.15, 0.05, 0.15, 0.0);
@@ -350,6 +392,20 @@ public final class Cosmetics {
 				level.sendParticles(new DustParticleOptions(0xE0202A, 2.0F), at.x, at.y + 1, at.z, 40, 0.8, 0.8, 0.8, 0.2);
 				level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y + 1, at.z, 1, 0, 0, 0, 0);
 				level.playSound(null, BlockPos.containing(at), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.5F, 0.8F);
+			}
+			case "kill_frost" -> {
+				level.sendParticles(ParticleTypes.SNOWFLAKE, at.x, at.y + 1, at.z, 40, 0.5, 0.6, 0.5, 0.12);
+				level.playSound(null, BlockPos.containing(at), SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 0.8F, 1.4F);
+			}
+			case "kill_fire" -> {
+				level.sendParticles(ParticleTypes.FLAME, at.x, at.y + 1, at.z, 40, 0.3, 0.4, 0.3, 0.12);
+				level.sendParticles(ParticleTypes.LAVA, at.x, at.y + 1, at.z, 8, 0.3, 0.3, 0.3, 0);
+				level.playSound(null, BlockPos.containing(at), SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.8F, 1.0F);
+			}
+			case "kill_souls" -> level.sendParticles(ParticleTypes.SOUL, at.x, at.y + 0.5, at.z, 16, 0.4, 0.5, 0.4, 0.04);
+			case "kill_gold" -> {
+				level.sendParticles(new DustParticleOptions(0xFFD040, 1.6F), at.x, at.y + 1.6, at.z, 50, 0.6, 0.7, 0.6, 0.1);
+				level.playSound(null, BlockPos.containing(at), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.2F, 1.6F);
 			}
 			default -> level.sendParticles(ParticleTypes.FIREWORK, at.x, at.y + 1, at.z, 20, 0.3, 0.5, 0.3, 0.15);
 		}

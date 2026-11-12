@@ -1761,6 +1761,8 @@ public final class AutoTest {
 			then(160, mc -> log("tanks: {}", dev.rubymod.game.convoy.Convoy.debugState()));
 			convoyView(0, 9, -10);
 			then(20, mc -> shot(mc, "convoy-tanks"));
+			then(5, mc -> command(mc, "execute as @p at @e[name=\"Legion Tank\",limit=1,sort=nearest] run tp @s ~6 ~3.5 ~6 135 22"));
+			then(25, mc -> shot(mc, "convoy-tank-close"));
 			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "tanks")));
 			then(60, mc -> log("after tanks: {}", dev.rubymod.game.convoy.Convoy.debugState()));
 			// Red Canyon: the gunship and the bridge.
@@ -1800,6 +1802,10 @@ public final class AutoTest {
 			then(200, mc -> log("boss: {}", dev.rubymod.game.convoy.Convoy.debugState()));
 			convoyView(-10, 8, -12);
 			then(20, mc -> shot(mc, "convoy-boss"));
+			then(5, mc -> command(mc, "execute as @p at @e[name=\"The Iron Dreadnought\",limit=1,sort=nearest] run tp @s ~11 ~7 ~11 135 22"));
+			then(25, mc -> shot(mc, "convoy-dread-close"));
+			then(5, mc -> command(mc, "execute as @p at @e[name=\"The Iron Dreadnought\",limit=1,sort=nearest] run tp @s ~-9 ~5 ~-13 -35 18"));
+			then(25, mc -> shot(mc, "convoy-dread-front"));
 			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "ride")));
 			then(160, mc -> log("boss fight: {}", dev.rubymod.game.convoy.Convoy.debugState()));
 			then(5, mc -> onServer(mc, server -> dev.rubymod.game.convoy.Convoy.testSkip(server, "killboss")));
@@ -4500,6 +4506,13 @@ public final class AutoTest {
 			case "vehicles" -> vehiclesScript();
 			case "progress" -> progressScript();
 			case "special" -> specialScript();
+			case "maps" -> mapsScript();
+			case "howto" -> {
+				then(20, mc -> command(mc, "execute as @p run play koth"));
+				then(200, mc -> onServer(mc, server -> pg("koth").skipLobby()));
+				then(170, mc -> shot(mc, "howto-card"));
+				then(5, mc -> command(mc, "execute as @p run hub"));
+			}
 			case "strikes" -> strikesScript();
 			case "planes" -> planesScript();
 			case "showcase" -> showcaseScript();
@@ -4516,6 +4529,57 @@ public final class AutoTest {
 			log("done");
 			mc.stop();
 		});
+	}
+
+	/** Each party game's second and third maps, from above; then the hub's podium and a how-to card. */
+	private static void mapsScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode creative @a");
+		});
+		String[][] games = {{"koth", "34"}, {"ctf", "46"}, {"gungame", "34"}, {"tanks", "70"}};
+		for (String[] game : games) {
+			for (int round = 1; round <= 2; round++) {
+				int n = round;
+				then(20, mc -> command(mc, "execute as @p run play " + game[0]));
+				// The arena builds a little at a time.
+				then(game[0].equals("tanks") ? 500 : 260, mc -> {
+					command(mc, "gamemode spectator @a");
+					command(mc, "execute as @p at @s run tp @s ~ ~" + game[1] + " ~ 0 90");
+				});
+				then(40, mc -> {
+					shot(mc, "maps-" + game[0] + "-" + n);
+					log("{}: {}", game[0], pg(game[0]).debugState());
+				});
+				then(5, mc -> command(mc, "execute as @p run hub"));
+			}
+		}
+		// The podium (someone has to have some XP first).
+		then(20, mc -> onServer(mc, server -> {
+			var me = me(server);
+			dev.rubymod.game.Stats.addXp(me.getUUID(), me.getName().getString(), 4000);
+			dev.rubymod.game.Stats.addXp(java.util.UUID.nameUUIDFromBytes("a".getBytes()), "Notch", 2500);
+			dev.rubymod.game.Stats.addXp(java.util.UUID.nameUUIDFromBytes("b".getBytes()), "jeb_", 900);
+			dev.rubymod.game.Cosmetics.select(me, "set_ocean");
+		}));
+		then(5, mc -> {
+			command(mc, "gamemode adventure @a");
+			command(mc, "execute as @p at @s run tp @s 11.5 102 2.5 -90 -5");
+		});
+		then(260, mc -> {
+			shot(mc, "maps-podium");
+			onServer(mc, server -> log("podium statues: {}", server.getLevel(dev.rubymod.game.Hub.HUB).getEntities((net.minecraft.world.entity.Entity) null,
+					new net.minecraft.world.phys.AABB(14, 100, -4, 24, 110, 8), e -> e.entityTags().contains("rubymod_hub_podium")).size()));
+		});
+		then(5, mc -> ProfileScreen.data = null);
+		then(5, mc -> mc.gui.setScreen(new ProfileScreen()));
+		then(60, mc -> shot(mc, "maps-profile"));
+		then(5, mc -> mc.gui.setScreen(null));
+		// A how-to card.
+		then(5, mc -> command(mc, "execute as @p run play convoy"));
+		then(60, mc -> mc.gui.setScreen(null));
+		then(30, mc -> shot(mc, "maps-howto"));
+		then(5, mc -> command(mc, "execute as @p run hub"));
 	}
 
 	/** The hub's gallery and war room, a ruby meteor, the convoy's horn and blackout, Horde's vote. */

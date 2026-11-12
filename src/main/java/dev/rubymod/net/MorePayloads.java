@@ -186,6 +186,20 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: a game's how-to card (its title, then "item|sentence" lines). */
+	public record HowTo(String title, List<String> lines) implements CustomPacketPayload {
+		public static final Type<HowTo> TYPE = new Type<>(RubyMod.id("how_to"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, HowTo> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, HowTo::title,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), HowTo::lines,
+				HowTo::new);
+
+		@Override
+		public Type<HowTo> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: profile stats ("label|value") and cosmetics ("id|kind|name|icon|how|unlocked|wearing"). */
 	public record ProfileSync(List<String> stats, List<String> cosmetics) implements CustomPacketPayload {
 		public static final Type<ProfileSync> TYPE = new Type<>(RubyMod.id("profile_sync"));
@@ -500,6 +514,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(OpenModes.TYPE, OpenModes.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ProfileRequest.TYPE, ProfileRequest.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ProfileSync.TYPE, ProfileSync.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(HowTo.TYPE, HowTo.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(CosmeticSelect.TYPE, CosmeticSelect.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HordeBuy.TYPE, HordeBuy.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaceMap.TYPE, RaceMap.CODEC);

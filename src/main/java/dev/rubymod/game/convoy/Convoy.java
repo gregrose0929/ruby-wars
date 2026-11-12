@@ -280,6 +280,7 @@ public final class Convoy {
 		tell(server, Component.literal(player.getName().getString() + " joined the Ruby Convoy.").withStyle(ChatFormatting.GOLD));
 		player.sendSystemMessage(Component.literal("Ruby Convoy: stay close to the truck to keep it moving. Crouch beside it to repair it. H to leave.")
 				.withStyle(ChatFormatting.GOLD));
+		dev.rubymod.game.HowTo.show(player, "convoy");
 	}
 
 	public static void leave(ServerPlayer player) {
@@ -1093,6 +1094,11 @@ public final class Convoy {
 		}
 		if (spares <= 0) {
 			titleAll(server, "TRUCK WRECKED!", "No spare trucks left...", ChatFormatting.RED);
+		}
+		for (ServerPlayer p : players(server)) {
+			Alerts.jingle(p, dev.rubymod.registry.ModSounds.ALARM, 0.8F);
+		}
+		if (spares <= 0) {
 		} else {
 			titleAll(server, "TRUCK WRECKED!", "A spare truck is on its way (" + spares + " left)", ChatFormatting.RED);
 		}
@@ -1130,6 +1136,9 @@ public final class Convoy {
 		status = 8;
 		record(server, false);
 		titleAll(server, "THE CONVOY IS LOST", "You made it to " + ConvoyRoute.NAMES[stage] + ". Try again!", ChatFormatting.RED);
+		for (ServerPlayer p : players(server)) {
+			Alerts.jingle(p, dev.rubymod.registry.ModSounds.LOSE_JINGLE, 0.9F);
+		}
 		summary(server, false);
 	}
 
@@ -1140,7 +1149,9 @@ public final class Convoy {
 		status = 7;
 		record(server, true);
 		titleAll(server, "RUBIES DELIVERED!", "The convoy made it to the vault!", ChatFormatting.GOLD);
-		level.playSound(null, BlockPos.containing(truck.position()), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.NEUTRAL, 2.0F, 1.0F);
+		for (ServerPlayer p : players(server)) {
+			Alerts.jingle(p, dev.rubymod.registry.ModSounds.WIN_JINGLE, 1.0F);
+		}
 		summary(server, true);
 	}
 

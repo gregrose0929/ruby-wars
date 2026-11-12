@@ -1,0 +1,11 @@
+{
+	"model": {
+		"type": "minecraft:special",
+		"base": "rubymod:item/tank",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:legion_tank",
+			"texture": "rubymod:textures/entity/vehicle/legion_tank.png"
+		}
+	}
+}

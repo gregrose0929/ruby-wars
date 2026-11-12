@@ -82,9 +82,16 @@ public class CaptureTheFlag extends PartyGame {
 		return center().offset(0, 0, baseZ(team));
 	}
 
+	/** Which map this round is on: they take turns (the bases are the same on all three; the middle isn't). */
+	private int map;
+	private int built;
+	private static final String[] MAPS = {"The Fields", "Red Canyon", "The Warehouse"};
+
 	@Override
 	protected void build(ServerLevel level) {
-		flatArena(level, HALF_X, HALF_Z, 25, Blocks.GRASS_BLOCK.defaultBlockState(), true);
+		map = built++ % MAPS.length;
+		flatArena(level, HALF_X, HALF_Z, 25, map == 1 ? Blocks.TERRACOTTA.defaultBlockState() : map == 2 ? Blocks.SMOOTH_STONE.defaultBlockState()
+				: Blocks.GRASS_BLOCK.defaultBlockState(), true);
 		for (int team = 0; team < 2; team++) {
 			int z = baseZ(team);
 			int s = team == 0 ? -1 : 1;
@@ -104,7 +111,35 @@ public class CaptureTheFlag extends PartyGame {
 		BlockState bricks = Blocks.STONE_BRICKS.defaultBlockState();
 		BlockState sandbags = ModBlocks.SANDBAGS.defaultBlockState();
 		BlockState crate = Blocks.BARREL.defaultBlockState();
-		for (int s : new int[] {1, -1}) {
+		for (int s : map == 0 ? new int[0] : new int[] {1, -1}) {
+			if (map == 1) {
+				// Canyon walls three high make three lanes, with gaps to cut between them.
+				BlockState rock = Blocks.RED_SANDSTONE.defaultBlockState();
+				box(level, -9 * s, 1, 6 * s, -9 * s, 3, 32 * s, rock);
+				box(level, -9 * s, 1, 17 * s, -9 * s, 3, 19 * s, Blocks.AIR.defaultBlockState());
+				box(level, 9 * s, 1, 9 * s, 9 * s, 3, 34 * s, rock);
+				box(level, 9 * s, 1, 23 * s, 9 * s, 3, 25 * s, Blocks.AIR.defaultBlockState());
+				box(level, -20 * s, 1, 12 * s, -17 * s, 2, 12 * s, rock);
+				box(level, 16 * s, 1, 28 * s, 20 * s, 2, 28 * s, rock);
+				box(level, -3 * s, 1, 14 * s, 3 * s, 1, 14 * s, sandbags);
+				box(level, -2 * s, 1, 28 * s, 2 * s, 2, 28 * s, rock);
+				set(level, 0, 1, 20 * s, crate);
+				set(level, 15 * s, 1, 14 * s, crate);
+				set(level, -15 * s, 1, 24 * s, crate);
+			} else {
+				// Rows of crates and shelves, and a loading bay wall.
+				int[][] stacks = {{-18, 7}, {-8, 10}, {6, 8}, {17, 12}, {-13, 18}, {2, 20}, {12, 22}, {-20, 27}, {-5, 29}, {8, 31}, {20, 30}};
+				for (int[] st : stacks) {
+					box(level, st[0] * s, 1, st[1] * s, st[0] * s + 1, 2, st[1] * s + 1, crate);
+					set(level, st[0] * s, 3, st[1] * s, crate);
+				}
+				box(level, -24 * s, 1, 15 * s, -19 * s, 3, 15 * s, bricks);
+				box(level, 19 * s, 1, 24 * s, 24 * s, 3, 24 * s, bricks);
+				box(level, -1 * s, 1, 12 * s, 1 * s, 2, 12 * s, bricks);
+				box(level, -3 * s, 1, 34 * s, 3 * s, 1, 34 * s, sandbags);
+			}
+		}
+		for (int s : map != 0 ? new int[0] : new int[] {1, -1}) {
 			box(level, -12 * s, 1, 8 * s, -6 * s, 2, 8 * s, bricks);
 			box(level, 6 * s, 1, 18 * s, 12 * s, 1, 18 * s, sandbags);
 			box(level, -18 * s, 1, 24 * s, -18 * s, 2, 30 * s, bricks);
@@ -213,6 +248,7 @@ public class CaptureTheFlag extends PartyGame {
 			dev.rubymod.game.Alerts.title(p, "YOU'RE " + teamName(part.team).toUpperCase(), "20 seconds to build defenses (sandbags!)",
 					part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
 		}
+		tell(Component.literal("Map: " + MAPS[map]).withStyle(ChatFormatting.AQUA));
 	}
 
 	@Override

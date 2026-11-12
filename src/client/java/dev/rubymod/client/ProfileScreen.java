@@ -107,33 +107,33 @@ public class ProfileScreen extends Screen {
 					if (f.length < 7 || !f[1].equals(kind)) {
 						continue;
 					}
-					if (sx + 22 > rightX + colW - 8) {
+					if (sx + 16 > rightX + colW - 8) {
 						sx = rightX + 10;
-						sy += 22;
+						sy += 18;
 					}
 					boolean unlocked = f[5].equals("true");
 					boolean wearing = f[6].equals("true");
 					slots.add(new Slot(f[0], kind, sx, sy, unlocked, wearing));
-					boolean over = Ui.inside(mouseX, mouseY, sx, sy, 20, 20);
-					Ui.inset(g, sx, sy, 20, 20);
+					boolean over = Ui.inside(mouseX, mouseY, sx, sy, 16, 16);
+					Ui.inset(g, sx, sy, 16, 16);
 					if (wearing) {
-						g.fill(sx + 1, sy + 1, sx + 19, sy + 19, 0x405BD27A);
-						g.outline(sx, sy, 20, 20, Ui.GREEN);
+						g.fill(sx + 1, sy + 1, sx + 15, sy + 15, 0x405BD27A);
+						g.outline(sx, sy, 16, 16, Ui.GREEN);
 					} else if (over && unlocked) {
-						g.outline(sx, sy, 20, 20, Ui.TEXT);
+						g.outline(sx, sy, 16, 16, Ui.TEXT);
 					}
-					g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[3]))), sx + 2, sy + 2);
+					g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[3]))), sx, sy);
 					if (!unlocked) {
-						g.fill(sx + 1, sy + 1, sx + 19, sy + 19, 0xB0101216);
-						Ui.icon(g, Ui.Icon.LOCK, sx + 6, sy + 6);
+						g.fill(sx + 1, sy + 1, sx + 15, sy + 15, 0xB0101216);
+						Ui.icon(g, Ui.Icon.LOCK, sx + 4, sy + 4);
 					}
 					if (over) {
 						tip = List.of(f[2], wearing ? (kind.equals("PAINT") ? "Your truck's paint." : "You're using it. Click to take it off.")
 								: unlocked ? "Click to use it." : "To unlock: " + f[4]);
 					}
-					sx += 23;
+					sx += 18;
 				}
-				sy += 23;
+				sy += 19;
 			}
 		} else {
 			Ui.text(g, "Loading...", rightX + 10, top + 26, Ui.MUTED);
@@ -147,7 +147,7 @@ public class ProfileScreen extends Screen {
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
 		for (Slot s : slots) {
-			if (event.x() >= s.x() && event.x() < s.x() + 20 && event.y() >= s.y() && event.y() < s.y() + 20) {
+			if (event.x() >= s.x() && event.x() < s.x() + 16 && event.y() >= s.y() && event.y() < s.y() + 16) {
 				if (s.unlocked()) {
 					ClientPlayNetworking.send(new MorePayloads.CosmeticSelect(s.wearing() ? "none:" + s.kind() : s.id()));
 				}
