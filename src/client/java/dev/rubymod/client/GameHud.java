@@ -66,7 +66,8 @@ public class GameHud implements HudElement {
 			g.centeredText(font, text, w / 2, h - 70, RED);
 		}
 
-		if (ClientState.hud != null && ClientState.hud.eliminated()) {
+		// Only in the Ruby Wars world, during the battle, while watching: not in the hub or another game, and not after the season.
+		if (ClientState.hud != null && ClientState.hud.eliminated() && ClientState.inRubyWarsWorld() && ClientState.phase().isBattle() && player.isSpectator()) {
 			g.centeredText(font, Component.literal("ELIMINATED - spectating"), w / 2, h - 60, RED);
 		}
 	}

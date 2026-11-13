@@ -296,8 +296,9 @@ public final class Hub {
 		return null;
 	}
 
-	/** Into the hub (after you've left wherever you were). */
+	/** Into the hub (after you've left wherever you were). The last game's how-to card goes with it. */
 	public static void enterHub(ServerPlayer player) {
+		HowTo.forget(player);
 		ServerLevel hub = player.level().getServer().getLevel(HUB);
 		if (hub == null) {
 			player.sendSystemMessage(Component.literal("The hub dimension is missing.").withStyle(ChatFormatting.RED));

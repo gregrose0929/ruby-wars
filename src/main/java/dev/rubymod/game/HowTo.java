@@ -53,8 +53,13 @@ public final class HowTo {
 		}
 	}
 
-	/** Take the card down (the round is starting). */
+	/** Take the card down (the round is starting); the help key can still bring it back. */
 	public static void hide(ServerPlayer player) {
 		Net.send(player, new MorePayloads.HowTo("", List.of(), 0));
+	}
+
+	/** The player left the game: its card is gone. */
+	public static void forget(ServerPlayer player) {
+		Net.send(player, new MorePayloads.HowTo("", List.of(), -1));
 	}
 }

@@ -485,7 +485,7 @@ public abstract class PartyGame {
 
 	/** Out of the game: its gear stays behind. */
 	public void leave(ServerPlayer player) {
-		dev.rubymod.game.HowTo.hide(player);
+		dev.rubymod.game.HowTo.forget(player);
 		drop(player.getUUID(), player);
 		clearPlayer(player);
 	}
@@ -851,8 +851,8 @@ public abstract class PartyGame {
 		return false;
 	}
 
-	/** Pick-ups switched on for this game in the game picker (saved; on unless someone turns them off). */
-	boolean pickupsOn = true;
+	/** Pick-ups switched on for this game in the game picker (saved; off unless someone turns them on). */
+	boolean pickupsOn;
 
 	/** This game has pick-ups that can be switched off. */
 	protected boolean hasPickups() {

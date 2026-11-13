@@ -60,6 +60,7 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping modesKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.modes", InputConstants.KEY_H, CATEGORY));
 		KeyMapping profileKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.profile_menu", InputConstants.KEY_I, CATEGORY));
 		KeyMapping instrumentsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.instruments", InputConstants.KEY_F9, CATEGORY));
+		KeyMapping helpKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.help", InputConstants.KEY_N, CATEGORY));
 		autopilotKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.autopilot", InputConstants.KEY_Z, CATEGORY));
 		flaresKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.flares", InputConstants.KEY_X, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
@@ -96,6 +97,11 @@ public class RubyModClient implements ClientModInitializer {
 			while (manualKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {
 					client.gui.setScreen(new ManualScreen());
+				}
+			}
+			while (helpKey.consumeClick()) {
+				if (client.gui.screen() == null) {
+					HowToCard.helpKey(client);
 				}
 			}
 			while (instrumentsKey.consumeClick()) {

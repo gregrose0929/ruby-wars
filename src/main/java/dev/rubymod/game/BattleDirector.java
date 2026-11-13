@@ -222,7 +222,7 @@ public final class BattleDirector {
 		}
 		Research.sync(player);
 		player.sendSystemMessage(Component.literal("Ruby Wars: press Y for the Field Manual.").withStyle(ChatFormatting.GRAY));
-		if (Rules.isEliminated(player.getUUID())) {
+		if (Rules.isEliminated(player.getUUID()) && data.phase.isBattle()) {
 			player.setGameMode(GameType.SPECTATOR);
 			player.sendSystemMessage(Component.literal("You've been eliminated this season. You can watch as a spectator.").withStyle(ChatFormatting.GRAY));
 		}

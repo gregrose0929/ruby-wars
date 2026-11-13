@@ -9,3 +9,4 @@
 
 /tools/*.sh     text eol=lf
 *.cmd           text eol=crlf
+tools/installer/ruby.ico binary

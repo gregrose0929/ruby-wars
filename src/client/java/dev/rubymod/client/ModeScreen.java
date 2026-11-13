@@ -263,19 +263,26 @@ public class ModeScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
-		// Later boxes sit on top (buttons inside rows), so look from the end.
-		for (int i = boxes.size() - 1; i >= 0; i--) {
+		// The small switches (bots, pick-ups) sit inside a game's row: they win over the row, so flipping one never starts the game.
+		int hit = -1;
+		for (int i = 0; i < boxes.size(); i++) {
 			int[] b = boxes.get(i);
 			if (Ui.inside(event.x(), event.y(), b[0], b[1], b[2], b[3])) {
-				String action = actions.get(i);
-				if (action.startsWith("bots:") || action.startsWith("pickups:")) {
-					// Stays open: the server sends the picker back with the new setting.
-					ClientPlayNetworking.send(new MorePayloads.ModeSelect(action));
-				} else {
-					go(action);
+				String a = actions.get(i);
+				if (hit < 0 || a.startsWith("bots:") || a.startsWith("pickups:")) {
+					hit = i;
 				}
-				return true;
 			}
+		}
+		if (hit >= 0) {
+			String action = actions.get(hit);
+			if (action.startsWith("bots:") || action.startsWith("pickups:")) {
+				// Stays open: the server sends the picker back with the new setting.
+				ClientPlayNetworking.send(new MorePayloads.ModeSelect(action));
+			} else {
+				go(action);
+			}
+			return true;
 		}
 		return super.mouseClicked(event, doubled);
 	}

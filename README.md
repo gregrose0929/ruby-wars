@@ -701,9 +701,10 @@ trees for vehicles, and two runways pointing at each other for planes.
 
 Everyone needs the same version of the mod. The easiest way is the installer
 (Windows): each player downloads
-[Install-Ruby-Wars.cmd](https://github.com/gregrose0929/ruby-wars/releases/latest/download/Install-Ruby-Wars.cmd)
-and double-clicks it (Windows may say it protected the PC: *More info*, then
-*Run anyway*). It needs the official Minecraft Launcher, opened and signed in
+[Ruby-Wars-Setup.exe](https://github.com/gregrose0929/ruby-wars/releases/latest/download/Ruby-Wars-Setup.exe)
+and opens it, then clicks *Install and play* (Windows may say it protected the
+PC: *More info*, then *Run anyway*). Its source is `tools/installer/RubyWarsSetup.cs`,
+built by `tools/installer/build.sh` (which `tools/release.sh` runs). It needs the official Minecraft Launcher, opened and signed in
 once. It puts the pack in its own folder (`%APPDATA%\.rubywars`), adds Fabric
 and a *Ruby Wars* entry to the launcher, and leaves a **Ruby Wars** shortcut on
 the desktop. That shortcut checks for a newer pack every time it's used, so

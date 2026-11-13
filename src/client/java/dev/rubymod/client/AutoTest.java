@@ -4539,6 +4539,42 @@ public final class AutoTest {
 					then(20, mc -> log("{} left: {}", id, pg(id).debugState()));
 				}
 			}
+			case "help" -> {
+				// Instructions: up the first time ever, hidden after that, N brings them back (and that's remembered).
+				then(0, mc -> {
+					try {
+						java.nio.file.Files.deleteIfExists(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("rubywars_help.txt"));
+					} catch (java.io.IOException e) {
+						throw new RuntimeException(e);
+					}
+				});
+				for (int round = 1; round <= 2; round++) {
+					int n = round;
+					then(20, mc -> command(mc, "execute as @p run play koth"));
+					then(140, mc -> {
+						shot(mc, "help-lobby-" + n);
+						log("lobby visit {}: card on screen {}", n, HowToCard.bottom() > 0);
+					});
+					then(5, mc -> command(mc, "execute as @p run hub"));
+				}
+				then(20, mc -> command(mc, "execute as @p run play koth"));
+				then(100, mc -> HowToCard.helpKey(mc));
+				then(20, mc -> {
+					shot(mc, "help-pressed-n");
+					log("after N: card on screen {}", HowToCard.bottom() > 0);
+				});
+				then(5, mc -> command(mc, "execute as @p run hub"));
+				then(20, mc -> command(mc, "execute as @p run play koth"));
+				then(140, mc -> {
+					log("visit after turning it on: card on screen {}", HowToCard.bottom() > 0);
+					try {
+						log("help file: {}", java.nio.file.Files.readAllLines(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("rubywars_help.txt")));
+					} catch (java.io.IOException e) {
+						throw new RuntimeException(e);
+					}
+				});
+				then(5, mc -> command(mc, "execute as @p run hub"));
+			}
 			case "howto" -> {
 				// The lobby's how-to card, the titles that fit the screen, and the vehicle displays.
 				then(0, mc -> command(mc, "difficulty normal"));

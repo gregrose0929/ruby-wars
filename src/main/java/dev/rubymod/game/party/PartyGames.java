@@ -110,17 +110,17 @@ public final class PartyGames {
 		for (PartyGame game : ALL) {
 			game.botsOn = on.contains(game.id);
 		}
-		pickupsFile = botsFile.resolveSibling("party_pickups_off.txt");
-		List<String> off = new ArrayList<>();
+		pickupsFile = botsFile.resolveSibling("party_pickups_on.txt");
+		List<String> pickups = new ArrayList<>();
 		try {
 			if (java.nio.file.Files.exists(pickupsFile)) {
-				off = java.nio.file.Files.readAllLines(pickupsFile);
+				pickups = java.nio.file.Files.readAllLines(pickupsFile);
 			}
 		} catch (java.io.IOException e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the party pick-up settings", e);
 		}
 		for (PartyGame game : ALL) {
-			game.pickupsOn = !off.contains(game.id);
+			game.pickupsOn = pickups.contains(game.id);
 		}
 		for (PartyGame game : ALL) {
 			game.attach(server);
@@ -318,15 +318,15 @@ public final class PartyGames {
 			return;
 		}
 		game.pickupsOn = !game.pickupsOn;
-		List<String> off = new ArrayList<>();
+		List<String> on = new ArrayList<>();
 		for (PartyGame g : ALL) {
-			if (g.hasPickups() && !g.pickupsOn) {
-				off.add(g.id);
+			if (g.hasPickups() && g.pickupsOn) {
+				on.add(g.id);
 			}
 		}
 		try {
 			java.nio.file.Files.createDirectories(pickupsFile.getParent());
-			java.nio.file.Files.write(pickupsFile, off);
+			java.nio.file.Files.write(pickupsFile, on);
 		} catch (java.io.IOException e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the party pick-up settings", e);
 		}

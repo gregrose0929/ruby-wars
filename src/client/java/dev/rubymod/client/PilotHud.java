@@ -97,6 +97,8 @@ public class PilotHud implements HudElement {
 		dev.rubymod.client.ui.Ui.text(g, "Power", x + 7, y + 43, dev.rubymod.client.ui.Ui.MUTED);
 		dev.rubymod.client.ui.Ui.bar(g, x + 40, y + 44, pw - 48, 6, aircraft.throttle(), dev.rubymod.client.ui.Ui.GOLD);
 		// What to do right now.
+		// What to do next: the first flight ever, then only with the help key (N).
+		boolean help = VehicleHelp.show("aircraft", aircraft.getId());
 		String tip = null;
 		int tipColor = dev.rubymod.client.ui.Ui.TEXT;
 		if (kind.rotorcraft()) {
@@ -340,12 +342,16 @@ public class PilotHud implements HudElement {
 				// Rockets fly straight to whatever is under the crosshair.
 				g.outline(w / 2 - 8, h / 2 - 8, 16, 16, GREEN);
 			}
-			dev.rubymod.client.ui.Ui.text(g, "Click to fire, R to switch", x + 7, y + 19, pw - 12, dev.rubymod.client.ui.Ui.MUTED);
+			if (VehicleHelp.show("aircraft", aircraft.getId())) {
+				dev.rubymod.client.ui.Ui.text(g, "Click to fire, R to switch", x + 7, y + 19, pw - 12, dev.rubymod.client.ui.Ui.MUTED);
+			}
 		}
 		dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.SHIELD, x + 7, y + 31);
 		String flareKey = aircraft.kind().rotorcraft() ? "X" : "Space";
 		dev.rubymod.client.ui.Ui.text(g, "Flares " + aircraft.flares() + " (" + flareKey + ")", x + 19, y + 32, aircraft.flares() == 0 ? dev.rubymod.client.ui.Ui.RED : dev.rubymod.client.ui.Ui.DIM);
-		dev.rubymod.client.ui.Ui.text(g, "Scroll to zoom", x + 7, y + 44, dev.rubymod.client.ui.Ui.MUTED);
+		if (VehicleHelp.show("aircraft", aircraft.getId())) {
+			dev.rubymod.client.ui.Ui.text(g, "Scroll to zoom. N: hide hints", x + 7, y + 44, pw - 12, dev.rubymod.client.ui.Ui.MUTED);
+		}
 		if (weapon == null) {
 			return;
 		}
