@@ -125,7 +125,85 @@ public class HideAndSeek extends PartyGame {
 
 	public HideAndSeek() {
 		super("hideseek", "Holo Hide & Seek", "Turn into a block and hide! Seekers have to find you.", "rubymod:holo_camo",
-				2, false, false, false);
+				1, true, false, false);
+	}
+
+	/** One player: they hide, and Seeker Golems hunt for them. */
+	private boolean solo;
+	private final List<UUID> golems = new ArrayList<>();
+
+	private void spawnGolems() {
+		ServerLevel level = level();
+		BlockPos c = center();
+		for (int i = 0; i < 3; i++) {
+			var golem = EntityTypes.IRON_GOLEM.create(level, EntitySpawnReason.EVENT);
+			if (golem == null) {
+				continue;
+			}
+			// They walk in from the edges of town.
+			double a = i * Math.PI * 2 / 3 + level.getRandom().nextDouble();
+			double gx = c.getX() + 0.5 + Math.cos(a) * (Town.HALF - 4);
+			double gz = c.getZ() + 0.5 + Math.sin(a) * (Town.HALF - 4);
+			golem.snapTo(gx, dev.rubymod.game.Hub.safeY(level, gx, c.getY(), gz), gz, 0, 0);
+			golem.setCustomName(Component.literal("Seeker Golem").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+			golem.setCustomNameVisible(true);
+			golem.addEffect(new MobEffectInstance(MobEffects.SPEED, -1, 1, false, false));
+			golem.setPersistenceRequired();
+			golem.addTag(tag());
+			level.addFreshEntity(golem);
+			spawned.add(golem.getUUID());
+			golems.add(golem.getUUID());
+		}
+	}
+
+	/**
+	 * The golems wander the town, drawn closer to the hider as time runs down. One coming right up to you finds you:
+	 * from three blocks if you're moving, only by walking into you if you're locked in place like a real block.
+	 */
+	private void tickGolems(ServerLevel level) {
+		ServerPlayer hider = null;
+		for (ServerPlayer p : online()) {
+			Part part = players.get(p.getUUID());
+			if (part != null && part.team == HIDER && !part.watching && !p.isSpectator()) {
+				hider = p;
+			}
+		}
+		if (hider == null) {
+			return;
+		}
+		Disguise d = disguises.get(hider.getUUID());
+		boolean locked = d != null && d.locked;
+		double left = 1.0 - (roundTicks - HIDE_TICKS) / (double) SEEK_TICKS;
+		for (UUID id : golems) {
+			if (!(level.getEntity(id) instanceof net.minecraft.world.entity.Mob golem) || !golem.isAlive()) {
+				continue;
+			}
+			golem.setTarget(null);
+			if ((roundTicks + golem.getId() * 17) % 70 == 0) {
+				// Somewhere within a circle round the hider that tightens from the whole town to a few houses.
+				double reach = 8 + 30 * left;
+				double a = level.getRandom().nextDouble() * Math.PI * 2;
+				double r = Math.sqrt(level.getRandom().nextDouble()) * reach;
+				BlockPos c = center();
+				double x = Math.max(c.getX() - Town.HALF + 2, Math.min(c.getX() + Town.HALF - 2, hider.getX() + Math.cos(a) * r));
+				double z = Math.max(c.getZ() - Town.HALF + 2, Math.min(c.getZ() + Town.HALF - 2, hider.getZ() + Math.sin(a) * r));
+				golem.getNavigation().moveTo(x, c.getY(), z, 0.9);
+			}
+			double near = golem.distanceTo(hider);
+			if (near < (locked ? 1.7 : 3.2)) {
+				int seconds = (roundTicks - HIDE_TICKS) / 20;
+				undisguise(hider.getUUID());
+				hider.removeEffect(MobEffects.INVISIBILITY);
+				level.sendParticles(ParticleTypes.FIREWORK, hider.getX(), hider.getY() + 1, hider.getZ(), 30, 0.4, 0.6, 0.4, 0.1);
+				level.playSound(null, hider.blockPosition(), SoundEvents.IRON_GOLEM_ATTACK, SoundSource.PLAYERS, 1.5F, 0.8F);
+				endRound("FOUND!", "A Seeker Golem found you after " + seconds + " seconds. " + (locked ? "So close!" : "Stand still when one is near: moving gives you away."),
+						ChatFormatting.RED);
+				return;
+			}
+			if (near < 9 && roundTicks % 20 == 0) {
+				hider.sendOverlayMessage(Component.literal(locked ? "A golem is close... don't move!" : "A golem is close: STAND STILL!").withStyle(ChatFormatting.RED));
+			}
+		}
 	}
 
 	@Override
@@ -168,7 +246,9 @@ public class HideAndSeek extends PartyGame {
 		tauntAt.clear();
 		List<UUID> ids = new ArrayList<>(players.keySet());
 		Collections.shuffle(ids);
-		int seekers = Math.max(1, ids.size() / 4);
+		solo = ids.size() == 1;
+		golems.clear();
+		int seekers = solo ? 0 : Math.max(1, ids.size() / 4);
 		for (int i = 0; i < ids.size(); i++) {
 			players.get(ids.get(i)).team = i < seekers ? SEEKER : HIDER;
 		}
@@ -184,6 +264,10 @@ public class HideAndSeek extends PartyGame {
 						+ "Stand still for 2 seconds and you lock in place like a real block. Feeling brave? Use the Taunt feather for bonus points.")
 						.withStyle(ChatFormatting.GREEN));
 				dev.rubymod.game.Alerts.title(p, "HIDE!", "Right-click a block to turn into it", ChatFormatting.GREEN);
+				if (solo) {
+					p.sendSystemMessage(Component.literal("You're on your own, so three Seeker Golems will come looking in 40 seconds. "
+							+ "Stay hidden until time runs out. Stand still when one is near!").withStyle(ChatFormatting.GOLD));
+				}
 			}
 		}
 	}
@@ -342,6 +426,15 @@ public class HideAndSeek extends PartyGame {
 	@Override
 	protected void tickRound() {
 		ServerLevel level = level();
+		if (solo && roundTicks == HIDE_TICKS) {
+			spawnGolems();
+		}
+		if (solo && roundTicks > HIDE_TICKS) {
+			tickGolems(level);
+			if (phase != Phase.PLAYING) {
+				return;
+			}
+		}
 		if (roundTicks == HIDE_TICKS) {
 			for (ServerPlayer p : online()) {
 				Part part = players.get(p.getUUID());

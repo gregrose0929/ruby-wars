@@ -40,10 +40,16 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 	public int selected = -1;
 
 	public ArmoryScreen(ArmoryMenu menu, Inventory inventory, Component title) {
-		super(menu, inventory, title, W, H);
+		super(menu, inventory, title, fitWidth(), H);
 	}
 
-	/** On the narrowest screens (it's wider than they are), at least the left of it stays on screen: that's the buying part. */
+	/** As wide as it's designed, or as wide as the screen allows (the description on the right gives up the room). */
+	private static int fitWidth() {
+		int screen = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScaledWidth();
+		return Math.max(PANEL_X + 96, Math.min(W, screen - 4));
+	}
+
+	/** On the narrowest screens at least the left of it (the buying part) stays on screen. */
 	@Override
 	protected void init() {
 		super.init();
@@ -81,7 +87,7 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 		super.extractBackground(g, mouseX, mouseY, a);
 		int x = leftPos;
 		int y = topPos;
-		Ui.panel(g, x, y, W, H);
+		Ui.panel(g, x, y, imageWidth, H);
 		// Tabs
 		int tx = x + 8;
 		for (int p = 0; p < 4; p++) {
@@ -111,15 +117,15 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			}
 		}
 		// Detail panel
-		Ui.inset(g, x + PANEL_X, y + 30, W - 8 - PANEL_X, H - 38);
+		Ui.inset(g, x + PANEL_X, y + 30, imageWidth - 8 - PANEL_X, H - 38);
 	}
 
 	@Override
 	protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
 		g.text(font, "Armory", 9, 6, TEXT, false);
 		String r = rubies() + " rubies";
-		Ui.icon(g, Ui.Icon.GEM, W - 20 - font.width(r), 5);
-		g.text(font, r, W - 8 - font.width(r), 6, Ui.GOLD, false);
+		Ui.icon(g, Ui.Icon.GEM, imageWidth - 20 - font.width(r), 5);
+		g.text(font, r, imageWidth - 8 - font.width(r), 6, Ui.GOLD, false);
 		int tx = 8;
 		for (int p = 0; p < 4; p++) {
 			String name = TABS[p];
@@ -164,7 +170,7 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 		g.pose().popMatrix();
 		int tx2 = px + 48;
 		String name = stack.getHoverName().getString().replace("[Locked] ", "");
-		List<FormattedCharSequence> nameLines = font.split(Component.literal(name), W - 14 - tx2);
+		List<FormattedCharSequence> nameLines = font.split(Component.literal(name), imageWidth - 14 - tx2);
 		int ny = 38;
 		for (FormattedCharSequence line : nameLines) {
 			g.text(font, line, tx2, ny, TEXT, false);
@@ -202,7 +208,7 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			lines.addAll(0, about);
 		}
 		for (Component c : lines) {
-			for (FormattedCharSequence line : font.split(c, W - 14 - px)) {
+			for (FormattedCharSequence line : font.split(c, imageWidth - 14 - px)) {
 				if (ly > H - 22) {
 					break;
 				}
@@ -216,7 +222,7 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 	private int bar(GuiGraphicsExtractor g, int x, int y, String label, float value, float max, String text) {
 		g.text(font, label, x, y, MUTED, false);
 		int bx = x + 52;
-		int bw = W - 14 - bx - 40;
+		int bw = imageWidth - 14 - bx - 40;
 		Ui.bar(g, bx, y + 1, bw, 6, Math.max(0.04F, Math.min(1.0F, value / max)), RUBY);
 		g.text(font, text, bx + bw + 4, y, TEXT, false);
 		return y + 11;

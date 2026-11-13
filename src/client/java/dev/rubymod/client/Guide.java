@@ -84,7 +84,7 @@ public final class Guide {
 		}
 		if (phase == Phase.BUILD) {
 			int day = ClientState.hud == null ? 0 : ClientState.hud.day();
-			return "Build day " + day + " of 14. Raids on days 3, 6, 9 and 12. Then Battle Day: last squad standing wins.";
+			return "Build day " + day + ". Raids on days 3, 6, 9 and 12. Battle Day starts when everyone's ready: last squad standing wins.";
 		}
 		if (phase == Phase.ENDED) {
 			return "The season is over. A new one starts soon.";

@@ -113,14 +113,14 @@ public class GameHud implements HudElement {
 
 	private void drawPhaseBanner(GuiGraphicsExtractor g, Font font, int w) {
 		var mc = net.minecraft.client.Minecraft.getInstance();
-		// In a duel the score bar sits up there instead.
-		if (ClientState.hud == null || mc.level != null && mc.level.dimension() == dev.rubymod.game.Duels.ARENA) {
+		// Only in the Ruby Wars world: everywhere else a game's own bar (or a duel's score) sits up there.
+		if (ClientState.hud == null || !ClientState.inRubyWarsWorld() || mc.level != null && mc.level.dimension() == dev.rubymod.game.Duels.ARENA) {
 			return;
 		}
 		Phase phase = ClientState.phase();
 		StringBuilder text = new StringBuilder(phase.title().toUpperCase());
 		if (phase == Phase.BUILD && ClientState.hud.day() > 0) {
-			text.append("  Day ").append(ClientState.hud.day()).append(" of 14");
+			text.append("  Day ").append(ClientState.hud.day());
 		}
 		long seconds = ClientState.secondsLeft();
 		if (seconds >= 0) {
@@ -215,6 +215,9 @@ public class GameHud implements HudElement {
 		if (!ClientState.inRubyWarsWorld() || phase != Phase.LOBBY && phase != Phase.BUILD) {
 			return;
 		}
+		if (HowToCard.covers(Minecraft.getInstance().getWindow().getGuiScaledWidth())) {
+			return;
+		}
 		int step = ClientState.research == null ? -1 : Guide.current();
 		java.util.List<String> bounties = phase == Phase.BUILD ? ClientState.bounties : java.util.List.of();
 		if (step < 0 && bounties.isEmpty()) {
@@ -283,7 +286,8 @@ public class GameHud implements HudElement {
 
 	private void drawAmmo(GuiGraphicsExtractor g, Font font, Player player, int w, int h) {
 		ItemStack held = player.getMainHandItem();
-		if (player.getVehicle() instanceof dev.rubymod.entity.AircraftEntity) {
+		// Aircraft and tanks have their own displays down there.
+		if (player.getVehicle() instanceof dev.rubymod.entity.AircraftEntity || player.getVehicle() instanceof dev.rubymod.entity.VehicleEntity v && v.isTank()) {
 			return;
 		}
 		int ammo;
@@ -313,7 +317,8 @@ public class GameHud implements HudElement {
 		int pw = 124;
 		int ph = 44;
 		int x = w - pw - 4;
-		int y = h - ph - 4;
+		// On a narrow screen the corner is where the hotbar and food bar are: the panel goes above them.
+		int y = x < w / 2 + 95 ? h - ph - 54 : h - ph - 4;
 		panel(g, x, y, x + pw, y + ph);
 		String name = font.plainSubstrByWidth(held.getHoverName().getString(), pw - 18 - font.width(mode));
 		g.text(font, name, x + 7, y + 5, 0xFFAAB0BA, false);

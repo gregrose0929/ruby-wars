@@ -9,13 +9,10 @@ import dev.rubymod.net.Net;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * The how-to card: three pictures and three sentences on screen for the first seconds of a game, so nobody has to
- * be told the rules. Each player sees a game's card the first three times they play it, then it stays out of the way.
+ * The how-to card: three pictures and three sentences, so nobody has to be told the rules. It's up while you wait in
+ * a game's lobby (and for the first seconds after joining the Horde, the Rift or the convoy), and gone when the round starts.
  */
 public final class HowTo {
-	/** How many times a card is shown before the player is taken to know the game. */
-	private static final int TIMES = 3;
-
 	/** mode -> title, then three "item|sentence" lines. */
 	private static final Map<String, List<String>> CARDS = Map.ofEntries(
 			Map.entry("gungame", List.of("Gun Game", "rubymod:arr_rifle|Every kill gives you the next weapon.",
@@ -29,9 +26,9 @@ public final class HowTo {
 			Map.entry("ctf", List.of("Capture the Flag", "minecraft:red_wool|Grab their flag and carry it back to yours.",
 					"rubymod:sandbags|You get 20 seconds to build defences first.", "minecraft:iron_bars|Right-click the ground with the Instant Barricade.")),
 			Map.entry("tanks", List.of("Tank Battle", "rubymod:tank|W A S D to drive. Aim with the mouse, click to fire.",
-					"minecraft:anvil|Drive over the floating pick-ups: repair, rapid fire, mines.", "minecraft:stone_bricks|You can drive straight through walls and trees.")),
+					"minecraft:anvil|Pick-ups (if they're on): drive over them for repair, rapid fire, mines.", "minecraft:stone_bricks|You can drive straight through walls and trees.")),
 			Map.entry("air", List.of("Air Battle", "rubymod:fighter_jet|Hold W to speed up, then look up to take off.",
-					"minecraft:nether_star|Fly through a glowing ring to rearm and repair.", "minecraft:gold_ingot|The Ace glows, and is worth two knockouts.")),
+					"minecraft:nether_star|Rings (if they're on): fly through to rearm and repair.", "minecraft:gold_ingot|The Ace glows, and is worth two knockouts.")),
 			Map.entry("skyrace", List.of("Sky Race", "rubymod:jetpack|Go through every ring, in order, for two laps.",
 					"minecraft:lime_concrete|Green rings give you a boost.", "minecraft:amethyst_shard|The purple ghost is the record run: beat it!")),
 			Map.entry("build", List.of("Build Battle", "minecraft:grass_block|Five minutes to build the theme on your plot.",
@@ -48,19 +45,16 @@ public final class HowTo {
 	private HowTo() {
 	}
 
-	/** Show this mode's card to the player, if they're still new to it. */
-	public static void show(ServerPlayer player, String mode) {
+	/** Show this mode's card to the player for that many seconds. */
+	public static void show(ServerPlayer player, String mode, int seconds) {
 		List<String> card = CARDS.get(mode);
-		if (card == null) {
-			return;
+		if (card != null) {
+			Net.send(player, new MorePayloads.HowTo(card.get(0), card.subList(1, card.size()), seconds));
 		}
-		Stats.Record r = Stats.get(player);
-		int seen = r.howTo.getOrDefault(mode, 0);
-		if (seen >= TIMES) {
-			return;
-		}
-		r.howTo.put(mode, seen + 1);
-		Stats.markDirty();
-		Net.send(player, new MorePayloads.HowTo(card.get(0), card.subList(1, card.size())));
+	}
+
+	/** Take the card down (the round is starting). */
+	public static void hide(ServerPlayer player) {
+		Net.send(player, new MorePayloads.HowTo("", List.of(), 0));
 	}
 }

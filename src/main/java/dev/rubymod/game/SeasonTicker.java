@@ -30,7 +30,7 @@ public final class SeasonTicker {
 	public static long durationOf(Phase phase) {
 		GameConfig c = GameConfig.get();
 		return switch (phase) {
-			case BUILD -> c.buildPhaseMinutes * MINUTE;
+			case BUILD -> c.buildLimitMinutes * MINUTE;
 			case LOCKDOWN -> c.lockdownMinutes * MINUTE;
 			case WAR -> c.warMinutes * MINUTE;
 			case SUDDEN_DEATH -> c.suddenDeathMinutes * MINUTE;
@@ -45,7 +45,8 @@ public final class SeasonTicker {
 			return 0;
 		}
 		long length = durationOf(Phase.BUILD);
-		long dayLength = length >= 14 * DAY ? DAY : Math.max(1, length / 14);
+		// No limit: real days. A limit shorter than two weeks (a test season) still counts fourteen "days".
+		long dayLength = length == 0 || length >= 14 * DAY ? DAY : Math.max(1, length / 14);
 		return (int) ((now() - data.buildStartedAt) / dayLength) + 1;
 	}
 
@@ -60,9 +61,59 @@ public final class SeasonTicker {
 		return Math.max(0, data.phaseEndsAt - now());
 	}
 
+	/** When the battle an admin called begins (ms; 0: none called). */
+	private static long battleAt;
+
+	/** /rubywars battle: Battle Day begins after a countdown everyone sees. Returns an error, or null. */
+	public static String callBattle(MinecraftServer server, int seconds) {
+		SeasonData data = SeasonData.get();
+		if (data.phase == Phase.LOBBY) {
+			return "The season hasn't started. Run /rubywars start first.";
+		}
+		if (data.phase != Phase.BUILD) {
+			return "The battle has already begun (" + data.phase.title() + ").";
+		}
+		battleAt = now() + seconds * 1000L;
+		lastBattleCall = -1;
+		Alerts.broadcastTitle(server, "BATTLE DAY IS COMING", "It begins in " + seconds + " seconds. Get to your base!", ChatFormatting.RED);
+		Alerts.broadcast(server, Component.literal("Battle Day has been called! It begins in " + seconds + " seconds. Finish what you're doing and get to your base.")
+				.withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		return null;
+	}
+
+	/** Call the battle off again (before it starts). */
+	public static boolean cancelBattle(MinecraftServer server) {
+		if (battleAt == 0) {
+			return false;
+		}
+		battleAt = 0;
+		Alerts.broadcast(server, Component.literal("Battle Day has been called off. Keep building!").withStyle(ChatFormatting.GOLD));
+		return true;
+	}
+
+	private static long lastBattleCall = -1;
+
 	/** Called once per second. */
 	public static void tickSecond(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
+		// A season begun under the old two-week limit carries on without one.
+		if (data.phase == Phase.BUILD && durationOf(Phase.BUILD) == 0 && data.phaseEndsAt != 0 && data.pausedRemaining < 0) {
+			data.phaseEndsAt = 0;
+			SeasonData.markDirty();
+		}
+		if (battleAt != 0 && data.phase != Phase.BUILD) {
+			battleAt = 0;
+		}
+		if (battleAt != 0) {
+			long left = Math.max(0, (battleAt - now() + 999) / 1000);
+			if (left <= 0) {
+				battleAt = 0;
+				BattleDirector.enterPhase(server, Phase.LOCKDOWN);
+			} else if (left != lastBattleCall && (left == 30 || left == 10 || left <= 5)) {
+				lastBattleCall = left;
+				Alerts.broadcastTitle(server, String.valueOf(left), "Battle Day begins", ChatFormatting.RED);
+			}
+		}
 		if (data.pausedRemaining < 0 && data.phaseEndsAt != 0 && now() >= data.phaseEndsAt) {
 			if (data.phase == Phase.BUILD && !GameConfig.get().autoStartBattle) {
 				if (!waitingNotified) {

@@ -267,6 +267,8 @@ public final class GameEvents {
 			ServerPlayer player = context.player();
 			if (payload.mode().startsWith("bots:")) {
 				dev.rubymod.game.party.PartyGames.toggleBots(player, payload.mode().substring(5));
+			} else if (payload.mode().startsWith("pickups:")) {
+				dev.rubymod.game.party.PartyGames.togglePickups(player, payload.mode().substring(8));
 			} else if (!payload.mode().isEmpty()) {
 				String error = Hub.go(player, payload.mode());
 				if (error != null) {

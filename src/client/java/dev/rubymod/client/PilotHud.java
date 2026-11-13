@@ -79,9 +79,10 @@ public class PilotHud implements HudElement {
 
 	/** The simple cockpit: your aircraft (hull, speed, height) bottom left, and one line of what to do next. */
 	private void drawSimple(GuiGraphicsExtractor g, Font font, Minecraft mc, AircraftEntity aircraft, AircraftType kind, int w, int h) {
-		int x = 4;
-		int y = h - 62;
+		// Side by side at the bottom middle, where the hotbar would be (the corners are the chat's and the minimap's).
 		int pw = 132;
+		int x = w / 2 - pw - 3;
+		int y = h - 62;
 		dev.rubymod.client.ui.Ui.panel(g, x, y, pw, 58);
 		dev.rubymod.client.ui.Ui.text(g, kind.name(), x + 7, y + 6, dev.rubymod.client.ui.Ui.TEXT);
 		float hull = aircraft.getHealth() / aircraft.getMaxHealth();
@@ -116,8 +117,8 @@ public class PilotHud implements HudElement {
 		}
 		if (tip != null) {
 			int tw = font.width(tip) + 14;
-			dev.rubymod.client.ui.Ui.panel(g, w / 2 - tw / 2, h - 104, tw, 18);
-			dev.rubymod.client.ui.Ui.text(g, tip, w / 2 - tw / 2 + 7, h - 99, tipColor);
+			dev.rubymod.client.ui.Ui.panel(g, w / 2 - tw / 2, h - 86, tw, 18);
+			dev.rubymod.client.ui.Ui.text(g, tip, w / 2 - tw / 2 + 7, h - 81, tipColor);
 		}
 	}
 
@@ -325,7 +326,7 @@ public class PilotHud implements HudElement {
 	private void drawWeapons(GuiGraphicsExtractor g, Font font, Camera camera, AircraftEntity aircraft, int w, int h) {
 		Weapon weapon = aircraft.selectedWeapon();
 		int pw = 128;
-		int x = w - pw - 4;
+		int x = w / 2 + 3;
 		int y = h - 62;
 		dev.rubymod.client.ui.Ui.panel(g, x, y, pw, 58);
 		if (weapon == null) {

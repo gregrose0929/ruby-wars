@@ -81,8 +81,6 @@ public final class Stats {
 		public int xp;
 		public boolean xpCounted;
 		public int convoyHardWins;
-		/** How many times each game's how-to card has been shown (see HowTo). */
-		public Map<String, Integer> howTo = new HashMap<>();
 		/** Fastest delivery, in seconds (0: none yet). */
 		public int convoyBestTime;
 
@@ -165,9 +163,6 @@ public final class Stats {
 		if (r.armor == null) {
 			r.armor = "";
 		}
-		if (r.howTo == null) {
-			r.howTo = new HashMap<>();
-		}
 		if (r.paint == null) {
 			r.paint = "";
 		}
@@ -224,7 +219,6 @@ public final class Stats {
 		dirty = true;
 		ServerPlayer p = server == null ? null : server.getPlayerList().getPlayer(id);
 		if (p != null) {
-			p.sendOverlayMessage(net.minecraft.network.chat.Component.literal("+" + amount + " XP").withStyle(net.minecraft.ChatFormatting.AQUA));
 			if (after > before) {
 				Alerts.title(p, "LEVEL " + after + "!", "Press I for your profile", net.minecraft.ChatFormatting.AQUA);
 				Alerts.jingle(p, dev.rubymod.registry.ModSounds.LEVEL_UP, 0.9F);

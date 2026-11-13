@@ -11,11 +11,12 @@ public class ZoomHud implements HudElement {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker deltaTracker) {
 		Minecraft mc = Minecraft.getInstance();
-		if (!Vehicles.zoomable(mc) || Targeting.piloting(mc) != null) {
+		// Only while zoomed in (the hint that you can is on the vehicle's own display).
+		if (!Vehicles.zoomable(mc) || Targeting.piloting(mc) != null || Vehicles.zoom <= 1) {
 			return;
 		}
-		String text = Vehicles.zoom > 1 ? "ZOOM " + Vehicles.zoom + "x  [scroll]" : "scroll: zoom";
-		int color = Vehicles.zoom > 1 ? 0xFF50FF70 : 0x9050FF70;
+		String text = "ZOOM " + Vehicles.zoom + "x";
+		int color = 0xFF50FF70;
 		g.text(mc.font, text, g.guiWidth() / 2 - mc.font.width(text) / 2, g.guiHeight() / 2 + 40, color, false);
 	}
 }

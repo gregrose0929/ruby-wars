@@ -282,7 +282,7 @@ public final class Rift {
 		r.ability = RiftAbilities.Ability.byId(RiftMeta.rec(player).riftAbility);
 		RUNNERS.put(player.getUUID(), r);
 		BAR.addPlayer(player);
-		dev.rubymod.game.HowTo.show(player, "rift");
+		dev.rubymod.game.HowTo.show(player, "rift", 20);
 		if (state == State.IDLE) {
 			startStaging(server);
 		}

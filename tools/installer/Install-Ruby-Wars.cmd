@@ -17,6 +17,7 @@ exit /b
 #   2. Puts its mods in their own game folder (%APPDATA%\.rubywars), so nothing else you play is touched.
 #   3. Adds Fabric and a "Ruby Wars" entry to the official Minecraft Launcher.
 #   4. Puts a "Ruby Wars" shortcut on the desktop: it checks for a new pack, then opens the launcher.
+#   5. The first time, gives the game sensible settings (the player's own if they have some).
 #
 # For testing: RW_MCDIR / RW_GAMEDIR point it at other folders, RW_NOLAUNCH=1 stops it opening the launcher or
 # waiting for a key, RW_NOSHORTCUT=1 leaves the desktop alone.
@@ -225,6 +226,38 @@ function Set-ServerList {
 	[IO.File]::WriteAllBytes($servers, $out.ToArray())
 }
 
+# Starting settings, the first time only (never touched again, so whatever the player changes stays changed).
+# Their own Minecraft settings if they have some (their keys, their mouse speed); otherwise friendly ones for a new player.
+function Set-Options {
+	$target = Join-Path $GameDir 'options.txt'
+	if (Test-Path -LiteralPath $target) {
+		return
+	}
+	$own = Join-Path $McDir 'options.txt'
+	$lines = New-Object System.Collections.Generic.List[string]
+	if (Test-Path -LiteralPath $own) {
+		foreach ($line in Get-Content -LiteralPath $own) { $lines.Add($line) }
+	} else {
+		# Bright enough to see in caves, music at half, jump up single blocks by yourself, a view distance most PCs manage.
+		foreach ($line in @('gamma:1.0', 'soundCategory_music:0.5', 'autoJump:true', 'renderDistance:10', 'guiScale:0', 'narrator:0')) { $lines.Add($line) }
+	}
+	# No vanilla tutorial pop-ups, first-run screens or multiplayer warning between a player and the game.
+	$always = @{ tutorialStep = 'none'; onboardAccessibility = 'false'; skipMultiplayerWarning = 'true'; joinedFirstServer = 'true' }
+	foreach ($key in $always.Keys) {
+		$found = $false
+		for ($i = 0; $i -lt $lines.Count; $i++) {
+			if ($lines[$i].StartsWith("${key}:")) {
+				$lines[$i] = "${key}:" + $always[$key]
+				$found = $true
+			}
+		}
+		if (-not $found) {
+			$lines.Add("${key}:" + $always[$key])
+		}
+	}
+	[IO.File]::WriteAllLines($target, $lines, $Utf8)
+}
+
 function Find-Launcher {
 	$candidates = @(
 		(Join-Path ${env:ProgramFiles(x86)} 'Minecraft Launcher\MinecraftLauncher.exe'),
@@ -337,6 +370,7 @@ try {
 			Set-LauncherProfile (Install-Fabric $versions.Minecraft $versions.Loader)
 			Set-ServerList
 		}
+		Set-Options
 		Install-Shortcut $launcher
 		Say ''
 		Say '  Done! From now on, use the "Ruby Wars" shortcut on your desktop.' 'Green'

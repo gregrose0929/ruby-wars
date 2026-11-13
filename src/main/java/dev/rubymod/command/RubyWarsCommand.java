@@ -79,6 +79,11 @@ public final class RubyWarsCommand {
 				.then(Commands.literal("trust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, true))))
 				.then(Commands.literal("untrust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, false))))
 				.then(Commands.literal("start").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::start))
+				.then(Commands.literal("battle").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.executes(c -> battle(c, 60))
+						.then(Commands.literal("cancel").executes(c -> SeasonTicker.cancelBattle(c.getSource().getServer())
+								? ok(c, "Battle Day called off.") : fail(c, "No battle has been called.")))
+						.then(Commands.argument("seconds", IntegerArgumentType.integer(5, 3600)).executes(c -> battle(c, IntegerArgumentType.getInteger(c, "seconds")))))
 				.then(Commands.literal("phase").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.argument("phase", StringArgumentType.word())
 								.suggests((c, b) -> SharedSuggestionProvider.suggest(
@@ -153,7 +158,8 @@ public final class RubyWarsCommand {
 		String paused = data.pausedRemaining >= 0 ? " (paused)" : "";
 		source.sendSystemMessage(Component.literal("Phase: " + data.phase.title() + "  |  Time left: " + formatTime(SeasonTicker.remainingMillis()) + paused));
 		if (data.phase == Phase.BUILD) {
-			source.sendSystemMessage(Component.literal("Day " + SeasonTicker.currentDay() + " of 14"));
+			source.sendSystemMessage(Component.literal("Day " + SeasonTicker.currentDay() + (GameConfig.get().buildLimitMinutes > 0 ? " of 14"
+					: " of the build phase (it ends when an admin runs /rubywars battle)")));
 		}
 		if (data.phase.isBattle() || data.phase == Phase.ENDED) {
 			source.sendSystemMessage(Component.literal("Players remaining: " + BattleDirector.aliveCount()));
@@ -287,13 +293,30 @@ public final class RubyWarsCommand {
 		return ok(c, (add ? "Trusted " : "Removed trust for ") + target.getName().getString() + ".");
 	}
 
+	/** /rubywars battle [seconds]: end the build phase. Battle Day (the lockdown, then open war) begins after the countdown. */
+	private static int battle(CommandContext<CommandSourceStack> c, int seconds) {
+		String error = SeasonTicker.callBattle(c.getSource().getServer(), seconds);
+		if (error != null) {
+			return fail(c, error);
+		}
+		return ok(c, "Battle Day begins in " + seconds + " seconds (then " + GameConfig.get().lockdownMinutes + " minutes of lockdown before PvP). "
+				+ "/rubywars battle cancel calls it off.");
+	}
+
+	private static int fail(CommandContext<CommandSourceStack> c, String message) {
+		c.getSource().sendFailure(Component.literal(message));
+		return 0;
+	}
+
 	private static int start(CommandContext<CommandSourceStack> c) {
 		if (SeasonData.get().phase != Phase.LOBBY) {
 			c.getSource().sendFailure(Component.literal("The season already started. Use /rubywars phase to jump around, or /rubywars reset confirm."));
 			return 0;
 		}
 		BattleDirector.startSeason(c.getSource().getServer());
-		return ok(c, "Season started! The build phase runs " + GameConfig.get().buildPhaseMinutes + " minutes.");
+		int limit = GameConfig.get().buildLimitMinutes;
+		return ok(c, limit > 0 ? "Season started! The build phase runs " + limit + " minutes." : "Season started! Build for as long as you like: "
+				+ "when everyone's ready, run /rubywars battle.");
 	}
 
 	private static int phase(CommandContext<CommandSourceStack> c) {

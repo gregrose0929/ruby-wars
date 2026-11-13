@@ -43,7 +43,7 @@ public class Infection extends PartyGame {
 
 	public Infection() {
 		super("infection", "Infection", "One zombie at the start. Get caught and you're a zombie too! Survive 4 minutes.",
-				"minecraft:zombie_head", 2, false, true, false);
+					"minecraft:zombie_head", 1, true, true, false);
 	}
 
 	@Override
@@ -122,6 +122,9 @@ public class Infection extends PartyGame {
 		return lines;
 	}
 
+	/** One player: a survivor against the wild zombies. */
+	private boolean solo;
+
 	private long count(int team) {
 		return players.values().stream().filter(p -> !p.watching && p.team == team).count();
 	}
@@ -141,11 +144,13 @@ public class Infection extends PartyGame {
 	protected void startRound() {
 		List<UUID> ids = new ArrayList<>(players.keySet());
 		Collections.shuffle(ids);
-		int zombies = Math.max(1, ids.size() / 5);
+		// On your own: nobody starts as the zombie. The wild ones come thicker and faster instead.
+		solo = ids.size() == 1;
+		int zombies = solo ? 0 : Math.max(1, ids.size() / 5);
 		for (int i = 0; i < ids.size(); i++) {
 			players.get(ids.get(i)).team = i < zombies ? ZOMBIE : SURVIVOR;
 		}
-		alpha = ids.isEmpty() ? null : ids.get(0);
+		alpha = ids.isEmpty() || solo ? null : ids.get(0);
 		roarAt = 15 * 20;
 		lastStand = false;
 		hero = null;
@@ -235,7 +240,11 @@ public class Infection extends PartyGame {
 			dev.rubymod.game.Alerts.title(victim, "INFECTED!", "You're a zombie now: go get them!", ChatFormatting.DARK_GREEN);
 			tell(Component.literal(part.name + " was infected! " + count(SURVIVOR) + " survivors left.").withStyle(ChatFormatting.DARK_GREEN));
 			level().playSound(null, victim.blockPosition(), SoundEvents.ZOMBIE_VILLAGER_CONVERTED, SoundSource.PLAYERS, 1.0F, 1.0F);
-			if (count(SURVIVOR) == 0) {
+			if (count(SURVIVOR) == 0 && solo) {
+				int lasted = roundTicks / 20;
+				endRound("THE ZOMBIES GOT YOU", "You lasted " + lasted / 60 + ":" + String.format("%02d", lasted % 60) + " of 4:00. Try again!",
+						ChatFormatting.DARK_GREEN);
+			} else if (count(SURVIVOR) == 0) {
 				Part best = players.values().stream().max(Comparator.comparingInt(p -> p.score)).orElse(null);
 				endRound("ZOMBIES WIN", "Everyone was infected!" + (best != null && best.score > 0 ? " Most bites: " + best.name + " (" + best.score + ")" : ""),
 						ChatFormatting.DARK_GREEN, teamIds(ZOMBIE));
@@ -280,9 +289,10 @@ public class Infection extends PartyGame {
 			}
 		}
 		// Wild zombies wander in to keep survivors moving.
-		if (roundTicks % 300 == 150 && level.getDifficulty() != Difficulty.PEACEFUL) {
+		if (roundTicks % (solo ? 120 : 300) == (solo ? 60 : 150) && level.getDifficulty() != Difficulty.PEACEFUL) {
 			long wild = spawned.stream().filter(id -> level.getEntity(id) instanceof Mob m && m.isAlive()).count();
-			int add = (int) Math.min(count(SURVIVOR), 8 - wild);
+			// On your own they keep coming, more of them as the clock runs down.
+			int add = solo ? (int) Math.min(2 + roundTicks / 1200, 12 - wild) : (int) Math.min(count(SURVIVOR), 8 - wild);
 			for (int i = 0; i < add; i++) {
 				var zombie = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.EVENT);
 				if (zombie == null) {

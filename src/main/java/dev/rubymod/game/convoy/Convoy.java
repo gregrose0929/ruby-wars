@@ -216,11 +216,35 @@ public final class Convoy {
 
 	/** How much tougher (or weaker) the enemies are on this difficulty. */
 	static double enemyScale() {
-		return difficulty == 0 ? 0.75 : difficulty == 2 ? 1.3 : 1.0;
+		return (difficulty == 0 ? 0.75 : difficulty == 2 ? 1.3 : 1.0) * (twist == Twist.LEGION_ALERT ? 1.2 : 1.0);
 	}
 
 	public static boolean idle() {
 		return state == State.IDLE;
+	}
+
+	/** Every job has a twist, drawn when the truck is loaded: no two runs are quite the same job. */
+	enum Twist {
+		HEAVY_LOAD("Heavy Load", "The truck has half again as much armor, but it's slower."),
+		RUSH_JOB("Rush Job", "The truck is a quarter faster. Keep up!"),
+		FRAGILE("Fragile Cargo", "The truck has less armor, but there's an extra spare."),
+		LEGION_ALERT("Legion on Alert", "Tougher enemies all the way. The job pays 25% more XP."),
+		AIR_COVER("Air Cover", "Everyone gets an Air Strike Flare now, and another at every depot."),
+		BOUNTY("Bounty Run", "Every enemy you drop is worth double on the scoreboard, and the job pays 10% more XP.");
+
+		final String title;
+		final String about;
+
+		Twist(String title, String about) {
+			this.title = title;
+			this.about = about;
+		}
+	}
+
+	private static Twist twist = Twist.HEAVY_LOAD;
+
+	static boolean twist(Twist t) {
+		return twist == t;
 	}
 
 	/** Pick the difficulty ("easy", "normal", "hard") for the next job; only counts while nobody is on the road. */
@@ -280,7 +304,7 @@ public final class Convoy {
 		tell(server, Component.literal(player.getName().getString() + " joined the Ruby Convoy.").withStyle(ChatFormatting.GOLD));
 		player.sendSystemMessage(Component.literal("Ruby Convoy: stay close to the truck to keep it moving. Crouch beside it to repair it. H to leave.")
 				.withStyle(ChatFormatting.GOLD));
-		dev.rubymod.game.HowTo.show(player, "convoy");
+		dev.rubymod.game.HowTo.show(player, "convoy", 20);
 	}
 
 	public static void leave(ServerPlayer player) {
@@ -712,9 +736,14 @@ public final class Convoy {
 		won = false;
 		bossBeaten = false;
 		stage = 0;
-		spares = SPARES + 1 - difficulty;
+		Twist[] all = Twist.values();
+		twist = all[level.getRandom().nextInt(all.length)];
+		spares = SPARES + 1 - difficulty + (twist == Twist.FRAGILE ? 1 : 0);
 		wrecks = 0;
 		UPGRADES.clear();
+		if (twist == Twist.AIR_COVER) {
+			UPGRADES.put(ConvoyUpgrade.AIRSTRIKE, 1);
+		}
 		java.util.Arrays.fill(VISITED, false);
 		seed = level.getRandom().nextLong();
 		ConvoyRoute.reroll(new Random(seed));
@@ -735,11 +764,17 @@ public final class Convoy {
 	private static void firstStretchBuilt(MinecraftServer server) {
 		ServerLevel level = level(server);
 		ready = true;
-		truck = ConvoyTruck.spawn(level, PARK, 300 * (1 + 0.3F * Math.max(0, CREW.size() - 1)), paint);
+		truck = ConvoyTruck.spawn(level, PARK, 300 * (1 + 0.3F * Math.max(0, CREW.size() - 1))
+				* (twist == Twist.HEAVY_LOAD ? 1.5F : twist == Twist.FRAGILE ? 0.75F : 1.0F), paint);
 		hold(level);
+		tell(server, Component.literal("This job's twist: " + twist.title + ". ").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)
+				.append(Component.literal(twist.about).withStyle(ChatFormatting.WHITE)));
 		for (ServerPlayer p : players(server)) {
 			place(p);
-			Alerts.title(p, "RUBY CONVOY", "Pick your job, then get the rubies to the vault!", ChatFormatting.GOLD);
+			Alerts.title(p, "RUBY CONVOY", "This job: " + twist.title, ChatFormatting.GOLD);
+			if (twist == Twist.AIR_COVER) {
+				p.getInventory().add(new ItemStack(ModItems.AIR_STRIKE_FLARE));
+			}
 			if (CREW.get(p.getUUID()).role == null) {
 				offerRoles(p);
 			}
@@ -882,7 +917,8 @@ public final class Convoy {
 		boolean blocked = truck.z >= limit - 0.05;
 		boolean moving = near > 0 && !contested && !blocked;
 		if (moving) {
-			double speed = 0.07 * (1 + 0.12 * (near - 1)) * (1 + 0.25 * level(ConvoyUpgrade.ENGINE));
+			double speed = 0.07 * (1 + 0.12 * (near - 1)) * (1 + 0.25 * level(ConvoyUpgrade.ENGINE))
+					* (twist == Twist.HEAVY_LOAD ? 0.82 : twist == Twist.RUSH_JOB ? 1.25 : 1.0);
 			truck.z = Math.min(limit, truck.z + speed);
 			truck.place(level);
 			// Nudge anyone standing where it's going.
@@ -1158,7 +1194,13 @@ public final class Convoy {
 	private static void record(MinecraftServer server, boolean delivered) {
 		for (ServerPlayer p : players(server)) {
 			Crew c = CREW.get(p.getUUID());
-			Stats.convoy(p.getUUID(), p.getName().getString(), stage + 1, delivered, c == null ? 0 : c.kills, difficulty, (int) ((ticks - runStart) / 20));
+			int kills = c == null ? 0 : c.kills * (twist == Twist.BOUNTY ? 2 : 1);
+			Stats.convoy(p.getUUID(), p.getName().getString(), stage + 1, delivered, kills, difficulty, (int) ((ticks - runStart) / 20));
+			if (twist == Twist.LEGION_ALERT || twist == Twist.BOUNTY) {
+				// The twist's bonus, on top of what the job paid.
+				int base = Math.round(((stage + 1) * 40 + (delivered ? 150 : 0)) * (difficulty == 0 ? 0.7F : difficulty == 2 ? 1.5F : 1.0F));
+				Stats.addXp(p.getUUID(), p.getName().getString(), Math.round(base * (twist == Twist.LEGION_ALERT ? 0.25F : 0.1F)));
+			}
 		}
 	}
 
@@ -1166,7 +1208,7 @@ public final class Convoy {
 		long secs = (ticks - runStart) / 20;
 		tell(server, Component.literal("══ RUBY CONVOY " + (delivered ? "DELIVERED" : "LOST") + " ══").withStyle(ChatFormatting.GOLD,
 				ChatFormatting.BOLD));
-		tell(server, Component.literal(DIFFICULTY_NAMES[difficulty] + "  •  reached: " + ConvoyRoute.NAMES[stage] + "  •  time " + secs / 60 + ":" + String.format("%02d", secs % 60)
+		tell(server, Component.literal(DIFFICULTY_NAMES[difficulty] + "  •  " + twist.title + "  •  reached: " + ConvoyRoute.NAMES[stage] + "  •  time " + secs / 60 + ":" + String.format("%02d", secs % 60)
 				+ "  •  trucks wrecked: " + wrecks).withStyle(ChatFormatting.WHITE));
 		for (Crew c : CREW.values()) {
 			tell(server, Component.literal("  " + c.name + (c.role == null ? "" : " (" + c.role.title + ")") + ": " + c.kills + " kills, "

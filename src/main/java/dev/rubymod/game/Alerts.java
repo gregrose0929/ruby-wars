@@ -35,6 +35,13 @@ public final class Alerts {
 	}
 
 	public static void title(ServerPlayer player, String title, String subtitle, ChatFormatting color) {
+		// Drawn by the mod so it always fits the screen (Minecraft's own titles run off the sides when they're long).
+		if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(player, dev.rubymod.net.MorePayloads.Title.TYPE)) {
+			var text = net.minecraft.network.chat.TextColor.fromLegacyFormat(color);
+			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player,
+					new dev.rubymod.net.MorePayloads.Title(title, subtitle, text == null ? 0xFFFFFF : text.getValue()));
+			return;
+		}
 		player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket(10, 60, 20));
 		player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(Component.literal(subtitle)));
 		player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(

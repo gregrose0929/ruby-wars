@@ -76,7 +76,7 @@ public final class ConvoyClient {
 		@Override
 		public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker delta) {
 			Minecraft mc = Minecraft.getInstance();
-			if (mc.player == null || !active()) {
+			if (mc.player == null || !active() || dev.rubymod.client.HowToCard.covers(g.guiWidth())) {
 				return;
 			}
 			Font font = mc.font;

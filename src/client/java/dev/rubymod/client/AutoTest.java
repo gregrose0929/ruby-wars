@@ -4507,10 +4507,57 @@ public final class AutoTest {
 			case "progress" -> progressScript();
 			case "special" -> specialScript();
 			case "maps" -> mapsScript();
+			case "solo" -> {
+				// The four games that used to need two people, played by one.
+				then(0, mc -> {
+					command(mc, "time set noon");
+					command(mc, "difficulty normal");
+					command(mc, "gamemode survival @a");
+				});
+				for (String id : new String[] {"tanks", "air", "hideseek", "infection"}) {
+					then(20, mc -> command(mc, "execute as @p run play " + id));
+					then(id.equals("tanks") || id.equals("air") ? 560 : 300, mc -> onServer(mc, server -> pg(id).skipLobby()));
+					then(60, mc -> command(mc, "effect give @a minecraft:resistance infinite 4 true"));
+					then(140, mc -> {
+						shot(mc, "solo-" + id + "-start");
+						log("{} alone: {} | riding {}", id, pg(id).debugState(), mc.player.getVehicle());
+					});
+					if (id.equals("hideseek")) {
+						then(5, mc -> onServer(mc, server -> pg(id).fastForward(40 * 20 - 5)));
+						then(60, mc -> log("golems out: {}", pg(id).debugState()));
+						then(200, mc -> {
+							shot(mc, "solo-hideseek-golems");
+							log("after 10s of golems: {}", pg(id).debugState());
+						});
+					} else {
+						then(300, mc -> {
+							shot(mc, "solo-" + id + "-later");
+							log("{} 15s on: {}", id, pg(id).debugState());
+						});
+					}
+					then(5, mc -> command(mc, "execute as @p run hub"));
+					then(20, mc -> log("{} left: {}", id, pg(id).debugState()));
+				}
+			}
 			case "howto" -> {
+				// The lobby's how-to card, the titles that fit the screen, and the vehicle displays.
+				then(0, mc -> command(mc, "difficulty normal"));
 				then(20, mc -> command(mc, "execute as @p run play koth"));
-				then(200, mc -> onServer(mc, server -> pg("koth").skipLobby()));
-				then(170, mc -> shot(mc, "howto-card"));
+				then(160, mc -> shot(mc, "howto-lobby"));
+				then(40, mc -> onServer(mc, server -> pg("koth").skipLobby()));
+				then(15, mc -> shot(mc, "howto-countdown"));
+				then(45, mc -> shot(mc, "howto-roundstart"));
+				then(60, mc -> onServer(mc, server -> dev.rubymod.game.Alerts.title(me(server), "THE BOTS WIN THIS ROUND",
+						"A bot was the last one standing. Try again, and this time stay inside the zone as it closes in!", net.minecraft.ChatFormatting.RED)));
+				then(25, mc -> shot(mc, "howto-longtitle"));
+				then(5, mc -> command(mc, "execute as @p run hub"));
+				then(20, mc -> command(mc, "execute as @p run play tanks"));
+				then(560, mc -> onServer(mc, server -> pg("tanks").skipLobby()));
+				then(200, mc -> shot(mc, "howto-tank"));
+				then(5, mc -> command(mc, "execute as @p run hub"));
+				then(20, mc -> command(mc, "execute as @p run play air"));
+				then(560, mc -> onServer(mc, server -> pg("air").skipLobby()));
+				then(200, mc -> shot(mc, "howto-air"));
 				then(5, mc -> command(mc, "execute as @p run hub"));
 			}
 			case "strikes" -> strikesScript();

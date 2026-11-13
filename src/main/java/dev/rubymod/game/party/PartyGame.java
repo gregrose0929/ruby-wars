@@ -476,6 +476,7 @@ public abstract class PartyGame {
 			}
 		} else {
 			toLobby(player);
+			lobbyCard(player);
 			tell(Component.literal(part.name + " joined " + title + ".").withStyle(ChatFormatting.GREEN));
 		}
 		player.sendSystemMessage(Component.literal(title + ": " + about + " (H or /hub to leave.)").withStyle(ChatFormatting.GOLD));
@@ -484,6 +485,7 @@ public abstract class PartyGame {
 
 	/** Out of the game: its gear stays behind. */
 	public void leave(ServerPlayer player) {
+		dev.rubymod.game.HowTo.hide(player);
 		drop(player.getUUID(), player);
 		clearPlayer(player);
 	}
@@ -598,6 +600,13 @@ public abstract class PartyGame {
 		player.setHealth(player.getMaxHealth());
 	}
 
+	/** In the lobby: the game's how-to card is up until the round starts. */
+	private void lobbyCard(ServerPlayer player) {
+		if (!PartyGames.TEST_PLAYERS.containsKey(player.getUUID())) {
+			dev.rubymod.game.HowTo.show(player, id, 60);
+		}
+	}
+
 	public void tick() {
 		if (server == null) {
 			return;
@@ -643,6 +652,7 @@ public abstract class PartyGame {
 						players.put(p.getUUID(), fresh);
 						clearPlayer(p);
 						toLobby(p);
+						lobbyCard(p);
 					}
 					updateBar();
 				}
@@ -697,8 +707,8 @@ public abstract class PartyGame {
 				Part part = players.get(p.getUUID());
 				if (!part.watching && !PartyGames.TEST_PLAYERS.containsKey(p.getUUID())) {
 					dev.rubymod.game.Stats.played(p.getUUID(), part.name, id);
-					dev.rubymod.game.HowTo.show(p, id);
 				}
+				dev.rubymod.game.HowTo.hide(p);
 			}
 			updateBar();
 		}
@@ -838,6 +848,14 @@ public abstract class PartyGame {
 
 	/** This game can fill in with bots. */
 	protected boolean hasBots() {
+		return false;
+	}
+
+	/** Pick-ups switched on for this game in the game picker (saved; on unless someone turns them off). */
+	boolean pickupsOn = true;
+
+	/** This game has pick-ups that can be switched off. */
+	protected boolean hasPickups() {
 		return false;
 	}
 

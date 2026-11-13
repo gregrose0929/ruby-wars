@@ -110,6 +110,18 @@ public final class PartyGames {
 		for (PartyGame game : ALL) {
 			game.botsOn = on.contains(game.id);
 		}
+		pickupsFile = botsFile.resolveSibling("party_pickups_off.txt");
+		List<String> off = new ArrayList<>();
+		try {
+			if (java.nio.file.Files.exists(pickupsFile)) {
+				off = java.nio.file.Files.readAllLines(pickupsFile);
+			}
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the party pick-up settings", e);
+		}
+		for (PartyGame game : ALL) {
+			game.pickupsOn = !off.contains(game.id);
+		}
 		for (PartyGame game : ALL) {
 			game.attach(server);
 			game.reset();
@@ -292,9 +304,40 @@ public final class PartyGames {
 		List<String> lines = new ArrayList<>();
 		for (PartyGame game : ALL) {
 			lines.add("game:" + game.id + "|" + game.title + "|" + game.status() + "|" + game.icon + "|" + game.about + "|"
-					+ (game.hasBots() ? game.botsOn ? "on" : "off" : "-"));
+					+ (game.hasBots() ? game.botsOn ? "on" : "off" : "-") + "|" + (game.hasPickups() ? game.pickupsOn ? "on" : "off" : "-"));
 		}
 		return lines;
+	}
+
+	private static java.nio.file.Path pickupsFile;
+
+	/** The game picker's Pick-ups button: switch a game's pick-ups on or off (from its next round). */
+	public static void togglePickups(ServerPlayer player, String id) {
+		PartyGame game = byId(id);
+		if (game == null || !game.hasPickups()) {
+			return;
+		}
+		game.pickupsOn = !game.pickupsOn;
+		List<String> off = new ArrayList<>();
+		for (PartyGame g : ALL) {
+			if (g.hasPickups() && !g.pickupsOn) {
+				off.add(g.id);
+			}
+		}
+		try {
+			java.nio.file.Files.createDirectories(pickupsFile.getParent());
+			java.nio.file.Files.write(pickupsFile, off);
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the party pick-up settings", e);
+		}
+		var message = net.minecraft.network.chat.Component.literal(player.getName().getString() + " turned pick-ups " + (game.pickupsOn ? "ON" : "OFF")
+				+ " for " + game.title + ". It starts next round.").withStyle(net.minecraft.ChatFormatting.YELLOW);
+		player.sendSystemMessage(message);
+		for (ServerPlayer p : game.online()) {
+			if (p != player) {
+				p.sendSystemMessage(message);
+			}
+		}
 	}
 
 	/** The game picker's Bots button: switch bots on or off for a game (from its next round). */

@@ -798,7 +798,10 @@ The mod writes a zipped world backup to `backups/` every 24 hours and keeps the
 newest 7. Season state lives in `world/rubywars/season.json`.
 
 To test a full season quickly, set short times in `config/rubywars.json`
-(for example `"buildPhaseMinutes": 10`), run `/rubywars reload`, then `/rubywars start`.
+(for example `"buildLimitMinutes": 10`), run `/rubywars reload`, then `/rubywars start`.
+By default the build phase has no time limit: when everyone is ready, an admin runs
+`/rubywars battle` (a 60-second countdown, then Battle Day; `/rubywars battle 300` for a
+longer warning, `/rubywars battle cancel` to call it off).
 
 ## Building
 

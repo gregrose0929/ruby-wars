@@ -69,7 +69,8 @@ public final class BattleDirector {
 				for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 					giveHeartIfNeeded(player);
 				}
-				Alerts.broadcastTitle(server, "Season " + data.season, "Build phase: 14 days to prepare", ChatFormatting.RED);
+				Alerts.broadcastTitle(server, "Season " + data.season, duration > 0 ? "The build phase has begun" : "Build until Battle Day is called",
+						ChatFormatting.RED);
 				Alerts.broadcast(server, Component.literal("The season has begun! Place your Ruby Heart to claim land, mine rubies, "
 						+ "and get ready for Battle Day.").withStyle(ChatFormatting.GOLD));
 			}

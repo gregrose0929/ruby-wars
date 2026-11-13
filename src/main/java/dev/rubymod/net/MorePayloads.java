@@ -186,12 +186,28 @@ public final class MorePayloads {
 		}
 	}
 
-	/** Server -> client: a game's how-to card (its title, then "item|sentence" lines). */
-	public record HowTo(String title, List<String> lines) implements CustomPacketPayload {
+	/** Server -> client: a big announcement and the line under it, drawn to fit the screen (see BigTitle). */
+	public record Title(String title, String subtitle, int color) implements CustomPacketPayload {
+		public static final Type<Title> TYPE = new Type<>(RubyMod.id("title"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Title> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, Title::title,
+				ByteBufCodecs.STRING_UTF8, Title::subtitle,
+				ByteBufCodecs.VAR_INT, Title::color,
+				Title::new);
+
+		@Override
+		public Type<Title> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: a game's how-to card (its title, "item|sentence" lines, and how many seconds to show it; none takes it down). */
+	public record HowTo(String title, List<String> lines, int seconds) implements CustomPacketPayload {
 		public static final Type<HowTo> TYPE = new Type<>(RubyMod.id("how_to"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, HowTo> CODEC = StreamCodec.composite(
 				ByteBufCodecs.STRING_UTF8, HowTo::title,
 				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), HowTo::lines,
+				ByteBufCodecs.VAR_INT, HowTo::seconds,
 				HowTo::new);
 
 		@Override
@@ -515,6 +531,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.serverboundPlay().register(ProfileRequest.TYPE, ProfileRequest.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ProfileSync.TYPE, ProfileSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HowTo.TYPE, HowTo.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(Title.TYPE, Title.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(CosmeticSelect.TYPE, CosmeticSelect.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HordeBuy.TYPE, HordeBuy.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaceMap.TYPE, RaceMap.CODEC);

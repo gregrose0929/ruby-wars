@@ -296,7 +296,7 @@ public final class RiftClient {
 			}
 			drawNumbers(g, mc);
 			drawFx(g, mc);
-			if (!active()) {
+			if (!active() || dev.rubymod.client.HowToCard.covers(g.guiWidth())) {
 				return;
 			}
 			Font font = mc.font;

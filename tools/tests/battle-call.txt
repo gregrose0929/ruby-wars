@@ -1,0 +1,15 @@
+# The admin-called Battle Day: no build timer, /rubywars battle counts down, cancel calls it off.
+rubywars battle
+wait 2
+rubywars start
+wait 3
+rubywars status
+rubywars battle 8
+wait 3
+rubywars battle cancel
+wait 3
+rubywars status
+rubywars battle 6
+wait 9
+rubywars status
+rubywars battle

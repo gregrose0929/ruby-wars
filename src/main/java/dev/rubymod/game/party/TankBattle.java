@@ -31,7 +31,144 @@ public class TankBattle extends PartyGame {
 	private final Map<UUID, Integer> boardIn = new HashMap<>();
 
 	public TankBattle() {
-		super("tanks", "Tank Battle", "Red vs Blue in tanks. First team to 10 knockouts wins!", "rubymod:tank", 2, false, true, true);
+		super("tanks", "Tank Battle", "Red vs Blue in tanks. First team to 10 knockouts wins!", "rubymod:tank", 1, true, true, true);
+	}
+
+	@Override
+	protected boolean hasBots() {
+		return true;
+	}
+
+	@Override
+	protected boolean hasPickups() {
+		return true;
+	}
+
+	// ----- Bot tanks: on your own (or with bots switched on) everyone is Red, against Blue tanks that drive themselves -----
+
+	/** This round is against the bots. */
+	private boolean versusBots;
+	/** Each bot tank: its model, and ticks until it fires again. */
+	private final Map<UUID, Object[]> botTanks = new HashMap<>();
+	/** When each lost bot tank comes back (round ticks). */
+	private final java.util.List<Integer> botReturns = new java.util.ArrayList<>();
+
+	private void spawnBotTank() {
+		ServerLevel level = level();
+		BlockPos c = center();
+		var random = level.getRandom();
+		double x = c.getX() + random.nextInt(141) - 70 + 0.5;
+		double z = c.getZ() + 92 + random.nextInt(10) + 0.5;
+		Mob base = net.minecraft.world.entity.EntityTypes.RAVAGER.create(level, EntitySpawnReason.EVENT);
+		if (base == null) {
+			return;
+		}
+		base.snapTo(x, dev.rubymod.game.Hub.safeY(level, x, c.getY(), z), z, 180, 0);
+		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.SCALE, 1.25);
+		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH, 120);
+		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED, 0.14);
+		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE, 200);
+		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE, 1.0);
+		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE, 0);
+		base.setHealth(base.getMaxHealth());
+		base.setSilent(true);
+		base.setPersistenceRequired();
+		base.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.INVISIBILITY, -1, 0, false, false));
+		base.setCustomName(Component.literal("Blue Bot Tank").withStyle(ChatFormatting.BLUE, ChatFormatting.BOLD));
+		base.addTag(tag());
+		base.addTag("rubymod_horde"); // allowed even with hostile mobs off
+		level.addFreshEntity(base);
+		spawned.add(base.getUUID());
+		var model = dev.rubymod.game.Props.model(level, base.position(), 180, "legion_tank", dev.rubymod.game.convoy.ConvoyModels.LEGION_TANK_SIZE,
+				dev.rubymod.game.convoy.ConvoyModels.LEGION_TANK_Y, dev.rubymod.game.convoy.ConvoyModels.LEGION_TANK_Z, tag());
+		botTanks.put(base.getUUID(), new Object[] {model == null ? null : model.getUUID(), new int[] {80 + random.nextInt(60)}});
+	}
+
+	private static void setAttr(Mob mob, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attr, double value) {
+		var a = mob.getAttribute(attr);
+		if (a != null) {
+			a.setBaseValue(value);
+		}
+	}
+
+	/** Every tick: each bot tank rolls toward the nearest player, keeps its model with it, and shells them when it has a clear shot. */
+	private void tickBotTanks() {
+		ServerLevel level = level();
+		for (var it = botReturns.iterator(); it.hasNext();) {
+			if (roundTicks >= it.next()) {
+				it.remove();
+				spawnBotTank();
+			}
+		}
+		for (var e : botTanks.entrySet()) {
+			if (!(level.getEntity(e.getKey()) instanceof Mob mob) || !mob.isAlive()) {
+				continue;
+			}
+			Entity model = e.getValue()[0] == null ? null : level.getEntity((UUID) e.getValue()[0]);
+			if (model != null) {
+				model.teleportTo(mob.getX(), mob.getY(), mob.getZ());
+				model.setYRot(mob.yBodyRot);
+			}
+			ServerPlayer target = null;
+			for (ServerPlayer p : online()) {
+				Part part = players.get(p.getUUID());
+				if (part != null && !part.watching && part.respawnIn <= 0 && !p.isSpectator() && (target == null || p.distanceToSqr(mob) < target.distanceToSqr(mob))) {
+					target = p;
+				}
+			}
+			if (target == null) {
+				mob.getNavigation().stop();
+				continue;
+			}
+			double far = target.distanceTo(mob);
+			if (roundTicks % 20 == 0) {
+				if (far > 34) {
+					mob.getNavigation().moveTo(target.getX(), target.getY(), target.getZ(), 1.0);
+				} else {
+					mob.getNavigation().stop();
+				}
+			}
+			mob.setTarget(null);
+			mob.getLookControl().setLookAt(target.getX(), target.getEyeY(), target.getZ());
+			int[] cooldown = (int[]) e.getValue()[1];
+			if (--cooldown[0] > 0 || far > 90) {
+				continue;
+			}
+			cooldown[0] = 90 + level.getRandom().nextInt(50);
+			// A shell at where the player is, a little off: it has to be dodged, not just survived.
+			double yaw = Math.toRadians(mob.yBodyRot);
+			net.minecraft.world.phys.Vec3 muzzle = mob.position().add(-Math.sin(yaw) * 3.2, 2.0, Math.cos(yaw) * 3.2);
+			net.minecraft.world.phys.Vec3 aim = target.position().add((level.getRandom().nextDouble() - 0.5) * far * 0.08, 1.0,
+					(level.getRandom().nextDouble() - 0.5) * far * 0.08);
+			net.minecraft.world.phys.Vec3 way = aim.subtract(muzzle).normalize();
+			level.addFreshEntity(dev.rubymod.entity.RocketEntity.tankShell(level, mob, muzzle, way.scale(2.4), 3.0F));
+			level.playSound(null, BlockPos.containing(muzzle), dev.rubymod.registry.ModSounds.TANK_CANNON, net.minecraft.sounds.SoundSource.HOSTILE, 3.0F, 1.1F);
+			level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE, muzzle.x, muzzle.y, muzzle.z, 10, 0.3, 0.3, 0.3, 0.05);
+		}
+	}
+
+	@Override
+	protected void onEntityDied(net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.damagesource.DamageSource source) {
+		Object[] bot = botTanks.remove(entity.getUUID());
+		if (bot == null || phase != Phase.PLAYING) {
+			return;
+		}
+		ServerLevel level = level();
+		if (bot[0] != null && level.getEntity((UUID) bot[0]) instanceof Entity model) {
+			model.discard();
+		}
+		level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER, entity.getX(), entity.getY() + 1, entity.getZ(), 1, 0, 0, 0, 0);
+		level.playSound(null, entity.blockPosition(), net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), net.minecraft.sounds.SoundSource.HOSTILE, 3.0F, 0.7F);
+		kills[0]++;
+		if (source.getEntity() instanceof ServerPlayer k && players.containsKey(k.getUUID())) {
+			players.get(k.getUUID()).kills++;
+			k.sendOverlayMessage(Component.literal("Knocked out a bot tank!").withStyle(ChatFormatting.GREEN));
+		}
+		tell(Component.literal("A Blue bot tank is knocked out (" + kills[0] + " - " + kills[1] + ")").withStyle(ChatFormatting.BLUE));
+		botReturns.add(roundTicks + 120);
+		if (kills[0] >= WIN) {
+			endRound("RED WINS!", "Red " + kills[0] + " - " + kills[1] + " Blue bots", ChatFormatting.RED, teamIds(0));
+		}
 	}
 
 	@Override
@@ -109,11 +246,27 @@ public class TankBattle extends PartyGame {
 		tanks.clear();
 		boardIn.clear();
 		minesLeft.clear();
+		botTanks.clear();
+		botReturns.clear();
+		versusBots = useBots();
+		if (versusBots) {
+			// Everyone on Red, against the Blue bot tanks.
+			for (ServerPlayer p : online()) {
+				Part part = players.get(p.getUUID());
+				part.team = 0;
+				joinTeam(p, 0);
+			}
+			int bots = Math.max(2, Math.min(4, activeCount() + 1));
+			for (int i = 0; i < bots; i++) {
+				spawnBotTank();
+			}
+			tell(Component.literal("You're all Red, against " + bots + " Blue bot tanks.").withStyle(ChatFormatting.RED));
+		}
 		tell(Component.literal("Map: " + MAPS[map]).withStyle(ChatFormatting.AQUA));
 		// Pick-ups out in the open, where it's dangerous to go and get them.
 		BlockPos c = center();
 		Object[][] spots = {{"rapid", 0, 0}, {"repair", -55, 0}, {"repair", 55, 0}, {"mines", 0, -48}, {"mines", 0, 48}, {"repair", 0, -85}, {"repair", 0, 85}};
-		for (Object[] spot : spots) {
+		for (Object[] spot : pickupsOn ? spots : new Object[0][]) {
 			String kind = (String) spot[0];
 			double x = c.getX() + (int) spot[1] + 0.5;
 			double z = c.getZ() + (int) spot[2] + 0.5;
@@ -127,7 +280,8 @@ public class TankBattle extends PartyGame {
 		for (ServerPlayer p : online()) {
 			Part part = players.get(p.getUUID());
 			spawn(p, part);
-			dev.rubymod.game.Alerts.title(p, "YOU'RE " + teamName(part.team).toUpperCase(), "First team to 10 knockouts. Drive over the pick-ups!",
+			dev.rubymod.game.Alerts.title(p, "YOU'RE " + teamName(part.team).toUpperCase(), pickupsOn ? "First team to 10 knockouts. Drive over the pick-ups!"
+					: "First team to 10 knockouts wins",
 					part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
 		}
 	}
@@ -319,6 +473,9 @@ public class TankBattle extends PartyGame {
 		}
 		if (roundTicks % 2 == 0) {
 			crush();
+		}
+		if (versusBots) {
+			tickBotTanks();
 		}
 		if (roundTicks % 30 == 0) {
 			dropMines();

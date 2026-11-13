@@ -26,7 +26,8 @@ public class GameConfig {
 	private static GameConfig current = new GameConfig();
 
 	// Season timing (minutes). 20160 minutes = 14 days.
-	public int buildPhaseMinutes = 20160;
+	/** How long the build phase runs. 0 (the default): no limit, until an admin runs /rubywars battle. */
+	public int buildLimitMinutes = 0;
 	/** Hostile mobs (zombies, creepers...) spawn at all. Off: Ruby Wars is about building and each other. */
 	public boolean hostileMobs = false;
 	/** Hunger drains. Off: the food bar stays full (health still regenerates slowly). */

@@ -49,7 +49,52 @@ public class AirBattle extends PartyGame {
 
 	public AirBattle() {
 		super("air", "Air Battle", "Red vs Blue in jets and helicopters, with AA guns on the ground. First team to 10 knockouts wins!",
-				"rubymod:fighter_jet", 2, false, true, true);
+				"rubymod:fighter_jet", 1, true, true, true);
+	}
+
+	@Override
+	protected boolean hasBots() {
+		return true;
+	}
+
+	@Override
+	protected boolean hasPickups() {
+		return true;
+	}
+
+	/** This round is against drones: everyone is Red, and the Blue "team" is jets circling the field. */
+	private boolean versusDrones;
+	private final java.util.List<Integer> droneReturns = new java.util.ArrayList<>();
+	private int droneCount;
+
+	private void spawnDrone() {
+		ServerLevel level = level();
+		BlockPos c = center();
+		int i = droneCount++;
+		double[][] orbits = {{95, 150}, {75, 240}, {120, 330}, {60, 90}};
+		double[] o = orbits[i % orbits.length];
+		var drone = dev.rubymod.entity.AircraftEntity.targetDrone(level, new net.minecraft.world.phys.Vec3(c.getX() + 0.5, c.getY() + o[0], c.getZ() + 0.5), o[1]);
+		drone.setCustomName(Component.literal("Blue Drone").withStyle(ChatFormatting.BLUE, ChatFormatting.BOLD));
+		drone.addTag(tag());
+		level.addFreshEntity(drone);
+		spawned.add(drone.getUUID());
+	}
+
+	@Override
+	protected void onEntityDied(net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.damagesource.DamageSource source) {
+		if (!versusDrones || phase != Phase.PLAYING || !(entity instanceof dev.rubymod.entity.AircraftEntity plane) || !plane.isDrone()) {
+			return;
+		}
+		kills[0]++;
+		if (source.getEntity() instanceof ServerPlayer k && players.containsKey(k.getUUID())) {
+			players.get(k.getUUID()).kills++;
+			k.sendOverlayMessage(Component.literal("Drone down!").withStyle(ChatFormatting.GREEN));
+		}
+		tell(Component.literal("A Blue drone is down (" + kills[0] + " - " + kills[1] + ")").withStyle(ChatFormatting.BLUE));
+		droneReturns.add(roundTicks + 100);
+		if (kills[0] >= WIN) {
+			endRound("RED WINS!", "Red " + kills[0] + " - " + kills[1] + " Blue drones", ChatFormatting.GOLD, teamIds(0));
+		}
 	}
 
 	@Override
@@ -96,10 +141,25 @@ public class AirBattle extends PartyGame {
 		boardIn.clear();
 		outside.clear();
 		ace = null;
+		droneReturns.clear();
+		droneCount = 0;
+		versusDrones = useBots();
+		if (versusDrones) {
+			for (ServerPlayer p : online()) {
+				Part part = players.get(p.getUUID());
+				part.team = 0;
+				joinTeam(p, 0);
+			}
+			for (int i = 0; i < 3; i++) {
+				spawnDrone();
+			}
+			tell(Component.literal("You're all Red. Shoot down 10 Blue drones (they circle the field, and they don't shoot back). Crashing counts for Blue!")
+					.withStyle(ChatFormatting.RED));
+		}
 		// Rings in the sky: fly through one to rearm and patch up without landing.
 		BlockPos mid = center();
 		int[][] rings = {{0, 0, 95}, {-260, 0, 80}, {260, 0, 80}, {0, -330, 110}, {0, 330, 110}};
-		for (int[] r : rings) {
+		for (int[] r : pickupsOn ? rings : new int[0][]) {
 			net.minecraft.world.phys.Vec3 at = new net.minecraft.world.phys.Vec3(mid.getX() + r[0] + 0.5, mid.getY() + r[2], mid.getZ() + r[1] + 0.5);
 			addPickup("ring", at, new ItemStack(net.minecraft.world.item.Items.NETHER_STAR), "REARM + REPAIR", ChatFormatting.AQUA, 25 * 20, 13);
 			drawRing(at);
@@ -275,6 +335,12 @@ public class AirBattle extends PartyGame {
 		}
 		if (roundTicks % 20 == 0) {
 			updateAce();
+		}
+		for (var it = droneReturns.iterator(); it.hasNext();) {
+			if (roundTicks >= it.next()) {
+				it.remove();
+				spawnDrone();
+			}
 		}
 		// The edge of the battle area: five seconds to turn back.
 		BlockPos c = center();

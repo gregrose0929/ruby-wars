@@ -60,7 +60,7 @@ public class ManualScreen extends Screen {
 					"Each stage has a job: shoot the fallen logs, wreck the tanks, guard the bridge builders, dig out of the avalanche, beat the Iron Dreadnought.",
 					"Depots: repairs, jeeps, tanks and a helicopter, and everyone picks an upgrade (J if you closed it). Wrecked? A spare truck restarts the stage."),
 			new Page("The Season",
-					"Build for 14 days, then survive one Battle Day. Last squad (or player) standing wins.",
+					"Build until everyone's ready, then survive one Battle Day. Last squad (or player) standing wins.",
 					"Place your Ruby Heart to claim land: nobody else can build there, and you're safe inside it until Battle Day. Outside the bases you can fight.",
 					"Battle Day: Lockdown (defenses arm), Open War (PvP, Hearts can be breached, you respawn at your Heart), "
 							+ "Sudden Death (Hearts shatter, the border shrinks), Final Circle.",

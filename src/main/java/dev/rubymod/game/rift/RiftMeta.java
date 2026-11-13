@@ -47,7 +47,9 @@ public final class RiftMeta {
 		DEMOLITIONIST("Demolitionist", "rubymod:rocket_launcher", "Rocket launcher and a pile of grenades. Starts with Gravity Grenades.", 30,
 				Relic.GRAVITY_GRENADES),
 		SNIPER("Sniper", "rubymod:longshot_sniper", "Longshot sniper and pistol. Starts with Headhunter.", 30, Relic.HEADHUNTER),
-		MEDIC("Medic", "minecraft:golden_apple", "Rifle and golden apples. Starts with Field Medic.", 25, Relic.FIELD_MEDIC);
+		MEDIC("Medic", "minecraft:golden_apple", "Rifle and golden apples. Starts with Field Medic.", 25, Relic.FIELD_MEDIC),
+		GUNSLINGER("Gunslinger", "rubymod:six_shooter", "Two six-shooters and a shotgun. Starts with Quick Hands.", 35, Relic.QUICK_HANDS),
+		BRUISER("Bruiser", "rubymod:ruby_warhammer", "The Ruby Warhammer and a shotgun, close up and tough. Starts with Thorn Armor.", 40, Relic.THORN_ARMOR);
 
 		public final String title;
 		public final String icon;
@@ -268,6 +270,20 @@ public final class RiftMeta {
 				inv.add(gun(ModItems.COMBAT_SHOTGUN));
 				inv.add(new ItemStack(ModItems.RUBY_SWORD));
 				inv.add(new ItemStack(Items.GOLDEN_APPLE, 6));
+			}
+			case GUNSLINGER -> {
+				inv.add(gun(ModItems.SIX_SHOOTER));
+				inv.add(gun(ModItems.COMBAT_SHOTGUN));
+				inv.add(new ItemStack(ModItems.RUBY_SWORD));
+				inv.add(new ItemStack(ModItems.FRAG_GRENADE, 2));
+				inv.add(new ItemStack(ModItems.LIGHT_AMMO, 64));
+				inv.add(new ItemStack(ModItems.LIGHT_AMMO, 64));
+			}
+			case BRUISER -> {
+				inv.add(gun(ModItems.RUBY_WARHAMMER));
+				inv.add(gun(ModItems.COMBAT_SHOTGUN));
+				inv.add(new ItemStack(ModItems.FRAG_GRENADE, 3));
+				inv.add(new ItemStack(Items.GOLDEN_APPLE, 3));
 			}
 			default -> {
 				inv.add(gun(ModItems.ARR_RIFLE));

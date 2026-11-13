@@ -59,6 +59,7 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping squadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.squad", InputConstants.KEY_O, CATEGORY));
 		KeyMapping modesKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.modes", InputConstants.KEY_H, CATEGORY));
 		KeyMapping profileKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.profile_menu", InputConstants.KEY_I, CATEGORY));
+		KeyMapping instrumentsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.instruments", InputConstants.KEY_F9, CATEGORY));
 		autopilotKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.autopilot", InputConstants.KEY_Z, CATEGORY));
 		flaresKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.flares", InputConstants.KEY_X, CATEGORY));
 		KeyMapping freeLookKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.free_look", InputConstants.KEY_LALT, CATEGORY));
@@ -95,6 +96,13 @@ public class RubyModClient implements ClientModInitializer {
 			while (manualKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {
 					client.gui.setScreen(new ManualScreen());
+				}
+			}
+			while (instrumentsKey.consumeClick()) {
+				PilotHud.fullInstruments = !PilotHud.fullInstruments;
+				if (client.player != null) {
+					client.player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(PilotHud.fullInstruments
+							? "Full flight instruments: on" : "Full flight instruments: off (the simple cockpit)"));
 				}
 			}
 			while (profileKey.consumeClick()) {
@@ -190,6 +198,7 @@ public class RubyModClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HordeShopSync.TYPE, (payload, context) -> HordeShopScreen.show(payload));
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.ProfileSync.TYPE, (payload, context) -> ProfileScreen.data = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HowTo.TYPE, (payload, context) -> HowToCard.show(payload));
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Title.TYPE, (payload, context) -> BigTitle.show(payload));
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.OpenModes.TYPE, (payload, context) -> {
 			if (context.client().gui.screen() == null) {
 				context.client().gui.setScreen(new ModeScreen());
@@ -265,6 +274,7 @@ public class RubyModClient implements ClientModInitializer {
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
 		HudElementRegistry.addLast(RubyMod.id("zoom"), new ZoomHud());
 		HudElementRegistry.addLast(RubyMod.id("how_to"), new HowToCard());
+		HudElementRegistry.addLast(RubyMod.id("big_title"), new BigTitle());
 		HudElementRegistry.addLast(RubyMod.id("jetpack"), new Jetpack.Hud());
 		net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry.registerModelLayer(Jetpack.LAYER, Jetpack::layer);
 		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {

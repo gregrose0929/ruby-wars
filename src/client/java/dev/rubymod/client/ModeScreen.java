@@ -26,7 +26,7 @@ public class ModeScreen extends Screen {
 	}
 
 	private static final List<Game> MAIN = List.of(
-			new Game("rubywars", "Ruby Wars", "Build a base for two weeks, then battle for the win.", "rubywars", Ui.WARS),
+			new Game("rubywars", "Ruby Wars", "Build a base, then battle for the win when everyone's ready.", "rubywars", Ui.WARS),
 			new Game("rift", "Ruby Rift", "Fight room to room and build a wild set of relics.", "rift", Ui.RIFT),
 			new Game("convoy", "Ruby Convoy", "Guard the ruby truck through five stages.", "convoy", Ui.CONVOY),
 			new Game("horde", "Co-op Horde", "Defend the Ruby Core from waves, together.", "horde", Ui.HORDE));
@@ -168,7 +168,7 @@ public class ModeScreen extends Screen {
 		if (info != null) {
 			for (String line : info.modes()) {
 				if (line.startsWith("game:")) {
-					String[] f = line.split("[|]", 6);
+					String[] f = line.split("[|]", 7);
 					if (f.length >= 5) {
 						party.add(f);
 					}
@@ -190,10 +190,15 @@ public class ModeScreen extends Screen {
 				break;
 			}
 			boolean here = here(f[0]);
-			boolean hasBots = f.length == 6 && !f[5].equals("-");
-			int botW = 46;
-			boolean overBots = hasBots && Ui.inside(mouseX, mouseY, rightX + colW - 10 - botW, y + 1, botW, rowH - 2);
-			boolean over = !here && !overBots && Ui.inside(mouseX, mouseY, rightX + 7, y, colW - 14, rowH);
+			boolean hasBots = f.length >= 6 && !f[5].equals("-");
+			boolean hasPickups = f.length >= 7 && !f[6].equals("-");
+			// Narrow screens: shorter buttons, so the games' names still fit.
+			boolean slim = colW < 200;
+			int botW = slim ? 30 : 46;
+			int pickW = slim ? 34 : 50;
+			int buttons = (hasBots ? botW + 4 : 0) + (hasPickups ? pickW + 4 : 0);
+			boolean overButtons = buttons > 0 && Ui.inside(mouseX, mouseY, rightX + colW - 6 - buttons, y + 1, buttons, rowH - 2);
+			boolean over = !here && !overButtons && Ui.inside(mouseX, mouseY, rightX + 7, y, colW - 14, rowH);
 			float hv = Ui.hover("party:" + f[0], over);
 			if (hv > 0 || here) {
 				g.fill(rightX + 7, y, rightX + colW - 7, y + rowH - 1, here ? 0x3028A050 : Ui.alpha(0x30FFFFFF, hv * 0.7F));
@@ -203,7 +208,7 @@ public class ModeScreen extends Screen {
 			g.pose().scale(0.75F, 0.75F);
 			g.item(icon(f[3]), 0, 0);
 			g.pose().popMatrix();
-			int room = colW - 35 - (hasBots ? botW + 4 : 0);
+			int room = colW - 35 - buttons;
 			int nameW = Math.min(room, Ui.font().width(f[1]));
 			Ui.text(g, f[1], rightX + 25, y + (rowH - 8) / 2, room, here ? Ui.GREEN : Ui.TEXT);
 			String s = here ? "You're here" : f[2];
@@ -216,11 +221,22 @@ public class ModeScreen extends Screen {
 			if (hasBots) {
 				boolean on = f[5].equals("on");
 				int bx = rightX + colW - 10 - botW;
-				if (Ui.button(g, on ? "Bots on" : "Bots off", bx, y + 1, botW, rowH - 2, mouseX, mouseY, on ? Ui.GREEN : 0xFF5A606C, true)) {
+				if (Ui.button(g, slim ? "Bots" : on ? "Bots on" : "Bots off", bx, y + 1, botW, rowH - 2, mouseX, mouseY, on ? Ui.GREEN : 0xFF5A606C, true)) {
 					tooltip = on ? List.of("Bots join this game", "Click to turn them off. Someone playing alone still gets bots.")
 							: List.of("No bots", "Unless you're playing alone. Click to turn bots on.");
 				}
 				click(bx, y + 1, botW, rowH - 2, "bots:" + f[0].substring(5));
+			}
+			if (hasPickups) {
+				boolean on = f[6].equals("on");
+				int px = rightX + colW - 10 - (hasBots ? botW + 4 : 0) - pickW;
+				if (Ui.button(g, slim ? "Items" : on ? "Pick-ups" : "No pick-ups", px, y + 1, pickW, rowH - 2, mouseX, mouseY, on ? Ui.GREEN : 0xFF5A606C,
+						true)) {
+					tooltip = on ? List.of("Pick-ups are on", f[0].equals("game:air") ? "Glowing rings rearm and repair you." : "Repair, rapid fire and mines on the field.",
+							"Click to turn them off (from the next round).")
+							: List.of("Pick-ups are off", "Just you, your vehicle and the enemy. Click to turn them on.");
+				}
+				click(px, y + 1, pickW, rowH - 2, "pickups:" + f[0].substring(5));
 			}
 			if (!here) {
 				click(rightX + 7, y, colW - 14, rowH, f[0]);
@@ -252,7 +268,7 @@ public class ModeScreen extends Screen {
 			int[] b = boxes.get(i);
 			if (Ui.inside(event.x(), event.y(), b[0], b[1], b[2], b[3])) {
 				String action = actions.get(i);
-				if (action.startsWith("bots:")) {
+				if (action.startsWith("bots:") || action.startsWith("pickups:")) {
 					// Stays open: the server sends the picker back with the new setting.
 					ClientPlayNetworking.send(new MorePayloads.ModeSelect(action));
 				} else {

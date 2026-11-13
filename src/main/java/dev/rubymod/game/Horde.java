@@ -351,6 +351,7 @@ public final class Horde {
 	public static void join(ServerPlayer player, Challenge difficulty) {
 		if (state == State.IDLE) {
 			player.sendSystemMessage(Component.literal("2 minutes to build before the first wave. ").withStyle(ChatFormatting.GOLD).append(shopButton()));
+			player.sendSystemMessage(Component.literal("Battlefield: " + Outpost.MAPS[fields % Outpost.MAPS.length]).withStyle(ChatFormatting.AQUA));
 		}
 		MinecraftServer server = player.level().getServer();
 		ServerLevel arena = server.getLevel(Duels.ARENA);
@@ -364,7 +365,7 @@ public final class Horde {
 		Fighter fighter = new Fighter(player.getName().getString());
 		FIGHTERS.put(player.getUUID(), fighter);
 		if (!TEST_PLAYERS.containsKey(player.getUUID())) {
-			HowTo.show(player, "horde");
+			HowTo.show(player, "horde", 25);
 		}
 		BAR.addPlayer(player);
 		CACHE_BAR.addPlayer(player);
@@ -475,12 +476,15 @@ public final class Horde {
 		}
 	}
 
+	private static int fields;
+
 	private static void startGame(ServerLevel arena) {
 		clearArea(arena);
 		buildStartedAt = arena.getServer().getTickCount();
-		if (Outpost.WORK.isEmpty()) {
-			Outpost.build(arena); // (a build from the server start still running covers it)
-		}
+		// A different battlefield each game (whatever was still building is dropped for it).
+		Outpost.map = fields++ % Outpost.MAPS.length;
+		Outpost.WORK.clear();
+		Outpost.build(arena);
 		wave = 0;
 		state = State.COUNTDOWN;
 		timer = BUILD_TICKS;
@@ -2013,6 +2017,9 @@ public final class Horde {
 		private static final int FLAGS = Block.UPDATE_CLIENTS;
 		/** Building happens a few milliseconds a tick (no freezes), in order. */
 		static final java.util.ArrayDeque<Runnable> WORK = new java.util.ArrayDeque<>();
+		/** Which battlefield: the Core and Armory are the same on all of them; the ground and what's scattered on it aren't. */
+		static int map;
+		static final String[] MAPS = {"The Meadow", "The Quarry", "The Snowfield"};
 
 		private Outpost() {
 		}
@@ -2066,8 +2073,11 @@ public final class Horde {
 					int fz = z;
 					boolean edge = Math.abs(x) > HALF + 1 || Math.abs(z) > HALF + 1;
 					double r = dev.rubymod.world.WarzoneTerrain.hash3(x, 7, z);
-					BlockState floor = r < 0.06 ? Blocks.COARSE_DIRT.defaultBlockState() : r < 0.09 ? Blocks.PODZOL.defaultBlockState()
-							: r < 0.11 ? Blocks.GRAVEL.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
+					BlockState floor = map == 1 ? (r < 0.25 ? Blocks.GRAVEL.defaultBlockState() : r < 0.4 ? Blocks.COBBLESTONE.defaultBlockState()
+							: r < 0.5 ? Blocks.ANDESITE.defaultBlockState() : Blocks.STONE.defaultBlockState())
+							: map == 2 ? (r < 0.08 ? Blocks.PACKED_ICE.defaultBlockState() : Blocks.SNOW_BLOCK.defaultBlockState())
+							: r < 0.06 ? Blocks.COARSE_DIRT.defaultBlockState() : r < 0.09 ? Blocks.PODZOL.defaultBlockState()
+									: r < 0.11 ? Blocks.GRAVEL.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
 					WORK.add(() -> {
 						for (int y = -3; y <= 40; y++) {
 							BlockState want = y < 0 ? dirt : y == 0 ? floor : y == 40 || edge ? barrier : air;
@@ -2085,15 +2095,20 @@ public final class Horde {
 			box(level, 0, 2, 0, 0, 2, 0, Blocks.BEACON.defaultBlockState());
 			box(level, 4, 1, 0, 4, 1, 0, ModBlocks.ARMORY.defaultBlockState());
 			// Boulders, trees and old ruins (the same every game), none too close to the Core.
-			BlockState[] rock = {Blocks.STONE.defaultBlockState(), Blocks.ANDESITE.defaultBlockState(), Blocks.MOSSY_COBBLESTONE.defaultBlockState(),
-					Blocks.COBBLESTONE.defaultBlockState()};
-			for (int i = 0; i < 26; i++) {
-				int x = (int) Math.round((h(i, 1) * 2 - 1) * (HALF - 6));
-				int z = (int) Math.round((h(i, 2) * 2 - 1) * (HALF - 6));
+			BlockState[] rock = map == 1 ? new BlockState[] {Blocks.DEEPSLATE.defaultBlockState(), Blocks.COBBLED_DEEPSLATE.defaultBlockState(),
+					Blocks.TUFF.defaultBlockState(), Blocks.IRON_ORE.defaultBlockState()}
+					: map == 2 ? new BlockState[] {Blocks.PACKED_ICE.defaultBlockState(), Blocks.SNOW_BLOCK.defaultBlockState(), Blocks.STONE.defaultBlockState(),
+							Blocks.BLUE_ICE.defaultBlockState()}
+					: new BlockState[] {Blocks.STONE.defaultBlockState(), Blocks.ANDESITE.defaultBlockState(), Blocks.MOSSY_COBBLESTONE.defaultBlockState(),
+							Blocks.COBBLESTONE.defaultBlockState()};
+			// The quarry is all rock (twice as many boulders, and bigger); the others have a scattering.
+			for (int i = 0; i < (map == 1 ? 52 : 26); i++) {
+				int x = (int) Math.round((h(i, 1 + map * 40) * 2 - 1) * (HALF - 6));
+				int z = (int) Math.round((h(i, 2 + map * 40) * 2 - 1) * (HALF - 6));
 				if (Math.hypot(x, z) < 16) {
 					continue;
 				}
-				int size = 1 + (int) (h(i, 3) * 2);
+				int size = 1 + (int) (h(i, 3) * (map == 1 ? 3 : 2));
 				for (int dx = -size; dx <= size; dx++) {
 					for (int dz = -size; dz <= size; dz++) {
 						int height = size + 1 - Math.max(Math.abs(dx), Math.abs(dz)) - (h(i * 31 + dx * 7 + dz, 4) < 0.3 ? 1 : 0);
@@ -2103,11 +2118,13 @@ public final class Horde {
 					}
 				}
 			}
-			BlockState log = Blocks.OAK_LOG.defaultBlockState();
-			BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
-			for (int i = 0; i < 22; i++) {
-				int x = (int) Math.round((h(i, 11) * 2 - 1) * (HALF - 4));
-				int z = (int) Math.round((h(i, 12) * 2 - 1) * (HALF - 4));
+			BlockState log = (map == 2 ? Blocks.SPRUCE_LOG : Blocks.OAK_LOG).defaultBlockState();
+			BlockState leaves = (map == 2 ? Blocks.SPRUCE_LEAVES : Blocks.OAK_LEAVES).defaultBlockState()
+					.setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+			// No trees in the quarry; a wood of them on the snowfield.
+			for (int i = 0; i < (map == 1 ? 0 : map == 2 ? 34 : 22); i++) {
+				int x = (int) Math.round((h(i, 11 + map * 40) * 2 - 1) * (HALF - 4));
+				int z = (int) Math.round((h(i, 12 + map * 40) * 2 - 1) * (HALF - 4));
 				if (Math.hypot(x, z) < 14) {
 					continue;
 				}
@@ -2117,9 +2134,9 @@ public final class Horde {
 			}
 			BlockState bricks = Blocks.STONE_BRICKS.defaultBlockState();
 			BlockState cracked = Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
-			for (int i = 0; i < 10; i++) {
-				int x = (int) Math.round((h(i, 21) * 2 - 1) * (HALF - 10));
-				int z = (int) Math.round((h(i, 22) * 2 - 1) * (HALF - 10));
+			for (int i = 0; i < (map == 1 ? 18 : 10); i++) {
+				int x = (int) Math.round((h(i, 21 + map * 40) * 2 - 1) * (HALF - 10));
+				int z = (int) Math.round((h(i, 22 + map * 40) * 2 - 1) * (HALF - 10));
 				if (Math.hypot(x, z) < 20) {
 					continue;
 				}
@@ -2141,7 +2158,7 @@ public final class Horde {
 				sign.snapTo(c.x, c.y + 2.4, c.z, 0, 0);
 				((DisplayAccessor) sign).rubymod$setBillboard(Display.BillboardConstraints.VERTICAL);
 				((DisplayAccessor) sign).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(),
-						new Vector3f(1.4F, 1.4F, 1.4F), new Quaternionf()));
+						new Vector3f(0.9F, 0.9F, 0.9F), new Quaternionf()));
 				((TextDisplayAccessor) sign).rubymod$setText(Component.literal("RUBY CORE\n").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)
 						.append(Component.literal("Defend it! Shop at the Armory").withStyle(ChatFormatting.WHITE)));
 				((TextDisplayAccessor) sign).rubymod$setBackground(0x80000000);

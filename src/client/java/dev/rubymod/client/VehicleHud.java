@@ -32,6 +32,9 @@ public class VehicleHud implements HudElement {
 		return mc.player.getVehicle() instanceof VehicleEntity v && v.isTank() && v.getControllingPassenger() == mc.player;
 	}
 
+	private static int hintFor = -1;
+	private static long hintSince;
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker deltaTracker) {
 		Minecraft mc = Minecraft.getInstance();
@@ -87,7 +90,13 @@ public class VehicleHud implements HudElement {
 		g.fill(cx - 2, cy - 2, cx + 2, cy + 2, GREEN);
 
 		int smoke = vehicle.smokeCharges();
-		String hint = "Click to fire. Right-click: sight. Space: smoke (" + smoke + ")";
+		// The controls for the first 20 seconds in a vehicle; after that just the smoke count, out of the chat's way.
+		if (vehicle.getId() != hintFor) {
+			hintFor = vehicle.getId();
+			hintSince = System.currentTimeMillis();
+		}
+		String hint = System.currentTimeMillis() - hintSince < 20_000 ? "Click: fire. Right-click: sight. Scroll: zoom. Space: smoke (" + smoke + ")"
+				: "Smoke: " + smoke + " (Space)";
 		int hw = font.width(hint) + 14;
 		dev.rubymod.client.ui.Ui.panel(g, w / 2 - hw / 2, y0 - 38, hw, 18);
 		dev.rubymod.client.ui.Ui.text(g, hint, w / 2 - hw / 2 + 7, y0 - 33, dev.rubymod.client.ui.Ui.MUTED);
