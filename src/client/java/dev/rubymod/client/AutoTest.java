@@ -4544,6 +4544,7 @@ public final class AutoTest {
 			case "parknew" -> parkNewScript();
 			case "parkthrill" -> parkThrillScript();
 			case "parkbooth" -> parkBoothScript();
+			case "parkpretty" -> parkPrettyScript();
 			case "parkswan" -> parkSwanScript();
 			case "parkducks" -> parkDucksScript();
 			case "parktour" -> parkTourScript();
@@ -5251,6 +5252,36 @@ public final class AutoTest {
 			System.clearProperty("rubywars.season");
 			dev.rubymod.game.hub.HubPark.build(server.getLevel(dev.rubymod.game.Hub.HUB));
 		}));
+	}
+
+	/** The park by day and by night, for judging how it looks. */
+	private static void parkPrettyScript() {
+		String[][] views = {
+			{"sky", "40 150 140", "10 100 0"},
+			{"midway", "47 104 2.5", "66 102 2.5"},
+			{"thrill", "70 112 22", "86 102 44"},
+			{"speedway", "-70 110 -10", "-88 101 6"},
+			{"spooky", "28 108 30", "44 102 40"},
+			{"plaza", "-14 108 18", "4 102 -4"},
+			{"islets", "50 98 10", "36 92 24"},
+			{"landing", "44.5 102.6 5.5", "52 102 2"},
+		};
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamerule doDaylightCycle false");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> command(mc, "gamemode creative @p"));
+		for (String when : new String[] {"day", "night"}) {
+			then(10, mc -> command(mc, when.equals("day") ? "time set noon" : "time set midnight"));
+			for (String[] v : views) {
+				then(20, mc -> {
+					mc.player.getAbilities().flying = true;
+					tpHub(mc, v[1] + " facing " + v[2]);
+				});
+				then(90, mc -> shot(mc, when + "-" + v[0]));
+			}
+		}
 	}
 
 	/** The newer park things: the Park Map, the Ghost Train, the flume, swan boats, Coach Kit; and photos of them. */

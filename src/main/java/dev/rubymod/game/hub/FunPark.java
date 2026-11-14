@@ -154,7 +154,7 @@ final class FunPark {
 		HubPark.set(level, cx, FLOOR + wall + 3 + lvl, cz, Blocks.WOOL.pick(DyeColor.YELLOW).defaultBlockState());
 	}
 
-	private static void stand(ServerLevel level, int x, int z, DyeColor color, String name, BlockState treat) {
+	static void stand(ServerLevel level, int x, int z, DyeColor color, String name, BlockState treat) {
 		HubPark.box(level, x, FLOOR + 1, z, x + 2, FLOOR + 1, z, Blocks.STRIPPED_BIRCH_LOG.defaultBlockState());
 		for (int dx : new int[] {0, 2}) {
 			HubPark.box(level, x + dx, FLOOR + 2, z, x + dx, FLOOR + 3, z, Blocks.OAK_FENCE.defaultBlockState());

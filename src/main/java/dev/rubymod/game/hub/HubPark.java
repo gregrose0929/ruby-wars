@@ -383,7 +383,7 @@ public final class HubPark {
 		((BlockDisplayAccessor) d).rubymod$setBlockState(state);
 		Vector3f half = rot.transform(new Vector3f(size).mul(0.5F));
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f().sub(half), rot, size, new Quaternionf()));
-		((DisplayAccessor) d).rubymod$setViewRange(6.0F);
+		((DisplayAccessor) d).rubymod$setViewRange(Math.max(size.x, Math.max(size.y, size.z)) >= 0.9F ? 4.0F : 2.0F);
 		level.addFreshEntity(d);
 		keep(d);
 		return d;
@@ -402,7 +402,7 @@ public final class HubPark {
 		d.snapTo(a.x, a.y, a.z, 0, 0);
 		((BlockDisplayAccessor) d).rubymod$setBlockState(state);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(off, rot, new Vector3f(w, h, len), new Quaternionf()));
-		((DisplayAccessor) d).rubymod$setViewRange(5.0F);
+		((DisplayAccessor) d).rubymod$setViewRange(Math.max(w, h) >= 0.3F ? 5.0F : len > 6 ? 3.0F : 2.0F);
 		level.addFreshEntity(d);
 		keep(d);
 		return d;
@@ -431,7 +431,7 @@ public final class HubPark {
 		ItemStack stack = new ItemStack(net.minecraft.world.item.Items.STICK);
 		stack.set(net.minecraft.core.component.DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_" + id));
 		((dev.rubymod.mixin.ItemDisplayAccessor) d).rubymod$setItemStack(stack);
-		((DisplayAccessor) d).rubymod$setViewRange(8.0F);
+		((DisplayAccessor) d).rubymod$setViewRange(size >= 2 ? 8.0F : size >= 1 ? 5.0F : 3.0F);
 		((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(temp ? 2 : 3);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(0, up, 0), new Quaternionf().rotateY((float) Math.PI),
 				new Vector3f(size, size, size), new Quaternionf()));
@@ -587,6 +587,7 @@ public final class HubPark {
 		Records.build(level);
 		Seasons.build(level);
 		Coaster.build(level);
+		Scenery.build(level);
 		arrows(level);
 		plazaLights(level);
 	}
@@ -665,6 +666,16 @@ public final class HubPark {
 				.append(Component.literal("\n\nYour Park Map (in your hotbar) flies you anywhere.\nCoach Kit runs Tag, Hide and Seek and more!")
 						.withStyle(ChatFormatting.WHITE));
 		keep(Props.text(level, new Vec3(-7.5, FLOOR + 1.6, 11.5), text, 0.55F, TAG));
+	}
+
+	/** Is anyone (in the hub) within {@code r} blocks of x, z? */
+	static boolean near(ServerLevel level, double x, double z, double r) {
+		for (ServerPlayer p : level.players()) {
+			if (!p.isSpectator() && Math.hypot(p.getX() - x, p.getZ() - z) < r) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** Glowing arrows on the ground from the spawn out to each green launch pad. */
@@ -993,19 +1004,39 @@ public final class HubPark {
 		HubRides.tick(level);
 		HubGames.tick(level);
 		HubHosts.tick(level, tick);
-		Coaster.tick(level, tick);
-		FunPark.tick(level);
-		MiniGolf.tick(level);
-		Concert.tick(level);
-		Spooky.tick(level);
-		Flume.tick(level, tick);
-		Village.tick(level, tick);
+		// Each area only runs while someone's close enough to see it (riders are, by being on it).
+		if (near(level, 0, 0, 70)) {
+			Coaster.tick(level, tick);
+		}
+		if (near(level, FunPark.FX, FunPark.FZ, 45)) {
+			FunPark.tick(level);
+		}
+		if (near(level, -44, 44, 40)) {
+			MiniGolf.tick(level);
+		}
+		if (near(level, -46, -34, 40)) {
+			Concert.tick(level);
+		}
+		if (near(level, Spooky.CX, Spooky.CZ, 40)) {
+			Spooky.tick(level);
+		}
+		if (near(level, Flume.CX, Flume.CZ, 40)) {
+			Flume.tick(level, tick);
+		}
+		if (near(level, 0, 56, 40)) {
+			Village.tick(level, tick);
+		}
 		HubPlay.tick(level);
-		Speedway.tick(level, tick);
-		Thrill.tick(level);
-		Booths.tick(level);
+		if (near(level, Speedway.CX, Speedway.CZ, 50)) {
+			Speedway.tick(level, tick);
+		}
+		if (near(level, Thrill.CX, Thrill.CZ, 50) || Thrill.busy()) {
+			Thrill.tick(level);
+			Booths.tick(level);
+		}
 		Pets.tick(level, tick);
 		Seasons.tick(level, tick);
+		Scenery.tick(level, tick);
 		ambience(level);
 		if (lampsLit && tick % 2400 == 1200) {
 			fireworksUntil = tick + 8 * 20;

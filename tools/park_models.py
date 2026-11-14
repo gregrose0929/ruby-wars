@@ -317,6 +317,20 @@ MALLET = [
     b([4, 11, 5], [12, 16, 11], RED),                                   # head
 ]
 
+def cloud(seed):
+    import random
+    r = random.Random(seed)
+    boxes = [b([-8, 0, -2], [24, 6, 18], WHITE)]
+    for _ in range(7):
+        x = r.uniform(-10, 14)
+        z = r.uniform(-4, 10)
+        w = r.uniform(6, 12)
+        d = r.uniform(6, 10)
+        h = r.uniform(4, 10)
+        boxes.append(b([x, 2, z], [min(26, x + w), min(16, 2 + h), min(20, z + d)], WHITE))
+    return boxes
+
+
 MODELS = {
     "coaster_car": coaster_car(RED, YELLOW),
     "coaster_car_blue": coaster_car(BLUE, WHITE),
@@ -333,6 +347,7 @@ MODELS = {
     "teacup_green": teacup(LIME, WHITE), "teacup_purple": teacup(PURPLE, PINK), "teacup_red": teacup(RED, YELLOW),
     "balloon": BALLOON, "pirate_ship": PIRATE_SHIP, "drop_seats": DROP_SEATS, "basketball": BASKETBALL, "toss_ring": TOSS_RING,
     "mole": MOLE, "teddy": TEDDY,
+    "cloud_a": cloud(1), "cloud_b": cloud(2), "cloud_c": cloud(3),
     "duck": DUCK, "golf_ball": GOLF_BALL, "golf_flag": GOLF_FLAG, "zip_handle": ZIP_HANDLE,
 }
 HANDHELD = {"putter": PUTTER, "mallet": MALLET}

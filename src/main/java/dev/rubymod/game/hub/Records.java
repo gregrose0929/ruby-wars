@@ -36,7 +36,7 @@ final class Records {
 
 	static void build(ServerLevel level) {
 		BOARDS.clear();
-		for (Vec3 at : new Vec3[] {new Vec3(-7.5, FLOOR + 6.4, 11.5), new Vec3(Speedway.CX - 0.5, FLOOR + 5.5, Speedway.CZ - 5.5)}) {
+		for (Vec3 at : new Vec3[] {new Vec3(-7.5, FLOOR + 6.4, 11.5), new Vec3(Speedway.CX + 0.5, FLOOR + 8.4, Speedway.CZ - 3.5)}) {
 			Display.TextDisplay t = Props.text(level, at, Component.literal("TONIGHT'S RECORDS"), 0.6F, HubPark.TAG);
 			HubPark.keep(t);
 			if (t != null) {

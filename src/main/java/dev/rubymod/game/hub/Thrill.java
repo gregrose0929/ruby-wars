@@ -556,6 +556,11 @@ final class Thrill {
 		}
 	}
 
+	/** A balloon's out over the park (it keeps going wherever its riders are). */
+	static boolean busy() {
+		return balloon != null && !balloon.cars.isEmpty();
+	}
+
 	static void reset() {
 		drop = Drop.IDLE;
 		shipT = -1;
