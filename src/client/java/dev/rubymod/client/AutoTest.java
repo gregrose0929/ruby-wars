@@ -4542,6 +4542,8 @@ public final class AutoTest {
 			case "parkreal" -> parkRealScript();
 			case "parkhosts" -> parkHostsScript();
 			case "parknew" -> parkNewScript();
+			case "parkthrill" -> parkThrillScript();
+			case "parkbooth" -> parkBoothScript();
 			case "parkswan" -> parkSwanScript();
 			case "parkducks" -> parkDucksScript();
 			case "parktour" -> parkTourScript();
@@ -5050,6 +5052,205 @@ public final class AutoTest {
 			command(mc, "execute in rubymod:hub run tp @p -10 104 46 facing -3 101 52");
 		});
 		then(60, mc -> shot(mc, "swan-view"));
+	}
+
+	private static void tpHub(Minecraft mc, String where) {
+		command(mc, "execute in rubymod:hub run tp @p " + where);
+	}
+
+	/** The Thrill Zone, the booths, the Speedway, pets and the seasons. */
+	private static void parkThrillScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		// The Drop Tower, all the way.
+		then(160, mc -> tpHub(mc, "93.5 101 33.5 90 0"));
+		then(30, mc -> talk(mc, 93.5, 101, 35.5));
+		then(20, mc -> press(mc, "play"));
+		then(10, mc -> log("drop: riding {}", mc.player.isPassenger()));
+		then(260, mc -> {
+			log("drop: at {}", mc.player.position());
+			shot(mc, "thrill-drop-top");
+		});
+		then(200, mc -> log("drop: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		// The Pirate Ship, part of the way.
+		then(5, mc -> tpHub(mc, "79.5 101 38.5 180 0"));
+		then(30, mc -> talk(mc, 79.5, 101, 36.5));
+		then(20, mc -> press(mc, "play"));
+		then(10, mc -> log("ship: riding {}", mc.player.isPassenger()));
+		then(330, mc -> {
+			log("ship: at {}", mc.player.position());
+			shot(mc, "thrill-ship");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		then(10, mc -> log("ship: off at {}", mc.player.blockPosition()));
+		// Teacups.
+		then(5, mc -> tpHub(mc, "66.5 101 40.5 0 0"));
+		then(30, mc -> talk(mc, 66.5, 101, 42.5));
+		then(20, mc -> press(mc, "play"));
+		then(60, mc -> {
+			log("cups: riding {}", mc.player.isPassenger());
+			shot(mc, "thrill-cups");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// The balloon.
+		then(5, mc -> tpHub(mc, "97.5 101 34.5 0 0"));
+		then(30, mc -> talk(mc, 97.5, 101, 36.5));
+		then(20, mc -> press(mc, "play"));
+		then(10, mc -> log("balloon: riding {}", mc.player.isPassenger()));
+		then(500, mc -> {
+			log("balloon: at {}", mc.player.position());
+			shot(mc, "thrill-balloon");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// High Striker: mallet, power bar, swing at the top.
+		then(10, mc -> tpHub(mc, "82.5 101 51.5 180 0"));
+		then(30, mc -> talk(mc, 80.5, 101, 51.5));
+		then(20, mc -> press(mc, "play"));
+		then(10, mc -> {
+			log("striker: holding {}", mc.player.getMainHandItem().getHoverName().getString());
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+		});
+		then(18, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(10, mc -> shot(mc, "thrill-striker"));
+		then(10, mc -> log("striker: teddy {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.STICK)));
+		// Hoop Shot.
+		then(10, mc -> tpHub(mc, "88.0 101 50.5 0 0"));
+		then(30, mc -> talk(mc, 85.5, 101, 51.5));
+		then(20, mc -> press(mc, "play"));
+		for (int i = 0; i < 6; i++) {
+			then(12, mc -> {
+				lookAt(mc, new net.minecraft.world.phys.Vec3(88.0, 106.8, 54.4));
+				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+			});
+		}
+		then(30, mc -> shot(mc, "thrill-hoops"));
+		// Ring Toss.
+		then(10, mc -> tpHub(mc, "93.0 101 50.5 0 0"));
+		then(30, mc -> talk(mc, 90.5, 101, 51.5));
+		then(20, mc -> press(mc, "play"));
+		for (int i = 0; i < 6; i++) {
+			then(12, mc -> {
+				lookAt(mc, new net.minecraft.world.phys.Vec3(93.0, 102.65, 54.0));
+				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+			});
+		}
+		then(30, mc -> shot(mc, "thrill-rings"));
+		// Whack-a-Mole.
+		then(10, mc -> tpHub(mc, "97.5 101 51.8 0 40"));
+		then(30, mc -> talk(mc, 95.5, 101, 51.5));
+		then(20, mc -> press(mc, "play"));
+		for (int i = 0; i < 40; i++) {
+			then(5, mc -> {
+				var moles = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, new net.minecraft.world.phys.AABB(95.5, 101.7, 52.5, 99.5, 103, 55.5));
+				for (var m : moles) {
+					var hits = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Interaction.class, new net.minecraft.world.phys.AABB(m.getX() - 0.3, 101.5, m.getZ() - 0.3, m.getX() + 0.3, 103, m.getZ() + 0.3));
+					if (!hits.isEmpty()) {
+						lookAt(mc, hits.get(0).position().add(0, 0.4, 0));
+						mc.gameMode.attack(mc.player, hits.get(0));
+						break;
+					}
+				}
+			});
+		}
+		then(10, mc -> shot(mc, "thrill-moles"));
+		then(500, mc -> log("booths: teddies {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.STICK)));
+		// Penny: a puppy.
+		then(10, mc -> tpHub(mc, "8.5 101 9.5 0 0"));
+		then(30, mc -> talk(mc, 8.5, 101, 11.5));
+		then(20, mc -> press(mc, "wolf"));
+		then(40, mc -> log("pets: wolves near {}", mc.level.getEntitiesOfClass(net.minecraft.world.entity.animal.wolf.Wolf.class, mc.player.getBoundingBox().inflate(6)).size()));
+		// The Speedway: a race on our own.
+		then(10, mc -> tpHub(mc, "-86.5 101 2.5 180 0"));
+		then(40, mc -> talk(mc, -86.5, 101, 0.5));
+		then(20, mc -> press(mc, "play"));
+		then(20, mc -> {
+			log("karts: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			shot(mc, "speedway-grid");
+		});
+		then(400, mc -> mc.options.keyUp.setDown(true));
+		then(40, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("karts: drove to {}", mc.player.position());
+			shot(mc, "speedway-drive");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// Photos, including the seasons.
+		String[][] views = {
+			{"speedway", "-60 122 30", "-88 101 6"},
+			{"thrill", "112 125 70", "84 103 40"},
+			{"booths", "90 106 44", "90 102 54"},
+		};
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		for (String[] v : views) {
+			then(20, mc -> {
+				mc.player.getAbilities().flying = true;
+				tpHub(mc, v[1] + " facing " + v[2]);
+			});
+			then(60, mc -> shot(mc, "view-" + v[0]));
+		}
+		for (String season : new String[] {"winter", "halloween"}) {
+			then(10, mc -> onServer(mc, server -> {
+				System.setProperty("rubywars.season", season);
+				dev.rubymod.game.hub.HubPark.build(server.getLevel(dev.rubymod.game.Hub.HUB));
+			}));
+			then(60, mc -> {
+				mc.player.getAbilities().flying = true;
+				tpHub(mc, "-1 106 9 facing -9 102 1");
+			});
+			then(60, mc -> shot(mc, "season-" + season));
+		}
+		then(10, mc -> onServer(mc, server -> {
+			System.clearProperty("rubywars.season");
+			dev.rubymod.game.hub.HubPark.build(server.getLevel(dev.rubymod.game.Hub.HUB));
+		}));
+	}
+
+	private static void parkBoothScript() {
+		then(0, mc -> command(mc, "gamemode adventure @a"));
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> {
+		});
+		// Hoop Shot.
+		then(10, mc -> tpHub(mc, "88.0 101 50.5 0 0"));
+		then(30, mc -> talk(mc, 85.5, 101, 51.5));
+		then(20, mc -> press(mc, "play"));
+		for (int i = 0; i < 6; i++) {
+			then(12, mc -> {
+				lookAt(mc, new net.minecraft.world.phys.Vec3(88.0, 106.8, 54.4));
+				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+			});
+		}
+		then(30, mc -> shot(mc, "thrill-hoops"));
+		// Ring Toss.
+		then(10, mc -> tpHub(mc, "93.0 101 50.5 0 0"));
+		then(30, mc -> talk(mc, 90.5, 101, 51.5));
+		then(20, mc -> press(mc, "play"));
+		for (int i = 0; i < 6; i++) {
+			then(12, mc -> {
+				lookAt(mc, new net.minecraft.world.phys.Vec3(93.0, 102.65, 54.0));
+				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+			});
+		}
+		then(30, mc -> shot(mc, "thrill-rings"));
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		for (String season : new String[] {"winter", "halloween"}) {
+			then(10, mc -> onServer(mc, server -> {
+				System.setProperty("rubywars.season", season);
+				dev.rubymod.game.hub.HubPark.build(server.getLevel(dev.rubymod.game.Hub.HUB));
+			}));
+			then(60, mc -> {
+				mc.player.getAbilities().flying = true;
+				tpHub(mc, "-1 106 9 facing -9 102 1");
+			});
+			then(60, mc -> shot(mc, "season-" + season));
+		}
+		then(10, mc -> onServer(mc, server -> {
+			System.clearProperty("rubywars.season");
+			dev.rubymod.game.hub.HubPark.build(server.getLevel(dev.rubymod.game.Hub.HUB));
+		}));
 	}
 
 	/** The newer park things: the Park Map, the Ghost Train, the flume, swan boats, Coach Kit; and photos of them. */

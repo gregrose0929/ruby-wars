@@ -220,6 +220,103 @@ SWAN = [
     b([7, 17.5, -0.5], [9, 18.5, 1.5], PINK),                           # a little bow
 ]
 
+def go_kart(color):
+    return [
+        b([2, 0, 0], [14, 1.5, 16], BLACK),                             # chassis
+        *[b([x, 0, z], [x + 2.5, 3.5, z + 3.5], GRAY) for x in (-0.5, 14) for z in (0.5, 12)],   # fat tyres
+        b([3, 1.5, -1], [13, 4, 4], color),                             # nose
+        b([4, 1.5, 4], [12, 5, 9], color),                              # body
+        b([3, 1.5, 12], [13, 3, 16], color),                            # back
+        b([5, 3, 9], [11, 4, 13], BLACK),                               # seat
+        b([5, 4, 12], [11, 9, 13.5], BLACK),                            # seat back
+        b([7.5, 4, 4], [8.5, 7, 5], STEEL), b([5.5, 6.6, 3.8], [10.5, 7.4, 4.6], BLACK),   # wheel
+        b([2, 6, 15], [14, 7, 17], color),                              # spoiler
+        b([3, 3, 15], [4, 6, 16], STEEL), b([12, 3, 15], [13, 6, 16], STEEL),
+        b([6, 4.2, -1.2], [10, 5.6, -0.8], WHITE),                      # number plate
+    ]
+
+
+def teacup(color, trim):
+    return [
+        b([2, 0, 2], [14, 2, 14], trim),                                # foot
+        b([0, 2, 0], [16, 9, 16], color),                               # cup
+        b([1, 9, 1], [15, 10, 15], trim),                               # rim
+        b([2, 2, 2], [14, 9.5, 14], WHITE),                             # inside (seen from above)
+        b([16, 3, 6], [19, 8, 10], color), b([17, 4, 7], [18, 7, 9], WHITE),   # handle
+        b([6, 5, -0.2], [10, 7, 0], trim), b([6, 5, 16], [10, 7, 16.2], trim),  # dots
+        b([7, 2, 7], [9, 6, 9], STEEL),                                 # wheel in the middle
+    ]
+
+
+BALLOON = [
+    b([2, -16, 2], [14, -9, 14], WOOD),                                 # basket
+    b([1.5, -10, 1.5], [14.5, -9, 14.5], ORANGE),                       # basket rim
+    *[b([x, -9, z], [x + 0.5, 4, z + 0.5], GRAY) for x in (2.5, 13) for z in (2.5, 13)],   # ropes
+    b([6, -6, 6], [10, -4, 10], ORANGE),                                # burner
+    b([0, 4, 0], [16, 8, 16], RED),                                     # envelope, striped
+    b([-4, 8, -4], [20, 14, 20], YELLOW),
+    b([-6, 14, -6], [22, 22, 22], RED),
+    b([-5, 22, -5], [21, 28, 21], YELLOW),
+    b([-2, 28, -2], [18, 31, 18], RED),
+    b([3, 31, 3], [13, 32, 13], YELLOW),
+]
+
+PIRATE_SHIP = [
+    b([4, 0, -16], [12, 3, 32], WOOD),                                  # keel
+    b([2, 3, -14], [14, 7, 30], WOOD),                                  # hull
+    b([1, 7, -12], [15, 9, 28], RED_DARK),                              # rail
+    b([4, 6, -13], [12, 8, 29], GRAY),                                  # deck (seen from above)
+    b([3, 7, -16], [13, 13, -12], WOOD), b([3, 7, 28], [13, 13, 32], WOOD),   # raised ends
+    b([7.5, 7, 7], [8.5, 32, 8], WOOD),                                 # mast
+    b([3, 18, 7.2], [13, 30, 7.8], WHITE),                              # sail
+    b([6, 21, 7.0], [10, 25, 7.1], BLACK), b([7, 22, 6.9], [9, 24, 7.0], WHITE),   # skull on the sail
+    b([5, 31, 7.6], [11, 32, 8.4], BLACK),                              # flag
+    *[b([1.8, 4, z], [2, 6, z + 2], YELLOW) for z in (-8, 0, 8, 16, 24)],   # portholes
+    *[b([14, 4, z], [14.2, 6, z + 2], YELLOW) for z in (-8, 0, 8, 16, 24)],
+]
+
+DROP_SEATS = [
+    b([0, 0, 0], [16, 3, 16], RED),                                     # the ring of seats round the tower
+    b([1, 3, 1], [15, 4, 15], YELLOW),
+    *[b([x, 3, z], [x + 3, 9, z + 1], BLACK) for x in (1, 6.5, 12) for z in (0, 15)],
+    *[b([x, 3, z], [x + 1, 9, z + 3], BLACK) for x in (0, 15) for z in (1, 6.5, 12)],
+]
+
+BASKETBALL = [
+    b([5, 5, 5], [11, 11, 11], ORANGE), b([4.4, 6, 6], [11.6, 10, 10], ORANGE), b([6, 4.4, 6], [10, 11.6, 10], ORANGE),
+    b([6, 6, 4.4], [10, 10, 11.6], ORANGE),
+    b([7.8, 4.3, 4.3], [8.2, 11.7, 11.7], BLACK), b([4.3, 7.8, 4.3], [11.7, 8.2, 11.7], BLACK),
+]
+
+TOSS_RING = [
+    b([3, 7, 3], [13, 9, 5], PINK), b([3, 7, 11], [13, 9, 13], PINK),
+    b([3, 7, 5], [5, 9, 11], PINK), b([11, 7, 5], [13, 9, 11], PINK),
+]
+
+MOLE = [
+    b([4, 0, 4], [12, 10, 12], WOOD),                                   # body
+    b([5, 10, 5], [11, 13, 11], WOOD),                                  # head
+    b([6.5, 9, 3.6], [9.5, 11, 4.1], PINK),                             # nose
+    b([5.5, 11, 4.6], [6.8, 12.3, 5.1], BLACK), b([9.2, 11, 4.6], [10.5, 12.3, 5.1], BLACK),   # eyes
+    b([7, 7, 3.6], [9, 8, 4.1], WHITE),                                 # teeth
+    b([3, 5, 6], [4, 7, 9], PINK), b([12, 5, 6], [13, 7, 9], PINK),     # paws
+]
+
+TEDDY = [
+    b([4, 0, 5], [12, 8, 11], WOOD),                                    # body
+    b([5, 8, 5.5], [11, 14, 10.5], WOOD),                               # head
+    b([4, 13, 7], [6, 15, 9], WOOD), b([10, 13, 7], [12, 15, 9], WOOD), # ears
+    b([7, 9.5, 4.8], [9, 11.5, 5.5], ORANGE),                           # muzzle
+    b([6, 11.5, 5.2], [7, 12.5, 5.5], BLACK), b([9, 11.5, 5.2], [10, 12.5, 5.5], BLACK),
+    b([2, 3, 6.5], [4, 7, 9.5], WOOD), b([12, 3, 6.5], [14, 7, 9.5], WOOD),   # arms
+    b([6, 6.5, 4.8], [10, 7.5, 5.2], RED),                              # bow
+]
+
+MALLET = [
+    b([7.4, 0, 7.4], [8.6, 12, 8.6], WOOD),                             # handle
+    b([4, 11, 5], [12, 16, 11], RED),                                   # head
+]
+
 MODELS = {
     "coaster_car": coaster_car(RED, YELLOW),
     "coaster_car_blue": coaster_car(BLUE, WHITE),
@@ -230,9 +327,15 @@ MODELS = {
     "bumper_yellow": bumper_car(YELLOW), "bumper_pink": bumper_car(PINK), "bumper_purple": bumper_car(PURPLE),
     "ghost": GHOST, "skeleton": SKELETON, "spider": SPIDER, "bat": BAT, "log_boat": LOG_BOAT, "swan": SWAN,
     "ghost_car": coaster_car(PURPLE, LIME),
+    "kart_red": go_kart(RED), "kart_blue": go_kart(BLUE), "kart_green": go_kart(GREEN), "kart_yellow": go_kart(YELLOW),
+    "kart_pink": go_kart(PINK), "kart_purple": go_kart(PURPLE), "kart_orange": go_kart(ORANGE), "kart_white": go_kart(WHITE),
+    "teacup_pink": teacup(PINK, WHITE), "teacup_blue": teacup(SKY, WHITE), "teacup_yellow": teacup(YELLOW, ORANGE),
+    "teacup_green": teacup(LIME, WHITE), "teacup_purple": teacup(PURPLE, PINK), "teacup_red": teacup(RED, YELLOW),
+    "balloon": BALLOON, "pirate_ship": PIRATE_SHIP, "drop_seats": DROP_SEATS, "basketball": BASKETBALL, "toss_ring": TOSS_RING,
+    "mole": MOLE, "teddy": TEDDY,
     "duck": DUCK, "golf_ball": GOLF_BALL, "golf_flag": GOLF_FLAG, "zip_handle": ZIP_HANDLE,
 }
-HANDHELD = {"putter": PUTTER}
+HANDHELD = {"putter": PUTTER, "mallet": MALLET}
 
 
 def write(path, obj):

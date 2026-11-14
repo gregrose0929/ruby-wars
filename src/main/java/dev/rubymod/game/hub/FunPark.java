@@ -308,6 +308,7 @@ final class FunPark {
 				continue;
 			}
 			HubGames.takeAll(p, "Gallery Snowball");
+			Records.submit(level, "Most ducks (Duck Shoot)", p.getName().getString(), e.getValue(), false, String::valueOf);
 			if (e.getValue() >= 5) {
 				ItemStack duck = HubGames.toy(Items.STICK, 1, "Rubber Duck (Duck Shoot prize!)", ChatFormatting.GOLD);
 				duck.set(net.minecraft.core.component.DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_duck"));

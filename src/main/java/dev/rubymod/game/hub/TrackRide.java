@@ -35,12 +35,19 @@ final class TrackRide {
 	final float size;
 	final Vec3 exit;
 	final String hostName;
+	/** Seats in a car (2, or 4 for the balloon), and how high the seats are above the path. */
+	int seatsPer = 2;
+	double seatHeight = Double.NaN;
+	/** How far up the model sits from the path (by default, half its size: its bottom on the path). */
+	double modelUp = Double.NaN;
+	/** Stays level (the balloon) instead of tilting with the path. */
+	boolean upright;
 	/** Things that happen as a car passes a point on the path (keyed by the point's index). */
 	final Map<Integer, BiConsumer<ServerLevel, Car>> events = new HashMap<>();
 
 	static final class Car {
 		UUID model;
-		final UUID[] seats = new UUID[2];
+		UUID[] seats = new UUID[2];
 		double d;
 		int wait = 80;
 		final Set<UUID> riders = new LinkedHashSet<>();
@@ -78,7 +85,7 @@ final class TrackRide {
 			}
 			Car car = null;
 			for (Car c : cars) {
-				if (c.wait > 0 && c.riders.size() < 2) {
+				if (c.wait > 0 && c.riders.size() < seatsPer) {
 					car = c;
 				}
 			}
@@ -121,13 +128,14 @@ final class TrackRide {
 
 	private Car spawn(ServerLevel level) {
 		Car c = new Car();
+		c.seats = new UUID[seatsPer];
 		Vec3 p = at(0);
-		Display.ItemDisplay m = HubPark.tempModel(level, p, 0, model, size, size / 2);
+		Display.ItemDisplay m = HubPark.tempModel(level, p, 0, model, size, (float) (Double.isNaN(modelUp) ? size / 2 : modelUp));
 		if (m == null) {
 			return null;
 		}
 		c.model = m.getUUID();
-		for (int s = 0; s < 2; s++) {
+		for (int s = 0; s < seatsPer; s++) {
 			Display.BlockDisplay seat = HubPark.seat(level, p);
 			c.seats[s] = seat == null ? null : seat.getUUID();
 		}
@@ -210,7 +218,15 @@ final class TrackRide {
 
 	private boolean onCar(ServerPlayer p, Car c) {
 		Entity v = p.getVehicle();
-		return v != null && (v.getUUID().equals(c.seats[0]) || v.getUUID().equals(c.seats[1]));
+		if (v == null) {
+			return false;
+		}
+		for (UUID id : c.seats) {
+			if (v.getUUID().equals(id)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void letOff(ServerPlayer p, String message) {
@@ -219,8 +235,9 @@ final class TrackRide {
 
 	private void remove(ServerLevel level, Car c) {
 		HubPark.discard(level, c.model);
-		HubPark.discard(level, c.seats[0]);
-		HubPark.discard(level, c.seats[1]);
+		for (UUID id : c.seats) {
+			HubPark.discard(level, id);
+		}
 	}
 
 	private void place(ServerLevel level, Car c) {
@@ -232,7 +249,7 @@ final class TrackRide {
 		}
 		dir = dir.normalize();
 		float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
-		float pitch = (float) -Math.toDegrees(Math.asin(Math.max(-1, Math.min(1, dir.y))));
+		float pitch = upright ? 0 : (float) -Math.toDegrees(Math.asin(Math.max(-1, Math.min(1, dir.y))));
 		Entity m = level.getEntity(c.model);
 		if (m != null) {
 			m.teleportTo(p.x, p.y, p.z);
@@ -240,11 +257,14 @@ final class TrackRide {
 			m.setXRot(pitch);
 		}
 		Vec3 flat = new Vec3(dir.x, 0, dir.z).normalize();
-		for (int s = 0; s < 2; s++) {
+		Vec3 side = new Vec3(-flat.z, 0, flat.x);
+		for (int s = 0; s < seatsPer; s++) {
 			Entity seat = c.seats[s] == null ? null : level.getEntity(c.seats[s]);
 			if (seat != null) {
-				double along = s == 0 ? 0.35 : -0.45;
-				Vec3 sp = p.add(flat.scale(along * size / 2)).add(0, 0.55 * size / 2 + dir.y * along, 0);
+				double along = (s / (seatsPer > 2 ? 2 : 1)) % 2 == 0 ? 0.35 : -0.45;
+				double across = seatsPer > 2 ? (s % 2 == 0 ? -0.45 : 0.45) : 0;
+				double up = Double.isNaN(seatHeight) ? 0.55 * size / 2 : seatHeight;
+				Vec3 sp = p.add(flat.scale(along * size / 2)).add(side.scale(across * size / 2)).add(0, up + dir.y * along, 0);
 				seat.teleportTo(sp.x, sp.y, sp.z);
 				seat.setYRot(yaw);
 				for (Entity rider : seat.getPassengers()) {

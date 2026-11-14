@@ -111,7 +111,9 @@ public final class HubPark {
 			new Place("gallery", "The Gallery", "Build Battle winner", "minecraft:painting", stand(-33, FLOOR - 2, 6)),
 			new Place("parkour", "Sky Parkour", "Jump across the sky", "minecraft:feather", stand(-22, FLOOR + 3, -36)),
 			new Place("spooky", "Spooky Hollow", "The Ghost Train", "minecraft:carved_pumpkin", stand(32, FLOOR, 44)),
-			new Place("flume", "Flume Falls", "Log flume, big splash", "minecraft:oak_log", stand(-5, FLOOR, -61)));
+			new Place("flume", "Flume Falls", "Log flume, big splash", "minecraft:oak_log", stand(-5, FLOOR, -61)),
+			new Place("speedway", "Speedway", "Go-kart racing", "minecraft:minecart", stand(-91, FLOOR, 2)),
+			new Place("thrill", "Thrill Zone", "Drop tower, ship, games", "minecraft:firework_rocket", stand(83, FLOOR, 38)));
 
 	private static final String MAP = "Park Map";
 
@@ -180,7 +182,7 @@ public final class HubPark {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
 			}
-			if (HubPlay.punched(sp, entity) || MiniGolf.punched(sp, entity) || HubGames.chickenHit(sp, entity)) {
+			if (HubPlay.punched(sp, entity) || Booths.punched(sp, entity) || MiniGolf.punched(sp, entity) || HubGames.chickenHit(sp, entity)) {
 				return InteractionResult.SUCCESS;
 			}
 			return InteractionResult.PASS;
@@ -243,6 +245,9 @@ public final class HubPark {
 	public static boolean useItem(ServerPlayer p, ItemStack held) {
 		if (MiniGolf.isPutter(held)) {
 			return MiniGolf.putt(p);
+		}
+		if (Booths.isMallet(held)) {
+			return Booths.swing(p);
 		}
 		if (HubGames.isToy(held) && held.getHoverName().getString().equals(MAP)) {
 			if (!p.isPassenger()) {
@@ -535,7 +540,7 @@ public final class HubPark {
 	}
 
 	public static void build(ServerLevel level) {
-		for (int cx = -5; cx <= 4; cx++) {
+		for (int cx = -8; cx <= 7; cx++) {
 			for (int cz = -6; cz <= 4; cz++) {
 				level.getChunk(cx, cz);
 			}
@@ -563,6 +568,8 @@ public final class HubPark {
 		Spooky.reset();
 		Flume.reset();
 		Village.reset();
+		Speedway.reset();
+		Thrill.reset();
 		plaza(level);
 		FunPark.build(level);
 		tower(level);
@@ -573,6 +580,12 @@ public final class HubPark {
 		Spooky.build(level);
 		Flume.build(level);
 		HubPlay.build(level);
+		Speedway.build(level);
+		Thrill.build(level);
+		Booths.build(level);
+		Pets.build(level);
+		Records.build(level);
+		Seasons.build(level);
 		Coaster.build(level);
 		arrows(level);
 		plazaLights(level);
@@ -647,6 +660,8 @@ public final class HubPark {
 				.append(Component.literal("\n\u2191 Sky Parkour: how fast can you go?").withStyle(ChatFormatting.YELLOW))
 				.append(Component.literal("\n\u2198 Spooky Hollow: the Ghost Train").withStyle(ChatFormatting.LIGHT_PURPLE))
 				.append(Component.literal("\n\u2191 Flume Falls: the log flume").withStyle(ChatFormatting.AQUA))
+				.append(Component.literal("\n\u2190 Speedway: go-kart races").withStyle(ChatFormatting.RED))
+				.append(Component.literal("\n\u2198 Thrill Zone: drop tower, pirate ship, teacups,\n   balloon tours and carnival games").withStyle(ChatFormatting.GOLD))
 				.append(Component.literal("\n\nYour Park Map (in your hotbar) flies you anywhere.\nCoach Kit runs Tag, Hide and Seek and more!")
 						.withStyle(ChatFormatting.WHITE));
 		keep(Props.text(level, new Vec3(-7.5, FLOOR + 1.6, 11.5), text, 0.55F, TAG));
@@ -677,7 +692,7 @@ public final class HubPark {
 	/** Strings of coloured lights from cherry tree to cherry tree round the plaza. */
 	private static void plazaLights(ServerLevel level) {
 		int[][] trees = {{15, -6}, {17, 2}, {14, 8}, {7, 16}, {-7, 16}, {-14, 8}, {-17, 2}, {-15, -6}};
-		DyeColor[] colors = {DyeColor.RED, DyeColor.YELLOW, DyeColor.LIME, DyeColor.LIGHT_BLUE, DyeColor.MAGENTA, DyeColor.ORANGE};
+		DyeColor[] colors = Seasons.lights();
 		int n = 0;
 		for (int k = 0; k + 1 < trees.length; k++) {
 			Vec3 a = new Vec3(trees[k][0] + 0.5, FLOOR + 4.6, trees[k][1] + 0.5);
@@ -986,6 +1001,11 @@ public final class HubPark {
 		Flume.tick(level, tick);
 		Village.tick(level, tick);
 		HubPlay.tick(level);
+		Speedway.tick(level, tick);
+		Thrill.tick(level);
+		Booths.tick(level);
+		Pets.tick(level, tick);
+		Seasons.tick(level, tick);
 		ambience(level);
 		if (lampsLit && tick % 2400 == 1200) {
 			fireworksUntil = tick + 8 * 20;
@@ -1092,6 +1112,9 @@ public final class HubPark {
 						if (i == PARKOUR.size() - 1) {
 							Long started = PARKOUR_STARTED.remove(p.getUUID());
 							String time = started == null ? "" : " in " + (level.getGameTime() - started) / 20 + " seconds";
+							if (started != null) {
+								Records.submit(level, "Fastest sky parkour", p.getName().getString(), (int) (level.getGameTime() - started), true, Speedway::time);
+							}
 							Alerts.title(p, "YOU MADE IT!", "Sky parkour" + time, ChatFormatting.GOLD);
 							burst(level, p.position().add(0, 4, 0));
 						} else if (i > 0) {

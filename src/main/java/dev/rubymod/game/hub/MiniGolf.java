@@ -500,6 +500,7 @@ final class MiniGolf {
 			card.append(h == 0 ? "" : "   ").append(h + 1).append(": ").append(r.strokes[h]);
 		}
 		Alerts.title(p, "Round done!", total + " strokes (par " + par + ")", ChatFormatting.GOLD);
+		Records.submit((ServerLevel) p.level(), "Best mini golf round", p.getName().getString(), total, true, v -> v + " strokes");
 		p.sendSystemMessage(Component.literal("⛳ Mini golf scorecard:  " + card + "   Total: " + total + " (par " + par + ")").withStyle(ChatFormatting.GREEN));
 		p.sendSystemMessage(Component.literal("Talk to Gus to play again!").withStyle(ChatFormatting.GRAY));
 		p.teleportTo(-43.5, FLOOR + 1, 56.0);
