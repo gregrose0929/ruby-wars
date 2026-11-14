@@ -109,7 +109,31 @@ public final class HubPark {
 			new Place("golf", "Mini Golf", "Four crazy holes", "minecraft:slime_ball", stand(-40, FLOOR, 57)),
 			new Place("stage", "The Stage", "Pick songs, dance", "minecraft:jukebox", stand(-37, FLOOR, -35)),
 			new Place("gallery", "The Gallery", "Build Battle winner", "minecraft:painting", stand(-33, FLOOR - 2, 6)),
-			new Place("parkour", "Sky Parkour", "Jump across the sky", "minecraft:feather", stand(-22, FLOOR + 3, -36)));
+			new Place("parkour", "Sky Parkour", "Jump across the sky", "minecraft:feather", stand(-22, FLOOR + 3, -36)),
+			new Place("spooky", "Spooky Hollow", "The Ghost Train", "minecraft:carved_pumpkin", stand(32, FLOOR, 44)),
+			new Place("flume", "Flume Falls", "Log flume, big splash", "minecraft:oak_log", stand(-5, FLOOR, -61)));
+
+	private static final String MAP = "Park Map";
+
+	/** Into the hub: a Park Map in your hotbar (right-click it to fly anywhere). */
+	public static void welcome(ServerPlayer p) {
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			if (HubGames.isToy(inv.getItem(i)) && inv.getItem(i).getHoverName().getString().equals(MAP)) {
+				return;
+			}
+		}
+		ItemStack map = HubGames.toy(net.minecraft.world.item.Items.PAPER, 1, MAP, ChatFormatting.AQUA);
+		map.set(net.minecraft.core.component.DataComponents.ITEM_MODEL, net.minecraft.resources.Identifier.withDefaultNamespace("map"));
+		map.set(net.minecraft.core.component.DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(
+				Component.literal("Right-click to fly anywhere in the park").withStyle(ChatFormatting.GRAY))));
+		if (inv.getItem(8).isEmpty()) {
+			inv.setItem(8, map);
+		} else {
+			inv.add(map);
+		}
+		p.inventoryMenu.broadcastChanges();
+	}
 
 	/** Who has the travel menu open, and where they were standing. */
 	private static final Map<UUID, Vec3> TRAVEL_MENU = new HashMap<>();
@@ -156,7 +180,7 @@ public final class HubPark {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
 			}
-			if (MiniGolf.punched(sp, entity) || HubGames.chickenHit(sp, entity)) {
+			if (HubPlay.punched(sp, entity) || MiniGolf.punched(sp, entity) || HubGames.chickenHit(sp, entity)) {
 				return InteractionResult.SUCCESS;
 			}
 			return InteractionResult.PASS;
@@ -165,6 +189,12 @@ public final class HubPark {
 				(payload, context) -> travelPicked(context.player(), payload.id()));
 		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HostPick.TYPE,
 				(payload, context) -> HubHosts.picked(context.player(), payload.host(), payload.key()));
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.TravelAsk.TYPE, (payload, context) -> {
+			ServerPlayer p = context.player();
+			if (p.level().dimension() == Hub.HUB && !p.isPassenger()) {
+				openTravel(p, null);
+			}
+		});
 		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
@@ -213,6 +243,12 @@ public final class HubPark {
 	public static boolean useItem(ServerPlayer p, ItemStack held) {
 		if (MiniGolf.isPutter(held)) {
 			return MiniGolf.putt(p);
+		}
+		if (HubGames.isToy(held) && held.getHoverName().getString().equals(MAP)) {
+			if (!p.isPassenger()) {
+				openTravel(p, null);
+			}
+			return true;
 		}
 		return HubGames.useToy(p, held);
 	}
@@ -524,6 +560,9 @@ public final class HubPark {
 		FunPark.reset();
 		MiniGolf.reset();
 		Coaster.reset();
+		Spooky.reset();
+		Flume.reset();
+		Village.reset();
 		plaza(level);
 		FunPark.build(level);
 		tower(level);
@@ -531,7 +570,12 @@ public final class HubPark {
 		MiniGolf.build(level);
 		stage(level);
 		parkour(level);
+		Spooky.build(level);
+		Flume.build(level);
+		HubPlay.build(level);
 		Coaster.build(level);
+		arrows(level);
+		plazaLights(level);
 	}
 
 	static Vec3 stand(double x, int y, double z) {
@@ -586,11 +630,11 @@ public final class HubPark {
 
 	/** The park guide by the spawn: what's where, and how the pads work. */
 	private static void guide(ServerLevel level) {
-		box(level, -2, FLOOR + 1, 15, 2, FLOOR + 1, 15, Blocks.DARK_OAK_PLANKS.defaultBlockState());
-		for (int x : new int[] {-2, 2}) {
-			box(level, x, FLOOR + 2, 15, x, FLOOR + 4, 15, Blocks.DARK_OAK_LOG.defaultBlockState());
+		// West of the spawn, clear of the Party Games gate (x -4..4 at z 15) and the garden's trees.
+		for (int x : new int[] {-10, -6}) {
+			box(level, x, FLOOR + 1, 11, x, FLOOR + 4, 11, Blocks.DARK_OAK_LOG.defaultBlockState());
 		}
-		box(level, -2, FLOOR + 5, 15, 2, FLOOR + 5, 15, Blocks.DARK_OAK_SLAB.defaultBlockState());
+		box(level, -10, FLOOR + 5, 11, -6, FLOOR + 5, 11, Blocks.DARK_OAK_SLAB.defaultBlockState());
 		Component text = Component.literal("PARK GUIDE").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
 				.append(Component.literal("\nStep on a green pad to fly to an island.\nStep on a blue pad to fly anywhere.\nRight-click the people to play!\n")
 						.withStyle(ChatFormatting.WHITE))
@@ -600,8 +644,95 @@ public final class HubPark {
 				.append(Component.literal("\n\u2193 Fishing Village: fishing, swings").withStyle(ChatFormatting.AQUA))
 				.append(Component.literal("\n\u2199 Mini Golf: four crazy holes").withStyle(ChatFormatting.GREEN))
 				.append(Component.literal("\n\u2196 The Stage: pick songs, dance").withStyle(ChatFormatting.LIGHT_PURPLE))
-				.append(Component.literal("\n\u2191 Sky Parkour: how fast can you go?").withStyle(ChatFormatting.YELLOW));
-		keep(Props.text(level, new Vec3(0.5, FLOOR + 2.0, 14.4), text, 0.55F, TAG));
+				.append(Component.literal("\n\u2191 Sky Parkour: how fast can you go?").withStyle(ChatFormatting.YELLOW))
+				.append(Component.literal("\n\u2198 Spooky Hollow: the Ghost Train").withStyle(ChatFormatting.LIGHT_PURPLE))
+				.append(Component.literal("\n\u2191 Flume Falls: the log flume").withStyle(ChatFormatting.AQUA))
+				.append(Component.literal("\n\nYour Park Map (in your hotbar) flies you anywhere.\nCoach Kit runs Tag, Hide and Seek and more!")
+						.withStyle(ChatFormatting.WHITE));
+		keep(Props.text(level, new Vec3(-7.5, FLOOR + 1.6, 11.5), text, 0.55F, TAG));
+	}
+
+	/** Glowing arrows on the ground from the spawn out to each green launch pad. */
+	private static void arrows(ServerLevel level) {
+		Vec3 spawn = new Vec3(0.5, FLOOR + 1.03, 8.5);
+		int[][] pads = {{21, 0}, {19, -8}, {11, 18}, {-11, 18}, {-20, 9}, {-20, -4}, {-17, -10}};
+		BlockState glow = Blocks.CONCRETE.pick(DyeColor.LIME).defaultBlockState();
+		for (int[] pad : pads) {
+			Vec3 to = new Vec3(pad[0] + 0.5, FLOOR + 1.03, pad[1] + 0.5);
+			Vec3 dir = to.subtract(spawn).normalize();
+			Vec3 side = new Vec3(-dir.z, 0, dir.x);
+			double len = to.distanceTo(spawn);
+			for (double d = 3.5; d < len - 2.5; d += 2.6) {
+				Vec3 tip = spawn.add(dir.scale(d));
+				for (int s : new int[] {-1, 1}) {
+					Display.BlockDisplay b = beam(level, tip.subtract(dir.scale(0.45)).add(side.scale(0.4 * s)), tip, 0.13F, 0.03F, glow);
+					if (b != null) {
+						((DisplayAccessor) b).rubymod$setBrightness(new net.minecraft.util.Brightness(15, 15));
+					}
+				}
+			}
+		}
+	}
+
+	/** Strings of coloured lights from cherry tree to cherry tree round the plaza. */
+	private static void plazaLights(ServerLevel level) {
+		int[][] trees = {{15, -6}, {17, 2}, {14, 8}, {7, 16}, {-7, 16}, {-14, 8}, {-17, 2}, {-15, -6}};
+		DyeColor[] colors = {DyeColor.RED, DyeColor.YELLOW, DyeColor.LIME, DyeColor.LIGHT_BLUE, DyeColor.MAGENTA, DyeColor.ORANGE};
+		int n = 0;
+		for (int k = 0; k + 1 < trees.length; k++) {
+			Vec3 a = new Vec3(trees[k][0] + 0.5, FLOOR + 4.6, trees[k][1] + 0.5);
+			Vec3 b = new Vec3(trees[k + 1][0] + 0.5, FLOOR + 4.6, trees[k + 1][1] + 0.5);
+			int steps = (int) (a.distanceTo(b) / 1.2);
+			for (int i = 1; i < steps; i++) {
+				double t = i / (double) steps;
+				Vec3 p = a.lerp(b, t).add(0, -1.1 * Math.sin(Math.PI * t), 0);
+				Display.BlockDisplay d = piece(level, p, Blocks.STAINED_GLASS.pick(colors[n++ % colors.length]).defaultBlockState(), new Vector3f(0.22F, 0.3F, 0.22F),
+						new Quaternionf());
+				if (d != null) {
+					((DisplayAccessor) d).rubymod$setBrightness(new net.minecraft.util.Brightness(15, 15));
+				}
+			}
+		}
+	}
+
+	/** Each island's own sounds, for whoever's on it: carnival music, waves and gulls, a spooky drone, rushing water. */
+	private static void ambience(ServerLevel level) {
+		if (tick % 20 != 0) {
+			return;
+		}
+		var random = level.getRandom();
+		for (ServerPlayer p : level.players()) {
+			Vec3 at = p.position();
+			if (at.distanceTo(new Vec3(FunPark.FX, FLOOR, FunPark.FZ)) < 24) {
+				if (tick % 240 == 0) {
+					hear(p, dev.rubymod.registry.ModSounds.PARK_CARNIVAL, new Vec3(56, FLOOR + 3, 2), 0.7F);
+				}
+				if (tick % 160 == 80) {
+					hear(p, dev.rubymod.registry.ModSounds.PARK_CROWD, at, 0.35F);
+				}
+			} else if (at.distanceTo(new Vec3(0, FLOOR, 56)) < 20) {
+				if (tick % 180 == 0) {
+					hear(p, dev.rubymod.registry.ModSounds.PARK_WAVES, new Vec3(-1, FLOOR, 52), 0.6F);
+				}
+				if (random.nextInt(9) == 0) {
+					hear(p, dev.rubymod.registry.ModSounds.PARK_GULLS, at.add(random.nextDouble() * 16 - 8, 8, random.nextDouble() * 16 - 8), 0.6F);
+				}
+			} else if (at.distanceTo(new Vec3(Spooky.CX, FLOOR, Spooky.CZ)) < 20) {
+				if (tick % 200 == 0) {
+					hear(p, dev.rubymod.registry.ModSounds.PARK_SPOOKY, new Vec3(Spooky.CX, FLOOR + 3, Spooky.CZ), 0.8F);
+				}
+			} else if (at.distanceTo(new Vec3(Flume.CX, FLOOR, Flume.CZ)) < 20) {
+				if (tick % 180 == 0) {
+					hear(p, dev.rubymod.registry.ModSounds.PARK_WAVES, new Vec3(2, FLOOR, -55), 0.5F);
+				}
+			}
+		}
+	}
+
+	private static void hear(ServerPlayer p, net.minecraft.sounds.SoundEvent sound, Vec3 at, float volume) {
+		p.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+				net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.wrapAsHolder(sound), SoundSource.AMBIENT, at.x, at.y, at.z, volume, 1.0F,
+				p.getRandom().nextLong()));
 	}
 
 	// ----- The Tower -----
@@ -851,6 +982,14 @@ public final class HubPark {
 		FunPark.tick(level);
 		MiniGolf.tick(level);
 		Concert.tick(level);
+		Spooky.tick(level);
+		Flume.tick(level, tick);
+		Village.tick(level, tick);
+		HubPlay.tick(level);
+		ambience(level);
+		if (lampsLit && tick % 2400 == 1200) {
+			fireworksUntil = tick + 8 * 20;
+		}
 		for (ServerPlayer p : level.players()) {
 			if (p.isSpectator() || p.isPassenger()) {
 				continue;

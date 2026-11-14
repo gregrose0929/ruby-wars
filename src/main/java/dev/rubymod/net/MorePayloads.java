@@ -564,7 +564,21 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Client -> server: the Park Map key (open the hub's travel menu). */
+	public record TravelAsk(String where) implements CustomPacketPayload {
+		public static final Type<TravelAsk> TYPE = new Type<>(RubyMod.id("travel_ask"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, TravelAsk> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, TravelAsk::where,
+				TravelAsk::new);
+
+		@Override
+		public Type<TravelAsk> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.serverboundPlay().register(TravelAsk.TYPE, TravelAsk.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HostCard.TYPE, HostCard.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HostPick.TYPE, HostPick.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(TravelMenu.TYPE, TravelMenu.CODEC);

@@ -62,6 +62,59 @@ public final class HubHosts {
 		return p -> List.of("play|" + label);
 	}
 
+	/** Other players near {@code p} who could come along on a ride. */
+	static List<ServerPlayer> friends(ServerPlayer p) {
+		List<ServerPlayer> out = new ArrayList<>();
+		for (ServerPlayer q : ((ServerLevel) p.level()).players()) {
+			if (q != p && !q.isSpectator() && !q.isPassenger() && q.position().distanceTo(p.position()) < 6) {
+				out.add(q);
+			}
+		}
+		return out;
+	}
+
+	/** A ride's buttons: Play, and (when friends are standing close by) one that takes them along too. */
+	static Function<ServerPlayer, List<String>> rideButtons(String label) {
+		return p -> {
+			int n = friends(p).size();
+			List<String> b = new ArrayList<>();
+			if (n > 0) {
+				b.add("friends|Ride together (you + " + n + (n == 1 ? " friend)" : " friends)"));
+			}
+			b.add("play|" + (n > 0 ? "Just me" : label));
+			return b;
+		};
+	}
+
+	/** Who's riding: just {@code p}, or {@code p} and the friends nearby (who are told who brought them). */
+	static List<ServerPlayer> group(ServerPlayer p, String key) {
+		List<ServerPlayer> g = new ArrayList<>();
+		g.add(p);
+		if ("friends".equals(key)) {
+			for (ServerPlayer q : friends(p)) {
+				g.add(q);
+				q.sendSystemMessage(Component.literal(p.getName().getString() + " brought you along for the ride! (Crouch to hop off.)")
+						.withStyle(ChatFormatting.LIGHT_PURPLE));
+			}
+		}
+		return g;
+	}
+
+	/** A host calls out to everyone nearby (who isn't already on it), e.g. "the train's leaving in 5 seconds!". */
+	static void callOut(ServerLevel level, String id, String text, java.util.function.Predicate<ServerPlayer> skip) {
+		for (Placed h : HOSTS) {
+			if (!h.host().id().equals(id)) {
+				continue;
+			}
+			for (ServerPlayer p : level.players()) {
+				if (p.position().distanceTo(h.at()) < 28 && !skip.test(p)) {
+					p.sendSystemMessage(Component.literal("[" + h.host().name() + "] ").withStyle(s -> s.withColor(TextColor.fromRgb(h.host().color())).withBold(true))
+							.append(Component.literal(text).withStyle(ChatFormatting.WHITE)));
+				}
+			}
+		}
+	}
+
 	/** Put a host at {@code at}, facing {@code yaw}, dressed as {@code profession} from {@code type}. */
 	static void add(ServerLevel level, Vec3 at, float yaw, ResourceKey<VillagerProfession> profession, ResourceKey<VillagerType> type, Host host) {
 		Villager v = EntityTypes.VILLAGER.create(level, EntitySpawnReason.EVENT);

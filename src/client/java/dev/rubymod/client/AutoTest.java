@@ -4541,6 +4541,8 @@ public final class AutoTest {
 			}
 			case "parkreal" -> parkRealScript();
 			case "parkhosts" -> parkHostsScript();
+			case "parknew" -> parkNewScript();
+			case "parkswan" -> parkSwanScript();
 			case "parkducks" -> parkDucksScript();
 			case "parktour" -> parkTourScript();
 			case "ridesmooth" -> rideSmoothScript();
@@ -5014,6 +5016,135 @@ public final class AutoTest {
 			}
 			log("client displays near: {}", mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, new net.minecraft.world.phys.AABB(40, 95, -15, 60, 110, 0)).size());
 		}));
+	}
+
+	private static void parkSwanScript() {
+		then(0, mc -> command(mc, "gamemode adventure @a"));
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> {
+		});
+		// A swan boat.
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p -7.5 101 48.5 90 20"));
+		then(40, mc -> {
+			var boats = mc.level.getEntitiesOfClass(net.minecraft.world.entity.vehicle.boat.AbstractBoat.class, mc.player.getBoundingBox().inflate(8));
+			log("swans: boats near {}", boats.size());
+			if (!boats.isEmpty()) {
+				var b = boats.get(0);
+				lookAt(mc, b.position());
+				mc.gameMode.interact(mc.player, b, new net.minecraft.world.phys.EntityHitResult(b), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(10, mc -> {
+			log("swans: riding {}", mc.player.isPassenger());
+			mc.options.keyUp.setDown(true);
+		});
+		then(30, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("swans: paddled to {}", mc.player.position());
+			shot(mc, "new-swan");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			command(mc, "execute in rubymod:hub run tp @p -10 104 46 facing -3 101 52");
+		});
+		then(60, mc -> shot(mc, "swan-view"));
+	}
+
+	/** The newer park things: the Park Map, the Ghost Train, the flume, swan boats, Coach Kit; and photos of them. */
+	private static void parkNewScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		// The Park Map in the hotbar: right-click it.
+		then(160, mc -> {
+			int slot = slotOf(mc, net.minecraft.world.item.Items.PAPER);
+			log("map: slot {} name {}", slot, slot < 0 ? "-" : mc.player.getInventory().getItem(slot).getHoverName().getString());
+			if (slot >= 0) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(20, mc -> {
+			log("map: screen {}", mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getSimpleName());
+			if (mc.gui.screen() instanceof TravelScreen t) {
+				log("map: places {}", t.ids());
+				t.pick(t.ids().indexOf("spooky"));
+			}
+		});
+		then(120, mc -> log("map: landed at {}", mc.player.blockPosition()));
+		then(5, mc -> shot(mc, "new-spooky-arrive"));
+		// The Ghost Train, all the way through.
+		then(5, mc -> talk(mc, 33.5, 101, 41.5));
+		then(20, mc -> press(mc, "play"));
+		then(10, mc -> log("ghost: riding {}", mc.player.isPassenger()));
+		then(140, mc -> {
+			log("ghost: at {}", mc.player.position());
+			shot(mc, "new-ghost-1");
+		});
+		then(60, mc -> shot(mc, "new-ghost-2"));
+		then(90, mc -> shot(mc, "new-ghost-3"));
+		then(90, mc -> shot(mc, "new-ghost-4"));
+		then(300, mc -> log("ghost: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		// The flume.
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p -4.5 101 -57.5 90 0"));
+		then(30, mc -> talk(mc, -3.5, 101, -56.5));
+		then(20, mc -> press(mc, "play"));
+		then(10, mc -> log("flume: riding {}", mc.player.isPassenger()));
+		then(200, mc -> {
+			log("flume: at {}", mc.player.position());
+			shot(mc, "new-flume-top");
+		});
+		then(220, mc -> shot(mc, "new-flume-drop"));
+		then(400, mc -> log("flume: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		// A swan boat.
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p -7.5 101 48.5 90 20"));
+		then(40, mc -> {
+			var boats = mc.level.getEntitiesOfClass(net.minecraft.world.entity.vehicle.boat.AbstractBoat.class, mc.player.getBoundingBox().inflate(8));
+			log("swans: boats near {}", boats.size());
+			if (!boats.isEmpty()) {
+				var b = boats.get(0);
+				lookAt(mc, b.position());
+				mc.gameMode.interact(mc.player, b, new net.minecraft.world.phys.EntityHitResult(b), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(10, mc -> {
+			log("swans: riding {}", mc.player.isPassenger());
+			mc.options.keyUp.setDown(true);
+		});
+		then(30, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("swans: paddled to {}", mc.player.position());
+			shot(mc, "new-swan");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// Coach Kit (on our own: not enough players, which is fine).
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p -3.5 101 9.5 0 0"));
+		then(30, mc -> talk(mc, -3.5, 101, 11.5));
+		then(20, mc -> press(mc, "TAG"));
+		then(20, mc -> shot(mc, "new-kit"));
+		then(420, mc -> log("kit: done waiting"));
+		// Photos.
+		String[][] views = {
+			{"plaza-arrows", "0.5 108 14", "0.5 101 0"},
+			{"plaza-lights", "0 109 -2", "0 103 14"},
+			{"spooky", "24 116 52", "44 102 40"},
+			{"spooky-house", "30 105 46", "42 103 42"},
+			{"flume", "-14 116 -50", "6 104 -63"},
+			{"flume-drop", "4 106 -48", "6 104 -55"},
+			{"swans", "-12 106 44", "-2 101 52"},
+		};
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		for (String[] v : views) {
+			then(20, mc -> {
+				mc.player.getAbilities().flying = true;
+				command(mc, "execute in rubymod:hub run tp @p " + v[1] + " facing " + v[2]);
+			});
+			then(60, mc -> shot(mc, "new-view-" + v[0]));
+		}
 	}
 
 	/** Every park host, clicked and played, the way a player would. */

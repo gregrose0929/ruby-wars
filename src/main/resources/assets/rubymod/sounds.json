@@ -257,5 +257,77 @@
 				"name": "rubymod:music_pickup"
 			}
 		]
+	},
+	"park_carnival": {
+		"sounds": [
+			{
+				"name": "rubymod:park_carnival",
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"park_waves": {
+		"sounds": [
+			{
+				"name": "rubymod:park_waves",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"park_gulls": {
+		"sounds": [
+			{
+				"name": "rubymod:park_gulls_0",
+				"attenuation_distance": 40
+			},
+			{
+				"name": "rubymod:park_gulls_1",
+				"attenuation_distance": 40
+			},
+			{
+				"name": "rubymod:park_gulls_2",
+				"attenuation_distance": 40
+			}
+		]
+	},
+	"park_crowd": {
+		"sounds": [
+			{
+				"name": "rubymod:park_crowd",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"park_spooky": {
+		"sounds": [
+			{
+				"name": "rubymod:park_spooky",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"park_ghost": {
+		"sounds": [
+			{
+				"name": "rubymod:park_ghost_0",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "rubymod:park_ghost_1",
+				"attenuation_distance": 24
+			}
+		]
+	},
+	"park_boo": {
+		"sounds": [
+			{
+				"name": "rubymod:park_boo_0",
+				"attenuation_distance": 24
+			},
+			{
+				"name": "rubymod:park_boo_1",
+				"attenuation_distance": 24
+			}
+		]
 	}
 }

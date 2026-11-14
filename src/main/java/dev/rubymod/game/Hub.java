@@ -313,6 +313,7 @@ public final class Hub {
 		player.removeAllEffects();
 		player.clearFire();
 		player.setHealth(player.getMaxHealth());
+		dev.rubymod.game.hub.HubPark.welcome(player);
 		player.resetFallDistance();
 		Alerts.title(player, "THE HUB", "Walk into a portal to play  \u2022  H switches games", ChatFormatting.AQUA);
 	}

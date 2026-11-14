@@ -31,6 +31,13 @@ public final class ModSounds {
 	public static final SoundEvent JEEP_ENGINE = register("jeep_engine");
 	// Music and jingles (tools/music.py).
 	public static final SoundEvent HUB_THEME = register("hub_theme");
+	public static final SoundEvent PARK_CARNIVAL = register("park_carnival");
+	public static final SoundEvent PARK_WAVES = register("park_waves");
+	public static final SoundEvent PARK_GULLS = register("park_gulls");
+	public static final SoundEvent PARK_CROWD = register("park_crowd");
+	public static final SoundEvent PARK_SPOOKY = register("park_spooky");
+	public static final SoundEvent PARK_GHOST = register("park_ghost");
+	public static final SoundEvent PARK_BOO = register("park_boo");
 	public static final SoundEvent WIN_JINGLE = register("win_jingle");
 	public static final SoundEvent LOSE_JINGLE = register("lose_jingle");
 	public static final SoundEvent ROUND_START = register("round_start");

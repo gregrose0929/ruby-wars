@@ -87,7 +87,11 @@ final class Coaster {
 				new HubHosts.Host("coaster", "Rita", "Ruby Rocket", 0xFF4050, "minecraft:minecart",
 						"The fastest ride in the park! The train waits a few seconds for friends, climbs the big hill, then WHOOSH. "
 								+ "You get off at the exit when it's back.",
-						"Ruby Rocket: right-click Rita to ride!", HubHosts.play("Ride the Ruby Rocket!"), (p, key) -> board(p)));
+						"Ruby Rocket: right-click Rita to ride!", HubHosts.rideButtons("Ride the Ruby Rocket!"), (p, key) -> {
+							for (ServerPlayer q : HubHosts.group(p, key)) {
+								board(q);
+							}
+						}));
 	}
 
 	private static void clearOldTrack(ServerLevel level) {
@@ -284,6 +288,7 @@ final class Coaster {
 				if (state == State.IDLE) {
 					state = State.COUNTDOWN;
 					timer = 100;
+					HubHosts.callOut(level, "coaster", "The Ruby Rocket leaves in 5 seconds! Right-click me to hop on.", q -> RIDERS.contains(q.getUUID()));
 				} else {
 					timer = Math.max(timer, 60);
 				}

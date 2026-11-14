@@ -158,6 +158,68 @@ ZIP_HANDLE = [
     b([3, 14, 7], [5, 16, 9], BLACK), b([11, 14, 7], [13, 16, 9], BLACK),  # pulleys
 ]
 
+GHOST = [
+    b([3, 2, 4], [13, 14, 12], WHITE),                                  # sheet
+    b([4, 14, 5], [12, 17, 11], WHITE),                                 # head
+    b([5, 17, 6], [11, 18, 10], WHITE),
+    b([2, 0, 4], [5, 3, 12], WHITE), b([7, -1, 4], [9, 2, 12], WHITE), b([11, 0, 4], [14, 3, 12], WHITE),  # wavy hem
+    b([5, 13, 3.6], [7, 16, 4.1], BLACK), b([9, 13, 3.6], [11, 16, 4.1], BLACK),   # eyes
+    b([6.5, 9, 3.6], [9.5, 12, 4.1], BLACK),                            # "oooo" mouth
+    b([0, 8, 6], [3, 10, 9], WHITE), b([13, 8, 6], [16, 10, 9], WHITE),  # arms out
+]
+
+SKELETON = [
+    b([5, 18, 5], [11, 24, 11], WHITE),                                 # skull
+    b([6, 20, 4.6], [7.5, 22, 5.1], BLACK), b([8.5, 20, 4.6], [10, 22, 5.1], BLACK),   # eye sockets
+    b([7, 18.5, 4.6], [9, 19.2, 5.1], BLACK),                           # teeth
+    b([7.5, 6, 7.5], [8.5, 18, 8.5], STEEL),                            # spine
+    *[b([5, y, 6], [11, y + 0.8, 10], WHITE) for y in (11, 13, 15)],    # ribs
+    b([2, 16, 7.5], [5, 17, 8.5], WHITE), b([1, 16, 7.5], [2, 22, 8.5], WHITE),     # arms up
+    b([11, 16, 7.5], [14, 17, 8.5], WHITE), b([14, 16, 7.5], [15, 22, 8.5], WHITE),
+    b([5.5, 6, 7], [10.5, 7, 9], WHITE),                                # hips
+    b([6, -4, 7.5], [7, 6, 8.5], WHITE), b([9, -4, 7.5], [10, 6, 8.5], WHITE),     # legs
+]
+
+SPIDER = [
+    b([5, 3, 6], [11, 8, 14], BLACK),                                   # body
+    b([5.5, 3.5, 2], [10.5, 7, 6], GRAY),                               # head
+    b([6, 5.5, 1.8], [7, 6.5, 2.1], RED), b([9, 5.5, 1.8], [10, 6.5, 2.1], RED),   # eyes
+    b([7, 4.5, 1.8], [7.6, 5.1, 2.1], RED), b([8.4, 4.5, 1.8], [9, 5.1, 2.1], RED),
+    *[b([0, 4, z], [5, 5, z + 1], BLACK) for z in (4, 7, 10, 13)],      # legs
+    *[b([11, 4, z], [16, 5, z + 1], BLACK) for z in (4, 7, 10, 13)],
+    *[b([0, 0, z], [1, 4, z + 1], BLACK) for z in (4, 7, 10, 13)],
+    *[b([15, 0, z], [16, 4, z + 1], BLACK) for z in (4, 7, 10, 13)],
+    b([7.5, 8, 9.5], [8.5, 32, 10.5], WHITE),                           # its thread
+]
+
+BAT = [
+    b([6, 5, 6], [10, 10, 10], BLACK),                                  # body
+    b([6.5, 10, 6.5], [9.5, 13, 9.5], BLACK),                           # head
+    b([6.5, 11, 6.3], [7.5, 12, 6.5], RED), b([8.5, 11, 6.3], [9.5, 12, 6.5], RED),
+    b([0, 8, 7], [6, 9, 9], GRAY), b([10, 8, 7], [16, 9, 9], GRAY),     # wings
+    b([0, 6, 7], [3, 8, 9], GRAY), b([13, 6, 7], [16, 8, 9], GRAY),
+]
+
+LOG_BOAT = [
+    b([2, 0, -2], [14, 2, 18], WOOD),                                   # hull
+    b([1, 2, -2], [3, 8, 18], WOOD), b([13, 2, -2], [15, 8, 18], WOOD),  # sides
+    b([2, 2, -3], [14, 9, -1], WOOD), b([2, 2, 17], [14, 8, 19], WOOD),  # ends
+    b([3, 8.5, -3.2], [13, 9, -2.8], ORANGE),                           # cut log rings
+    b([0.8, 3, 2], [1, 7, 5], ORANGE), b([15, 3, 9], [15.2, 7, 12], ORANGE),   # bark knots
+    b([3, 2, 2], [13, 5, 6], GRAY), b([3, 2, 10], [13, 5, 14], GRAY),    # seats
+]
+
+SWAN = [
+    b([1, 0, 2], [15, 6, 20], WHITE),                                   # body (wraps the boat)
+    b([3, 6, 14], [13, 9, 21], WHITE),                                  # tail feathers
+    b([0, 2, 4], [1, 7, 17], WHITE), b([15, 2, 4], [16, 7, 17], WHITE),  # wings
+    b([6.5, 5, 0], [9.5, 15, 3], WHITE),                                # neck
+    b([6, 14, -2], [10, 17.5, 2], WHITE),                               # head
+    b([7, 14.6, -5], [9, 16.2, -2], ORANGE),                            # beak
+    b([5.8, 15.6, -1], [6.2, 16.6, 0], BLACK), b([9.8, 15.6, -1], [10.2, 16.6, 0], BLACK),   # eyes
+    b([7, 17.5, -0.5], [9, 18.5, 1.5], PINK),                           # a little bow
+]
+
 MODELS = {
     "coaster_car": coaster_car(RED, YELLOW),
     "coaster_car_blue": coaster_car(BLUE, WHITE),
@@ -166,6 +228,8 @@ MODELS = {
     "horse_black": carousel_horse(BLACK, RED), "horse_gold": carousel_horse(GOLD, PURPLE),
     "bumper_red": bumper_car(RED), "bumper_blue": bumper_car(BLUE), "bumper_green": bumper_car(GREEN),
     "bumper_yellow": bumper_car(YELLOW), "bumper_pink": bumper_car(PINK), "bumper_purple": bumper_car(PURPLE),
+    "ghost": GHOST, "skeleton": SKELETON, "spider": SPIDER, "bat": BAT, "log_boat": LOG_BOAT, "swan": SWAN,
+    "ghost_car": coaster_car(PURPLE, LIME),
     "duck": DUCK, "golf_ball": GOLF_BALL, "golf_flag": GOLF_FLAG, "zip_handle": ZIP_HANDLE,
 }
 HANDHELD = {"putter": PUTTER}

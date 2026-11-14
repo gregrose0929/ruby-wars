@@ -334,9 +334,10 @@ final class FunPark {
 
 	private static final List<Spinner> SPINNERS = new ArrayList<>();
 	private static final UUID[] CABINS = new UUID[GONDOLAS];
-	private static final UUID[] CABIN_SEATS = new UUID[GONDOLAS];
+	private static final UUID[] CABIN_SEATS = new UUID[GONDOLAS * 2];
 	private static double angle;
-	private static final Set<UUID> WHEEL_QUEUE = new HashSet<>();
+	/** Who's waiting for a cabin (each entry rides together: one or two people). */
+	private static final List<List<UUID>> WHEEL_QUEUE = new ArrayList<>();
 	/** Riders, and how far round they've been. */
 	private static final Map<UUID, Double> WHEEL_RIDERS = new HashMap<>();
 
@@ -379,8 +380,10 @@ final class FunPark {
 		for (int i = 0; i < GONDOLAS; i++) {
 			Display.ItemDisplay g = HubPark.tempModel(level, cabinSpot(i), 0, "gondola_" + colors[i % colors.length], 1.8F, 0);
 			CABINS[i] = g == null ? null : g.getUUID();
-			Display.BlockDisplay s = HubPark.seat(level, cabinSpot(i).add(0, -0.6, 0));
-			CABIN_SEATS[i] = s == null ? null : s.getUUID();
+			for (int k = 0; k < 2; k++) {
+				Display.BlockDisplay s = HubPark.seat(level, cabinSpot(i).add(0, -0.6, 0));
+				CABIN_SEATS[i * 2 + k] = s == null ? null : s.getUUID();
+			}
 		}
 		HubPark.box(level, 61, FLOOR, -10, 64, FLOOR, -7, Blocks.POLISHED_ANDESITE.defaultBlockState());
 		HubPark.label(level, WHEEL.x, WHEEL.y + RADIUS + 2.4, WHEEL.z, "BIG WHEEL", ChatFormatting.RED, 2.0F);
@@ -388,9 +391,19 @@ final class FunPark {
 				new HubHosts.Host("wheel", "Wally", "Big Wheel", 0xFFD040, "minecraft:spyglass",
 						"A slow ride round the Big Wheel, with the best view of the whole park. Your cabin stops at the bottom for you. "
 								+ "Crouch to get off early.",
-						"Big Wheel: right-click Wally to ride!", HubHosts.play("Ride the Big Wheel!"), (p, key) -> {
-							WHEEL_QUEUE.add(p.getUUID());
-							p.sendOverlayMessage(Component.literal("Your cabin's coming round. Hop in at the bottom!").withStyle(ChatFormatting.YELLOW));
+						"Big Wheel: right-click Wally to ride!", HubHosts.rideButtons("Ride the Big Wheel!"), (p, key) -> {
+							List<ServerPlayer> g = HubHosts.group(p, key);
+							for (int i = 0; i < g.size(); i += 2) {
+								List<UUID> pair = new ArrayList<>();
+								pair.add(g.get(i).getUUID());
+								if (i + 1 < g.size()) {
+									pair.add(g.get(i + 1).getUUID());
+								}
+								WHEEL_QUEUE.add(pair);
+							}
+							for (ServerPlayer q : g) {
+								q.sendOverlayMessage(Component.literal("Your cabin's coming round. Hop in at the bottom!").withStyle(ChatFormatting.YELLOW));
+							}
 						}));
 	}
 
@@ -437,34 +450,40 @@ final class FunPark {
 			if (g != null) {
 				g.teleportTo(at.x, at.y, at.z);
 			}
-			Entity s = CABIN_SEATS[i] == null ? null : level.getEntity(CABIN_SEATS[i]);
-			if (s == null) {
-				continue;
-			}
-			s.teleportTo(at.x, at.y - 0.6, at.z);
 			double a = ((angle + i * Math.PI * 2 / GONDOLAS) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
 			boolean bottom = Math.abs(a - Math.PI * 1.5) < 0.05;
-			// Riders who've been all the way round get off at the bottom.
-			for (Entity rider : new ArrayList<>(s.getPassengers())) {
-				rider.resetFallDistance();
-				if (rider instanceof ServerPlayer p) {
-					double done = WHEEL_RIDERS.merge(p.getUUID(), SPIN, Double::sum);
-					if (bottom && done > Math.PI * 2 - 0.2) {
-						letOff(p, WHEEL_EXIT, "Wasn't that a view? Talk to Wally to go again.");
+			boolean empty = true;
+			Entity[] seats = new Entity[2];
+			for (int k = 0; k < 2; k++) {
+				Entity s = CABIN_SEATS[i * 2 + k] == null ? null : level.getEntity(CABIN_SEATS[i * 2 + k]);
+				seats[k] = s;
+				if (s == null) {
+					continue;
+				}
+				s.teleportTo(at.x + (k == 0 ? -0.3 : 0.3), at.y - 0.6, at.z);
+				// Riders who've been all the way round get off at the bottom.
+				for (Entity rider : new ArrayList<>(s.getPassengers())) {
+					empty = false;
+					rider.resetFallDistance();
+					if (rider instanceof ServerPlayer p) {
+						double done = WHEEL_RIDERS.merge(p.getUUID(), SPIN, Double::sum);
+						if (bottom && done > Math.PI * 2 - 0.2) {
+							letOff(p, WHEEL_EXIT, "Wasn't that a view? Talk to Wally to go again.");
+						}
 					}
 				}
 			}
-			// Someone waiting gets in when an empty cabin comes to the bottom.
-			if (bottom && !s.isVehicle()) {
-				for (Iterator<UUID> it = WHEEL_QUEUE.iterator(); it.hasNext();) {
-					ServerPlayer p = level.getServer().getPlayerList().getPlayer(it.next());
-					it.remove();
+			// The next one or two waiting get in when an empty cabin comes to the bottom.
+			if (bottom && empty && seats[0] != null && seats[1] != null && !WHEEL_QUEUE.isEmpty()) {
+				List<UUID> pair = WHEEL_QUEUE.remove(0);
+				int k = 0;
+				for (UUID id : pair) {
+					ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
 					if (p != null && p.level() == level && p.position().distanceTo(WHEEL) < 20 && !p.isPassenger()) {
-						p.startRiding(s, true, true);
+						p.startRiding(seats[k++], true, true);
 						WHEEL_RIDERS.put(p.getUUID(), 0.0);
 						p.sendOverlayMessage(Component.literal("Up we go! Crouch to get off early.").withStyle(ChatFormatting.YELLOW));
 						level.playSound(null, p.blockPosition(), SoundEvents.WOODEN_DOOR_CLOSE, SoundSource.PLAYERS, 0.7F, 1.2F);
-						break;
 					}
 				}
 			}
@@ -531,7 +550,11 @@ final class FunPark {
 		HubHosts.add(level, new Vec3(57.5, FLOOR + 1, 9.5), 270, VillagerProfession.SHEPHERD, VillagerType.SNOW,
 				new HubHosts.Host("carousel", "Cora", "Carousel", 0xFF7CC0, "minecraft:saddle",
 						"Round and round on a painted horse, up and down to the music! Rides last about 40 seconds. Crouch to get off.",
-						"Carousel: right-click Cora to ride!", HubHosts.play("Ride a horse!"), (p, key) -> rideHorse(p)));
+						"Carousel: right-click Cora to ride!", HubHosts.rideButtons("Ride a horse!"), (p, key) -> {
+							for (ServerPlayer q : HubHosts.group(p, key)) {
+								rideHorse(q);
+							}
+						}));
 	}
 
 	private static Vec3 horseSpot(int i) {
@@ -665,7 +688,11 @@ final class FunPark {
 		HubHosts.add(level, new Vec3(49.5, FLOOR + 1, 6.5), 0, VillagerProfession.ARMORER, VillagerType.DESERT,
 				new HubHosts.Host("bumper", "Buzz", "Bumper Cars", 0x60FF80, "minecraft:minecart",
 						"Drive a bumper car and bonk your friends! W to go, S to go back, A and D to turn. Crouch to get out.",
-						"Bumper Cars: right-click Buzz to drive!", HubHosts.play("Drive a bumper car!"), (p, key) -> drive(p)));
+						"Bumper Cars: right-click Buzz to drive!", HubHosts.rideButtons("Drive a bumper car!"), (p, key) -> {
+							for (ServerPlayer q : HubHosts.group(p, key)) {
+								drive(q);
+							}
+						}));
 	}
 
 	private static void drive(ServerPlayer p) {

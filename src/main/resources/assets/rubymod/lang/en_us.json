@@ -170,5 +170,6 @@
 	"item.rubymod.ruby_warhammer": "Ruby Warhammer",
 	"item.rubymod.singularity_cannon": "Singularity Cannon",
 	"block.rubymod.rift_portal": "Ruby Rift Portal",
-	"block.rubymod.convoy_portal": "Ruby Convoy Portal"
+	"block.rubymod.convoy_portal": "Ruby Convoy Portal",
+	"key.rubymod.park_map": "Park Map: Fly Anywhere (in the hub)"
 }
