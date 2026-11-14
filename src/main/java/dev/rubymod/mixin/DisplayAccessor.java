@@ -30,4 +30,7 @@ public interface DisplayAccessor {
 
 	@Invoker("setGlowColorOverride")
 	void rubymod$setGlowColorOverride(int rgb);
+
+	@Invoker("setBrightnessOverride")
+	void rubymod$setBrightness(net.minecraft.util.Brightness brightness);
 }

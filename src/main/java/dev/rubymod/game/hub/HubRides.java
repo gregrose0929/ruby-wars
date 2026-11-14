@@ -154,6 +154,11 @@ public final class HubRides {
 
 	/** Ride along {@code path} (points {@code kind.speed} apart... or, for flights, one per tick). */
 	static void start(ServerPlayer p, List<Vec3> path, Kind kind, BlockState car, float carW, float carH, float carL) {
+		start(p, path, kind, car, carW, carH, carL, null, Vec3.ZERO);
+	}
+
+	/** The same, with one of the park's models riding along {@code modelOff} from the rider (the zip line's handle). */
+	static void start(ServerPlayer p, List<Vec3> path, Kind kind, BlockState car, float carW, float carH, float carL, String model, Vec3 modelOff) {
 		if (riding(p) || p.isPassenger()) {
 			return;
 		}
@@ -186,9 +191,15 @@ public final class HubRides {
 				carId = d.getUUID();
 			}
 		}
+		if (model != null) {
+			Display.ItemDisplay m = HubPark.tempModel(level, first.add(modelOff), 0, model, 1.0F, 0);
+			if (m != null) {
+				carId = m.getUUID();
+			}
+		}
 		p.startRiding(seat, true, true);
 		int ticks = kind == Kind.FLIGHT ? path.size() - 1 : 0;
-		RIDES.put(p.getUUID(), new Ride(p.getUUID(), seat.getUUID(), carId, path, kind, Vec3.ZERO, ticks));
+		RIDES.put(p.getUUID(), new Ride(p.getUUID(), seat.getUUID(), carId, path, kind, modelOff, ticks));
 	}
 
 	static void tick(ServerLevel level) {
@@ -219,7 +230,7 @@ public final class HubRides {
 			seat.teleportTo(pos.x, pos.y + SEAT, pos.z);
 			Entity car = r.car == null ? null : level.getEntity(r.car);
 			if (car != null) {
-				car.teleportTo(pos.x, pos.y, pos.z);
+				car.teleportTo(pos.x + r.off.x, pos.y + r.off.y, pos.z + r.off.z);
 				car.setYRot(yaw);
 			}
 			p.resetFallDistance();

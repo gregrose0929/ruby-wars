@@ -91,11 +91,45 @@ public final class HubGames {
 		}
 	}
 
+	/** Hand someone a toy (or top up the one they have). */
+	static void give(ServerPlayer p, ItemStack stack) {
+		hand(p, stack);
+		p.inventoryMenu.broadcastChanges();
+	}
+
+	/** Put the toy called {@code name} in their hand (swapped into the slot they're holding). */
+	static void hold(ServerPlayer p, String name) {
+		var inv = p.getInventory();
+		int sel = inv.getSelectedSlot();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			if (named(inv.getItem(i), name)) {
+				if (i != sel) {
+					ItemStack was = inv.getItem(sel);
+					inv.setItem(sel, inv.getItem(i));
+					inv.setItem(i, was);
+				}
+				p.inventoryMenu.broadcastChanges();
+				return;
+			}
+		}
+	}
+
+	/** Take back every toy called {@code name}. */
+	static void takeAll(ServerPlayer p, String name) {
+		for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+			if (named(p.getInventory().getItem(i), name)) {
+				p.getInventory().setItem(i, ItemStack.EMPTY);
+			}
+		}
+		p.inventoryMenu.broadcastChanges();
+	}
+
 	/** The toy chest on the plaza. */
 	static void toyChest(ServerPlayer p) {
 		hand(p, toy(Items.FIREWORK_STAR, 1, "Confetti Cannon", ChatFormatting.LIGHT_PURPLE));
 		hand(p, toy(Items.CHICKEN, 1, "Rubber Chicken", ChatFormatting.YELLOW));
 		hand(p, toy(Items.SLIME_BALL, 1, "Bouncy Ball", ChatFormatting.GREEN));
+		hand(p, toy(Items.SNOWBALL, 16, "Snowball", ChatFormatting.WHITE));
 		p.inventoryMenu.broadcastChanges();
 		p.sendSystemMessage(Component.literal("Toys! Right-click to use them. They stay in the hub.").withStyle(ChatFormatting.LIGHT_PURPLE));
 		p.level().playSound(null, p.blockPosition(), SoundEvents.CHEST_OPEN, SoundSource.PLAYERS, 0.8F, 1.3F);
@@ -275,186 +309,13 @@ public final class HubGames {
 	}
 
 	private static final List<Ball> BALLS = new ArrayList<>();
-	/** Mini-golf: each player's ball. */
-	private static final Map<UUID, Ball> GOLF = new HashMap<>();
-	static final String GOLF_TAG = "rubymod_golf_ball";
-
-	/** Somebody whacked a golf ball. */
-	static boolean golfHit(ServerPlayer p, Entity e) {
-		if (!e.entityTags().contains(GOLF_TAG)) {
-			return false;
-		}
-		for (Ball b : GOLF.values()) {
-			if (e.getUUID().equals(b.hitbox)) {
-				if (b.vel.lengthSqr() > 0.01) {
-					return true;
-				}
-				Vec3 dir = new Vec3(p.getLookAngle().x, 0, p.getLookAngle().z).normalize();
-				b.vel = dir.scale(p.isSprinting() ? 0.95 : p.isShiftKeyDown() ? 0.3 : 0.6);
-				b.strokes++;
-				b.idle = 0;
-				p.level().playSound(null, p.blockPosition(), SoundEvents.ARROW_HIT, SoundSource.PLAYERS, 0.8F, 1.6F);
-				ServerPlayer owner = p.level().getServer().getPlayerList().getPlayer(b.owner);
-				if (owner != null) {
-					owner.sendOverlayMessage(Component.literal("Hole " + (b.hole + 1) + "  •  stroke " + b.strokes).withStyle(ChatFormatting.GREEN));
-				}
-				return true;
-			}
-		}
-		return true;
-	}
-
-	private static void tickGolf(ServerLevel level) {
-		// A ball for anyone standing on a tee (lime blocks at the start of each hole) who hasn't got one on that hole.
-		for (ServerPlayer p : level.players()) {
-			for (int h = 0; h < HubPark.GOLF_TEES.size(); h++) {
-				BlockPos tee = HubPark.GOLF_TEES.get(h);
-				if (p.blockPosition().below().equals(tee) || p.blockPosition().equals(tee.above())) {
-					Ball have = GOLF.get(p.getUUID());
-					if (have != null && have.hole == h) {
-						continue;
-					}
-					if (have != null) {
-						have.remove(level);
-					}
-					Ball b = Ball.spawn(level, Vec3.atBottomCenterOf(tee.above()).add(1.2, 0.02, 0), Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.WHITE).defaultBlockState(), 0.26F, GOLF_TAG);
-					if (b != null) {
-						b.owner = p.getUUID();
-						b.hole = h;
-						GOLF.put(p.getUUID(), b);
-						p.sendOverlayMessage(Component.literal("Hole " + (h + 1) + ": punch the ball toward the flag. Sprint for a big hit, crouch for a tap.")
-								.withStyle(ChatFormatting.GREEN));
-					}
-				}
-			}
-		}
-		for (Iterator<Map.Entry<UUID, Ball>> it = GOLF.entrySet().iterator(); it.hasNext();) {
-			var e = it.next();
-			Ball b = e.getValue();
-			ServerPlayer p = level.getServer().getPlayerList().getPlayer(e.getKey());
-			if (p == null || p.level() != level || p.distanceToSqr(b.pos) > 40 * 40 || ++b.idle > 20 * 120) {
-				b.remove(level);
-				it.remove();
-				continue;
-			}
-			if (b.vel != Vec3.ZERO) {
-				b.step(level);
-				b.idle = 0;
-			}
-			BlockPos hole = HubPark.GOLF_HOLES.get(b.hole);
-			Vec3 cup = Vec3.atBottomCenterOf(hole.above());
-			double d = Math.hypot(b.pos.x - cup.x, b.pos.z - cup.z);
-			if (d < 0.42 && b.vel.length() < 0.55) {
-				String how = b.strokes == 1 ? "HOLE IN ONE!" : b.strokes == 2 ? "Birdie!" : "In the hole!";
-				Alerts.title(p, how, "Hole " + (b.hole + 1) + " in " + b.strokes + (b.strokes == 1 ? " stroke" : " strokes"), ChatFormatting.GREEN);
-				level.playSound(null, hole, SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.8F, 1.6F);
-				level.sendParticles(ParticleTypes.HAPPY_VILLAGER, cup.x, cup.y + 0.5, cup.z, 20, 0.4, 0.4, 0.4, 0);
-				if (b.strokes == 1) {
-					HubPark.burst(level, cup.add(0, 4, 0));
-				}
-				b.remove(level);
-				it.remove();
-				continue;
-			}
-			// Off the course (over a wall, or off the green): back to the tee.
-			BlockPos under = BlockPos.containing(b.pos).below();
-			if (!b.solid(level, b.pos.add(0, -0.2, 0)) || level.getBlockState(under).isAir()) {
-				b.pos = Vec3.atBottomCenterOf(HubPark.GOLF_TEES.get(b.hole).above()).add(1.2, 0.02, 0);
-				b.vel = Vec3.ZERO;
-				b.strokes++;
-				p.sendOverlayMessage(Component.literal("Out of bounds! Back to the tee (+1 stroke)").withStyle(ChatFormatting.RED));
-				b.step(level);
-			}
-		}
-	}
-
-	// ----- The shooting gallery -----
-
-	private static int galleryEnds = -1;
-	private static final List<BlockPos> TARGETS = new ArrayList<>();
-	private static final Map<UUID, Integer> SCORES = new HashMap<>();
 	private static int tick;
 
-	private static void galleryStart(ServerLevel level) {
-		galleryEnds = tick + 30 * 20;
-		SCORES.clear();
-		for (ServerPlayer p : level.players()) {
-			if (HubPark.GALLERY_LINE.contains(p.position())) {
-				hand(p, toy(Items.SNOWBALL, 16, "Gallery Snowball", ChatFormatting.AQUA));
-				p.inventoryMenu.broadcastChanges();
-				Alerts.title(p, "SHOOT!", "Hit the targets with snowballs: 30 seconds", ChatFormatting.AQUA);
-				SCORES.put(p.getUUID(), 0);
-			}
-		}
-		for (int i = 0; i < 3; i++) {
-			newTarget(level);
-		}
-	}
-
-	private static void newTarget(ServerLevel level) {
-		var random = level.getRandom();
-		for (int tries = 0; tries < 20; tries++) {
-			BlockPos p = HubPark.GALLERY_WALL.get(random.nextInt(HubPark.GALLERY_WALL.size()));
-			if (!TARGETS.contains(p)) {
-				TARGETS.add(p);
-				level.setBlock(p, Blocks.TARGET.defaultBlockState(), 3);
-				level.playSound(null, p, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 0.5F, 1.6F);
-				return;
-			}
-		}
-	}
-
-	private static void galleryEnd(ServerLevel level) {
-		galleryEnds = -1;
-		for (BlockPos t : TARGETS) {
-			level.setBlock(t, HubPark.GALLERY_WALL_BLOCK, 3);
-		}
-		TARGETS.clear();
-		StringBuilder b = new StringBuilder();
-		SCORES.entrySet().stream().sorted((x, y) -> y.getValue() - x.getValue()).forEach(e -> {
-			ServerPlayer p = level.getServer().getPlayerList().getPlayer(e.getKey());
-			if (p != null) {
-				b.append(b.isEmpty() ? "" : ", ").append(p.getName().getString()).append(" ").append(e.getValue());
-			}
-		});
-		for (ServerPlayer p : level.players()) {
-			if (SCORES.containsKey(p.getUUID())) {
-				Alerts.title(p, "TIME!", "Targets hit: " + b, ChatFormatting.AQUA);
-				for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
-					if (named(p.getInventory().getItem(i), "Gallery Snowball")) {
-						p.getInventory().setItem(i, ItemStack.EMPTY);
-					}
-				}
-			}
-		}
-		SCORES.clear();
-	}
-
-	/** Every snowball in the hub: does it hit a target, or splat somebody? */
+	/** Every snowball in the hub: does it splat somebody? */
 	private static void tickSnowballs(ServerLevel level) {
 		for (Snowball ball : level.getEntities(EntityTypes.SNOWBALL, HubPark.WHOLE_HUB, s -> s.isAlive())) {
 			Vec3 at = ball.position();
 			Vec3 ahead = at.add(ball.getDeltaMovement().scale(1.2));
-			for (Iterator<BlockPos> it = TARGETS.iterator(); it.hasNext();) {
-				BlockPos t = it.next();
-				AABB box = new AABB(t).inflate(0.2);
-				if (box.contains(at) || box.clip(at, ahead).isPresent()) {
-					it.remove();
-					level.setBlock(t, HubPark.GALLERY_WALL_BLOCK, 3);
-					level.playSound(null, t, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.PLAYERS, 1.2F, 1.4F);
-					level.sendParticles(ParticleTypes.CRIT, t.getX() + 0.5, t.getY() + 0.5, t.getZ() + 1.0, 15, 0.3, 0.3, 0.1, 0.2);
-					if (ball.getOwner() instanceof ServerPlayer shooter) {
-						int score = SCORES.merge(shooter.getUUID(), 1, Integer::sum);
-						shooter.sendOverlayMessage(Component.literal("Hit! " + score).withStyle(ChatFormatting.AQUA));
-					}
-					ball.discard();
-					newTarget(level);
-					break;
-				}
-			}
-			if (!ball.isAlive()) {
-				continue;
-			}
 			for (ServerPlayer p : level.players()) {
 				AABB body = p.getBoundingBox().inflate(0.3);
 				if (p != ball.getOwner() && !p.isSpectator() && (body.contains(at) || body.clip(at, ahead).isPresent())) {
@@ -484,6 +345,9 @@ public final class HubGames {
 		{Items.CHICKEN, "Rubber Chicken"}, {Items.GOLD_NUGGET, "Lucky Coin"}, {dev.rubymod.registry.ModItems.RUBY, "Pond Ruby"},
 		{Items.NAUTILUS_SHELL, "Fancy Shell"}, {Items.LILY_PAD, null}, {Items.KELP, null}};
 
+	/** The latest catches, newest first, for the Pond's catch board. */
+	static final java.util.ArrayDeque<String> CATCH_LOG = new java.util.ArrayDeque<>();
+
 	/** A catch from the hub's pond (anything a fishing line pulls out there is a toy). True if it was one. */
 	public static boolean fished(ItemEntity item, ServerLevel level) {
 		if (!HubPark.POND.contains(item.position())) {
@@ -502,6 +366,11 @@ public final class HubGames {
 		}
 		if (fisher != null) {
 			fisher.sendOverlayMessage(Component.literal("You caught: " + stack.getHoverName().getString() + "!").withStyle(ChatFormatting.AQUA));
+			CATCH_LOG.addFirst(fisher.getName().getString() + ": " + stack.getHoverName().getString());
+			while (CATCH_LOG.size() > 6) {
+				CATCH_LOG.removeLast();
+			}
+			Village.catchBoard(level);
 			if ("Pond Ruby".equals(name)) {
 				HubPark.burst(level, item.position().add(0, 3, 0));
 			}
@@ -520,7 +389,7 @@ public final class HubGames {
 	private static final SoundEvent[] SONGS = {SoundEvents.MUSIC_DISC_CAT.value(), SoundEvents.MUSIC_DISC_BLOCKS.value(), SoundEvents.MUSIC_DISC_CHIRP.value(),
 		SoundEvents.MUSIC_DISC_FAR.value(), SoundEvents.MUSIC_DISC_MALL.value(), SoundEvents.MUSIC_DISC_STRAD.value(), SoundEvents.MUSIC_DISC_PIGSTEP.value(),
 		SoundEvents.MUSIC_DISC_OTHERSIDE.value(), SoundEvents.MUSIC_DISC_RELIC.value()};
-	private static final String[] SONG_NAMES = {"Cat", "Blocks", "Chirp", "Far", "Mall", "Strad", "Pigstep", "Otherside", "Relic"};
+	static final String[] SONG_NAMES = {"Cat", "Blocks", "Chirp", "Far", "Mall", "Strad", "Pigstep", "Otherside", "Relic"};
 	private static final int[] SONG_SECONDS = {185, 345, 185, 174, 197, 188, 149, 195, 218};
 	private static int song = -1;
 	private static int songEnds;
@@ -528,6 +397,32 @@ public final class HubGames {
 	/** The stage's music is playing (the plaza's tune waits). */
 	public static boolean stageBusy() {
 		return song >= 0 && tick < songEnds;
+	}
+
+	/** The DJ's pick: song {@code i} (or, for -1, stop the music). */
+	static void play(ServerPlayer p, int i) {
+		ServerLevel level = (ServerLevel) p.level();
+		for (ServerPlayer q : level.players()) {
+			q.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(null, SoundSource.RECORDS));
+		}
+		if (i < 0 || i >= SONGS.length) {
+			song = -1;
+			HubPark.say(level, HubPark.STAGE_CENTER, "The music stops. Ask DJ Remy for another song!");
+			return;
+		}
+		song = i;
+		songEnds = tick + SONG_SECONDS[song] * 20;
+		level.playSound(null, BlockPos.containing(HubPark.STAGE_CENTER), SONGS[song], SoundSource.RECORDS, 4.0F, 1.0F);
+		for (ServerPlayer q : level.players()) {
+			if (q.position().distanceTo(HubPark.STAGE_CENTER) < 40) {
+				q.sendOverlayMessage(Component.literal("\u266a Now playing: " + SONG_NAMES[song] + " (picked by " + p.getName().getString() + ")")
+						.withStyle(ChatFormatting.LIGHT_PURPLE));
+			}
+		}
+	}
+
+	static int song() {
+		return stageBusy() ? song : -1;
 	}
 
 	static void nextSong(ServerPlayer p) {
@@ -579,7 +474,6 @@ public final class HubGames {
 	static void tick(ServerLevel level) {
 		tick++;
 		tickSnowballs(level);
-		tickGolf(level);
 		tickStage(level);
 		for (Iterator<Ball> it = BALLS.iterator(); it.hasNext();) {
 			Ball b = it.next();
@@ -589,30 +483,10 @@ public final class HubGames {
 				it.remove();
 			}
 		}
-		if (galleryEnds < 0) {
-			for (ServerPlayer p : level.players()) {
-				if (p.blockPosition().below().equals(HubPark.GALLERY_START)) {
-					galleryStart(level);
-					break;
-				}
-			}
-		} else if (tick >= galleryEnds) {
-			galleryEnd(level);
-		} else if ((galleryEnds - tick) % 200 == 0) {
-			for (ServerPlayer p : level.players()) {
-				if (SCORES.containsKey(p.getUUID())) {
-					p.sendOverlayMessage(Component.literal((galleryEnds - tick) / 20 + " seconds left").withStyle(ChatFormatting.AQUA));
-				}
-			}
-		}
 	}
 
 	static void reset() {
 		BALLS.clear();
-		GOLF.clear();
-		TARGETS.clear();
-		SCORES.clear();
-		galleryEnds = -1;
 		song = -1;
 	}
 }

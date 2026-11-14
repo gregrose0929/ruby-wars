@@ -4540,6 +4540,9 @@ public final class AutoTest {
 				}
 			}
 			case "parkreal" -> parkRealScript();
+			case "parkhosts" -> parkHostsScript();
+			case "parkducks" -> parkDucksScript();
+			case "parktour" -> parkTourScript();
 			case "ridesmooth" -> rideSmoothScript();
 			case "park" -> {
 				// The hub's park: every ride, pad, game and toy.
@@ -4905,6 +4908,245 @@ public final class AutoTest {
 			});
 		}
 		then(1, mc -> log("ride trace: {}", RIDE_TRACE));
+	}
+
+	/** Photos of every part of the hub park from above, to judge how it looks. */
+	private static void parkTourScript() {
+		String[][] views = {
+			{"overview", "75 145 75", "5 100 5"},
+			{"plaza", "22 115 22", "0 101 0"},
+			{"funpark", "80 116 26", "56 101 0"},
+			{"funpark2", "56 108 -26", "56 101 4"},
+			{"coaster", "34 112 -2", "22 104 -22"},
+			{"tower", "64 118 -26", "44 106 -44"},
+			{"pond", "20 113 76", "0 101 56"},
+			{"golf", "-22 114 66", "-46 100 44"},
+			{"stage", "-28 112 -16", "-46 101 -34"},
+			{"parkour", "-6 118 -46", "-22 104 -70"},
+			{"gallery", "-24 108 18", "-41 100 6"},
+			{"cannon", "8 106 26", "0 101 18"},
+			{"close-train", "41 104 5", "42 101 0"},
+			{"close-carousel", "56 104 15", "63 102 10"},
+			{"close-ducks", "49.5 102.5 -2", "49 102 -8"},
+			{"close-rink", "51 105 4", "51 101 12"},
+			{"close-golf", "-50 106 30", "-44 101 40"},
+			{"close-golf2", "-50 106 58", "-44 101 46"},
+			{"close-stage", "-46 105 -26", "-46 103 -40"},
+			{"close-village", "-6 106 40", "4 101 52"},
+		};
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamerule doDaylightCycle false");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> command(mc, "gamemode creative @p"));
+		for (String[] v : views) {
+			then(20, mc -> { mc.player.getAbilities().flying = true; command(mc, "execute in rubymod:hub run tp @p " + v[1] + " facing " + v[2]); });
+			then(70, mc -> shot(mc, "tour-" + v[0]));
+		}
+	}
+
+	/** Right-click the host villager nearest {@code at}, as a player would. */
+	private static void talk(Minecraft mc, double x, double y, double z) {
+		var box = new net.minecraft.world.phys.AABB(x - 2, y - 1, z - 2, x + 2, y + 3, z + 2);
+		var hosts = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, box);
+		log("talk: hosts near ({}, {}, {}): {}", x, y, z, hosts.size());
+		if (!hosts.isEmpty()) {
+			var v = hosts.get(0);
+			lookAt(mc, v.getEyePosition());
+			mc.gameMode.interact(mc.player, v, new net.minecraft.world.phys.EntityHitResult(v), InteractionHand.MAIN_HAND);
+		}
+	}
+
+	/** Press button {@code key} on the host card that's open (logging what it offers). */
+	private static void press(Minecraft mc, String key) {
+		if (mc.gui.screen() instanceof HostScreen h) {
+			log("card: {} buttons {}", h.host(), h.keys());
+			int i = h.keys().indexOf(key);
+			h.pick(i < 0 ? 0 : i);
+		} else {
+			log("card: NO CARD (screen {})", mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getSimpleName());
+		}
+	}
+
+	private static void host(Minecraft mc, String tp, double x, double y, double z) {
+		command(mc, "execute in rubymod:hub run tp @p " + tp);
+	}
+
+	private static void parkDucksScript() {
+		then(0, mc -> command(mc, "gamemode adventure @a"));
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> {
+		});
+		// Dot: the duck shoot.
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p 53.0 101 -1.5 135 0"));
+		then(20, mc -> talk(mc, 54.5, 101, -2.5));
+		then(10, mc -> press(mc, "play"));
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p 49.5 101 -2.5 180 0"));
+		then(10, mc -> log("ducks: snowballs {} at {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.SNOWBALL), mc.player.blockPosition()));
+		for (int k = 0; k < 6; k++) {
+			then(8, mc -> {
+				var ducks = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class,
+						new net.minecraft.world.phys.AABB(44, 101, -11, 54, 106, -6), d -> d.getXRot() < 10);
+				int slot = slotOf(mc, net.minecraft.world.item.Items.SNOWBALL);
+				log("ducks: {} up, snowball slot {}, pos {}", ducks.size(), slot, ducks.isEmpty() ? "-" : ducks.get(0).position());
+				if (!ducks.isEmpty() && slot >= 0) {
+					mc.player.getInventory().setSelectedSlot(slot);
+					var d = ducks.get(0);
+					lookAt(mc, d.position().add(0, 0.6, 0));
+				}
+			});
+			then(2, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		}
+		then(20, mc -> shot(mc, "host-ducks"));
+		then(40, mc -> onServer(mc, server -> {
+			var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+			int n = 0;
+			for (var e : hub.getAllEntities()) {
+				if (e instanceof net.minecraft.world.entity.Display.ItemDisplay) {
+					n++;
+				}
+			}
+			log("server item displays in the hub: {}", n);
+			var all = hub.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, new net.minecraft.world.phys.AABB(40, 95, -15, 60, 110, 0));
+			for (var d : all) {
+				log("server display {} at {} item {}", d.getId(), d.position(), d.getItemStack().get(net.minecraft.core.component.DataComponents.ITEM_MODEL));
+			}
+			log("client displays near: {}", mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, new net.minecraft.world.phys.AABB(40, 95, -15, 60, 110, 0)).size());
+		}));
+	}
+
+	/** Every park host, clicked and played, the way a player would. */
+	private static void parkHostsScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		// Tilly: toys.
+		then(160, mc -> command(mc, "execute in rubymod:hub run tp @p 4.5 101 9.0 0 0"));
+		then(40, mc -> talk(mc, 4.5, 101, 11.5));
+		then(30, mc -> press(mc, "play"));
+		then(10, mc -> log("toys: chicken {} snowballs {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.CHICKEN),
+				mc.player.getInventory().countItem(net.minecraft.world.item.Items.SNOWBALL)));
+		// Rita: the coaster, all the way round.
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p 46.5 101 0.0 0 0"));
+		then(30, mc -> talk(mc, 46.5, 101, 2.5));
+		then(10, mc -> shot(mc, "host-card"));
+		then(5, mc -> press(mc, "play"));
+		then(10, mc -> log("coaster: riding {}", mc.player.isPassenger()));
+		then(140, mc -> {
+			log("coaster: lift at {}", mc.player.position());
+			shot(mc, "host-coaster-lift");
+		});
+		then(160, mc -> {
+			log("coaster: running at {}", mc.player.position());
+			shot(mc, "host-coaster-drop");
+		});
+		then(120, mc -> shot(mc, "host-coaster-loop"));
+		then(400, mc -> log("coaster: after the ride riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		// Wally: the Big Wheel.
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p 59.5 101 -1.5 180 0"));
+		then(20, mc -> talk(mc, 59.5, 101, -3.5));
+		then(10, mc -> press(mc, "play"));
+		then(200, mc -> log("wheel: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		then(240, mc -> {
+			log("wheel: later at {}", mc.player.position());
+			shot(mc, "host-wheel");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		then(10, mc -> log("wheel: got off at {}", mc.player.blockPosition()));
+		// Cora: the carousel.
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p 56.0 101 9.5 270 0"));
+		then(20, mc -> talk(mc, 57.5, 101, 9.5));
+		then(10, mc -> press(mc, "play"));
+		then(60, mc -> {
+			log("carousel: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			shot(mc, "host-carousel");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// Buzz: bumper cars, driven with W.
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p 49.5 101 5.0 0 0"));
+		then(20, mc -> talk(mc, 49.5, 101, 6.5));
+		then(10, mc -> press(mc, "play"));
+		then(10, mc -> {
+			log("bumper: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			mc.options.keyUp.setDown(true);
+		});
+		then(30, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("bumper: drove to {}", mc.player.position());
+			shot(mc, "host-bumper");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// Dot: the duck shoot.
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p 53.0 101 -1.5 135 0"));
+		then(20, mc -> talk(mc, 54.5, 101, -2.5));
+		then(10, mc -> press(mc, "play"));
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p 49.5 101 -2.5 180 0"));
+		then(10, mc -> log("ducks: snowballs {} at {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.SNOWBALL), mc.player.blockPosition()));
+		for (int k = 0; k < 6; k++) {
+			then(8, mc -> {
+				var ducks = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class,
+						new net.minecraft.world.phys.AABB(44, 101, -11, 54, 106, -6), d -> d.getXRot() < 10);
+				int slot = slotOf(mc, net.minecraft.world.item.Items.SNOWBALL);
+				log("ducks: {} up, snowball slot {}, pos {}", ducks.size(), slot, ducks.isEmpty() ? "-" : ducks.get(0).position());
+				if (!ducks.isEmpty() && slot >= 0) {
+					mc.player.getInventory().setSelectedSlot(slot);
+					var d = ducks.get(0);
+					lookAt(mc, d.position().add(0, 0.6, 0));
+				}
+			});
+			then(2, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		}
+		then(20, mc -> shot(mc, "host-ducks"));
+		// Gus: mini golf, putting with the power bar.
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p -43.5 101 56.0 180 0"));
+		then(20, mc -> talk(mc, -43.5, 101, 57.5));
+		then(10, mc -> press(mc, "play"));
+		then(20, mc -> {
+			log("golf: at {} holding {}", mc.player.blockPosition(), mc.player.getMainHandItem().getHoverName().getString());
+			mc.player.setYRot(-90);
+			mc.player.setXRot(30);
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+		});
+		then(14, mc -> {
+			shot(mc, "host-golf-power");
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+		});
+		then(60, mc -> {
+			var balls = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Interaction.class, mc.player.getBoundingBox().inflate(25));
+			log("golf: ball at {}", balls.isEmpty() ? "none" : balls.get(0).position());
+			shot(mc, "host-golf");
+		});
+		// Lulu: up the tower, down the slide.
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p 45.5 101 -38.0 180 0"));
+		then(20, mc -> talk(mc, 45.5, 101, -39.5));
+		then(10, mc -> press(mc, "play"));
+		then(20, mc -> log("tower: at {}", mc.player.blockPosition()));
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p 48.5 117 -43.5"));
+		then(30, mc -> {
+			log("slide: riding {}", mc.player.isPassenger());
+			shot(mc, "host-slide");
+		});
+		then(160, mc -> log("slide: ended at {}", mc.player.blockPosition()));
+		// Finn: a rod.
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p -3.5 101 46.0 180 0"));
+		then(20, mc -> talk(mc, -3.5, 101, 44.5));
+		then(10, mc -> press(mc, "play"));
+		then(10, mc -> log("fishing: holding {}", mc.player.getMainHandItem().getHoverName().getString()));
+		// DJ Remy: pick a song.
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p -45.5 102 -39.0 180 -10"));
+		then(20, mc -> talk(mc, -45.5, 102, -41.5));
+		then(10, mc -> press(mc, "3"));
+		then(10, mc -> onServer(mc, server -> log("dj: stage busy {}", dev.rubymod.game.hub.HubGames.stageBusy())));
+		then(5, mc -> command(mc, "execute in rubymod:hub run tp @p -45.5 101 -28.0 180 -15"));
+		then(60, mc -> shot(mc, "host-stage"));
+		// Pip: parkour.
+		then(10, mc -> command(mc, "execute in rubymod:hub run tp @p -20.5 103 -33.0 180 0"));
+		then(20, mc -> talk(mc, -20.5, 103, -34.5));
+		then(10, mc -> press(mc, "play"));
+		then(10, mc -> log("parkour: at {}", mc.player.blockPosition()));
 	}
 
 	/** The hub park, played as a player would: clicks, throws and punches from the client. */

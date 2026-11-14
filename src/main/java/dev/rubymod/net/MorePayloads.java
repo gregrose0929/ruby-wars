@@ -532,7 +532,41 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: a park host's card. buttons: "key|label" each (the first is the big one). */
+	public record HostCard(String host, String title, String body, String icon, int color, List<String> buttons) implements CustomPacketPayload {
+		public static final Type<HostCard> TYPE = new Type<>(RubyMod.id("host_card"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, HostCard> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, HostCard::host,
+				ByteBufCodecs.STRING_UTF8, HostCard::title,
+				ByteBufCodecs.STRING_UTF8, HostCard::body,
+				ByteBufCodecs.STRING_UTF8, HostCard::icon,
+				ByteBufCodecs.INT, HostCard::color,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), HostCard::buttons,
+				HostCard::new);
+
+		@Override
+		public Type<HostCard> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: a button on a host's card. */
+	public record HostPick(String host, String key) implements CustomPacketPayload {
+		public static final Type<HostPick> TYPE = new Type<>(RubyMod.id("host_pick"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, HostPick> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, HostPick::host,
+				ByteBufCodecs.STRING_UTF8, HostPick::key,
+				HostPick::new);
+
+		@Override
+		public Type<HostPick> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(HostCard.TYPE, HostCard.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(HostPick.TYPE, HostPick.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(TravelMenu.TYPE, TravelMenu.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TravelPick.TYPE, TravelPick.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ConvoyHud.TYPE, ConvoyHud.CODEC);
