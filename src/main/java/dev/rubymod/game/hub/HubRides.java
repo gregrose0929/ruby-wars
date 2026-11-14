@@ -149,6 +149,9 @@ public final class HubRides {
 
 	// ----- Starting and running rides -----
 
+	/** How far above the path the rider sits (the old seat was this tall). */
+	private static final double SEAT = 0.3;
+
 	/** Ride along {@code path} (points {@code kind.speed} apart... or, for flights, one per tick). */
 	static void start(ServerPlayer p, List<Vec3> path, Kind kind, BlockState car, float carW, float carH, float carL) {
 		if (riding(p) || p.isPassenger()) {
@@ -156,13 +159,15 @@ public final class HubRides {
 		}
 		ServerLevel level = (ServerLevel) p.level();
 		Vec3 first = path.get(0);
-		Interaction seat = EntityTypes.INTERACTION.create(level, EntitySpawnReason.EVENT);
+		// An invisible display entity as the seat: displays send their position every tick and glide between updates,
+		// so the ride is smooth (an interaction entity only sends every few ticks, which made rides judder).
+		Display.BlockDisplay seat = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
 		if (seat == null) {
 			return;
 		}
-		((InteractionAccessor) seat).rubymod$setWidth(0.6F);
-		((InteractionAccessor) seat).rubymod$setHeight(0.3F);
-		seat.snapTo(first.x, first.y, first.z, 0, 0);
+		((BlockDisplayAccessor) seat).rubymod$setBlockState(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		((DisplayAccessor) seat).rubymod$setPosRotInterpolationDuration(2);
+		seat.snapTo(first.x, first.y + SEAT, first.z, 0, 0);
 		level.addFreshEntity(seat);
 		seat.addTag(TEMP);
 		LIVE.add(seat.getUUID());
@@ -211,7 +216,7 @@ public final class HubRides {
 			Vec3 pos = r.path.get(i);
 			Vec3 next = r.path.get(Math.min(r.path.size() - 1, i + 2));
 			float yaw = (float) Math.toDegrees(Math.atan2(-(next.x - pos.x), next.z - pos.z));
-			seat.teleportTo(pos.x, pos.y, pos.z);
+			seat.teleportTo(pos.x, pos.y + SEAT, pos.z);
 			Entity car = r.car == null ? null : level.getEntity(r.car);
 			if (car != null) {
 				car.teleportTo(pos.x, pos.y, pos.z);
@@ -262,6 +267,7 @@ public final class HubRides {
 		final Vec3 pivot;
 		final double length;
 		UUID seat;
+		UUID handle;
 		final List<UUID> ropes = new ArrayList<>();
 		UUID board;
 		double phase;
@@ -278,12 +284,22 @@ public final class HubRides {
 	/** A swing hanging from {@code pivot}: two ropes and a board you right-click to sit on. */
 	static void swing(ServerLevel level, Vec3 pivot, double length) {
 		Swing s = new Swing(pivot, length);
-		Interaction seat = EntityTypes.INTERACTION.create(level, EntitySpawnReason.EVENT);
-		if (seat == null) {
+		// What you right-click (an interaction box at the board), and what you sit on (an invisible display, which
+		// moves smoothly).
+		Interaction handle = EntityTypes.INTERACTION.create(level, EntitySpawnReason.EVENT);
+		Display.BlockDisplay seat = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
+		if (handle == null || seat == null) {
 			return;
 		}
-		((InteractionAccessor) seat).rubymod$setWidth(0.8F);
-		((InteractionAccessor) seat).rubymod$setHeight(0.4F);
+		((InteractionAccessor) handle).rubymod$setWidth(1.0F);
+		((InteractionAccessor) handle).rubymod$setHeight(0.6F);
+		handle.snapTo(pivot.x, pivot.y - length - 0.2, pivot.z, 0, 0);
+		level.addFreshEntity(handle);
+		handle.addTag(HubPark.TAG);
+		HubPark.keep(handle);
+		s.handle = handle.getUUID();
+		((BlockDisplayAccessor) seat).rubymod$setBlockState(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		((DisplayAccessor) seat).rubymod$setPosRotInterpolationDuration(2);
 		seat.snapTo(pivot.x, pivot.y - length, pivot.z, 0, 0);
 		level.addFreshEntity(seat);
 		seat.addTag(HubPark.TAG);
@@ -317,10 +333,15 @@ public final class HubRides {
 		SWINGS.clear();
 	}
 
-	static boolean isSwingSeat(Entity e) {
+	/** Right-clicking a swing's board: sit on it (if it's free). */
+	static boolean mountSwing(ServerPlayer p, Entity clicked) {
 		for (Swing s : SWINGS) {
-			if (e.getUUID().equals(s.seat)) {
-				return true;
+			if (clicked.getUUID().equals(s.handle) || clicked.getUUID().equals(s.seat)) {
+				Entity seat = ((ServerLevel) p.level()).getEntity(s.seat);
+				if (seat == null || seat.isVehicle() || p.isPassenger()) {
+					return false;
+				}
+				return p.startRiding(seat, true, true);
 			}
 		}
 		return false;
@@ -351,7 +372,11 @@ public final class HubRides {
 		double y = -s.length * Math.cos(angle);
 		double z = -s.length * Math.sin(angle);
 		if (seat != null) {
-			seat.teleportTo(s.pivot.x, s.pivot.y + y - 0.2, s.pivot.z + z);
+			seat.teleportTo(s.pivot.x, s.pivot.y + y + 0.1, s.pivot.z + z);
+		}
+		Entity handle = level.getEntity(s.handle);
+		if (handle != null) {
+			handle.teleportTo(s.pivot.x, s.pivot.y + y - 0.2, s.pivot.z + z);
 		}
 		Quaternionf tilt = new Quaternionf().rotateX((float) angle);
 		Quaternionf down = new Quaternionf().rotateX((float) Math.PI);

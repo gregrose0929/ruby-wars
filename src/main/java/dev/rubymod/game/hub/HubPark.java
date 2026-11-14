@@ -93,8 +93,26 @@ public final class HubPark {
 	private static final BlockPos SNOW_PILE = new BlockPos(68, FLOOR + 1, 5);
 	private static final BlockPos JUKEBOX = new BlockPos(-46, FLOOR + 2, -40);
 
-	private record Pad(String label, Vec3 to) {
+	/** A launch pad: straight to {@code to}, or (when that's null) a travel pad that asks where you'd like to go. */
+	private record Pad(String label, Vec3 to, String here) {
 	}
+
+	/** Everywhere a travel pad can fly you: id, name, a few words, an icon, where you land. */
+	private record Place(String id, String name, String about, String icon, Vec3 land) {
+	}
+
+	private static final List<Place> PLACES = List.of(
+			new Place("plaza", "The Plaza", "Toys and fireworks", "minecraft:bell", stand(-1, FLOOR, 6)),
+			new Place("funpark", "Fun Park", "Coaster and trampolines", "minecraft:minecart", stand(46, FLOOR, 1)),
+			new Place("tower", "The Tower", "Water slide and zip line", "minecraft:water_bucket", stand(37, FLOOR, -40)),
+			new Place("pond", "The Pond", "Fishing and swings", "minecraft:fishing_rod", stand(6, FLOOR, 46)),
+			new Place("golf", "Mini Golf", "Punch the ball in the hole", "minecraft:slime_ball", stand(-39, FLOOR, 54)),
+			new Place("stage", "The Stage", "Music and a dance floor", "minecraft:jukebox", stand(-37, FLOOR, -35)),
+			new Place("gallery", "The Gallery", "Build Battle winner", "minecraft:painting", stand(-33, FLOOR - 2, 6)),
+			new Place("parkour", "Sky Parkour", "Jump across the sky", "minecraft:feather", stand(-22, FLOOR + 3, -36)));
+
+	/** Who has the travel menu open, and where they were standing. */
+	private static final Map<UUID, Vec3> TRAVEL_MENU = new HashMap<>();
 
 	/** Launch pads: each of the 3x3 blocks of a pad, and where it sends you. */
 	private static final Map<BlockPos, Pad> PADS = new HashMap<>();
@@ -138,12 +156,13 @@ public final class HubPark {
 			}
 			return InteractionResult.PASS;
 		});
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.TravelPick.TYPE,
+				(payload, context) -> travelPicked(context.player(), payload.id()));
 		net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
 			}
-			if (HubRides.isSwingSeat(entity) && !entity.isVehicle() && !sp.isPassenger()) {
-				sp.startRiding(entity, true, true);
+			if (HubRides.mountSwing(sp, entity)) {
 				sp.sendOverlayMessage(Component.literal("Wheee! Crouch to get off.").withStyle(ChatFormatting.YELLOW));
 				return InteractionResult.SUCCESS;
 			}
@@ -318,7 +337,7 @@ public final class HubPark {
 
 	/** A launch pad (3x3, glowing middle) at x, y, z, sending you to {@code to}. */
 	private static void pad(ServerLevel level, int x, int y, int z, String label, Vec3 to) {
-		Pad pad = new Pad(label, to);
+		Pad pad = new Pad(label, to, null);
 		for (int dx = -1; dx <= 1; dx++) {
 			for (int dz = -1; dz <= 1; dz++) {
 				set(level, x + dx, y, z + dz, dx == 0 && dz == 0 ? Blocks.EMERALD_BLOCK.defaultBlockState() : Blocks.CONCRETE.pick(DyeColor.LIME).defaultBlockState());
@@ -328,6 +347,57 @@ public final class HubPark {
 			}
 		}
 		label(level, x + 0.5, y + 2.6, z + 0.5, "↗ " + label, ChatFormatting.GREEN, 1.0F);
+	}
+
+	/** A travel pad (3x3, light blue): step on it to pick any place in the hub to fly to. {@code here}: this place's id. */
+	private static void travelPad(ServerLevel level, int x, int y, int z, String here) {
+		Pad pad = new Pad("", null, here);
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				set(level, x + dx, y, z + dz, dx == 0 && dz == 0 ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.CONCRETE.pick(DyeColor.LIGHT_BLUE).defaultBlockState());
+				set(level, x + dx, y + 1, z + dz, Blocks.AIR.defaultBlockState());
+				set(level, x + dx, y + 2, z + dz, Blocks.AIR.defaultBlockState());
+				PADS.put(new BlockPos(x + dx, y, z + dz), pad);
+			}
+		}
+		label(level, x + 0.5, y + 2.9, z + 0.5, "✈ Fly anywhere", ChatFormatting.AQUA, 1.1F);
+		label(level, x + 0.5, y + 2.5, z + 0.5, "step on to pick a place", ChatFormatting.GRAY, 0.7F);
+	}
+
+	private static void fly(ServerPlayer p, Vec3 to, String name) {
+		ServerLevel level = (ServerLevel) p.level();
+		Vec3 from = p.position();
+		double dist = from.distanceTo(to);
+		int ticks = (int) (24 + dist * 0.75);
+		HubRides.start(p, HubRides.arc(from, to, 5 + dist * 0.15, ticks), HubRides.Kind.FLIGHT, null, 0, 0, 0);
+		level.playSound(null, p.blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 1.0F, 1.2F);
+		p.sendOverlayMessage(Component.literal("Off to " + name + "!").withStyle(ChatFormatting.GREEN));
+	}
+
+	private static void openTravel(ServerPlayer p, String here) {
+		List<String> list = new ArrayList<>();
+		for (Place pl : PLACES) {
+			if (!pl.id().equals(here)) {
+				list.add(pl.id() + "|" + pl.name() + "|" + pl.about() + "|" + pl.icon());
+			}
+		}
+		TRAVEL_MENU.put(p.getUUID(), p.position());
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.rubymod.net.MorePayloads.TravelMenu(list));
+		p.level().playSound(null, p.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
+	}
+
+	/** A place picked from the travel menu (only from someone who was just shown it, still near that pad). */
+	private static void travelPicked(ServerPlayer p, String id) {
+		Vec3 at = TRAVEL_MENU.remove(p.getUUID());
+		if (at == null || p.level().dimension() != Hub.HUB || p.isPassenger() || p.position().distanceTo(at) > 6) {
+			return;
+		}
+		for (Place pl : PLACES) {
+			if (pl.id().equals(id)) {
+				fly(p, pl.land(), pl.name());
+				return;
+			}
+		}
 	}
 
 	public static void build(ServerLevel level) {
@@ -377,6 +447,8 @@ public final class HubPark {
 		pad(level, -20, FLOOR, 9, "The Gallery", stand(-33, FLOOR - 2, 6));
 		pad(level, -20, FLOOR, -4, "The Stage", stand(-37, FLOOR, -35));
 		pad(level, -17, FLOOR, -10, "Sky Parkour", stand(-22, FLOOR + 3, -36));
+		// The gallery island (the Build Battle showcase) had no way back: a travel pad on its south edge, clear of the plot.
+		travelPad(level, -41, FLOOR - 2, -3, "gallery");
 		// The toy chest, the fireworks button.
 		set(level, TOY_CHEST.getX(), TOY_CHEST.getY(), TOY_CHEST.getZ(), Blocks.BARREL.defaultBlockState());
 		label(level, TOY_CHEST.getX() + 0.5, TOY_CHEST.getY() + 1.5, TOY_CHEST.getZ() + 0.5, "TOY CHEST", ChatFormatting.LIGHT_PURPLE, 0.9F);
@@ -410,7 +482,7 @@ public final class HubPark {
 	private static void funPark(ServerLevel level) {
 		island(level, FX, FZ, 17, FLOOR);
 		label(level, FX + 0.5, FLOOR + 9, FZ + 0.5, "FUN PARK", ChatFormatting.GOLD, 3.0F);
-		pad(level, 42, FLOOR, 6, "The Plaza", stand(20, FLOOR, 3));
+		travelPad(level, 42, FLOOR, 6, "funpark");
 		// The rollercoaster station.
 		box(level, 39, FLOOR, -3, 44, FLOOR, 3, Blocks.POLISHED_ANDESITE.defaultBlockState());
 		for (int[] post : new int[][] {{39, -3}, {44, -3}, {39, 3}, {44, 3}}) {
@@ -478,7 +550,7 @@ public final class HubPark {
 		int cz = -44;
 		island(level, cx, cz, 11, FLOOR);
 		label(level, 36.5, FLOOR + 8, -39.5, "THE TOWER", ChatFormatting.AQUA, 2.5F);
-		pad(level, 36, FLOOR, -46, "The Plaza", stand(18, FLOOR, -5));
+		travelPad(level, 36, FLOOR, -46, "tower");
 		BlockState brick = Blocks.STONE_BRICKS.defaultBlockState();
 		// The tower: 5x5, hollow, a ladder inside up the north wall, a door on the south side.
 		for (int y = FLOOR + 1; y <= FLOOR + 15; y++) {
@@ -569,7 +641,7 @@ public final class HubPark {
 	private static void pond(ServerLevel level) {
 		island(level, 0, 56, 14, FLOOR);
 		label(level, 0.5, FLOOR + 8, 56.5, "THE POND", ChatFormatting.AQUA, 2.5F);
-		pad(level, 9, FLOOR, 48, "The Plaza", stand(10, FLOOR, 15));
+		travelPad(level, 9, FLOOR, 48, "pond");
 		// The fishing pond, with a dock.
 		box(level, -8, FLOOR - 4, 46, 5, FLOOR - 4, 57, Blocks.CLAY.defaultBlockState());
 		for (int x = -8; x <= 5; x++) {
@@ -616,7 +688,7 @@ public final class HubPark {
 		int cz = 44;
 		island(level, cx, cz, 16, FLOOR);
 		label(level, cx + 0.5, FLOOR + 8, cz + 0.5, "MINI GOLF", ChatFormatting.GREEN, 2.5F);
-		pad(level, -36, FLOOR, 56, "The Plaza", stand(-13, FLOOR, 15));
+		travelPad(level, -36, FLOOR, 56, "golf");
 		BlockState wall = Blocks.SPRUCE_PLANKS.defaultBlockState();
 		BlockState green = Blocks.MOSS_BLOCK.defaultBlockState();
 		// {x1, z1, x2, z2} of each hole's lane (tee at the west end, hole near the east), and obstacles inside.
@@ -659,7 +731,7 @@ public final class HubPark {
 		int cz = -34;
 		island(level, cx, cz, 12, FLOOR);
 		label(level, cx + 0.5, FLOOR + 10, cz + 0.5, "THE STAGE", ChatFormatting.LIGHT_PURPLE, 2.5F);
-		pad(level, -36, FLOOR, -31, "The Plaza", stand(-18, FLOOR, -1));
+		travelPad(level, -36, FLOOR, -31, "stage");
 		// The stage, its back wall of lights, the DJ's jukebox.
 		box(level, -52, FLOOR + 1, -43, -40, FLOOR + 1, -38, Blocks.DARK_OAK_PLANKS.defaultBlockState());
 		for (int x = -52; x <= -40; x++) {
@@ -727,7 +799,7 @@ public final class HubPark {
 		}
 		BlockPos end = PARKOUR.get(PARKOUR.size() - 1);
 		label(level, end.getX() + 0.5, end.getY() + 3.4, end.getZ() + 0.5, "YOU MADE IT!", ChatFormatting.GOLD, 1.2F);
-		pad(level, end.getX(), end.getY(), end.getZ() - 4, "The Plaza", stand(-1, FLOOR, 6));
+		travelPad(level, end.getX(), end.getY(), end.getZ() - 4, "parkour");
 		box(level, end.getX() - 1, end.getY(), end.getZ() - 3, end.getX() + 1, end.getY(), end.getZ() - 3, Blocks.GOLD_BLOCK.defaultBlockState());
 		parkourZone = new AABB(x0 - 8, FLOOR - 30, end.getZ() - 8, x0 + 8, FLOOR + 40, -32);
 	}
@@ -776,13 +848,12 @@ public final class HubPark {
 			if (pad == null) {
 				ON_PAD.remove(p.getUUID());
 			} else if (ON_PAD.add(p.getUUID())) {
-				Vec3 from = p.position();
-				double dist = from.distanceTo(pad.to());
-				int ticks = (int) (24 + dist * 0.75);
-				HubRides.start(p, HubRides.arc(from, pad.to(), 5 + dist * 0.15, ticks), HubRides.Kind.FLIGHT, null, 0, 0, 0);
-				level.playSound(null, p.blockPosition(), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 1.0F, 1.2F);
-				p.sendOverlayMessage(Component.literal("Off to " + pad.label() + "!").withStyle(ChatFormatting.GREEN));
-				continue;
+				if (pad.to() == null) {
+					openTravel(p, pad.here());
+				} else {
+					fly(p, pad.to(), pad.label());
+					continue;
+				}
 			}
 			// Trampolines.
 			if (p.onGround() && TRAMPOLINES.contains(under)) {

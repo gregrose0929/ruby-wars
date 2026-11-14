@@ -4539,6 +4539,8 @@ public final class AutoTest {
 					then(20, mc -> log("{} left: {}", id, pg(id).debugState()));
 				}
 			}
+			case "parkreal" -> parkRealScript();
+			case "ridesmooth" -> rideSmoothScript();
 			case "park" -> {
 				// The hub's park: every ride, pad, game and toy.
 				then(0, mc -> {
@@ -4864,6 +4866,177 @@ public final class AutoTest {
 		then(40, mc -> command(mc, "execute as @p run play horde"));
 		then(100, mc -> onServer(mc, server -> log("horde vote with none open: {}", dev.rubymod.game.Horde.vote(me(server), "guns"))));
 		then(5, mc -> command(mc, "execute as @p run hub"));
+	}
+
+	/** Look at a point (client side, as a player would). */
+	private static void lookAt(Minecraft mc, net.minecraft.world.phys.Vec3 at) {
+		var d = at.subtract(mc.player.getEyePosition());
+		mc.player.setYRot((float) Math.toDegrees(Math.atan2(-d.x, d.z)));
+		mc.player.setXRot((float) -Math.toDegrees(Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
+	}
+
+	private static void clickBlock(Minecraft mc, net.minecraft.core.BlockPos pos) {
+		lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(pos));
+		mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos),
+				net.minecraft.core.Direction.UP, pos, false));
+	}
+
+	private static int slotOf(Minecraft mc, net.minecraft.world.item.Item item) {
+		for (int i = 0; i < 9; i++) {
+			if (mc.player.getInventory().getItem(i).is(item)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	private static final StringBuilder RIDE_TRACE = new StringBuilder();
+
+	/** A flight from the plaza, traced tick by tick on the client to see whether it moves evenly. */
+	private static void rideSmoothScript() {
+		then(0, mc -> command(mc, "time set noon"));
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(140, mc -> command(mc, "execute as @p at @s run tp @s 18.5 101 0.5 90 0"));
+		then(10, mc -> command(mc, "execute as @p at @s run tp @s 21.5 101 0.5 90 0"));
+		for (int i = 0; i < 60; i++) {
+			then(1, mc -> {
+				var v = mc.player.getVehicle();
+				RIDE_TRACE.append(String.format(java.util.Locale.ROOT, "%.2f/%.2f%s ", mc.player.getX(), mc.player.getY(), v == null ? "-" : ""));
+			});
+		}
+		then(1, mc -> log("ride trace: {}", RIDE_TRACE));
+	}
+
+	/** The hub park, played as a player would: clicks, throws and punches from the client. */
+	private static void parkRealScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(140, mc -> command(mc, "execute as @p at @s run tp @s 3.5 101 8.5 0 0"));
+		then(20, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(3, 101, 10)));
+		then(20, mc -> log("toy chest: chicken {} confetti {} ball {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.CHICKEN),
+				mc.player.getInventory().countItem(net.minecraft.world.item.Items.FIREWORK_STAR), mc.player.getInventory().countItem(net.minecraft.world.item.Items.SLIME_BALL)));
+		then(5, mc -> {
+			int slot = slotOf(mc, net.minecraft.world.item.Items.SLIME_BALL);
+			log("ball slot {}", slot);
+			if (slot >= 0) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(10, mc -> log("bouncy ball displays near: {}", mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.BlockDisplay.class,
+				mc.player.getBoundingBox().inflate(12)).size()));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s 11.5 101 4.5 90 0"));
+		then(10, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(13, 101, 4)));
+		then(10, mc -> log("bench: passenger {}", mc.player.isPassenger()));
+		then(5, mc -> command(mc, "ride @p dismount"));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -6.5 101 -2.5 180 0"));
+		then(10, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-6, 102, -4)));
+		then(20, mc -> shot(mc, "real-fireworks"));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s 52.5 101 -1.5 180 0"));
+		then(20, mc -> log("gallery: snowballs {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.SNOWBALL)));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s 52.5 101 -3.5 180 0"));
+		for (int shot = 0; shot < 3; shot++) {
+			then(10, mc -> {
+				net.minecraft.core.BlockPos target = null;
+				for (int x = 46; x <= 58 && target == null; x++) {
+					for (int y = 101; y <= 105; y++) {
+						if (mc.level.getBlockState(new net.minecraft.core.BlockPos(x, y, -12)).is(net.minecraft.world.level.block.Blocks.TARGET)) {
+							target = new net.minecraft.core.BlockPos(x, y, -12);
+							break;
+						}
+					}
+				}
+				log("aiming at target {}", target);
+				int slot = slotOf(mc, net.minecraft.world.item.Items.SNOWBALL);
+				if (target != null && slot >= 0) {
+					mc.player.getInventory().setSelectedSlot(slot);
+					lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(target).add(0, 0.6, 0.5));
+				}
+			});
+			then(3, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+			then(25, mc -> log("after a throw: snowballs left {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.SNOWBALL)));
+		}
+		then(5, mc -> shot(mc, "real-gallery"));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -53.5 101 36.5 90 30"));
+		then(30, mc -> {
+			var balls = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Interaction.class, mc.player.getBoundingBox().inflate(4));
+			log("golf: hitboxes near {}", balls.size());
+		});
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -54.0 101 36.5 270 30"));
+		then(10, mc -> {
+			var balls = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Interaction.class, mc.player.getBoundingBox().inflate(4));
+			if (!balls.isEmpty()) {
+				var ball = balls.get(0);
+				lookAt(mc, ball.position().add(0, 0.2, 0));
+				mc.gameMode.attack(mc.player, ball);
+				log("golf: punched the ball at {}", ball.position());
+			}
+		});
+		then(40, mc -> {
+			var balls = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Interaction.class, mc.player.getBoundingBox().inflate(20));
+			log("golf: ball now at {}", balls.isEmpty() ? "gone" : balls.get(0).position());
+			shot(mc, "real-golf");
+		});
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -1.5 101 44.5 180 0"));
+		then(10, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-2, 101, 45)));
+		then(10, mc -> {
+			int slot = slotOf(mc, net.minecraft.world.item.Items.FISHING_ROD);
+			log("fishing: rod slot {}", slot);
+			if (slot >= 0) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -0.5 101 48.5 0 20"));
+		then(10, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(40, mc -> log("fishing: hook {} in water {}", mc.player.fishing == null ? "none" : mc.player.fishing.position(),
+				mc.player.fishing != null && mc.player.fishing.isInWater()));
+		then(5, mc -> shot(mc, "real-fishing"));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -46.5 102 -38.5 180 10"));
+		then(20, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-46, 102, -40)));
+		then(10, mc -> onServer(mc, server -> log("jukebox: stage busy {}", dev.rubymod.game.hub.HubGames.stageBusy())));
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s 6.5 101 60.5 0 30"));
+		then(20, mc -> {
+			var seats = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Interaction.class, mc.player.getBoundingBox().inflate(5));
+			log("swing seats near {}", seats.size());
+			if (!seats.isEmpty()) {
+				lookAt(mc, seats.get(0).position());
+				mc.gameMode.interact(mc.player, seats.get(0), new net.minecraft.world.phys.EntityHitResult(seats.get(0)), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(40, mc -> log("swing: passenger {}", mc.player.isPassenger()));
+		then(30, mc -> shot(mc, "real-swing"));
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// Island to island: the Fun Park's travel pad, then straight to the Pond.
+		then(20, mc -> command(mc, "execute as @p at @s run tp @s 39.5 101 6.5 90 20"));
+		then(10, mc -> command(mc, "execute as @p at @s run tp @s 42.5 101 6.5 90 20"));
+		then(20, mc -> {
+			log("travel: screen {}", mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getSimpleName());
+			shot(mc, "real-travel");
+		});
+		then(5, mc -> {
+			if (mc.gui.screen() instanceof TravelScreen t) {
+				log("travel: places {}", t.ids());
+				t.pick(t.ids().indexOf("pond"));
+			}
+		});
+		then(15, mc -> shot(mc, "real-travel-flying"));
+		then(100, mc -> log("travel: landed at {} riding {}", mc.player.blockPosition(), mc.player.isPassenger()));
+		// The gallery island's new pad.
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s -41.5 100 -0.5 180 20"));
+		then(10, mc -> command(mc, "execute as @p at @s run tp @s -40.5 99 -2.5 180 20"));
+		then(20, mc -> {
+			log("gallery pad: screen {}", mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getSimpleName());
+			shot(mc, "real-gallerypad");
+		});
+		then(5, mc -> {
+			if (mc.gui.screen() instanceof TravelScreen t) {
+				t.pick(t.ids().indexOf("plaza"));
+			}
+		});
+		then(100, mc -> log("gallery pad: landed at {}", mc.player.blockPosition()));
 	}
 
 	/** Levels and XP, armor sets (lent in the hub, and over real armor), the profile, the game picker, the simple tank and aircraft displays. */

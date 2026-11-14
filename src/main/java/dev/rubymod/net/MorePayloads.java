@@ -506,7 +506,35 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: open the hub travel menu. Each place is "id|name|about|icon item id". */
+	public record TravelMenu(List<String> places) implements CustomPacketPayload {
+		public static final Type<TravelMenu> TYPE = new Type<>(RubyMod.id("travel_menu"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, TravelMenu> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), TravelMenu::places,
+				TravelMenu::new);
+
+		@Override
+		public Type<TravelMenu> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: fly to this place. */
+	public record TravelPick(String id) implements CustomPacketPayload {
+		public static final Type<TravelPick> TYPE = new Type<>(RubyMod.id("travel_pick"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, TravelPick> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, TravelPick::id,
+				TravelPick::new);
+
+		@Override
+		public Type<TravelPick> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(TravelMenu.TYPE, TravelMenu.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(TravelPick.TYPE, TravelPick.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ConvoyHud.TYPE, ConvoyHud.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ConvoyCards.TYPE, ConvoyCards.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ConvoyPick.TYPE, ConvoyPick.CODEC);
