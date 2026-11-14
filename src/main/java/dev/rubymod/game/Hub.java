@@ -484,6 +484,9 @@ public final class Hub {
 	public static void tick(MinecraftServer server) {
 		tickJoins(server);
 		ServerLevel hub = server.getLevel(HUB);
+		if (hub != null && !hub.players().isEmpty()) {
+			dev.rubymod.game.hub.HubPark.tick(hub);
+		}
 		if (hub == null || server.getTickCount() % 4 != 0) {
 			return;
 		}
@@ -591,7 +594,7 @@ public final class Hub {
 			}
 		}
 		// The plaza's tune: twenty seconds long, started again as it ends (in the Music volume, for anyone who'd rather not).
-		if (!hub.players().isEmpty() && server.getTickCount() % 400 < 20) {
+		if (!hub.players().isEmpty() && server.getTickCount() % 400 < 20 && !dev.rubymod.game.hub.HubGames.stageBusy()) {
 			hub.playSound(null, new BlockPos(0, FLOOR + 3, 0), dev.rubymod.registry.ModSounds.HUB_THEME, net.minecraft.sounds.SoundSource.MUSIC, 1.0F, 1.0F);
 		}
 		if (!hub.players().isEmpty() && server.getTickCount() % 40 == 0) {
@@ -729,6 +732,7 @@ public final class Hub {
 		islet(level, -6, FLOOR + 8, 36, 3);
 		galleryBase(level);
 		podiumBase(level);
+		dev.rubymod.game.hub.HubPark.build(level);
 		// The war room: a table between the Rift and Convoy gates, with the season's map on it.
 		for (int x = -1; x <= 1; x++) {
 			for (int z = WAR_Z - 1; z <= WAR_Z + 1; z++) {

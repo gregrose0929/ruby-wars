@@ -4539,6 +4539,135 @@ public final class AutoTest {
 					then(20, mc -> log("{} left: {}", id, pg(id).debugState()));
 				}
 			}
+			case "park" -> {
+				// The hub's park: every ride, pad, game and toy.
+				then(0, mc -> {
+					command(mc, "time set noon");
+					command(mc, "gamemode adventure @a");
+				});
+				then(40, mc -> command(mc, "execute as @p run hub"));
+				then(120, mc -> {
+					command(mc, "gamemode spectator @a");
+					command(mc, "execute as @p at @s run tp @s 0.5 175 6.5 0 90");
+				});
+				then(80, mc -> shot(mc, "park-overview"));
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 25 140 60 145 30"));
+				then(60, mc -> shot(mc, "park-overview-2"));
+				then(5, mc -> command(mc, "gamemode adventure @a"));
+				// A launch pad.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 21.5 101 0.5 90 0"));
+				then(20, mc -> {
+					shot(mc, "park-pad-flying");
+					log("pad flight: riding {} at {}", mc.player.getVehicle(), mc.player.position());
+				});
+				then(80, mc -> log("after the pad: {}", mc.player.position()));
+				then(5, mc -> shot(mc, "park-funpark"));
+				// The rollercoaster.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 43.5 101 0.5 270 0"));
+				then(100, mc -> {
+					shot(mc, "park-coaster");
+					log("coaster: riding {} at {}", mc.player.getVehicle(), mc.player.position());
+				});
+				then(400, mc -> log("after the coaster: riding {} at {}", mc.player.getVehicle(), mc.player.position()));
+				// Trampoline.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 64.5 101 -7.5 0 0"));
+				then(14, mc -> {
+					shot(mc, "park-trampoline");
+					log("trampoline: y {}", mc.player.getY());
+				});
+				// The shooting gallery: start a round; throw at a target from the server.
+				then(40, mc -> command(mc, "execute as @p at @s run tp @s 52.5 101 -1.5 180 10"));
+				then(20, mc -> {
+					shot(mc, "park-gallery");
+					log("gallery: snowballs {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.SNOWBALL));
+				});
+				// The tower: slide, zipline.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 48.5 117 -43.5 90 0"));
+				then(40, mc -> {
+					shot(mc, "park-slide");
+					log("slide: riding {} at {}", mc.player.getVehicle(), mc.player.position());
+				});
+				then(200, mc -> log("after the slide: {} in water {}", mc.player.position(), mc.player.isInWater()));
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 40.5 117 -43.5 270 10"));
+				then(40, mc -> {
+					shot(mc, "park-zip");
+					log("zip: riding {} at {}", mc.player.getVehicle(), mc.player.position());
+				});
+				then(160, mc -> log("after the zip: {}", mc.player.position()));
+				// The cannon.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 0.5 101 20.5 160 0"));
+				then(90, mc -> {
+					shot(mc, "park-cannon");
+					log("cannon: riding {} at {}", mc.player.getVehicle(), mc.player.position());
+				});
+				then(80, mc -> log("after the cannon: {} in water {}", mc.player.position(), mc.player.isInWater()));
+				// Toys, fireworks, a bench, the jukebox, a fished catch, a swing.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 0.5 101 7.5 180 10"));
+				then(10, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+					dev.rubymod.game.hub.HubPark.useBlock(me, new net.minecraft.core.BlockPos(3, 101, 10), hub.getBlockState(new net.minecraft.core.BlockPos(3, 101, 10)));
+					dev.rubymod.game.hub.HubPark.useBlock(me, new net.minecraft.core.BlockPos(-6, 102, -4), hub.getBlockState(new net.minecraft.core.BlockPos(-6, 102, -4)));
+					log("toys: chicken {} confetti {} ball {}", me.getInventory().countItem(net.minecraft.world.item.Items.CHICKEN), me.getInventory().countItem(net.minecraft.world.item.Items.FIREWORK_STAR), me.getInventory().countItem(net.minecraft.world.item.Items.SLIME_BALL));
+				}));
+				then(40, mc -> shot(mc, "park-fireworks"));
+				then(5, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+					var pos = new net.minecraft.core.BlockPos(13, 101, 4);
+					dev.rubymod.game.hub.HubPark.useBlock(me, pos, hub.getBlockState(pos));
+					log("bench: riding {}", me.getVehicle());
+				}));
+				then(20, mc -> command(mc, "ride @p dismount"));
+				then(5, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+					var item = new net.minecraft.world.entity.item.ItemEntity(hub, -1.5, 100.5, 52.5, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COD));
+					hub.addFreshEntity(item);
+					log("fished: {} toy {}", item.getItem().getHoverName().getString(), dev.rubymod.game.hub.HubGames.isToy(item.getItem()));
+					log("critters: {}", hub.getEntities((net.minecraft.world.entity.Entity) null, new net.minecraft.world.phys.AABB(-60, 60, -60, 60, 150, 60),
+							e -> e.entityTags().contains("rubymod_critter")).stream().map(e -> e.getType().toShortString()).toList());
+				}));
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s -46.5 102 -36.5 180 5"));
+				then(30, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+					var pos = new net.minecraft.core.BlockPos(-46, 102, -40);
+					dev.rubymod.game.hub.HubPark.useBlock(me, pos, hub.getBlockState(pos));
+					log("stage busy {}", dev.rubymod.game.hub.HubGames.stageBusy());
+				}));
+				then(40, mc -> shot(mc, "park-stage"));
+				// Mini golf: stand on the first tee.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s -53.5 101 36.5 90 30"));
+				then(30, mc -> {
+					shot(mc, "park-golf");
+					onServer(mc, server -> log("golf balls: {}", server.getLevel(dev.rubymod.game.Hub.HUB).getEntities((net.minecraft.world.entity.Entity) null,
+							new net.minecraft.world.phys.AABB(-60, 95, 30, -30, 110, 60), e -> e.entityTags().contains("rubymod_golf_ball")).size()));
+				});
+				// Swings.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s 7.5 101 59.5 0 0"));
+				then(20, mc -> onServer(mc, server -> {
+					var me = me(server);
+					var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+					var seats = hub.getEntities(net.minecraft.world.entity.EntityTypes.INTERACTION, new net.minecraft.world.phys.AABB(4, 95, 58, 11, 110, 67), x -> true);
+					log("swing seats {}", seats.size());
+					if (!seats.isEmpty()) {
+						me.startRiding(seats.get(0), true, true);
+					}
+				}));
+				then(120, mc -> {
+					shot(mc, "park-swing");
+					log("swinging: {}", mc.player.position());
+				});
+				then(5, mc -> command(mc, "ride @p dismount"));
+				// Parkour: fall off, back to the checkpoint.
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s -21.5 103 -35.5 180 10"));
+				then(30, mc -> shot(mc, "park-parkour"));
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s -21.5 95 -50.5 180 10"));
+				then(20, mc -> log("after falling off the parkour: {}", mc.player.position()));
+				then(5, mc -> command(mc, "execute as @p at @s run tp @s -45.5 101 -27.5 180 0"));
+				then(30, mc -> shot(mc, "park-photo"));
+			}
 			case "help" -> {
 				// Instructions: up the first time ever, hidden after that, N brings them back (and that's remembered).
 				then(0, mc -> {

@@ -284,7 +284,7 @@ public final class Cosmetics {
 
 	/** Lent hub armor on the ground (someone threw it): it doesn't stay. */
 	public static boolean lentItem(Entity e) {
-		return e instanceof net.minecraft.world.entity.item.ItemEntity item && lent(item.getItem());
+		return e instanceof net.minecraft.world.entity.item.ItemEntity item && (lent(item.getItem()) || dev.rubymod.game.hub.HubGames.isToy(item.getItem()));
 	}
 
 	/**
@@ -300,6 +300,11 @@ public final class Cosmetics {
 		// Lent armor: only on your body, only in the hub, only with a set chosen.
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack stack = inv.getItem(i);
+			// The hub's toys stay in the hub.
+			if (!hub && !stack.isEmpty() && dev.rubymod.game.hub.HubGames.isToy(stack)) {
+				inv.setItem(i, ItemStack.EMPTY);
+				continue;
+			}
 			if (!stack.isEmpty() && lent(stack)) {
 				boolean worn = false;
 				for (var slot : ARMOR_SLOTS) {

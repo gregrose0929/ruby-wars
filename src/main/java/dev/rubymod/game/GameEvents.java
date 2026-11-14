@@ -60,9 +60,10 @@ public final class GameEvents {
 	}
 
 	public static void register() {
+		dev.rubymod.game.hub.HubPark.register();
 		// No hostile mobs (config: hostileMobs); raid soldiers, guards and animals are unaffected.
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-			if (Cosmetics.strayHat(entity) || Cosmetics.lentItem(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world) || dev.rubymod.game.convoy.Convoy.stale(entity)) {
+			if (Cosmetics.strayHat(entity) || Cosmetics.lentItem(entity) || dev.rubymod.game.hub.HubPark.stale(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world) || dev.rubymod.game.convoy.Convoy.stale(entity)) {
 				entity.discard();
 				return;
 			}
@@ -70,6 +71,10 @@ public final class GameEvents {
 			// like flowers): nobody dropped those, so they don't stay. Things players throw have an owner and aren't touched.
 			if (entity instanceof net.minecraft.world.entity.item.ItemEntity loose && loose.getOwner() == null) {
 				boolean hub = world.dimension() == Hub.HUB;
+				// A catch from the hub's pond (it's a toy).
+				if (hub && dev.rubymod.game.hub.HubGames.fished(loose, world)) {
+					return;
+				}
 				boolean gameMap = world.dimension() == Duels.ARENA || world.dimension() == dev.rubymod.game.party.RubyRush.RUSH;
 				boolean lantern = loose.getItem().getItem() instanceof net.minecraft.world.item.BlockItem b && b.getBlock() instanceof net.minecraft.world.level.block.LanternBlock;
 				if (hub || gameMap && lantern) {
@@ -522,6 +527,12 @@ public final class GameEvents {
 			}
 			BlockPos pos = hit.getBlockPos();
 			BlockState state = level.getBlockState(pos);
+			if (player instanceof ServerPlayer hubber && level.dimension() == Hub.HUB) {
+				InteractionResult park = dev.rubymod.game.hub.HubPark.useBlock(hubber, pos, state);
+				if (park != null) {
+					return park;
+				}
+			}
 			ItemStack held = player.getItemInHand(hand);
 			if (player instanceof ServerPlayer sp && dev.rubymod.game.party.PartyGames.of(sp) != null) {
 				BlockPos placeAt = state.canBeReplaced() ? pos : pos.relative(hit.getDirection());
@@ -557,6 +568,10 @@ public final class GameEvents {
 			}
 			if (level.isClientSide()) {
 				return InteractionResult.PASS;
+			}
+			// The hub's toys.
+			if (player instanceof ServerPlayer hubber && level.dimension() == Hub.HUB && dev.rubymod.game.hub.HubPark.useItem(hubber, player.getItemInHand(hand))) {
+				return InteractionResult.SUCCESS;
 			}
 			if (Rules.isEliminated(player.getUUID()) && Hub.inRubyWarsWorld(player)) {
 				return InteractionResult.FAIL;
