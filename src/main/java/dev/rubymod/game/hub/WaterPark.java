@@ -53,6 +53,10 @@ final class WaterPark {
 	private static final BlockPos FALL_PAD = new BlockPos(40 + DX, TOP, -44 + DZ);
 	private static final BlockPos RAFT_PAD = new BlockPos(44 + DX, TOP, -40 + DZ);
 	private static final Set<UUID> ON_PAD = new HashSet<>();
+	/** The drop capsule: stand on its floor, a countdown, and the floor drops away (laid out at 49, -54). */
+	private static final BlockPos CAPSULE = new BlockPos(49 + DX, TOP, -54 + DZ);
+	private static final java.util.Map<UUID, Integer> IN_CAPSULE = new java.util.HashMap<>();
+	private static int capsuleOpenUntil;
 	private static int tick;
 
 	static void build(ServerLevel level) {
@@ -193,6 +197,28 @@ final class WaterPark {
 		HubPark.label(level, (FALL_PAD.getX() - DX) + 0.5, TOP + 3, (FALL_PAD.getZ() - DZ) + 0.5, "FREE FALL\nstep on the red", ChatFormatting.RED, 0.8F);
 		HubPark.label(level, (RAFT_PAD.getX() - DX) + 0.5, TOP + 3, (RAFT_PAD.getZ() - DZ) + 0.5, "FAMILY RAFT\nstep on the yellow", ChatFormatting.YELLOW, 0.8F);
 		HubPark.box(level, CX, TOP + 1, CZ, CX, TOP + 4, CZ, Blocks.BIRCH_FENCE.defaultBlockState());
+		// The drop capsule: a walkway off the deck to a glass capsule standing out over the pool.
+		for (int z = -50; z >= -53; z--) {
+			HubPark.set(level, 49, TOP, z, Blocks.SMOOTH_QUARTZ.defaultBlockState());
+			HubPark.set(level, 48, TOP + 1, z, Blocks.GLASS_PANE.defaultBlockState());
+			HubPark.set(level, 50, TOP + 1, z, Blocks.GLASS_PANE.defaultBlockState());
+		}
+		HubPark.set(level, 49, TOP + 1, -49, Blocks.AIR.defaultBlockState());
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dz = -2; dz <= 2; dz++) {
+				boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+				boolean door = dx == 0 && dz == 2;
+				for (int y = TOP + 1; y <= TOP + 4; y++) {
+					HubPark.set(level, 49 + dx, y, -54 + dz, edge && !door && y <= TOP + 3 ? Blocks.STAINED_GLASS.pick(DyeColor.LIGHT_BLUE).defaultBlockState()
+							: y == TOP + 4 ? Blocks.CONCRETE.pick(DyeColor.RED).defaultBlockState() : Blocks.AIR.defaultBlockState());
+				}
+				if (Math.abs(dx) <= 1 && Math.abs(dz) <= 1 && !(dx == 0 && dz == 0)) {
+					HubPark.set(level, 49 + dx, TOP, -54 + dz, Blocks.SMOOTH_QUARTZ.defaultBlockState());
+				}
+			}
+		}
+		HubPark.set(level, 49, TOP, -54, Blocks.GLAZED_TERRACOTTA.pick(DyeColor.MAGENTA).defaultBlockState());
+		HubPark.label(level, 49.5, TOP + 5.5, -53.5, "DROP CAPSULE\nstand on the pink... if you dare!", ChatFormatting.LIGHT_PURPLE, 0.8F);
 		for (int dx = -3; dx <= 3; dx++) {
 			for (int dz = -3; dz <= 3; dz++) {
 				int ring = Math.max(Math.abs(dx), Math.abs(dz));
@@ -371,6 +397,29 @@ final class WaterPark {
 					}
 				}
 			}
+		}
+		// The drop capsule.
+		for (ServerPlayer p : level.players()) {
+			boolean in = p.onGround() && p.blockPosition().below().equals(CAPSULE);
+			if (!in) {
+				IN_CAPSULE.remove(p.getUUID());
+				continue;
+			}
+			int t = IN_CAPSULE.merge(p.getUUID(), 1, Integer::sum);
+			if (t == 1 || t == 21 || t == 41) {
+				dev.rubymod.game.Alerts.title(p, String.valueOf(3 - t / 20), "The floor's going to drop...", ChatFormatting.LIGHT_PURPLE);
+				level.playSound(null, CAPSULE, SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.PLAYERS, 1.5F, 0.8F + t / 60F);
+			}
+			if (t == 60) {
+				level.setBlock(CAPSULE, Blocks.AIR.defaultBlockState(), 2);
+				capsuleOpenUntil = tick + 40;
+				level.playSound(null, CAPSULE, SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 1.5F, 0.6F);
+				dev.rubymod.game.Alerts.title(p, "AAAAAH!", "", ChatFormatting.RED);
+			}
+		}
+		if (capsuleOpenUntil > 0 && tick >= capsuleOpenUntil) {
+			capsuleOpenUntil = 0;
+			level.setBlock(CAPSULE, Blocks.GLAZED_TERRACOTTA.pick(DyeColor.MAGENTA).defaultBlockState(), 2);
 		}
 		// The wave pool: every ten seconds a wave rolls through.
 		int phase = tick % 200;

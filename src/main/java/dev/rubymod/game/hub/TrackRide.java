@@ -40,6 +40,9 @@ final class TrackRide {
 	double seatHeight = Double.NaN;
 	/** How far up the model sits from the path (by default, half its size: its bottom on the path). */
 	double modelUp = Double.NaN;
+	/** Spinning cars (the rapids raft, the spinning coaster): degrees turned per point of track, from point spinFrom on. */
+	double spin;
+	int spinFrom;
 	/** The most the car tips nose-up or nose-down (degrees). */
 	double maxPitch = 90;
 	/** Stays level (the balloon) instead of tilting with the path. */
@@ -299,6 +302,12 @@ final class TrackRide {
 			Vec3 look = c.face.subtract(p);
 			yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));
 		}
+		boolean spinning = spin != 0 && c.d / STEP > spinFrom;
+		if (spinning) {
+			// Round and round: faster and slower, now one way, now the other.
+			double turned = (c.d / STEP - spinFrom) * spin;
+			yaw += (float) (Math.sin(turned * 0.004) * 360 + turned * 0.3);
+		}
 		float pitch = upright ? 0 : (float) -Math.toDegrees(Math.asin(Math.max(-1, Math.min(1, dir.y))));
 		pitch = (float) Math.max(-maxPitch, Math.min(maxPitch, pitch));
 		Vec3 seat0 = null;
@@ -318,6 +327,10 @@ final class TrackRide {
 					Vec3 fwd = new Vec3(-Math.sin(Math.toRadians(yaw)), 0, Math.cos(Math.toRadians(yaw)));
 					Vec3 sd = new Vec3(-fwd.z, 0, fwd.x);
 					sp = p.add(sd.scale(across * size / 2)).add(0, up, 0);
+				} else if (spinning) {
+					Vec3 fwd = new Vec3(-Math.sin(Math.toRadians(yaw)), 0, Math.cos(Math.toRadians(yaw)));
+					Vec3 sd = new Vec3(-fwd.z, 0, fwd.x);
+					sp = p.add(fwd.scale(along * size / 2)).add(sd.scale(across * size / 2)).add(0, up, 0);
 				}
 				seat.teleportTo(sp.x, sp.y, sp.z);
 				seat.setYRot(yaw);

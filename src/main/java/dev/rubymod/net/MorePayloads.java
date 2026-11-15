@@ -565,6 +565,32 @@ public final class MorePayloads {
 	}
 
 	/** Client -> server: the Park Map key (open the hub's travel menu). */
+	/** Server -> client: take a photo now (the Toy Camera). */
+	public record PhotoAsk(String by) implements CustomPacketPayload {
+		public static final Type<PhotoAsk> TYPE = new Type<>(RubyMod.id("photo_ask"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, PhotoAsk> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, PhotoAsk::by,
+				PhotoAsk::new);
+
+		@Override
+		public Type<PhotoAsk> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client -> server: the photo, as 128 x 128 map colours. */
+	public record PhotoData(byte[] pixels) implements CustomPacketPayload {
+		public static final Type<PhotoData> TYPE = new Type<>(RubyMod.id("photo_data"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, PhotoData> CODEC = StreamCodec.composite(
+				ByteBufCodecs.byteArray(16384), PhotoData::pixels,
+				PhotoData::new);
+
+		@Override
+		public Type<PhotoData> type() {
+			return TYPE;
+		}
+	}
+
 	public record TravelAsk(String where) implements CustomPacketPayload {
 		public static final Type<TravelAsk> TYPE = new Type<>(RubyMod.id("travel_ask"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, TravelAsk> CODEC = StreamCodec.composite(
@@ -579,6 +605,8 @@ public final class MorePayloads {
 
 	public static void register() {
 		PayloadTypeRegistry.serverboundPlay().register(TravelAsk.TYPE, TravelAsk.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(PhotoAsk.TYPE, PhotoAsk.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(PhotoData.TYPE, PhotoData.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(HostCard.TYPE, HostCard.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(HostPick.TYPE, HostPick.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(TravelMenu.TYPE, TravelMenu.CODEC);

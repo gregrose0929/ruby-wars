@@ -55,7 +55,7 @@ final class FunPark {
 	static final int FX = 56;
 	static final int FZ = 2;
 	/** The big Fun Park: the old Fun Park, the old Thrill Zone, and the land between and beyond (x, z, radius). */
-	static final int[][] CIRCLES = {{56, 2, 20}, {78, 16, 22}, {84, 40, 24}, {106, 4, 24}, {110, 26, 16}, {84, 0, 14}, {50, -20, 9}, {98, -21, 9}, {72, -19, 7}};
+	static final int[][] CIRCLES = {{56, 2, 20}, {78, 16, 22}, {84, 40, 24}, {106, 4, 24}, {110, 26, 16}, {84, 0, 14}, {50, -20, 9}, {98, -21, 9}, {72, -19, 7}, {50, 75, 14}};
 	/** Roughly the middle, and how far it reaches (for "is anyone near"). */
 	static final int MX = 84;
 	static final int MZ = 16;

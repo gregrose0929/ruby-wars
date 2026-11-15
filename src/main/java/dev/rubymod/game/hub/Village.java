@@ -96,8 +96,13 @@ final class Village {
 		HubPark.label(level, -9.5, FLOOR + 2.6, 50.5, "SWAN BOATS\nright-click a swan, steer with W A S D", ChatFormatting.WHITE, 0.7F);
 		HubHosts.add(level, new Vec3(-3.5, FLOOR + 1, 44.5), 180, VillagerProfession.FISHERMAN, VillagerType.SWAMP,
 				new HubHosts.Host("fishing", "Captain Finn", "Fishing", 0x40C8FF, "minecraft:fishing_rod",
-						"Grab a rod and cast into the pond (right-click), then right-click again when the bobber dips! You never know what you'll catch.",
-						"Fishing: right-click Captain Finn for a rod!", HubHosts.play("Give me a rod!"), (p, key) -> {
+						"Grab a rod and cast into the pond. When the bobber dips, reel in... then the fish FIGHTS: right-click when the needle's in "
+								+ "the green to land it! Thirty kinds of fish to find. Every new kind goes in the family aquarium.",
+						"Fishing: right-click Captain Finn for a rod!", p -> java.util.List.of("rod|Give me a rod!", "book|My fish book"), (p, key) -> {
+							if ("book".equals(key)) {
+								Fishing.book(p);
+								return;
+							}
 							HubGames.fishingRods(p);
 							HubGames.hold(p, "Pond Rod");
 						}));

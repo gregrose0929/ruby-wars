@@ -186,6 +186,9 @@ public final class HubGames {
 	/** Right-clicking with a toy. True when it was one (and handled). */
 	static boolean useToy(ServerPlayer p, ItemStack held) {
 		ServerLevel level = (ServerLevel) p.level();
+		if (named(held, "Pond Rod") && Fishing.reel(p)) {
+			return true;
+		}
 		if (named(held, "Confetti Cannon")) {
 			if (p.getCooldowns().isOnCooldown(held)) {
 				return true;
@@ -402,7 +405,19 @@ public final class HubGames {
 			return false;
 		}
 		var random = level.getRandom();
-		Object[] c = CATCHES[random.nextInt(CATCHES.length)];
+		ServerPlayer near = null;
+		for (ServerPlayer p : level.players()) {
+			if (near == null || p.distanceToSqr(item) < near.distanceToSqr(item)) {
+				near = p;
+			}
+		}
+		// Mostly a fish (which fights!); now and then something silly.
+		if (near != null && random.nextInt(5) != 0) {
+			item.discard();
+			Fishing.bite(near, level);
+			return true;
+		}
+		Object[] c = CATCHES[5 + random.nextInt(CATCHES.length - 5)];
 		String name = (String) c[1];
 		ItemStack stack = toy((net.minecraft.world.item.Item) c[0], 1, name, name != null && name.contains("Ruby") ? ChatFormatting.RED : ChatFormatting.AQUA);
 		item.setItem(stack);
@@ -424,6 +439,15 @@ public final class HubGames {
 			}
 		}
 		return true;
+	}
+
+	/** Onto the catch board. */
+	static void logCatch(ServerLevel level, String line) {
+		CATCH_LOG.addFirst(line);
+		while (CATCH_LOG.size() > 6) {
+			CATCH_LOG.removeLast();
+		}
+		Village.catchBoard(level);
 	}
 
 	static void fishingRods(ServerPlayer p) {

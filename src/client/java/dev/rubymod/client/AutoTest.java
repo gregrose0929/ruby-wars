@@ -4553,6 +4553,7 @@ public final class AutoTest {
 			case "parkcheck" -> parkCheckScript();
 			case "parkview" -> parkViewScript(null);
 			case "plazalook" -> plazaLookScript();
+			case "parknew3" -> parkNew3Script();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5477,6 +5478,126 @@ public final class AutoTest {
 			tpHub(mc, "60 135 -60 facing 60 105 -10");
 		});
 		then(100, mc -> shot(mc, "new-night-coaster"));
+	}
+
+	/** Party Board, River Rapids, Twister Mouse, Helter Skelter, the drop capsule, fishing, butterflies, the camera. */
+	private static void parkNew3Script() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		// The camera first (on the plaza), then the rides, then the board game.
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> tpHub(mc, "4.5 101 9.5 0 0"));
+		then(60, mc -> talk(mc, 4.5, 101, 11.5));
+		then(30, mc -> press(mc, "gadgets"));
+		then(20, mc -> {
+			int slot = slotOf(mc, "Toy Camera");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			tpHub(mc, "0.5 102 -6.5 facing 20 108 -30");
+		});
+		then(30, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(60, mc -> {
+			log("camera: photo {}", slotOf(mc, "Photo by " + mc.player.getName().getString()));
+			tpHub(mc, "-5.5 101 15.5 facing -5.5 102.5 20");
+		});
+		then(40, mc -> shot(mc, "n3-photowall"));
+		// River Rapids.
+		then(5, mc -> tpHub(mc, "37.5 101 -128.5 180 0"));
+		then(80, mc -> talk(mc, 37.5, 101, -130.0));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 6; i++) {
+			int n = i;
+			then(70, mc -> {
+				log("rapids {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				if (n == 3) {
+					mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+				}
+				shot(mc, "n3-rapids-" + n);
+			});
+		}
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			mc.options.keyShift.setDown(true);
+		});
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		// Twister Mouse.
+		then(20, mc -> tpHub(mc, "38.5 101 76.5 180 0"));
+		then(80, mc -> talk(mc, 38.5, 101, 74.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 6; i++) {
+			int n = i;
+			then(60, mc -> {
+				log("mouse {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				if (n == 3) {
+					mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+				}
+				shot(mc, "n3-mouse-" + n);
+			});
+		}
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			mc.options.keyShift.setDown(true);
+		});
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		// Helter Skelter: onto the mat at the top.
+		then(20, mc -> tpHub(mc, "-5.5 117 87.5 90 10"));
+		for (int i = 0; i < 5; i++) {
+			int n = i;
+			then(30, mc -> {
+				log("helter {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				shot(mc, "n3-helter-" + n);
+			});
+		}
+		// The drop capsule.
+		then(60, mc -> tpHub(mc, "35.5 127 -109.5 0 40"));
+		for (int i = 0; i < 6; i++) {
+			int n = i;
+			then(15, mc -> {
+				log("capsule {}: at {}", n, mc.player.position());
+				if (n == 4) {
+					shot(mc, "n3-capsule");
+				}
+			});
+		}
+		then(40, mc -> log("capsule: landed at {} in water {}", mc.player.position(), mc.player.isInWater()));
+		// Fishing: the book. Butterflies: a net.
+		then(5, mc -> tpHub(mc, "5.5 101 -140.5 180 0"));
+		then(60, mc -> talk(mc, 5.5, 101, -142.5));
+		then(30, mc -> press(mc, "book"));
+		then(10, mc -> tpHub(mc, "1.5 102 -146.5 facing 1.5 102 -151"));
+		then(40, mc -> shot(mc, "n3-aquarium"));
+		then(5, mc -> tpHub(mc, "13.5 101 76.5 0 0"));
+		then(60, mc -> talk(mc, 13.5, 101, 78.5));
+		then(30, mc -> press(mc, "net"));
+		then(10, mc -> tpHub(mc, "11.5 106 74.5 facing 11.5 102 84"));
+		then(40, mc -> shot(mc, "n3-butterflygarden"));
+		then(5, mc -> tpHub(mc, "-4.5 103 -4.5 facing 4 102 4"));
+		then(40, mc -> shot(mc, "n3-plaza-butterflies"));
+		// Party Board.
+		then(10, mc -> command(mc, "execute as @p run play board"));
+		then(400, mc -> log("board: {}", pg("board").debugState()));
+		for (int i = 0; i < 30; i++) {
+			int n = i;
+			then(40, mc -> {
+				int slot = slotOf(mc, "Roll the Dice!");
+				if (slot >= 0 && slot < 9) {
+					mc.player.getInventory().setSelectedSlot(slot);
+					mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+				}
+				if (n % 5 == 0) {
+					log("board {}: {}", n, pg("board").debugState());
+					shot(mc, "n3-board-" + n);
+				}
+			});
+		}
+		then(5, mc -> {
+			command(mc, "gamemode spectator @p");
+			command(mc, "execute in rubymod:arena run tp @p -115000 95 -30 facing -115000 65 0");
+		});
+		then(60, mc -> shot(mc, "n3-board-overview"));
 	}
 
 	/** The plaza's ground, close up, all the way round. */

@@ -211,6 +211,8 @@ public final class HubPark {
 			}
 			return InteractionResult.PASS;
 		});
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.PhotoData.TYPE,
+				(payload, context) -> Photos.received(context.player(), payload.pixels()));
 		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.TravelPick.TYPE,
 				(payload, context) -> travelPicked(context.player(), payload.id()));
 		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.HostPick.TYPE,
@@ -650,12 +652,19 @@ public final class HubPark {
 		HubToys.reset();
 		Toyland.reset();
 		NightShow.reset();
+		Rapids.reset();
+		Fishing.reset();
+		Butterflies.reset();
+		Photos.reset();
+		SpinCoaster.reset();
 		plaza(level);
 		FunPark.build(level);
 		BumperBoats.build(level);
 		FunRides.build(level);
 		SplashIsland.build(level);
 		Toyland.build(level);
+		SpinCoaster.build(level);
+		Photos.build(level);
 		WaterPark.build(level);
 		SkyZip.build(level);
 		SkyRings.build(level);
@@ -709,7 +718,7 @@ public final class HubPark {
 								+ "frisbee, a beach ball, a pogo stick), or silly ones (bubbles, water balloons, a sparkler, a whoopee cushion). "
 								+ "Right-click to use them. They stay in the hub.",
 						"Toys: right-click Tilly for some!", q -> List.of("classic|The classics", "outdoor|Kite, frisbee, beach ball, pogo",
-								"silly|Bubbles, balloons, sparkler, cushion", "gadgets|Grapple, paint gun, boots, morph wand"),
+								"silly|Bubbles, balloons, sparkler, cushion", "gadgets|Grapple, paint gun, boots, morph, camera"),
 								(q, key) -> HubGames.toyChest(q, key)));
 		guide(level);
 		set(level, FIREWORKS.getX(), FIREWORKS.getY() - 1, FIREWORKS.getZ(), Blocks.QUARTZ_PILLAR.defaultBlockState());
@@ -1073,6 +1082,13 @@ public final class HubPark {
 		SkyRings.tick(level);
 		HubToys.tick(level);
 		NightShow.tick(level, tick, lampsLit);
+		Fishing.tick(level);
+		if (!level.players().isEmpty()) {
+			Butterflies.tick(level);
+		}
+		if (near(level, 50, 75, 45) || SpinCoaster.busy()) {
+			SpinCoaster.tick(level);
+		}
 		if (near(level, Toyland.MX, Toyland.MZ, 50) || Toyland.busy()) {
 			Toyland.tick(level, tick);
 		}

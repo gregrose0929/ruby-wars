@@ -45,7 +45,7 @@ final class Toyland {
 	private Toyland() {
 	}
 
-	static final int[][] CIRCLES = {{4, 66, 22}, {22, 66, 14}};
+	static final int[][] CIRCLES = {{4, 66, 22}, {22, 66, 14}, {-9, 87, 11}};
 	static final int MX = 8;
 	static final int MZ = 66;
 	private static final String BLASTER = "Toy Blaster";
@@ -77,6 +77,8 @@ final class Toyland {
 		blasterBuilding(level);
 		blasterRide(level);
 		zoo(level);
+		HelterSkelter.build(level);
+		Butterflies.build(level);
 	}
 
 	// ----- The Toy Blaster -----
@@ -169,6 +171,9 @@ final class Toyland {
 			if (s != null) {
 				dev.rubymod.game.Alerts.title(p, s + " points!", s >= 400 ? "Blaster champion!" : "Nice zapping!", ChatFormatting.GOLD);
 				Records.submit((ServerLevel) p.level(), "Toy Blaster score", p.getName().getString(), s, false, String::valueOf);
+				if (s >= 300) {
+					Prizes.plushie((ServerLevel) p.level(), p);
+				}
 			}
 		};
 		// Targets along the way, off to the sides, on the walls and up high.
@@ -382,6 +387,7 @@ final class Toyland {
 
 	static void tick(ServerLevel level, int t) {
 		tick = t;
+		HelterSkelter.tick(level);
 		if (ride != null) {
 			ride.tick(level);
 		}
@@ -406,10 +412,11 @@ final class Toyland {
 	}
 
 	static boolean busy() {
-		return ride != null && !ride.cars.isEmpty();
+		return ride != null && !ride.cars.isEmpty() || HelterSkelter.busy();
 	}
 
 	static void reset() {
+		HelterSkelter.reset();
 		if (ride != null) {
 			ride.reset();
 		}

@@ -406,6 +406,41 @@ BLASTER_CAR = [
 ]
 
 
+def butterfly(wing, spot):
+    """A butterfly: a thin body and two big flat wings (they flap by squashing sideways)."""
+    return [
+        b([7.5, 6, 4], [8.5, 7, 12], BLACK),
+        b([0, 6.4, 3], [7.5, 6.6, 10], wing), b([8.5, 6.4, 3], [16, 6.6, 10], wing),
+        b([1, 6.4, 9], [7.5, 6.6, 14], wing), b([8.5, 6.4, 9], [15, 6.6, 14], wing),
+        b([2, 6.6, 5], [4, 6.7, 7], spot), b([12, 6.6, 5], [14, 6.7, 7], spot),
+    ]
+
+
+def plush(body, belly, kind):
+    """A soft blocky plushie, sitting."""
+    e = [
+        b([4, 0, 5], [12, 7, 11], body), b([5.5, 1, 4.8], [10.5, 5, 5], belly),
+        b([4.5, 7, 5.5], [11.5, 13, 11.5], body),
+        b([5.5, 10, 5.3], [7, 11.5, 5.5], BLACK), b([9, 10, 5.3], [10.5, 11.5, 5.5], BLACK),
+        b([3, 0, 5], [4.5, 2, 8], body), b([11.5, 0, 5], [13, 2, 8], body),
+    ]
+    if kind == "bunny":
+        e += [b([5.5, 13, 7.5], [7, 18, 9], body), b([9, 13, 7.5], [10.5, 18, 9], body), b([7.3, 8.5, 5.2], [8.7, 9.5, 5.5], PINK)]
+    elif kind == "cat":
+        e += [b([4.5, 13, 7], [6.5, 15, 9], body), b([9.5, 13, 7], [11.5, 15, 9], body), b([7, 0.5, 11], [9, 2, 16], body)]
+    elif kind == "pig":
+        e += [b([6.5, 8, 4.6], [9.5, 10, 5.5], belly), b([4.5, 13, 8], [6, 14, 9.5], body), b([10, 13, 8], [11.5, 14, 9.5], body)]
+    elif kind == "dragon":
+        e += [b([0, 6, 7], [4, 11, 8], belly), b([12, 6, 7], [16, 11, 8], belly), b([7, 13, 7], [9, 15, 9], YELLOW), b([7, 0, 11], [9, 2, 16], body)]
+    elif kind == "ghost":
+        e += [b([4, 0, 5], [12, 1, 11], WHITE), b([7, 8, 5.3], [9, 9.5, 5.5], BLACK)]
+    elif kind == "penguin":
+        e += [b([7, 8.5, 4.4], [9, 9.5, 5.5], ORANGE), b([5, 0, 3.5], [7, 0.8, 6], ORANGE), b([9, 0, 3.5], [11, 0.8, 6], ORANGE)]
+    elif kind == "frog":
+        e += [b([5, 13, 6], [7.5, 15, 8.5], body), b([8.5, 13, 6], [11, 15, 8.5], body), b([6, 8, 5.2], [10, 8.6, 5.5], RED_DARK)]
+    return e
+
+
 SWING_CROWN = [
     b([2, 0, 0], [14, 1.2, 16], RED), b([0, 0, 2], [16, 1.2, 14], WHITE), b([1, 0.1, 1], [15, 1.1, 15], YELLOW),
     *[b([x, -0.8, z], [x + 1, 0, z + 1], YELLOW) for x, z in ((1.5, 7.5), (13.5, 7.5), (7.5, 1.5), (7.5, 13.5), (3, 3), (12, 3), (3, 12), (12, 12))],
@@ -440,6 +475,12 @@ MODELS = {
     **{f"swing_chair_{n}": swing_chair(c) for n, c in (("red", RED), ("blue", BLUE), ("green", GREEN), ("yellow", YELLOW), ("pink", PINK),
                                                        ("purple", PURPLE), ("orange", ORANGE), ("sky", SKY))},
     "swing_crown": SWING_CROWN,
+    **{f"butterfly_{n}": butterfly(c, d) for n, c, d in (("red", RED, BLACK), ("orange", ORANGE, WHITE), ("yellow", YELLOW, ORANGE), ("lime", LIME, GREEN),
+                                                        ("sky", SKY, WHITE), ("blue", BLUE, SKY), ("purple", PURPLE, PINK), ("pink", PINK, WHITE),
+                                                        ("white", WHITE, SKY), ("gold", GOLD, YELLOW), ("ruby", RED_DARK, GOLD))},
+    "plush_bunny": plush(WHITE, PINK, "bunny"), "plush_cat": plush(ORANGE, WHITE, "cat"), "plush_pig": plush(PINK, RED, "pig"),
+    "plush_dragon": plush(GREEN, LIME, "dragon"), "plush_ghost": plush(WHITE, WHITE, "ghost"), "plush_penguin": plush(BLACK, WHITE, "penguin"),
+    "plush_frog": plush(LIME, YELLOW, "frog"),
     "target_red": target(RED, WHITE), "target_green": target(LIME, BLACK), "target_gold": target(GOLD, YELLOW),
     "blaster_car": BLASTER_CAR,
     "coaster_solo_red": coaster_solo(RED, YELLOW), "coaster_solo_yellow": coaster_solo(YELLOW, RED),

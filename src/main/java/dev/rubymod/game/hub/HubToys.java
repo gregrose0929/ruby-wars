@@ -80,6 +80,7 @@ final class HubToys {
 				out.add(HubGames.toy(Items.GLOW_INK_SAC, 1, PAINT, ChatFormatting.LIGHT_PURPLE));
 				out.add(HubGames.toy(Items.RABBIT_FOOT, 1, BOOTS, ChatFormatting.GREEN));
 				out.add(HubGames.toy(Items.BREEZE_ROD, 1, MORPH, ChatFormatting.AQUA));
+				out.add(HubGames.toy(Items.SPYGLASS, 1, Photos.CAMERA, ChatFormatting.GOLD));
 			}
 			default -> {
 			}
@@ -131,7 +132,7 @@ final class HubToys {
 
 	/** Right-click with one of these toys. True if it was one. */
 	static boolean use(ServerPlayer p, ItemStack held) {
-		if (Toyland.shoot(p, held)) {
+		if (Toyland.shoot(p, held) || Butterflies.swish(p, held) || Photos.snap(p, held)) {
 			return true;
 		}
 		ServerLevel level = (ServerLevel) p.level();

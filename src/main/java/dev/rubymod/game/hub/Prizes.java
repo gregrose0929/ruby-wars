@@ -66,6 +66,16 @@ final class Prizes {
 		MODELS.add(m == null ? null : m.getUUID());
 	}
 
+	private static final String[][] PLUSHIES = {{"plush_bunny", "a bunny plushie"}, {"plush_cat", "a kitty plushie"}, {"plush_pig", "a piggy plushie"},
+		{"plush_dragon", "a dragon plushie"}, {"plush_ghost", "a little ghost plushie"}, {"plush_penguin", "a penguin plushie"},
+		{"plush_frog", "a froggy plushie"}, {"teddy", "a teddy bear"}};
+
+	/** A plushie (one of eight, at random) for the shelf. */
+	static void plushie(ServerLevel level, ServerPlayer p) {
+		String[] pick = PLUSHIES[level.getRandom().nextInt(PLUSHIES.length)];
+		award(level, p, pick[0], pick[1]);
+	}
+
 	/** Somebody won a prize: up it goes on the shelf. */
 	static void award(ServerLevel level, ServerPlayer p, String model, String what) {
 		COUNT.merge(p.getName().getString(), 1, Integer::sum);

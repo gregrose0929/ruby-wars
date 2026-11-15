@@ -17,7 +17,7 @@ final class SplashIsland {
 	}
 
 	/** x, z, radius of the circles the island's made of. */
-	static final int[][] CIRCLES = {{30, -100, 30}, {74, -100, 28}, {8, -134, 16}, {52, -80, 12}};
+	static final int[][] CIRCLES = {{30, -100, 30}, {74, -100, 28}, {8, -134, 16}, {52, -80, 12}, {40, -141, 18}, {1, -151, 8}};
 	static final int MX = 44;
 	static final int MZ = -104;
 
@@ -36,6 +36,8 @@ final class SplashIsland {
 			HubPark.lamp(level, l[0], FLOOR + 1, l[1]);
 		}
 		Flume.build(level);
+		Rapids.build(level);
+		Fishing.build(level);
 	}
 
 	private static void path(ServerLevel level, int x1, int z1, int x2, int z2) {
@@ -73,6 +75,9 @@ final class SplashIsland {
 	static void tick(ServerLevel level, int tick) {
 		if (HubPark.near(level, Flume.CX, Flume.CZ, 50) || Flume.busy()) {
 			Flume.tick(level, tick);
+		}
+		if (HubPark.near(level, Rapids.CX, Rapids.CZ, 45) || Rapids.busy()) {
+			Rapids.tick(level, tick);
 		}
 	}
 }
