@@ -27,6 +27,7 @@ public final class PartyGames {
 			new AirBattle(),
 			new SkyRace(),
 			new BuildBattle(),
+			new CoasterWorkshop(),
 			new RubyRush());
 
 	/** For autotests: stand-in players (fake players) that aren't on the player list. */

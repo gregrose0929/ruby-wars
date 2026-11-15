@@ -61,7 +61,7 @@ final class Scenery {
 		islands.add(new int[] {0, 0, 23, 11});
 		islands.add(new int[] {-44, 44, 16, 12});
 		islands.add(new int[] {44, 40, 16, 6});
-		for (int[][] group : new int[][][] {FunPark.CIRCLES, SplashIsland.CIRCLES, Speedway.CIRCLES}) {
+		for (int[][] group : new int[][][] {FunPark.CIRCLES, SplashIsland.CIRCLES, Speedway.CIRCLES, Toyland.CIRCLES}) {
 			for (int[] c : group) {
 				islands.add(new int[] {c[0], c[1], c[2] - 1, 12});
 			}

@@ -37,7 +37,8 @@ final class Pets {
 				new HubHosts.Host("pets", "Penny", "Pet Friends", 0xFFB070, "minecraft:bone",
 						"Would you like a pet to follow you round the park? Pick one! (They stay in the hub and wait for you when you go off to play.)",
 						"Pets: right-click Penny for a pet friend!",
-						p -> List.of("wolf|A puppy", "cat|A kitten", "parrot|A parrot", "none|No pet, thanks"), Pets::choose));
+						p -> List.of("wolf|A puppy", "cat|A kitten", "parrot|A parrot", "pony|A pony (you can ride it!)", "none|No pet, thanks"),
+						Pets::choose));
 	}
 
 	private static void choose(ServerPlayer p, String key) {
@@ -55,6 +56,10 @@ final class Pets {
 	private static void spawn(ServerLevel level, ServerPlayer p) {
 		String kind = CHOICE.get(p.getUUID());
 		if (kind == null) {
+			return;
+		}
+		if ("pony".equals(kind)) {
+			pony(level, p);
 			return;
 		}
 		EntityType<? extends TamableAnimal> type = switch (kind) {
@@ -82,6 +87,27 @@ final class Pets {
 		level.addFreshEntity(pet);
 		PET.put(p.getUUID(), pet.getUUID());
 		p.sendOverlayMessage(Component.literal("Say hello to your " + name.toLowerCase() + "! It'll follow you round the park.").withStyle(ChatFormatting.YELLOW));
+	}
+
+	/** A pony: saddled, tame, yours. Right-click it to ride; it trots after you when you're not. */
+	private static void pony(ServerLevel level, ServerPlayer p) {
+		net.minecraft.world.entity.animal.equine.Horse pony = EntityTypes.HORSE.create(level, EntitySpawnReason.EVENT);
+		if (pony == null) {
+			return;
+		}
+		Vec3 at = p.position().add(p.getLookAngle().multiply(1, 0, 1).normalize().scale(2));
+		pony.snapTo(at.x, p.getY(), at.z, p.getYRot() + 180, 0);
+		pony.tameWithName(p);
+		pony.setItemSlot(net.minecraft.world.entity.EquipmentSlot.SADDLE, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SADDLE));
+		pony.setPermanentlyInvulnerable(true);
+		pony.setPersistenceRequired();
+		pony.setCustomName(Component.literal(p.getName().getString() + "'s Pony").withStyle(ChatFormatting.YELLOW));
+		pony.addTag(HubRides.TEMP);
+		HubPark.live(pony);
+		level.addFreshEntity(pony);
+		PET.put(p.getUUID(), pony.getUUID());
+		p.sendOverlayMessage(Component.literal("Here's your pony! Right-click it to ride (W to go, space to jump, crouch to get off).")
+				.withStyle(ChatFormatting.YELLOW));
 	}
 
 	private static void remove(ServerLevel level, UUID owner) {
@@ -112,6 +138,9 @@ final class Pets {
 				spawn(level, owner);
 			} else if (pet != null && pet.distanceTo(owner) > 40) {
 				pet.teleportTo(owner.getX(), owner.getY(), owner.getZ());
+			} else if (pet instanceof net.minecraft.world.entity.animal.equine.AbstractHorse h && !h.isVehicle() && h.distanceTo(owner) > 5) {
+				// The pony trots after you.
+				h.getNavigation().moveTo(owner, 1.4);
 			}
 		}
 		for (ServerPlayer p : level.players()) {

@@ -48,6 +48,10 @@ final class TrackRide {
 	boolean sideBySide;
 	/** Riders sway from side to side as they go (hanging from the Sky Zip). */
 	boolean sway;
+	/** Called for each rider as they get off (the Toy Blaster tots up your score). */
+	java.util.function.Consumer<ServerPlayer> onLeave;
+	/** Called for each rider as they get on. */
+	java.util.function.Consumer<ServerPlayer> onBoard;
 	/** How long a car waits at the station for friends. */
 	int waitTicks = 80;
 	/** Things that happen as a car passes a point on the path (keyed by the point's index). */
@@ -127,6 +131,9 @@ final class TrackRide {
 			q.startRiding(seat, true, true);
 			HubRides.faceSeat(q, seat);
 			car.riders.add(q.getUUID());
+			if (onBoard != null) {
+				onBoard.accept(q);
+			}
 			car.wait = Math.max(car.wait, Math.min(50, waitTicks));
 			q.sendOverlayMessage(Component.literal("All aboard! (crouch to get off)").withStyle(ChatFormatting.LIGHT_PURPLE));
 			level.playSound(null, q.blockPosition(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.PLAYERS, 0.6F, 1.3F);
@@ -266,6 +273,9 @@ final class TrackRide {
 	}
 
 	private void letOff(ServerPlayer p, String message) {
+		if (onLeave != null) {
+			onLeave.accept(p);
+		}
 		FunPark.letOff(p, exit, message);
 	}
 

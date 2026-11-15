@@ -1163,7 +1163,7 @@ public abstract class PartyGame {
 		}
 	}
 
-	private static void setNow(ServerLevel level, BlockPos pos, BlockState state) {
+	protected static void setNow(ServerLevel level, BlockPos pos, BlockState state) {
 		if (level.getBlockState(pos) != state) {
 			level.setBlock(pos, state, Block.UPDATE_CLIENTS);
 		}

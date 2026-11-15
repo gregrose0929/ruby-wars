@@ -54,6 +54,10 @@ final class HubToys {
 	static final String SPARKLER = "Sparkler";
 	static final String CUSHION = "Whoopee Cushion";
 	static final String BEACH_BALL = "Beach Ball";
+	static final String GRAPPLE = "Grappling Hook";
+	static final String PAINT = "Paint Splat Gun";
+	static final String BOOTS = "Bouncy Boots";
+	static final String MORPH = "Morph Wand";
 
 	/** Tilly's three bundles. */
 	static List<ItemStack> bundle(String key) {
@@ -70,6 +74,12 @@ final class HubToys {
 				out.add(HubGames.toy(Items.DYE.pick(DyeColor.BLUE), 16, BALLOON, ChatFormatting.BLUE));
 				out.add(HubGames.toy(Items.BLAZE_ROD, 1, SPARKLER, ChatFormatting.GOLD));
 				out.add(HubGames.toy(Items.DYE.pick(DyeColor.PINK), 1, CUSHION, ChatFormatting.LIGHT_PURPLE));
+			}
+			case "gadgets" -> {
+				out.add(HubGames.toy(Items.TRIPWIRE_HOOK, 1, GRAPPLE, ChatFormatting.GRAY));
+				out.add(HubGames.toy(Items.GLOW_INK_SAC, 1, PAINT, ChatFormatting.LIGHT_PURPLE));
+				out.add(HubGames.toy(Items.RABBIT_FOOT, 1, BOOTS, ChatFormatting.GREEN));
+				out.add(HubGames.toy(Items.BREEZE_ROD, 1, MORPH, ChatFormatting.AQUA));
 			}
 			default -> {
 			}
@@ -121,6 +131,9 @@ final class HubToys {
 
 	/** Right-click with one of these toys. True if it was one. */
 	static boolean use(ServerPlayer p, ItemStack held) {
+		if (Toyland.shoot(p, held)) {
+			return true;
+		}
 		ServerLevel level = (ServerLevel) p.level();
 		if (is(held, KITE)) {
 			Kite k = KITES.remove(p.getUUID());
@@ -229,11 +242,261 @@ final class HubToys {
 			}
 			return true;
 		}
-		return is(held, POGO) || is(held, SPARKLER);
+		if (is(held, GRAPPLE)) {
+			return grapple(p, held);
+		}
+		if (is(held, PAINT)) {
+			return paint(p, held);
+		}
+		if (is(held, MORPH)) {
+			return morph(p);
+		}
+		return is(held, POGO) || is(held, SPARKLER) || is(held, BOOTS);
 	}
+
+	// ----- Gadgets -----
+
+	/** Grappling hook: hook onto whatever you're looking at (up to 32 blocks) and get pulled to it. */
+	private static boolean grapple(ServerPlayer p, ItemStack held) {
+		if (p.getCooldowns().isOnCooldown(held) || p.isPassenger()) {
+			return true;
+		}
+		ServerLevel level = (ServerLevel) p.level();
+		Vec3 eye = p.getEyePosition();
+		var hit = level.clip(new net.minecraft.world.level.ClipContext(eye, eye.add(p.getLookAngle().scale(32)), net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+		if (hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
+			p.sendOverlayMessage(Component.literal("Nothing to hook onto there!").withStyle(ChatFormatting.GRAY));
+			return true;
+		}
+		p.getCooldowns().addCooldown(held, 20);
+		Vec3 to = hit.getLocation().subtract(p.position());
+		double dist = to.length();
+		Vec3 pull = to.normalize().scale(Math.min(2.4, 0.9 + dist * 0.08)).add(0, 0.45, 0);
+		p.setDeltaMovement(pull);
+		p.syncVelocity = true;
+		GRAPPLED.put(p.getUUID(), 0);
+		for (double d = 0; d < dist; d += 0.7) {
+			Vec3 q = eye.add(to.normalize().scale(d));
+			level.sendParticles(new DustParticleOptions(0xFF9A9AA6, 0.6F), q.x, q.y - 0.3, q.z, 1, 0, 0, 0, 0);
+		}
+		level.playSound(null, p.blockPosition(), SoundEvents.FISHING_BOBBER_THROW, SoundSource.PLAYERS, 1.0F, 0.7F);
+		level.playSound(null, BlockPos.containing(hit.getLocation()), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 1.0F, 1.4F);
+		return true;
+	}
+
+	private static final Map<UUID, Integer> GRAPPLED = new HashMap<>();
+
+	/** Painted blocks (painted only for everyone's eyes: the real block is still there), and when they go back. */
+	private record Paint(BlockPos pos, int until) {
+	}
+
+	private static final List<Paint> PAINTED = new ArrayList<>();
+
+	/** Paint splat gun: splat! A blob of bright paint where it lands (for a few seconds: it washes off). */
+	private static boolean paint(ServerPlayer p, ItemStack held) {
+		if (p.getCooldowns().isOnCooldown(held)) {
+			return true;
+		}
+		p.getCooldowns().addCooldown(held, 8);
+		ServerLevel level = (ServerLevel) p.level();
+		Vec3 eye = p.getEyePosition();
+		Vec3 look = p.getLookAngle();
+		var random = level.getRandom();
+		DyeColor[] colors = {DyeColor.RED, DyeColor.ORANGE, DyeColor.YELLOW, DyeColor.LIME, DyeColor.LIGHT_BLUE, DyeColor.MAGENTA, DyeColor.PINK, DyeColor.PURPLE};
+		DyeColor c = colors[random.nextInt(colors.length)];
+		int rgb = 0xFF000000 | c.getTextureDiffuseColor();
+		// A friend in the way gets splatted instead.
+		for (ServerPlayer q : level.players()) {
+			if (q == p) {
+				continue;
+			}
+			Vec3 to = q.position().add(0, 1, 0).subtract(eye);
+			double along = to.dot(look);
+			if (along > 0 && along < 24 && to.subtract(look.scale(along)).length() < 0.8) {
+				level.sendParticles(new DustParticleOptions(rgb, 1.5F), q.getX(), q.getY() + 1, q.getZ(), 30, 0.3, 0.6, 0.3, 0);
+				q.sendOverlayMessage(Component.literal("SPLAT! " + p.getName().getString() + " got you!").withStyle(ChatFormatting.LIGHT_PURPLE));
+				level.playSound(null, q.blockPosition(), SoundEvents.SLIME_SQUISH, SoundSource.PLAYERS, 1.0F, 1.2F);
+				return true;
+			}
+		}
+		var hit = level.clip(new net.minecraft.world.level.ClipContext(eye, eye.add(look.scale(24)), net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+		level.playSound(null, p.blockPosition(), SoundEvents.SLIME_SQUISH_SMALL, SoundSource.PLAYERS, 0.8F, 1.6F);
+		if (hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
+			return true;
+		}
+		BlockPos centre = ((net.minecraft.world.phys.BlockHitResult) hit).getBlockPos();
+		BlockState paintState = Blocks.CONCRETE.pick(c).defaultBlockState();
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dy = -1; dy <= 1; dy++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) > 2 || random.nextInt(5) == 0) {
+						continue;
+					}
+					BlockPos b = centre.offset(dx, dy, dz);
+					if (!level.getBlockState(b).isSolidRender()) {
+						continue;
+					}
+					for (ServerPlayer q : level.players()) {
+						if (q.position().distanceTo(Vec3.atCenterOf(b)) < 96) {
+							q.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(b, paintState));
+						}
+					}
+					PAINTED.add(new Paint(b, tick + 120));
+				}
+			}
+		}
+		Vec3 at = hit.getLocation();
+		level.sendParticles(new DustParticleOptions(rgb, 1.4F), at.x, at.y, at.z, 24, 0.4, 0.4, 0.4, 0);
+		level.playSound(null, centre, SoundEvents.SLIME_SQUISH, SoundSource.PLAYERS, 1.0F, 1.0F);
+		return true;
+	}
+
+	/** Who's morphed into what (the animal goes where they go; they're invisible), and until when. */
+	private record Morph(UUID mob, int until) {
+	}
+
+	private static final Map<UUID, Morph> MORPHS = new HashMap<>();
+	private static final net.minecraft.world.entity.EntityType<?>[] SHAPES = {EntityTypes.CHICKEN, EntityTypes.PIG, EntityTypes.CAT, EntityTypes.SLIME,
+		EntityTypes.SHEEP, EntityTypes.FOX, EntityTypes.RABBIT, EntityTypes.FROG, EntityTypes.PANDA, EntityTypes.PARROT};
+
+	/** Morph wand: turn into an animal for a minute (right-click again to change back). */
+	private static boolean morph(ServerPlayer p) {
+		ServerLevel level = (ServerLevel) p.level();
+		if (unmorph(level, p)) {
+			p.sendOverlayMessage(Component.literal("Poof! You're you again.").withStyle(ChatFormatting.AQUA));
+			return true;
+		}
+		var type = SHAPES[level.getRandom().nextInt(SHAPES.length)];
+		Entity e = type.create(level, EntitySpawnReason.EVENT);
+		if (!(e instanceof net.minecraft.world.entity.Mob m)) {
+			return true;
+		}
+		m.snapTo(p.getX(), p.getY(), p.getZ(), p.getYRot(), 0);
+		m.setNoAi(true);
+		m.setSilent(true);
+		m.setPermanentlyInvulnerable(true);
+		m.noPhysics = true;
+		m.setNoGravity(true);
+		if (m instanceof net.minecraft.world.entity.monster.cubemob.Slime s) {
+			s.setSize(2, false);
+		}
+		// Named after you (not shown): your own game hides your animal while you look out through its eyes.
+		m.setCustomName(Component.literal(p.getName().getString()));
+		m.setCustomNameVisible(false);
+		m.addTag(HubRides.TEMP);
+		HubPark.live(m);
+		level.addFreshEntity(m);
+		MORPHS.put(p.getUUID(), new Morph(m.getUUID(), tick + 60 * 20));
+		p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.INVISIBILITY, 60 * 20, 0, false, false));
+		level.sendParticles(ParticleTypes.POOF, p.getX(), p.getY() + 1, p.getZ(), 20, 0.4, 0.6, 0.4, 0.02);
+		level.playSound(null, p.blockPosition(), SoundEvents.ILLUSIONER_CAST_SPELL, SoundSource.PLAYERS, 0.8F, 1.4F);
+		p.sendOverlayMessage(Component.literal("Poof! You're a " + type.getDescription().getString().toLowerCase() + "! (F5 to see yourself)")
+				.withStyle(ChatFormatting.AQUA));
+		return true;
+	}
+
+	private static boolean unmorph(ServerLevel level, ServerPlayer p) {
+		Morph m = MORPHS.remove(p.getUUID());
+		if (m == null) {
+			return false;
+		}
+		HubPark.discard(level, m.mob());
+		p.removeEffect(net.minecraft.world.effect.MobEffects.INVISIBILITY);
+		level.sendParticles(ParticleTypes.POOF, p.getX(), p.getY() + 1, p.getZ(), 20, 0.4, 0.6, 0.4, 0.02);
+		return true;
+	}
+
+	private static final Map<UUID, Boolean> JUMP_HELD = new HashMap<>();
+	private static final java.util.Set<UUID> DOUBLE_USED = new java.util.HashSet<>();
+
+	private static boolean has(ServerPlayer p, String name) {
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			if (is(inv.getItem(i), name)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static void tickGadgets(ServerLevel level) {
+		for (ServerPlayer p : level.players()) {
+			// Bouncy boots: jump again in mid-air.
+			boolean jump = p.getLastClientInput().jump();
+			boolean was = JUMP_HELD.getOrDefault(p.getUUID(), false);
+			JUMP_HELD.put(p.getUUID(), jump);
+			if (p.onGround()) {
+				DOUBLE_USED.remove(p.getUUID());
+			} else if (jump && !was && !p.isPassenger() && !p.isFallFlying() && !DOUBLE_USED.contains(p.getUUID()) && has(p, BOOTS)) {
+				DOUBLE_USED.add(p.getUUID());
+				Vec3 f = p.getLookAngle().multiply(1, 0, 1);
+				f = f.lengthSqr() < 1e-4 ? Vec3.ZERO : f.normalize().scale(0.35);
+				p.setDeltaMovement(p.getDeltaMovement().x + f.x, 0.75, p.getDeltaMovement().z + f.z);
+				p.syncVelocity = true;
+				p.resetFallDistance();
+				level.sendParticles(ParticleTypes.CLOUD, p.getX(), p.getY(), p.getZ(), 8, 0.3, 0.05, 0.3, 0.02);
+				level.playSound(null, p.blockPosition(), SoundEvents.SLIME_JUMP, SoundSource.PLAYERS, 0.7F, 1.6F);
+			}
+			if (!p.onGround() && has(p, BOOTS)) {
+				p.resetFallDistance();
+			}
+		}
+		// The grappling hook: no bump when you land.
+		for (var it = GRAPPLED.entrySet().iterator(); it.hasNext();) {
+			var e = it.next();
+			ServerPlayer p = level.getServer().getPlayerList().getPlayer(e.getKey());
+			e.setValue(e.getValue() + 1);
+			if (p == null || e.getValue() > 200 || p.onGround() && e.getValue() > 5) {
+				it.remove();
+			} else {
+				p.resetFallDistance();
+			}
+		}
+		// Paint washes off.
+		for (var it = PAINTED.iterator(); it.hasNext();) {
+			Paint pt = it.next();
+			if (pt.until() <= tick) {
+				it.remove();
+				BlockState real = level.getBlockState(pt.pos());
+				for (ServerPlayer q : level.players()) {
+					if (q.position().distanceTo(Vec3.atCenterOf(pt.pos())) < 110) {
+						q.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(pt.pos(), real));
+					}
+				}
+			}
+		}
+		// Morphed: your animal goes where you go.
+		for (var it = MORPHS.entrySet().iterator(); it.hasNext();) {
+			var e = it.next();
+			ServerPlayer p = level.getServer().getPlayerList().getPlayer(e.getKey());
+			Entity m = level.getEntity(e.getValue().mob());
+			if (p == null || p.level() != level || m == null || e.getValue().until() <= tick) {
+				it.remove();
+				HubPark.discard(level, e.getValue().mob());
+				if (p != null) {
+					p.removeEffect(net.minecraft.world.effect.MobEffects.INVISIBILITY);
+					if (p.level() == level) {
+						p.sendOverlayMessage(Component.literal("Poof! The magic's worn off.").withStyle(ChatFormatting.AQUA));
+					}
+				}
+				continue;
+			}
+			m.teleportTo(p.getX(), p.getY(), p.getZ());
+			m.setYRot(p.getYRot());
+			m.setYHeadRot(p.getYHeadRot());
+			if (m instanceof net.minecraft.world.entity.LivingEntity le) {
+				le.yBodyRot = p.yBodyRot;
+			}
+			m.setXRot(p.getXRot());
+		}
+	}
+
 
 	static void tick(ServerLevel level) {
 		tick++;
+		tickGadgets(level);
 		// Toys you just hold: the pogo stick bounces you, the sparkler sparkles.
 		for (ServerPlayer p : level.players()) {
 			ItemStack held = p.getMainHandItem();

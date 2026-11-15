@@ -22,6 +22,11 @@ public final class RideView {
 		if (mc.player == null || !mc.options.getCameraType().isFirstPerson()) {
 			return false;
 		}
+		// Morphed (the Morph Wand): your own animal isn't drawn while you look out through its eyes.
+		if (e instanceof net.minecraft.world.entity.Mob m && m.isNoAi() && !m.isCustomNameVisible() && m.getCustomName() != null
+				&& m.getCustomName().getString().equals(mc.player.getName().getString())) {
+			return true;
+		}
 		Entity seat = mc.player.getVehicle();
 		if (seat == null) {
 			return false;

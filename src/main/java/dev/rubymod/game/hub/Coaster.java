@@ -419,9 +419,10 @@ public final class Coaster {
 			Vec3[] fa = frame(i * STEP);
 			Vec3[] fb = frame((i + seg) * STEP);
 			for (int s : new int[] {-1, 1}) {
-				HubPark.beam(level, a.add(fa[2].scale(0.45 * s)).add(fa[1].scale(-0.06)), b.add(fb[2].scale(0.45 * s)).add(fb[1].scale(-0.06)), 0.15F, 0.15F, rail);
+				NightShow.glow(HubPark.beam(level, a.add(fa[2].scale(0.45 * s)).add(fa[1].scale(-0.06)), b.add(fb[2].scale(0.45 * s)).add(fb[1].scale(-0.06)), 0.15F,
+						0.15F, rail));
 			}
-			HubPark.beam(level, a.add(fa[1].scale(-0.4)), b.add(fb[1].scale(-0.4)), 0.34F, 0.34F, spine);
+			NightShow.glow(HubPark.beam(level, a.add(fa[1].scale(-0.4)), b.add(fb[1].scale(-0.4)), 0.34F, 0.34F, spine));
 			Vec3 mid = a.lerp(b, 0.5).add(fa[1].scale(-0.18));
 			HubPark.beam(level, mid.add(fa[2].scale(-0.5)), mid.add(fa[2].scale(0.5)), 0.08F, 0.14F, tie);
 		}

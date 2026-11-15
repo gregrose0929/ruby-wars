@@ -388,6 +388,24 @@ def coaster_solo(body, trim):
     ]
 
 
+def target(face, rim):
+    """A round target on a stand (rings, a bullseye), facing -Z."""
+    return [
+        b([2, 2, 7], [14, 14, 8], rim), b([0, 4, 7], [16, 12, 8], rim), b([4, 0, 7], [12, 16, 8], rim),
+        b([3, 4, 6.8], [13, 12, 7], face), b([4, 3, 6.8], [12, 13, 7], face),
+        b([5, 5, 6.6], [11, 11, 6.8], rim), b([6.5, 6.5, 6.4], [9.5, 9.5, 6.6], face),
+    ]
+
+
+BLASTER_CAR = [
+    b([0, 0, 0], [16, 3, 16], PURPLE), b([1, 3, 1], [15, 4, 15], YELLOW),
+    b([0, 3, 0], [1, 6, 16], PURPLE), b([15, 3, 0], [16, 6, 16], PURPLE),
+    b([1, 3, -0.5], [15, 6, 2], PURPLE), b([1, 3, 13], [15, 7, 16], PURPLE),
+    b([3, 6, 0], [5, 7.5, 3], GRAY), b([11, 6, 0], [13, 7.5, 3], GRAY),
+    b([3.5, 6.5, -2], [4.5, 7.2, 0], ORANGE), b([11.5, 6.5, -2], [12.5, 7.2, 0], ORANGE),
+]
+
+
 SWING_CROWN = [
     b([2, 0, 0], [14, 1.2, 16], RED), b([0, 0, 2], [16, 1.2, 14], WHITE), b([1, 0.1, 1], [15, 1.1, 15], YELLOW),
     *[b([x, -0.8, z], [x + 1, 0, z + 1], YELLOW) for x, z in ((1.5, 7.5), (13.5, 7.5), (7.5, 1.5), (7.5, 13.5), (3, 3), (12, 3), (3, 12), (12, 12))],
@@ -422,6 +440,8 @@ MODELS = {
     **{f"swing_chair_{n}": swing_chair(c) for n, c in (("red", RED), ("blue", BLUE), ("green", GREEN), ("yellow", YELLOW), ("pink", PINK),
                                                        ("purple", PURPLE), ("orange", ORANGE), ("sky", SKY))},
     "swing_crown": SWING_CROWN,
+    "target_red": target(RED, WHITE), "target_green": target(LIME, BLACK), "target_gold": target(GOLD, YELLOW),
+    "blaster_car": BLASTER_CAR,
     "coaster_solo_red": coaster_solo(RED, YELLOW), "coaster_solo_yellow": coaster_solo(YELLOW, RED),
     "coaster_solo_blue": coaster_solo(BLUE, WHITE), "coaster_solo_green": coaster_solo(GREEN, YELLOW),
     "duck": DUCK, "golf_ball": GOLF_BALL, "golf_flag": GOLF_FLAG, "zip_handle": ZIP_HANDLE,

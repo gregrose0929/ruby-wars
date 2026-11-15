@@ -136,6 +136,7 @@ public final class HubPark {
 			new Place("splash", "Splash Island", "Slides, flume, fishing", "minecraft:water_bucket", stand(54, FLOOR, -76)),
 			new Place("golf", "Mini Golf", "Four crazy holes", "minecraft:slime_ball", stand(-40, FLOOR, 57)),
 			new Place("spooky", "Haunted Mansion", "Only a little bit scary", "minecraft:carved_pumpkin", stand(29, FLOOR, 44)),
+			new Place("toyland", "Toyland", "Toy Blaster, petting zoo", "minecraft:blaze_rod", stand(6, FLOOR, 44)),
 			new Place("speedway", "Speedway", "Kart racing on ice", "minecraft:snowball", stand(-109, FLOOR, -40)));
 
 	private static final String MAP = "Park Map";
@@ -224,7 +225,7 @@ public final class HubPark {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
 			}
-			if (HubHosts.clicked(sp, entity)) {
+			if (HubHosts.clicked(sp, entity) || Toyland.pet(sp, entity)) {
 				return InteractionResult.SUCCESS;
 			}
 			if (HubRides.mountSwing(sp, entity)) {
@@ -647,11 +648,14 @@ public final class HubPark {
 		SkyZip.reset();
 		SkyRings.reset();
 		HubToys.reset();
+		Toyland.reset();
+		NightShow.reset();
 		plaza(level);
 		FunPark.build(level);
 		BumperBoats.build(level);
 		FunRides.build(level);
 		SplashIsland.build(level);
+		Toyland.build(level);
 		WaterPark.build(level);
 		SkyZip.build(level);
 		SkyRings.build(level);
@@ -678,7 +682,7 @@ public final class HubPark {
 			}
 		}
 		Coaster.clearHeadroom(level);
-		arrows(level);
+		// (the green arrows on the ground are gone: they looked messy)
 		plazaLights(level);
 	}
 
@@ -696,6 +700,7 @@ public final class HubPark {
 		pad(level, -11, FLOOR, 18, "Mini Golf", stand(-40, FLOOR, 57));
 		pad(level, -20, FLOOR, 9, "Speedway", stand(-109, FLOOR, -40));
 		pad(level, -17, FLOOR, -10, "Sky Parkour", stand(-22, FLOOR + 3, -36));
+		pad(level, 5, FLOOR, 21, "Toyland", stand(6, FLOOR, 44));
 		// The toy chest, the fireworks button.
 		set(level, TOY_CHEST.getX(), TOY_CHEST.getY(), TOY_CHEST.getZ(), Blocks.BARREL.defaultBlockState());
 		HubHosts.add(level, new Vec3(4.5, FLOOR + 1, 11.5), 180, net.minecraft.world.entity.npc.villager.VillagerProfession.MASON,
@@ -704,7 +709,8 @@ public final class HubPark {
 								+ "frisbee, a beach ball, a pogo stick), or silly ones (bubbles, water balloons, a sparkler, a whoopee cushion). "
 								+ "Right-click to use them. They stay in the hub.",
 						"Toys: right-click Tilly for some!", q -> List.of("classic|The classics", "outdoor|Kite, frisbee, beach ball, pogo",
-								"silly|Bubbles, balloons, sparkler, cushion"), (q, key) -> HubGames.toyChest(q, key)));
+								"silly|Bubbles, balloons, sparkler, cushion", "gadgets|Grapple, paint gun, boots, morph wand"),
+								(q, key) -> HubGames.toyChest(q, key)));
 		guide(level);
 		set(level, FIREWORKS.getX(), FIREWORKS.getY() - 1, FIREWORKS.getZ(), Blocks.QUARTZ_PILLAR.defaultBlockState());
 		set(level, FIREWORKS.getX(), FIREWORKS.getY(), FIREWORKS.getZ(), Blocks.STONE_BUTTON.defaultBlockState().setValue(ButtonBlock.FACE, AttachFace.FLOOR));
@@ -1066,6 +1072,10 @@ public final class HubPark {
 		HubPlay.tick(level);
 		SkyRings.tick(level);
 		HubToys.tick(level);
+		NightShow.tick(level, tick, lampsLit);
+		if (near(level, Toyland.MX, Toyland.MZ, 50) || Toyland.busy()) {
+			Toyland.tick(level, tick);
+		}
 		if (tick % 20 == 0) {
 			for (ServerPlayer p : level.players()) {
 				SkyRings.tidy(p);

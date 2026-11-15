@@ -168,7 +168,7 @@ public final class HubGames {
 
 	/** One of Tilly's bundles: the classics, the outdoor toys, or the silly ones. */
 	static void toyChest(ServerPlayer p, String key) {
-		if ("outdoor".equals(key) || "silly".equals(key)) {
+		if ("outdoor".equals(key) || "silly".equals(key) || "gadgets".equals(key)) {
 			for (ItemStack s : HubToys.bundle(key)) {
 				hand(p, s);
 			}

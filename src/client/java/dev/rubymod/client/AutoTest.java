@@ -4552,6 +4552,8 @@ public final class AutoTest {
 			case "parkall" -> parkAllScript();
 			case "parkcheck" -> parkCheckScript();
 			case "parkview" -> parkViewScript(null);
+			case "plazalook" -> plazaLookScript();
+			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
 			case "parkducks" -> parkDucksScript();
@@ -5333,6 +5335,167 @@ public final class AutoTest {
 			});
 			then(120, mc -> shot(mc, "fix-view-" + v[0]));
 		}
+	}
+
+	/** Coaster Workshop, Toyland (Toy Blaster, petting zoo), the gadgets, the pony, the night show. */
+	private static void parkNew2Script() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run play coasters"));
+		then(300, mc -> log("coasters: {} at {}", pg("coasters").debugState(), mc.player.position()));
+		String[] build = {"Straight", "Hill Up", "Drop Down", "Turn Left", "Loop!", "Launch", "Turn Left", "Hill Up", "Drop Down", "Turn Left", "Straight",
+			"Turn Left"};
+		for (String piece : build) {
+			then(12, mc -> {
+				int slot = slotOf(mc, piece);
+				if (slot >= 0 && slot < 9) {
+					mc.player.getInventory().setSelectedSlot(slot);
+				}
+			});
+			then(4, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		}
+		then(10, mc -> shot(mc, "new-coaster-built"));
+		then(5, mc -> {
+			int slot = slotOf(mc, "Ride!");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(4, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		for (int i = 0; i < 8; i++) {
+			int n = i;
+			then(25, mc -> {
+				log("coaster ride {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				if (n == 4) {
+					mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+				}
+				shot(mc, "new-coaster-ride-" + n);
+			});
+		}
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		then(200, mc -> {
+			log("coaster after: riding {}", mc.player.isPassenger());
+			command(mc, "gamemode spectator @p");
+		});
+		then(10, mc -> command(mc, "tp @p -110030 120 -40 facing -110000 101 0"));
+		then(80, mc -> shot(mc, "new-coaster-overview"));
+		then(5, mc -> command(mc, "gamemode adventure @p"));
+		then(10, mc -> command(mc, "execute as @p run hub"));
+		// Toyland: the Toy Blaster.
+		then(160, mc -> tpHub(mc, "-3.5 101 44.5 90 0"));
+		then(60, mc -> talk(mc, -5.5, 101, 47.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 24; i++) {
+			int n = i;
+			then(30, mc -> {
+				mc.player.setYRot(mc.player.getYRot() + (n % 2 == 0 ? 40 : -40));
+				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+				if (n % 4 == 0) {
+					shot(mc, "new-blaster-" + n);
+				}
+			});
+		}
+		then(400, mc -> log("blaster after: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// The petting zoo.
+		then(5, mc -> tpHub(mc, "16.5 101 63.5 90 0"));
+		then(60, mc -> talk(mc, 16.5, 101, 66.5));
+		then(30, mc -> press(mc, "play"));
+		then(20, mc -> {
+			var animals = mc.level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class, mc.player.getBoundingBox().inflate(14));
+			log("zoo: {} animals nearby", animals.size());
+			if (!animals.isEmpty()) {
+				var a = animals.get(0);
+				lookAt(mc, a.position().add(0, 0.5, 0));
+				mc.gameMode.interact(mc.player, a, new net.minecraft.world.phys.EntityHitResult(a), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(10, mc -> shot(mc, "new-zoo"));
+		then(5, mc -> tpHub(mc, "14.5 108 50.5 facing 24 101 66"));
+		then(40, mc -> shot(mc, "new-zoo-overview"));
+		// Gadgets.
+		then(5, mc -> tpHub(mc, "4.5 101 9.5 0 0"));
+		then(60, mc -> talk(mc, 4.5, 101, 11.5));
+		then(30, mc -> press(mc, "gadgets"));
+		then(20, mc -> {
+			int slot = slotOf(mc, "Paint Splat Gun");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			mc.player.setXRot(40);
+		});
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(12, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(10, mc -> shot(mc, "new-paint"));
+		then(5, mc -> {
+			int slot = slotOf(mc, "Grappling Hook");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			mc.player.setXRot(-5);
+			mc.player.setYRot(180);
+		});
+		then(5, mc -> {
+			double y0 = mc.player.getY();
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+			log("grapple: from {}", mc.player.position());
+		});
+		then(12, mc -> log("grapple: now {}", mc.player.position()));
+		then(40, mc -> {
+			int slot = slotOf(mc, "Morph Wand");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(20, mc -> {
+			shot(mc, "new-morph-1st");
+			mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+		});
+		then(20, mc -> shot(mc, "new-morph-3rd"));
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		// A pony.
+		then(5, mc -> tpHub(mc, "8.5 101 9.5 0 0"));
+		then(40, mc -> talk(mc, 8.5, 101, 11.5));
+		then(30, mc -> press(mc, "pony"));
+		then(40, mc -> {
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			shot(mc, "new-pony");
+		});
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		// The night show.
+		then(5, mc -> command(mc, "time set 13000"));
+		then(5, mc -> tpHub(mc, "0.5 101 -10.5 facing 0.5 118 30"));
+		for (int i = 0; i < 4; i++) {
+			int n = i;
+			then(60, mc -> shot(mc, "new-night-" + n));
+		}
+		then(5, mc -> {
+			command(mc, "gamemode creative @p");
+			mc.player.getAbilities().flying = true;
+			tpHub(mc, "60 135 -60 facing 60 105 -10");
+		});
+		then(100, mc -> shot(mc, "new-night-coaster"));
+	}
+
+	/** The plaza's ground, close up, all the way round. */
+	private static void plazaLookScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode creative @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> mc.player.getAbilities().flying = true);
+		for (int i = 0; i < 8; i++) {
+			double a = i * Math.PI / 4;
+			int n = i;
+			then(20, mc -> tpHub(mc, String.format(java.util.Locale.ROOT, "%.1f 104 %.1f facing %.1f 100.5 %.1f", Math.cos(a) * 20, Math.sin(a) * 20,
+					Math.cos(a) * 8, Math.sin(a) * 8)));
+			then(60, mc -> shot(mc, "plaza-" + n));
+		}
+		then(20, mc -> tpHub(mc, "0.5 160 0.5 facing 0.5 100 0.6"));
+		then(80, mc -> shot(mc, "plaza-top"));
 	}
 
 	/** Every ride, from the rider's seat: a first-person photo every couple of seconds. */
