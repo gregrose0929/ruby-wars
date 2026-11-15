@@ -631,6 +631,7 @@ public final class HubPark {
 		COASTER_BOARD.clear();
 		moveOut(level);
 		HubRides.reset();
+		TrackRide.ALL.clear();
 		HubGames.reset();
 		HubHosts.reset();
 		FunPark.reset();
@@ -669,6 +670,14 @@ public final class HubPark {
 		Seasons.build(level);
 		Coaster.build(level);
 		Scenery.build(level);
+		// Last of all: nothing solid near a rider's head, on any ride.
+		for (TrackRide r : TrackRide.ALL) {
+			int n = r.clearHeadroom(level);
+			if (n > 0) {
+				dev.rubymod.RubyMod.LOGGER.info("Headroom: cleared {} blocks over the {}", n, r.name);
+			}
+		}
+		Coaster.clearHeadroom(level);
 		arrows(level);
 		plazaLights(level);
 	}

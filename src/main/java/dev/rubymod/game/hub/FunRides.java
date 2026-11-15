@@ -103,7 +103,7 @@ final class FunRides {
 		HubPark.box(level, cx, FLOOR + 3, cz, cx, FLOOR + 18, cz, pole);
 		HubPark.set(level, cx, FLOOR + 19, cz, Blocks.SEA_LANTERN.defaultBlockState());
 		HubPark.label(level, SWING.x, FLOOR + 21.5, SWING.z, "THE SWINGS", ChatFormatting.AQUA, 3.0F);
-		Display.ItemDisplay c = HubPark.tempModel(level, new Vec3(SWING.x, height, SWING.z), 0, "swing_crown", 11.0F, 0.0F);
+		Display.ItemDisplay c = HubPark.tempModel(level, new Vec3(SWING.x, height, SWING.z), 0, "swing_crown", 9.0F, 0.0F);
 		crown = c == null ? null : c.getUUID();
 		if (c != null) {
 			// It sits round the pole (inside it, as far as the light goes): lit as if in daylight.
@@ -179,6 +179,7 @@ final class FunRides {
 			Entity s = SEAT[i] == null ? null : level.getEntity(SEAT[i]);
 			if (s != null && !s.isVehicle()) {
 				p.startRiding(s, true, true);
+				HubRides.faceSeat(p, s);
 				SWING_RIDERS.add(p.getUUID());
 				if (swingT < 0) {
 					swingT = 0;

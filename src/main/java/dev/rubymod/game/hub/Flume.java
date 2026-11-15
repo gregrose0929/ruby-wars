@@ -263,6 +263,10 @@ final class Flume {
 			boolean f = flat.get(e.getKey());
 			HubPark.set(level, c.getX(), fy - 1, c.getZ(), f ? (fy < FLOOR ? Blocks.SMOOTH_SANDSTONE.defaultBlockState() : wood) : chute);
 			HubPark.set(level, c.getX(), fy, c.getZ(), f ? water : lift.get(e.getKey()) ? chain : chute);
+			if (!f && lift.get(e.getKey())) {
+				// An invisible stop over the lift: the water up top can't run down it (so its walls can stay low).
+				HubPark.set(level, c.getX(), fy + 1, c.getZ(), Blocks.BARRIER.defaultBlockState());
+			}
 		}
 		// Walls round every cell (as high as the water beside them could reach), and posts under the high parts.
 		Set<Long> walled = new HashSet<>();
@@ -276,11 +280,13 @@ final class Flume {
 				}
 				int bottom = fy - 1;
 				// Beside still water the wall only needs to reach the water; beside a slope, a block higher (the water runs down it).
-				int top = flat.get(e.getKey()) ? fy : fy + 1;
+				boolean low = flat.get(e.getKey()) || lift.get(e.getKey());
+				int top = low ? fy : fy + 1;
 				for (int[] d2 : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
 					Integer f2 = floor.get(BlockPos.asLong(c.getX() + d[0] + d2[0], 0, c.getZ() + d[1] + d2[1]));
 					if (f2 != null) {
-						top = Math.max(top, flat.get(BlockPos.asLong(c.getX() + d[0] + d2[0], 0, c.getZ() + d[1] + d2[1])) ? f2 : f2 + 1);
+						long k2 = BlockPos.asLong(c.getX() + d[0] + d2[0], 0, c.getZ() + d[1] + d2[1]);
+						top = Math.max(top, flat.get(k2) || lift.get(k2) ? f2 : f2 + 1);
 						bottom = Math.min(bottom, f2 - 1);
 					}
 				}

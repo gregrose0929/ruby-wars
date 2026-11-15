@@ -452,4 +452,39 @@ public final class HubRides {
 		LIVE.clear();
 		SWINGS.clear();
 	}
+
+	/**
+	 * Clear a rider's headroom: every solid block (not water, not light) in a column round {@code seat}, {@code r} to the
+	 * side, from {@code from} to {@code to} above it. Returns how many were cleared.
+	 */
+	static int clearAround(ServerLevel level, Vec3 seat, double r, double from, double to) {
+		int n = 0;
+		for (int x = (int) Math.floor(seat.x - r); x <= (int) Math.floor(seat.x + r); x++) {
+			for (int z = (int) Math.floor(seat.z - r); z <= (int) Math.floor(seat.z + r); z++) {
+				if (Math.hypot(x + 0.5 - seat.x, z + 0.5 - seat.z) > r + 0.35) {
+					continue;
+				}
+				for (int y = (int) Math.floor(seat.y + from); y <= (int) Math.floor(seat.y + to); y++) {
+					net.minecraft.core.BlockPos b = new net.minecraft.core.BlockPos(x, y, z);
+					var s = level.getBlockState(b);
+					if (s.isAir() || s.is(net.minecraft.world.level.block.Blocks.LIGHT) || s.is(net.minecraft.world.level.block.Blocks.WATER)) {
+						continue;
+					}
+					level.setBlock(b, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+					n++;
+				}
+			}
+		}
+		return n;
+	}
+
+	/** Just sat down: look the way the seat faces (out over the ride, not at the back of it). */
+	static void faceSeat(net.minecraft.server.level.ServerPlayer p, net.minecraft.world.entity.Entity seat) {
+		if (seat == null) {
+			return;
+		}
+		double yaw = Math.toRadians(seat.getYRot());
+		Vec3 eye = p.getEyePosition();
+		p.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, eye.add(-Math.sin(yaw) * 6, -0.6, Math.cos(yaw) * 6));
+	}
 }

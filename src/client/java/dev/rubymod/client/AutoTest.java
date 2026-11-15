@@ -4551,6 +4551,8 @@ public final class AutoTest {
 			case "parksplash" -> parkSplashScript();
 			case "parkall" -> parkAllScript();
 			case "parkcheck" -> parkCheckScript();
+			case "parkview" -> parkViewScript(null);
+			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
 			case "parkducks" -> parkDucksScript();
 			case "parktour" -> parkTourScript();
@@ -5331,6 +5333,68 @@ public final class AutoTest {
 			});
 			then(120, mc -> shot(mc, "fix-view-" + v[0]));
 		}
+	}
+
+	/** Every ride, from the rider's seat: a first-person photo every couple of seconds. */
+	private static void parkViewScript(java.util.Set<String> only) {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> log("start"));
+		// name, where to stand, host x y z, button, photos, ticks between
+		Object[][] rides = {
+			{"coaster", "54.5 101 -13.5 180 0", 54.5, -15.5, "play", 14, 40},
+			{"flume", "47.5 101 -97.5 270 0", 48.5, -97.5, "play", 16, 45},
+			{"mansion", "29.5 101 36.0 0 0", 30.5, 37.5, "play", 14, 60},
+			{"swings", "86.5 101 16.5 180 0", 86.5, 14.5, "play", 8, 60},
+			{"wheel", "59.5 101 -1.5 180 0", 59.5, -3.5, "play", 6, 60},
+			{"carousel", "54.5 101 14.5 180 0", 54.5, 12.5, "play", 4, 50},
+			{"ship", "79.5 101 38.5 180 0", 79.5, 36.5, "play", 6, 60},
+			{"cups", "62.5 101 44.5 180 0", 62.5, 42.5, "play", 4, 60},
+			{"drop", "93.5 101 37.5 180 0", 93.5, 35.5, "drop", 6, 60},
+			{"skyzip", "16.5 101 17.5 180 0", 16.5, 15.5, "play", 8, 60},
+			{"river", "30.5 101 -91.5 180 0", 30.5, -93.5, "river", 6, 60},
+		};
+		for (Object[] r : rides) {
+			if (only != null && !only.contains((String) r[0])) {
+				continue;
+			}
+			then(5, mc -> tpHub(mc, (String) r[1]));
+			then(70, mc -> talk(mc, (double) r[2], 101, (double) r[3]));
+			then(30, mc -> press(mc, (String) r[4]));
+			for (int i = 0; i < (int) r[5]; i++) {
+				int n = i;
+				then((int) r[6], mc -> {
+					log("view {} {}: riding {} at {}", r[0], n, mc.player.isPassenger(), mc.player.position());
+					shot(mc, "view-" + r[0] + "-" + n);
+				});
+			}
+			then(5, mc -> mc.options.keyShift.setDown(true));
+			then(10, mc -> mc.options.keyShift.setDown(false));
+			then(30, mc -> log("view {}: done, riding {}", r[0], mc.player.isPassenger()));
+		}
+		// The slides: off the top of the tower.
+		String[][] slides = only != null ? new String[0][] : new String[][] {{"twister", "34.5 127 -99.5 90 0"}, {"freefall", "26.5 127 -99.5 270 0"}, {"raft", "30.5 127 -95.5 0 0"}};
+		for (String[] sl : slides) {
+			then(5, mc -> tpHub(mc, sl[1]));
+			for (int i = 0; i < 8; i++) {
+				int n = i;
+				then(20, mc -> shot(mc, "view-" + sl[0] + "-" + n));
+			}
+			then(150, mc -> log("view {}: done", sl[0]));
+		}
+		// Karts: drive a bit.
+		then(5, mc -> tpHub(mc, "95.5 101 0.5 270 0"));
+		then(70, mc -> talk(mc, 96.5, 101, 0.5));
+		then(30, mc -> press(mc, "play"));
+		then(10, mc -> mc.options.keyUp.setDown(true));
+		for (int i = 0; i < 3; i++) {
+			int n = i;
+			then(20, mc -> shot(mc, "view-bumper-" + n));
+		}
+		then(5, mc -> mc.options.keyUp.setDown(false));
 	}
 
 	/** The Park Map screen, the bumper cars and the dark bits of the mansion. */

@@ -11,4 +11,7 @@ import net.minecraft.world.item.ItemStack;
 public interface ItemDisplayAccessor {
 	@Invoker("setItemStack")
 	void rubymod$setItemStack(ItemStack stack);
+
+	@Invoker("getItemStack")
+	ItemStack rubymod$getItemStack();
 }

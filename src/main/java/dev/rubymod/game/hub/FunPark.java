@@ -577,6 +577,7 @@ final class FunPark {
 			Entity s = HORSE_SEATS[i] == null ? null : level.getEntity(HORSE_SEATS[i]);
 			if (s != null && !s.isVehicle()) {
 				p.startRiding(s, true, true);
+				HubRides.faceSeat(p, s);
 				CAROUSEL_RIDERS.put(p.getUUID(), 0);
 				p.sendOverlayMessage(Component.literal("Giddy-up! Crouch to get off.").withStyle(ChatFormatting.LIGHT_PURPLE));
 				return;

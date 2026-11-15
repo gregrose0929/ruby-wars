@@ -67,7 +67,11 @@ final class TrackRide {
 
 	final List<Car> cars = new ArrayList<>();
 
+	/** Every ride built this time (for the headroom check). */
+	static final List<TrackRide> ALL = new ArrayList<>();
+
 	TrackRide(String name, List<Vec3> path, double[] speed, String model, float size, Vec3 exit, String hostName) {
+		ALL.add(this);
 		this.name = name;
 		this.path = path;
 		this.speed = speed;
@@ -121,6 +125,7 @@ final class TrackRide {
 				return;
 			}
 			q.startRiding(seat, true, true);
+			HubRides.faceSeat(q, seat);
 			car.riders.add(q.getUUID());
 			car.wait = Math.max(car.wait, Math.min(50, waitTicks));
 			q.sendOverlayMessage(Component.literal("All aboard! (crouch to get off)").withStyle(ChatFormatting.LIGHT_PURPLE));
@@ -333,6 +338,21 @@ final class TrackRide {
 			((dev.rubymod.mixin.DisplayAccessor) d).rubymod$setTransformation(new com.mojang.math.Transformation(off,
 					new org.joml.Quaternionf(q).rotateY((float) Math.PI), new org.joml.Vector3f(size, size, size), new org.joml.Quaternionf()));
 		}
+	}
+
+	/**
+	 * Nothing solid near a rider's head anywhere along the way: blocks in the space from just above the seat to well over
+	 * your head (and a little to each side) are cleared. Returns how many went.
+	 */
+	int clearHeadroom(ServerLevel level) {
+		double up = Double.isNaN(seatHeight) ? 0.55 * size / 2 : seatHeight;
+		double side = seatsPer > 1 || sideBySide ? 0.45 * size / 2 + 0.9 : 0.9;
+		int n = 0;
+		for (int i = 0; i < path.size(); i += 2) {
+			Vec3 p = path.get(i);
+			n += HubRides.clearAround(level, p.add(0, up, 0), side, 1.0, 3.0);
+		}
+		return n;
 	}
 
 	void reset() {

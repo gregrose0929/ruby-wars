@@ -522,6 +522,7 @@ public final class Coaster {
 			Entity seat = id == null ? null : level.getEntity(id);
 			if (seat != null && !taken(seat)) {
 				p.startRiding(seat, true, true);
+				HubRides.faceSeat(p, seat);
 				RIDERS.add(p.getUUID());
 				if (state == State.IDLE) {
 					state = State.COUNTDOWN;
@@ -728,6 +729,18 @@ public final class Coaster {
 				((DisplayAccessor) disp).rubymod$setTransformation(new Transformation(off, new Quaternionf(q).rotateY((float) Math.PI),
 						new Vector3f((float) CAR, (float) CAR, (float) CAR), new Quaternionf()));
 			}
+		}
+	}
+
+	/** Nothing solid near a rider's head anywhere round the track. */
+	static void clearHeadroom(ServerLevel level) {
+		int n = 0;
+		for (int i = 0; i < path.size(); i += 2) {
+			Vec3[] f = frame(i * STEP);
+			n += HubRides.clearAround(level, path.get(i).add(f[1].scale(0.55)), 1.0, 0.9, 3.0);
+		}
+		if (n > 0) {
+			dev.rubymod.RubyMod.LOGGER.info("Headroom: cleared {} blocks over the coaster", n);
 		}
 	}
 

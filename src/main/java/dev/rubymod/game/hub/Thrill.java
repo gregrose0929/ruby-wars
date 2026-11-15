@@ -74,7 +74,7 @@ final class Thrill {
 	private static UUID ring;
 	private static final UUID[] DROP_SEATS = new UUID[4];
 	private static final float[] DROP_YAW = {270, 0, 90, 180};
-	private static final double[][] DROP_SIDE = {{1.75, 0}, {0, 1.75}, {-1.75, 0}, {0, -1.75}};
+	private static final double[][] DROP_SIDE = {{2.3, 0}, {0, 2.3}, {-2.3, 0}, {0, -2.3}};
 	private enum Drop {
 		IDLE, BOARD, UP, HOLD, FALL
 	}
@@ -96,7 +96,7 @@ final class Thrill {
 		HubPark.box(level, 89, FLOOR + 45, 30, 90, FLOOR + 45, 31, Blocks.SEA_LANTERN.defaultBlockState());
 		HubPark.box(level, 87, FLOOR, 28, 92, FLOOR, 33, Blocks.POLISHED_ANDESITE.defaultBlockState());
 		HubPark.label(level, TOWER.x, FLOOR + 47.5, TOWER.z, "DROP TOWER", ChatFormatting.RED, 2.4F);
-		Display.ItemDisplay r = HubPark.tempModel(level, TOWER, 0, "drop_seats", 4.4F, 2.2F);
+		Display.ItemDisplay r = HubPark.tempModel(level, TOWER, 0, "drop_seats", 5.4F, 2.7F);
 		ring = r == null ? null : r.getUUID();
 		for (int i = 0; i < 4; i++) {
 			Display.BlockDisplay s = HubPark.seat(level, TOWER);
@@ -501,6 +501,7 @@ final class Thrill {
 			Entity s = id == null ? null : level.getEntity(id);
 			if (s != null && !s.isVehicle()) {
 				p.startRiding(s, true, true);
+				HubRides.faceSeat(p, s);
 				p.sendOverlayMessage(Component.literal(message + " (crouch to get off)").withStyle(ChatFormatting.YELLOW));
 				return true;
 			}
