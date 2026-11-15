@@ -313,8 +313,8 @@ final class MiniGolf {
 		if (r.ball.vel.lengthSqr() > 0.0004) {
 			return true;
 		}
-		if (p.position().distanceTo(r.ball.pos) > 4.5) {
-			p.sendOverlayMessage(Component.literal("Walk up to your ball first!").withStyle(ChatFormatting.YELLOW));
+		if (p.position().distanceTo(r.ball.pos) > 14) {
+			p.sendOverlayMessage(Component.literal("Get a bit closer to your ball first!").withStyle(ChatFormatting.YELLOW));
 			return true;
 		}
 		if (r.charging < 0) {
@@ -366,14 +366,14 @@ final class MiniGolf {
 		if (tick % 4 == 0) {
 			sails(level, 4);
 		}
-		BlockState barrier = sailDown() ? Blocks.BARRIER.defaultBlockState() : Blocks.AIR.defaultBlockState();
+		BlockState barrier = sailDown() && !ballIn(-48, 32.5, -46, 36.5) ? Blocks.BARRIER.defaultBlockState() : Blocks.AIR.defaultBlockState();
 		for (int z = 33; z <= 35; z++) {
 			BlockPos pos = new BlockPos(-47, FLOOR + 1, z);
 			if (level.getBlockState(pos) != barrier) {
 				level.setBlock(pos, barrier, 2);
 			}
 		}
-		BlockState bars = portcullisDown() ? Blocks.IRON_BARS.defaultBlockState() : Blocks.AIR.defaultBlockState();
+		BlockState bars = portcullisDown() && !ballIn(-45, 37.5, -43, 41.5) ? Blocks.IRON_BARS.defaultBlockState() : Blocks.AIR.defaultBlockState();
 		for (int z = 38; z <= 40; z++) {
 			BlockPos pos = new BlockPos(-44, FLOOR + 1, z);
 			if (level.getBlockState(pos).getBlock() != bars.getBlock()) {
@@ -481,10 +481,52 @@ final class MiniGolf {
 			r.next = 50;
 			return;
 		}
+		if (b.vel.lengthSqr() == 0 && stuck(level, b.pos)) {
+			Vec3 free = freeSpot(level, b.pos, hole);
+			if (free != null) {
+				b.pos = free;
+				b.step(level);
+				p.sendOverlayMessage(Component.literal("Free drop! Your ball's been moved somewhere you can reach it.").withStyle(ChatFormatting.AQUA));
+				level.sendParticles(ParticleTypes.HAPPY_VILLAGER, free.x, free.y + 0.3, free.z, 6, 0.2, 0.2, 0.2, 0);
+			}
+		}
 		if (r.strokes[r.hole] >= MAX_STROKES && b.vel.lengthSqr() == 0) {
 			p.sendOverlayMessage(Component.literal("That one's tricky! On to the next hole.").withStyle(ChatFormatting.YELLOW));
 			r.next = 30;
 		}
+	}
+
+	private static boolean ballIn(double x1, double z1, double x2, double z2) {
+		for (Round r : ROUNDS.values()) {
+			if (r.ball != null && r.ball.pos.x >= x1 && r.ball.pos.x <= x2 && r.ball.pos.z >= z1 && r.ball.pos.z <= z2) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Can't stand next to it: under a roof (the windmill's tunnel, the castle's gate) or boxed in. */
+	private static boolean stuck(ServerLevel level, Vec3 at) {
+		BlockPos above = BlockPos.containing(at.x, FLOOR + 2.2, at.z);
+		return !level.getBlockState(above).getCollisionShape(level, above).isEmpty();
+	}
+
+	/** The nearest open spot further down the lane (towards the hole), or back up it. */
+	private static Vec3 freeSpot(ServerLevel level, Vec3 at, Hole hole) {
+		for (int step = 1; step <= 10; step++) {
+			for (int dir : new int[] {1, -1}) {
+				Vec3 c = new Vec3(Math.floor(at.x) + 0.5 + dir * step, at.y, at.z);
+				if (c.x < hole.x1() || c.x > hole.x2() + 1) {
+					continue;
+				}
+				BlockPos here = BlockPos.containing(c.x, FLOOR + 1.1, c.z);
+				if (!stuck(level, c) && level.getBlockState(here).getCollisionShape(level, here).isEmpty()
+						&& !level.getBlockState(here.below()).is(Blocks.MAGMA_BLOCK) && level.getFluidState(here.below()).isEmpty()) {
+					return c;
+				}
+			}
+		}
+		return null;
 	}
 
 	private static void finish(ServerPlayer p, Round r) {

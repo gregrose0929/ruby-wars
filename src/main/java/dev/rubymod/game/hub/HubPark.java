@@ -110,9 +110,9 @@ public final class HubPark {
 			new Place("stage", "The Stage", "Pick songs, dance", "minecraft:jukebox", stand(-37, FLOOR, -35)),
 			new Place("gallery", "The Gallery", "Build Battle winner", "minecraft:painting", stand(-33, FLOOR - 2, 6)),
 			new Place("parkour", "Sky Parkour", "Jump across the sky", "minecraft:feather", stand(-22, FLOOR + 3, -36)),
-			new Place("spooky", "Spooky Hollow", "The Ghost Train", "minecraft:carved_pumpkin", stand(32, FLOOR, 44)),
+			new Place("spooky", "Spooky Hollow", "The Haunted Mansion", "minecraft:carved_pumpkin", stand(29, FLOOR, 44)),
 			new Place("flume", "Flume Falls", "Log flume, big splash", "minecraft:oak_log", stand(-5, FLOOR, -61)),
-			new Place("speedway", "Speedway", "Go-kart racing", "minecraft:minecart", stand(-91, FLOOR, 2)),
+			new Place("speedway", "Speedway", "Go-kart racing", "minecraft:minecart", stand(-96, FLOOR, 22)),
 			new Place("thrill", "Thrill Zone", "Drop tower, ship, games", "minecraft:firework_rocket", stand(83, FLOOR, 38)));
 
 	private static final String MAP = "Park Map";
@@ -570,9 +570,12 @@ public final class HubPark {
 		Village.reset();
 		Speedway.reset();
 		Thrill.reset();
+		WaterPark.reset();
+		SkyZip.reset();
 		plaza(level);
 		FunPark.build(level);
-		tower(level);
+		WaterPark.build(level);
+		SkyZip.build(level);
 		pond(level);
 		MiniGolf.build(level);
 		stage(level);
@@ -585,6 +588,7 @@ public final class HubPark {
 		Booths.build(level);
 		Pets.build(level);
 		Records.build(level);
+		Prizes.build(level);
 		Seasons.build(level);
 		Coaster.build(level);
 		Scenery.build(level);
@@ -761,104 +765,6 @@ public final class HubPark {
 				p.getRandom().nextLong()));
 	}
 
-	// ----- The Tower -----
-
-	private static void tower(ServerLevel level) {
-		int cx = 44;
-		int cz = -44;
-		island(level, cx, cz, 11, FLOOR);
-		WaterPark.ground(level);
-		travelPad(level, 36, FLOOR, -46, "tower");
-		BlockState brick = Blocks.STONE_BRICKS.defaultBlockState();
-		// The tower: 5x5, hollow, a ladder inside up the north wall, a door on the south side.
-		for (int y = FLOOR + 1; y <= FLOOR + 15; y++) {
-			for (int x = cx - 2; x <= cx + 2; x++) {
-				for (int z = cz - 2; z <= cz + 2; z++) {
-					boolean wall = x == cx - 2 || x == cx + 2 || z == cz - 2 || z == cz + 2;
-					set(level, x, y, z, wall ? (y % 4 == 0 ? Blocks.CHISELED_STONE_BRICKS.defaultBlockState() : brick) : Blocks.AIR.defaultBlockState());
-				}
-			}
-			set(level, cx, y, cz - 1, Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, Direction.SOUTH));
-		}
-		box(level, cx, FLOOR + 1, cz + 2, cx, FLOOR + 2, cz + 2, Blocks.AIR.defaultBlockState());
-		// The top: a platform with a rail, a hole for the ladder, and three ways off.
-		box(level, cx - 3, FLOOR + 16, cz - 3, cx + 3, FLOOR + 16, cz + 3, Blocks.SMOOTH_STONE.defaultBlockState());
-		set(level, cx, FLOOR + 16, cz - 1, Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, Direction.SOUTH));
-		for (int x = cx - 3; x <= cx + 3; x++) {
-			for (int z = cz - 3; z <= cz + 3; z++) {
-				boolean rim = x == cx - 3 || x == cx + 3 || z == cz - 3 || z == cz + 3;
-				boolean gap = x == cx && z == cz - 3 || x == cx - 3 && z == cz || x == cx + 3 && z == cz;
-				set(level, x, FLOOR + 17, z, rim && !gap ? Blocks.OAK_FENCE.defaultBlockState() : Blocks.AIR.defaultBlockState());
-			}
-		}
-		// The pool (north) and the diving board out over it.
-		box(level, cx - 4, FLOOR - 3, cz - 9, cx + 3, FLOOR, cz - 5, Blocks.WATER.defaultBlockState());
-		box(level, cx - 5, FLOOR - 4, cz - 10, cx + 4, FLOOR - 4, cz - 4, Blocks.PRISMARINE_BRICKS.defaultBlockState());
-		for (int x = cx - 5; x <= cx + 4; x++) {
-			for (int z = cz - 10; z <= cz - 4; z++) {
-				if (x == cx - 5 || x == cx + 4 || z == cz - 10 || z == cz - 4) {
-					box(level, x, FLOOR - 3, z, x, FLOOR, z, Blocks.PRISMARINE_BRICKS.defaultBlockState());
-				}
-			}
-		}
-		box(level, cx, FLOOR + 16, cz - 4, cx, FLOOR + 16, cz - 8, Blocks.BIRCH_PLANKS.defaultBlockState());
-		label(level, cx + 0.5, FLOOR + 18.5, cz - 7.5, "DIVING BOARD", ChatFormatting.AQUA, 0.8F);
-		// The water slide: twice round the tower, then out into the pool.
-		List<Vec3> pts = new ArrayList<>();
-		pts.add(new Vec3(SLIDE_START.getX() + 0.5, FLOOR + 16.6, cz + 0.5));
-		for (int i = 0; i <= 32; i++) {
-			double a = i / 16.0 * Math.PI * 2;
-			double y = FLOOR + 16.2 - 13.0 * i / 32;
-			pts.add(new Vec3(cx + 0.5 + Math.cos(a) * 5.5, y, cz + 0.5 + Math.sin(a) * 5.5));
-		}
-		pts.add(new Vec3(cx + 3.5, FLOOR + 2.2, cz - 5.0));
-		pts.add(new Vec3(cx + 0.5, FLOOR + 0.6, cz - 7.5));
-		slide = HubRides.spline(pts, 0.5);
-		for (int i = 0; i < slide.size() - 6; i++) {
-			Vec3 p = slide.get(i);
-			Vec3 q = slide.get(Math.min(slide.size() - 1, i + 1));
-			Vec3 side = new Vec3(q.z - p.z, 0, -(q.x - p.x)).normalize();
-			// A see-through tube: a yellow floor, glass sides and roof.
-			int fy = (int) Math.floor(p.y - 0.4);
-			set(level, (int) Math.floor(p.x), fy, (int) Math.floor(p.z), Blocks.CONCRETE.pick(DyeColor.YELLOW).defaultBlockState());
-			for (int s : new int[] {-1, 1}) {
-				Vec3 r = p.add(side.scale(s * 1.1));
-				for (int h = 1; h <= 2; h++) {
-					ifAir(level, (int) Math.floor(r.x), fy + h, (int) Math.floor(r.z), Blocks.STAINED_GLASS.pick(h == 1 ? DyeColor.LIGHT_BLUE : DyeColor.WHITE).defaultBlockState());
-				}
-			}
-
-		}
-		set(level, SLIDE_START.getX(), SLIDE_START.getY(), SLIDE_START.getZ(), Blocks.GLAZED_TERRACOTTA.pick(DyeColor.LIGHT_BLUE).defaultBlockState());
-		set(level, SLIDE_START.getX(), SLIDE_START.getY() + 1, SLIDE_START.getZ(), Blocks.AIR.defaultBlockState());
-		label(level, SLIDE_START.getX() + 0.5, SLIDE_START.getY() + 2.6, SLIDE_START.getZ() + 0.5, "TUBE SLIDE\nstep on the blue", ChatFormatting.AQUA, 0.8F);
-		// The zipline: from the top, down to the plaza.
-		set(level, ZIP_START.getX(), ZIP_START.getY(), ZIP_START.getZ(), Blocks.GOLD_BLOCK.defaultBlockState());
-		set(level, ZIP_START.getX(), ZIP_START.getY() + 1, ZIP_START.getZ(), Blocks.AIR.defaultBlockState());
-		box(level, ZIP_START.getX(), ZIP_START.getY() + 1, ZIP_START.getZ() - 1, ZIP_START.getX(), ZIP_START.getY() + 4, ZIP_START.getZ() - 1,
-				Blocks.DARK_OAK_FENCE.defaultBlockState());
-		label(level, ZIP_START.getX() + 0.5, ZIP_START.getY() + 2.6, ZIP_START.getZ() + 0.5, "ZIP LINE\nstep on the gold", ChatFormatting.GOLD, 0.8F);
-		Vec3 top = new Vec3(ZIP_START.getX() + 0.5, ZIP_START.getY() + 4.2, ZIP_START.getZ() + 0.5);
-		Vec3 bottom = new Vec3(16.5, FLOOR + 3.6, -10.5);
-		List<Vec3> cable = new ArrayList<>();
-		List<Vec3> ride = new ArrayList<>();
-		int n = (int) (top.distanceTo(bottom) / 0.5);
-		for (int i = 0; i <= n; i++) {
-			double t = i / (double) n;
-			Vec3 c = top.lerp(bottom, t).add(0, -2.5 * Math.sin(Math.PI * t), 0);
-			cable.add(c);
-			ride.add(c.add(0, -2.4, 0));
-		}
-		ride.add(new Vec3(16.5, FLOOR + 1, -10.5));
-		zip = HubRides.even(ride, 0.5);
-		for (int i = 0; i < cable.size(); i += 2) {
-			piece(level, cable.get(i), Blocks.CONCRETE.pick(DyeColor.GRAY).defaultBlockState(), new Vector3f(0.09F, 0.09F, 0.09F), new Quaternionf());
-		}
-		lamp(level, 50, FLOOR + 1, -37);
-		lamp(level, 38, FLOOR + 1, -51);
-		WaterPark.dress(level);
-	}
-
 	// ----- The Pond -----
 
 	private static void pond(ServerLevel level) {
@@ -1014,6 +920,10 @@ public final class HubPark {
 		if (near(level, -44, 44, 40)) {
 			MiniGolf.tick(level);
 		}
+		if (near(level, WaterPark.CX, WaterPark.CZ, 45)) {
+			WaterPark.tick(level);
+		}
+		SkyZip.tick(level, tick);
 		if (near(level, -46, -34, 40)) {
 			Concert.tick(level);
 		}
@@ -1027,7 +937,7 @@ public final class HubPark {
 			Village.tick(level, tick);
 		}
 		HubPlay.tick(level);
-		if (near(level, Speedway.CX, Speedway.CZ, 50)) {
+		if (near(level, Speedway.CX, Speedway.CZ, 60)) {
 			Speedway.tick(level, tick);
 		}
 		if (near(level, Thrill.CX, Thrill.CZ, 50) || Thrill.busy()) {
@@ -1076,17 +986,6 @@ public final class HubPark {
 				if (p.onGround()) {
 					BOUNCE_TOP.remove(p.getUUID());
 				}
-			}
-			// The rollercoaster, the slide, the zipline.
-			if (p.onGround() && under.equals(SLIDE_START)) {
-				HubRides.start(p, slide, HubRides.Kind.SLIDE, Blocks.CONCRETE.pick(DyeColor.YELLOW).defaultBlockState(), 1.0F, 0.25F, 1.3F);
-				level.playSound(null, p.blockPosition(), SoundEvents.PLAYER_SPLASH_HIGH_SPEED, SoundSource.PLAYERS, 0.8F, 1.2F);
-				continue;
-			}
-			if (p.onGround() && under.equals(ZIP_START)) {
-				HubRides.start(p, zip, HubRides.Kind.ZIP, null, 0, 0, 0, "zip_handle", new Vec3(0, 1.9, 0));
-				level.playSound(null, p.blockPosition(), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 1.0F, 0.8F);
-				continue;
 			}
 			// The cannon: stand in it for three seconds.
 			if (p.onGround() && under.equals(CANNON)) {

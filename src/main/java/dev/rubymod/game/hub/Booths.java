@@ -93,10 +93,8 @@ final class Booths {
 	}
 
 	private static void prize(ServerLevel level, ServerPlayer p, String why) {
-		ItemStack teddy = HubGames.toy(Items.STICK, 1, "Teddy Bear (prize!)", ChatFormatting.GOLD);
-		teddy.set(net.minecraft.core.component.DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_teddy"));
-		HubGames.give(p, teddy);
-		Alerts.title(p, "YOU WIN!", why + " Here's a teddy bear", ChatFormatting.GOLD);
+		Prizes.award(level, p, "teddy", "a teddy bear");
+		Alerts.title(p, "YOU WIN!", why + " A teddy bear for the Prize Shelf!", ChatFormatting.GOLD);
 		HubPark.burst(level, p.position().add(0, 3, 0));
 	}
 

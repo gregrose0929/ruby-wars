@@ -45,7 +45,6 @@ final class Scenery {
 		clouds(level);
 		islets(level);
 		signs(level);
-		speedway(level);
 		funPark(level);
 		thrillZone(level);
 		golf(level);
@@ -59,7 +58,7 @@ final class Scenery {
 	 */
 	private static void glow(ServerLevel level) {
 		int[][] islands = {{0, 0, 23, 11}, {56, 2, 17, 12}, {44, -44, 11, 12}, {0, 56, 14, 12}, {-44, 44, 16, 12}, {-46, -34, 12, 11}, {-41, 6, 9, 11},
-			{44, 40, 13, 6}, {6, -63, 14, 12}, {-88, 6, 22, 12}, {84, 40, 22, 12}};
+			{44, 40, 16, 6}, {6, -63, 14, 12}, {-96, 6, 30, 12}, {84, 40, 22, 12}};
 		for (int[] is : islands) {
 			BlockState light = Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, is[3]);
 			for (int x = -is[2]; x <= is[2]; x += 6) {
@@ -203,9 +202,9 @@ final class Scenery {
 		{"Mini Golf", "-39.5", "57.5", "Four crazy holes (Gus)", "The Windmill, the Castle,", "the Volcano, Pirate Cove"},
 		{"The Stage", "-36.5", "-35.5", "Pick a song (DJ Remy)", "The dance floor", "The photo spot"},
 		{"Sky Parkour", "-21.5", "-36.5", "Jump across the sky (Pip)", "Gold blocks are checkpoints"},
-		{"Spooky Hollow", "32.5", "44.5", "The Ghost Train (Mortimer)", "...if you dare!"},
+		{"Spooky Hollow", "29.5", "44.5", "The Haunted Mansion (Mortimer)", "...if you dare!"},
 		{"Flume Falls", "-4.5", "-60.5", "The Log Flume (Flo)", "The Splash Zone"},
-		{"Speedway", "-90.5", "2.5", "Go-kart races (Rex)", "Tonight's records"},
+		{"Speedway", "-95.5", "22.5", "Go-kart races (Rex)", "The bridge, the jump, boost pads", "Tonight's records"},
 		{"Thrill Zone", "83.5", "38.5", "Drop Tower (Tess)", "Pirate Ship (Captain Polly)", "Teacups (Mabel)", "Balloon Tours (Barnaby)",
 			"Carnival games and prizes!"},
 	};
@@ -336,8 +335,8 @@ final class Scenery {
 		int n = 0;
 		for (int i = 0; i < 24; i++) {
 			double a = i * Math.PI * 2 / 24;
-			int x = Spooky.CX + (int) Math.round(Math.cos(a) * 12.6);
-			int z = Spooky.CZ + (int) Math.round(Math.sin(a) * 12.6);
+			int x = Spooky.CX + (int) Math.round(Math.cos(a) * 15.6);
+			int z = Spooky.CZ + (int) Math.round(Math.sin(a) * 15.6);
 			BlockPos bars = new BlockPos(x, FLOOR + 1, z);
 			if (level.getBlockState(bars).is(Blocks.IRON_BARS) && level.getBlockState(bars.above()).isAir() && n++ % 2 == 0) {
 				level.setBlock(bars.above(), Blocks.SOUL_LANTERN.defaultBlockState(), 2);

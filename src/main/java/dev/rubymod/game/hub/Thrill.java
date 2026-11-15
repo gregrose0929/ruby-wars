@@ -52,11 +52,11 @@ final class Thrill {
 
 	static void build(ServerLevel level) {
 		HubPark.island(level, CX, CZ, 22, FLOOR);
-		HubPark.clear(level, CX - 22, FLOOR + 13, CZ - 22, CX + 22, FLOOR + 34, CZ + 22);
+		HubPark.clear(level, CX - 22, FLOOR + 13, CZ - 22, CX + 22, FLOOR + 48, CZ + 22);
 		// Paths between everything.
 		HubPark.box(level, CX - 14, FLOOR, CZ - 1, CX + 16, FLOOR, CZ + 1, Blocks.SMOOTH_SANDSTONE.defaultBlockState());
 		HubPark.box(level, CX - 1, FLOOR, CZ - 12, CX + 1, FLOOR, CZ + 10, Blocks.SMOOTH_SANDSTONE.defaultBlockState());
-		HubPark.label(level, CX + 0.5, FLOOR + 33, CZ + 0.5, "THRILL ZONE", ChatFormatting.GOLD, 3.0F);
+		HubPark.label(level, CX + 0.5, FLOOR + 30, CZ + 4.5, "THRILL ZONE", ChatFormatting.GOLD, 3.0F);
 		HubPark.travelPad(level, CX + 3, FLOOR, CZ + 3, "thrill");
 		dropTower(level);
 		pirateShip(level);
@@ -71,7 +71,7 @@ final class Thrill {
 
 	private static final Vec3 TOWER = new Vec3(90.0, FLOOR + 1, 31.0);
 	private static final Vec3 TOWER_EXIT = new Vec3(90.5, FLOOR + 1, 35.5);
-	private static final double TOP = FLOOR + 27;
+	private static final double TOP = FLOOR + 40;
 	private static UUID ring;
 	private static final UUID[] DROP_SEATS = new UUID[4];
 	private static final float[] DROP_YAW = {270, 0, 90, 180};
@@ -88,14 +88,14 @@ final class Thrill {
 	private static void dropTower(ServerLevel level) {
 		drop = Drop.IDLE;
 		dropY = TOWER.y;
-		for (int y = FLOOR + 1; y <= FLOOR + 30; y++) {
+		for (int y = FLOOR + 1; y <= FLOOR + 43; y++) {
 			BlockState s = Blocks.CONCRETE.pick(((y - FLOOR) / 3) % 2 == 0 ? DyeColor.RED : DyeColor.WHITE).defaultBlockState();
 			HubPark.box(level, 89, y, 30, 90, y, 31, s);
 		}
-		HubPark.box(level, 88, FLOOR + 31, 29, 91, FLOOR + 31, 32, Blocks.GOLD_BLOCK.defaultBlockState());
-		HubPark.box(level, 89, FLOOR + 32, 30, 90, FLOOR + 32, 31, Blocks.SEA_LANTERN.defaultBlockState());
+		HubPark.box(level, 88, FLOOR + 44, 29, 91, FLOOR + 44, 32, Blocks.GOLD_BLOCK.defaultBlockState());
+		HubPark.box(level, 89, FLOOR + 45, 30, 90, FLOOR + 45, 31, Blocks.SEA_LANTERN.defaultBlockState());
 		HubPark.box(level, 87, FLOOR, 28, 92, FLOOR, 33, Blocks.POLISHED_ANDESITE.defaultBlockState());
-		HubPark.label(level, TOWER.x, FLOOR + 34.5, TOWER.z, "DROP TOWER", ChatFormatting.RED, 2.0F);
+		HubPark.label(level, TOWER.x, FLOOR + 47.5, TOWER.z, "DROP TOWER", ChatFormatting.RED, 2.4F);
 		Display.ItemDisplay r = HubPark.tempModel(level, TOWER, 0, "drop_seats", 4.4F, 2.2F);
 		ring = r == null ? null : r.getUUID();
 		for (int i = 0; i < 4; i++) {
@@ -135,7 +135,7 @@ final class Thrill {
 				}
 			}
 			case UP -> {
-				dropY += 0.12;
+				dropY += 0.15;
 				if (tick % 8 == 0) {
 					level.playSound(null, BlockPos.containing(TOWER.x, dropY, TOWER.z), SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 0.8F, 0.6F);
 				}
@@ -426,9 +426,9 @@ final class Thrill {
 	private static TrackRide balloon;
 	private static final Vec3 BALLOON = new Vec3(100.5, FLOOR + 1, 38.5);
 	/** Up from the Thrill Zone, over every island in turn, and home. x, z, height. */
-	private static final double[][] TOUR = {{100.5, 38.5, 1}, {100, 40, 6}, {96, 44, 14}, {84, 46, 22}, {64, 44, 27}, {44, 40, 29}, {20, 50, 29},
-		{0, 56, 29}, {-24, 52, 29}, {-44, 44, 29}, {-70, 26, 29}, {-88, 6, 30}, {-70, -6, 30}, {-46, -30, 30}, {-22, -58, 31}, {6, -63, 30},
-		{30, -56, 30}, {44, -44, 30}, {52, -20, 28}, {56, 2, 28}, {72, 20, 24}, {90, 30, 14}, {98, 36, 6}, {100.5, 38.5, 1}};
+	private static final double[][] TOUR = {{100.5, 38.5, 1}, {100, 40, 6}, {96, 44, 14}, {84, 46, 22}, {64, 44, 30}, {44, 40, 34}, {20, 50, 30},
+		{0, 56, 29}, {-24, 52, 29}, {-44, 44, 29}, {-70, 26, 29}, {-96, 6, 30}, {-70, -6, 30}, {-46, -30, 30}, {-22, -58, 31}, {6, -63, 30},
+		{30, -56, 30}, {44, -44, 30}, {52, -20, 28}, {56, 2, 28}, {72, 16, 24}, {86, 16, 18}, {94, 20, 14}, {101, 30, 6}, {100.5, 38.5, 1}};
 
 	private static void balloon(ServerLevel level) {
 		List<Vec3> pts = new ArrayList<>();

@@ -124,6 +124,43 @@ public final class HubGames {
 		p.inventoryMenu.broadcastChanges();
 	}
 
+	/** Where each game's things belong (x, z, radius): leave and they're put back. Prizes left over from before go too. */
+	private static final java.util.Map<String, double[]> HOME = java.util.Map.of(
+			"Putter", new double[] {-44, 44, 22},
+			"Pond Rod", new double[] {0, 56, 20},
+			"Gallery Snowball", new double[] {56, 2, 22},
+			"Mallet", new double[] {84, 40, 26},
+			"Basketball", new double[] {84, 40, 26},
+			"Toss Ring", new double[] {84, 40, 26},
+			"Teddy Bear (prize!)", new double[] {0, 0, -1},
+			"Rubber Duck (Duck Shoot prize!)", new double[] {0, 0, -1});
+
+	/** Take away anything that belongs somewhere else (the putter when you leave Mini Golf, and so on). */
+	static void putBack(ServerLevel level) {
+		for (ServerPlayer p : level.players()) {
+			var inv = p.getInventory();
+			boolean changed = false;
+			for (int i = 0; i < inv.getContainerSize(); i++) {
+				ItemStack s = inv.getItem(i);
+				if (!isToy(s)) {
+					continue;
+				}
+				double[] home = HOME.get(s.getHoverName().getString());
+				if (home != null && (home[2] < 0 || Math.hypot(p.getX() - home[0], p.getZ() - home[1]) > home[2])) {
+					inv.setItem(i, ItemStack.EMPTY);
+					changed = true;
+					if (home[2] > 0) {
+						p.sendOverlayMessage(Component.literal("(You left the " + s.getHoverName().getString().toLowerCase() + " where it belongs.)")
+								.withStyle(ChatFormatting.GRAY));
+					}
+				}
+			}
+			if (changed) {
+				p.inventoryMenu.broadcastChanges();
+			}
+		}
+	}
+
 	/** The toy chest on the plaza. */
 	static void toyChest(ServerPlayer p) {
 		hand(p, toy(Items.FIREWORK_STAR, 1, "Confetti Cannon", ChatFormatting.LIGHT_PURPLE));
@@ -473,6 +510,9 @@ public final class HubGames {
 
 	static void tick(ServerLevel level) {
 		tick++;
+		if (tick % 20 == 0) {
+			putBack(level);
+		}
 		tickSnowballs(level);
 		tickStage(level);
 		for (Iterator<Ball> it = BALLS.iterator(); it.hasNext();) {

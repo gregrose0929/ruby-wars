@@ -4545,6 +4545,8 @@ public final class AutoTest {
 			case "parkthrill" -> parkThrillScript();
 			case "parkbooth" -> parkBoothScript();
 			case "parkpretty" -> parkPrettyScript();
+			case "parkbig" -> parkBigScript();
+			case "parkfix" -> parkFixScript();
 			case "parkswan" -> parkSwanScript();
 			case "parkducks" -> parkDucksScript();
 			case "parktour" -> parkTourScript();
@@ -5252,6 +5254,180 @@ public final class AutoTest {
 			System.clearProperty("rubywars.season");
 			dev.rubymod.game.hub.HubPark.build(server.getLevel(dev.rubymod.game.Hub.HUB));
 		}));
+	}
+
+	private static void ride(String name, int[] checks) {
+	}
+
+	/** Checks after fixes: items going back, the Haunted Mansion, Free Fall, the Prize Shelf; photos. */
+	private static void parkFixScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> tpHub(mc, "-43.5 101 55.0 180 0"));
+		then(80, mc -> talk(mc, -43.5, 101, 57.5));
+		then(30, mc -> press(mc, "play"));
+		then(30, mc -> log("items: holding at golf {}", mc.player.getMainHandItem().getHoverName().getString()));
+		then(5, mc -> tpHub(mc, "0.5 101 8.5 180 0"));
+		then(60, mc -> log("items: holding on the plaza '{}' sticks {}", mc.player.getMainHandItem().getHoverName().getString(),
+				mc.player.getInventory().countItem(net.minecraft.world.item.Items.STICK)));
+		// Hoop Shot, to win a prize for the shelf.
+		then(10, mc -> tpHub(mc, "88.0 101 50.5 0 0"));
+		then(80, mc -> talk(mc, 85.5, 101, 51.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 10; i++) {
+			then(12, mc -> {
+				lookAt(mc, new net.minecraft.world.phys.Vec3(88.0, 103.8, 54.4));
+				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+			});
+		}
+		then(560, mc -> log("prize: round over"));
+		// The Haunted Mansion again.
+		then(5, mc -> tpHub(mc, "29.5 101 36.0 0 0"));
+		then(80, mc -> talk(mc, 30.5, 101, 37.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 14; i++) {
+			int n = i;
+			then(100, mc -> {
+				log("mansion {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				shot(mc, "fix-mansion-" + n);
+			});
+		}
+		then(200, mc -> log("mansion: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// Free Fall.
+		then(5, mc -> tpHub(mc, "40.5 127 -43.5 270 20"));
+		then(60, mc -> log("freefall: riding {}", mc.player.isPassenger()));
+		then(14, mc -> shot(mc, "fix-freefall"));
+		then(120, mc -> log("freefall: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		String[][] views = {
+			{"mansion", "24 116 22", "44 104 40"},
+			{"speedway", "-62 126 -24", "-96 101 6"},
+			{"water", "70 124 -16", "44 108 -44"},
+			{"coaster", "-24 118 -54", "-12 104 -30"},
+			{"bigwheel", "62 110 14", "62 110 -8"},
+			{"shelf", "11.5 103 9", "11.5 102 13"},
+		};
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		for (String[] v : views) {
+			then(20, mc -> {
+				mc.player.getAbilities().flying = true;
+				tpHub(mc, v[1] + " facing " + v[2]);
+			});
+			then(120, mc -> shot(mc, "fix-view-" + v[0]));
+		}
+	}
+
+	/** The rebuilt rides: the Haunted Mansion, the Speedway with computer karts, the water park, the Sky Zip, the new coaster. */
+	private static void parkBigScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		// Items go back: a putter at golf, then off to the plaza.
+		then(160, mc -> tpHub(mc, "-43.5 101 56.0 180 0"));
+		then(30, mc -> talk(mc, -43.5, 101, 57.5));
+		then(20, mc -> press(mc, "play"));
+		then(20, mc -> log("items: putters at golf {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.STICK)));
+		then(5, mc -> tpHub(mc, "0.5 101 8.5 180 0"));
+		then(40, mc -> log("items: putters on the plaza {}", mc.player.getInventory().countItem(net.minecraft.world.item.Items.STICK)));
+		// The coaster, all the way round (photos at the loop and in the tunnel).
+		then(5, mc -> tpHub(mc, "46.5 101 0.0 0 0"));
+		then(30, mc -> talk(mc, 46.5, 101, 2.5));
+		then(20, mc -> press(mc, "play"));
+		for (int i = 0; i < 12; i++) {
+			int n = i;
+			then(40, mc -> log("coaster {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position()));
+			if (i == 5 || i == 7 || i == 9) {
+				then(1, mc -> shot(mc, "big-coaster-" + n));
+			}
+		}
+		then(200, mc -> log("coaster: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		// The Haunted Mansion.
+		then(5, mc -> tpHub(mc, "29.5 101 36.0 0 0"));
+		then(30, mc -> talk(mc, 30.5, 101, 37.5));
+		then(20, mc -> press(mc, "play"));
+		for (int i = 0; i < 16; i++) {
+			int n = i;
+			then(90, mc -> {
+				log("mansion {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				shot(mc, "big-mansion-" + n);
+			});
+		}
+		then(200, mc -> log("mansion: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		// Splash Tower: up with Lulu, down the Twister; the Free Fall; the lazy river.
+		then(5, mc -> tpHub(mc, "44.5 101 -35.5 180 0"));
+		then(30, mc -> talk(mc, 44.5, 101, -37.5));
+		then(20, mc -> press(mc, "top"));
+		then(20, mc -> {
+			log("water: at the top {}", mc.player.blockPosition());
+			tpHub(mc, "48.5 127 -43.5");
+		});
+		then(40, mc -> log("twister: riding {}", mc.player.isPassenger()));
+		then(40, mc -> shot(mc, "big-twister"));
+		then(160, mc -> log("twister: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		then(5, mc -> tpHub(mc, "40.5 127 -43.5"));
+		then(40, mc -> log("freefall: riding {}", mc.player.isPassenger()));
+		then(20, mc -> shot(mc, "big-freefall"));
+		then(120, mc -> log("freefall: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		then(5, mc -> tpHub(mc, "44.5 127 -39.5"));
+		then(90, mc -> log("raft: riding {}", mc.player.isPassenger()));
+		then(60, mc -> shot(mc, "big-raft"));
+		then(200, mc -> log("raft: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		then(5, mc -> tpHub(mc, "44.5 101 -35.5 180 0"));
+		then(30, mc -> talk(mc, 44.5, 101, -37.5));
+		then(20, mc -> press(mc, "river"));
+		then(140, mc -> {
+			log("river: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			shot(mc, "big-river");
+		});
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// The Sky Zip.
+		then(10, mc -> tpHub(mc, "16.5 101 13.5 0 0"));
+		then(30, mc -> talk(mc, 16.5, 101, 15.5));
+		then(20, mc -> press(mc, "play"));
+		for (int i = 0; i < 6; i++) {
+			int n = i;
+			then(120, mc -> {
+				log("skyzip {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				if (n == 2) {
+					shot(mc, "big-skyzip");
+				}
+			});
+		}
+		then(200, mc -> log("skyzip: after riding {} at {}", mc.player.isPassenger(), mc.player.blockPosition()));
+		// The Speedway, with computer karts.
+		then(10, mc -> tpHub(mc, "-98.5 101 18.5 0 0"));
+		then(40, mc -> talk(mc, -98.5, 101, 20.5));
+		then(20, mc -> press(mc, "bots"));
+		then(440, mc -> onServer(mc, server -> log("karts at GO: {}", dev.rubymod.game.hub.Speedway.debug(server.getLevel(dev.rubymod.game.Hub.HUB)))));
+		for (int i = 0; i < 8; i++) {
+			int n = i;
+			then(60, mc -> onServer(mc, server -> log("karts {}: {}", n, dev.rubymod.game.hub.Speedway.debug(server.getLevel(dev.rubymod.game.Hub.HUB)))));
+			if (i == 3) {
+				then(1, mc -> shot(mc, "big-karts"));
+			}
+		}
+		then(5, mc -> command(mc, "ride @p dismount"));
+		// Photos of the new builds.
+		String[][] views = {
+			{"mansion", "24 116 22", "44 104 40"},
+			{"speedway", "-62 126 -24", "-96 101 6"},
+			{"water", "70 124 -16", "44 108 -44"},
+			{"coaster", "-24 118 -54", "-12 104 -30"},
+			{"bigwheel", "62 110 14", "62 110 -8"},
+			{"shelf", "11.5 103 9", "11.5 102 13"},
+		};
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		for (String[] v : views) {
+			then(20, mc -> {
+				mc.player.getAbilities().flying = true;
+				tpHub(mc, v[1] + " facing " + v[2]);
+			});
+			then(70, mc -> shot(mc, "big-view-" + v[0]));
+		}
 	}
 
 	/** The park by day and by night, for judging how it looks. */

@@ -42,6 +42,12 @@ final class TrackRide {
 	double modelUp = Double.NaN;
 	/** Stays level (the balloon) instead of tilting with the path. */
 	boolean upright;
+	/** Two seats side by side (the doom buggy) instead of one behind the other. */
+	boolean sideBySide;
+	/** Riders sway from side to side as they go (hanging from the Sky Zip). */
+	boolean sway;
+	/** How long a car waits at the station for friends. */
+	int waitTicks = 80;
 	/** Things that happen as a car passes a point on the path (keyed by the point's index). */
 	final Map<Integer, BiConsumer<ServerLevel, Car>> events = new HashMap<>();
 
@@ -52,6 +58,9 @@ final class TrackRide {
 		int wait = 80;
 		final Set<UUID> riders = new LinkedHashSet<>();
 		Vec3 pos = Vec3.ZERO;
+		/** Something the car turns to face for a while (a scene in the Haunted Mansion). */
+		Vec3 face;
+		int faceUntil;
 	}
 
 	final List<Car> cars = new ArrayList<>();
@@ -111,7 +120,7 @@ final class TrackRide {
 			}
 			q.startRiding(seat, true, true);
 			car.riders.add(q.getUUID());
-			car.wait = Math.max(car.wait, 50);
+			car.wait = Math.max(car.wait, Math.min(50, waitTicks));
 			q.sendOverlayMessage(Component.literal("All aboard! (crouch to get off)").withStyle(ChatFormatting.LIGHT_PURPLE));
 			level.playSound(null, q.blockPosition(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.PLAYERS, 0.6F, 1.3F);
 		}
@@ -129,6 +138,7 @@ final class TrackRide {
 	private Car spawn(ServerLevel level) {
 		Car c = new Car();
 		c.seats = new UUID[seatsPer];
+		c.wait = waitTicks;
 		Vec3 p = at(0);
 		Display.ItemDisplay m = HubPark.tempModel(level, p, 0, model, size, (float) (Double.isNaN(modelUp) ? size / 2 : modelUp));
 		if (m == null) {
@@ -196,6 +206,15 @@ final class TrackRide {
 		}
 	}
 
+	/** Turn the car (and its riders' heads) towards {@code target} until the path gets {@code ahead} points further on. */
+	void face(ServerLevel level, Car c, Vec3 target, int ahead) {
+		c.face = target;
+		c.faceUntil = (int) (c.d / STEP) + ahead;
+		for (ServerPlayer p : riders(level, c)) {
+			p.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, target);
+		}
+	}
+
 	void tell(ServerLevel level, Car c, String text) {
 		for (UUID id : c.riders) {
 			ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
@@ -249,6 +268,10 @@ final class TrackRide {
 		}
 		dir = dir.normalize();
 		float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
+		if (c.face != null && c.d / STEP < c.faceUntil) {
+			Vec3 look = c.face.subtract(p);
+			yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));
+		}
 		float pitch = upright ? 0 : (float) -Math.toDegrees(Math.asin(Math.max(-1, Math.min(1, dir.y))));
 		Entity m = level.getEntity(c.model);
 		if (m != null) {
@@ -261,10 +284,18 @@ final class TrackRide {
 		for (int s = 0; s < seatsPer; s++) {
 			Entity seat = c.seats[s] == null ? null : level.getEntity(c.seats[s]);
 			if (seat != null) {
-				double along = (s / (seatsPer > 2 ? 2 : 1)) % 2 == 0 ? 0.35 : -0.45;
-				double across = seatsPer > 2 ? (s % 2 == 0 ? -0.45 : 0.45) : 0;
+				double along = sideBySide ? 0 : (s / (seatsPer > 2 ? 2 : 1)) % 2 == 0 ? 0.35 : -0.45;
+				double across = seatsPer > 2 || sideBySide ? (s % 2 == 0 ? -0.45 : 0.45) : 0;
+				if (sway) {
+					across += Math.sin(c.d * 0.35) * 0.35;
+				}
 				double up = Double.isNaN(seatHeight) ? 0.55 * size / 2 : seatHeight;
 				Vec3 sp = p.add(flat.scale(along * size / 2)).add(side.scale(across * size / 2)).add(0, up + dir.y * along, 0);
+				if (c.face != null && c.d / STEP < c.faceUntil) {
+					Vec3 fwd = new Vec3(-Math.sin(Math.toRadians(yaw)), 0, Math.cos(Math.toRadians(yaw)));
+					Vec3 sd = new Vec3(-fwd.z, 0, fwd.x);
+					sp = p.add(sd.scale(across * size / 2)).add(0, up, 0);
+				}
 				seat.teleportTo(sp.x, sp.y, sp.z);
 				seat.setYRot(yaw);
 				for (Entity rider : seat.getPassengers()) {

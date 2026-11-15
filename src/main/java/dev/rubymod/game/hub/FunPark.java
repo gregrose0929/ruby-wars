@@ -310,10 +310,8 @@ final class FunPark {
 			HubGames.takeAll(p, "Gallery Snowball");
 			Records.submit(level, "Most ducks (Duck Shoot)", p.getName().getString(), e.getValue(), false, String::valueOf);
 			if (e.getValue() >= 5) {
-				ItemStack duck = HubGames.toy(Items.STICK, 1, "Rubber Duck (Duck Shoot prize!)", ChatFormatting.GOLD);
-				duck.set(net.minecraft.core.component.DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_duck"));
-				HubGames.give(p, duck);
-				Alerts.title(p, "YOU WIN!", e.getValue() + " ducks! Here's a Rubber Duck", ChatFormatting.GOLD);
+				Prizes.award(level, p, "duck", "a rubber duck");
+				Alerts.title(p, "YOU WIN!", e.getValue() + " ducks! A rubber duck for the Prize Shelf!", ChatFormatting.GOLD);
 				HubPark.burst(level, p.position().add(0, 3, 0));
 			} else {
 				Alerts.title(p, "TIME!", "Ducks hit: " + line, ChatFormatting.AQUA);
@@ -324,10 +322,10 @@ final class FunPark {
 
 	// ----- The Ferris wheel -----
 
-	private static final Vec3 WHEEL = new Vec3(62.5, FLOOR + 9.5, -8.5);
-	private static final double RADIUS = 7.0;
-	private static final int GONDOLAS = 8;
-	private static final double SPIN = Math.PI * 2 / 1000;
+	private static final Vec3 WHEEL = new Vec3(62.5, FLOOR + 12.0, -8.5);
+	private static final double RADIUS = 9.5;
+	private static final int GONDOLAS = 10;
+	private static final double SPIN = Math.PI * 2 / 1300;
 	private static final Vec3 WHEEL_EXIT = new Vec3(62.5, FLOOR + 1, -4.5);
 	/** The turning parts: a display at the hub and its shape at angle 0 (rotated round the hub as it turns). */
 	private record Spinner(UUID id, Vector3f offset, Quaternionf rot, Vector3f scale) {
@@ -350,13 +348,13 @@ final class FunPark {
 		BlockState white = Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState();
 		// The legs: an A-frame each side, and the axle.
 		for (double z : new double[] {-10.6, -6.4}) {
-			for (double x : new double[] {57.5, 67.5}) {
+			for (double x : new double[] {55.5, 69.5}) {
 				HubPark.beam(level, new Vec3(x, FLOOR + 1, WHEEL.z + (z - WHEEL.z) * 1.3), new Vec3(WHEEL.x, WHEEL.y, z), 0.35F, 0.35F, white);
 			}
 		}
 		HubPark.beam(level, new Vec3(WHEEL.x, WHEEL.y, -11.2), new Vec3(WHEEL.x, WHEEL.y, -5.8), 0.6F, 0.6F, Blocks.CONCRETE.pick(DyeColor.GRAY).defaultBlockState());
 		// The wheel: two rims (front and back), spokes, and lights round the edge.
-		int segs = 16;
+		int segs = 20;
 		for (double z : new double[] {-9.6, -7.4}) {
 			for (int i = 0; i < segs; i++) {
 				double a1 = i * Math.PI * 2 / segs;
@@ -377,7 +375,7 @@ final class FunPark {
 						(i % 2 == 0 ? Blocks.SEA_LANTERN : Blocks.SHROOMLIGHT).defaultBlockState());
 			}
 		}
-		String[] colors = {"red", "blue", "yellow", "green"};
+		String[] colors = {"red", "blue", "yellow", "green", "red", "blue", "yellow", "green", "red", "blue"};
 		for (int i = 0; i < GONDOLAS; i++) {
 			Display.ItemDisplay g = HubPark.tempModel(level, cabinSpot(i), 0, "gondola_" + colors[i % colors.length], 1.8F, 0);
 			CABINS[i] = g == null ? null : g.getUUID();

@@ -331,6 +331,19 @@ def cloud(seed):
     return boxes
 
 
+DOOM_BUGGY = [
+    b([1, 0, 0], [15, 3, 16], BLACK),                                   # base
+    b([1, 3, 12], [15, 11, 16], BLACK),                                 # rounded back (behind the riders)
+    b([2, 11, 13], [14, 12.5, 16], BLACK),
+    b([0, 3, 0], [1, 7, 16], BLACK), b([15, 3, 0], [16, 7, 16], BLACK),  # low sides
+    b([1, 3, -0.5], [15, 6, 1], BLACK),                                 # front
+    b([1.2, 3.1, 11.8], [14.8, 10.5, 12], PURPLE),                      # padded lining
+    b([2, 3, 6], [14, 5, 12], PURPLE),                                  # seat
+    b([2, 6, 3], [14, 6.8, 3.8], PURPLE),                               # lap bar
+    b([-0.2, 5, 0], [0, 7, 16], PURPLE), b([16, 5, 0], [16.2, 7, 16], PURPLE),   # trim
+]
+
+
 MODELS = {
     "coaster_car": coaster_car(RED, YELLOW),
     "coaster_car_blue": coaster_car(BLUE, WHITE),
@@ -348,6 +361,10 @@ MODELS = {
     "balloon": BALLOON, "pirate_ship": PIRATE_SHIP, "drop_seats": DROP_SEATS, "basketball": BASKETBALL, "toss_ring": TOSS_RING,
     "mole": MOLE, "teddy": TEDDY,
     "cloud_a": cloud(1), "cloud_b": cloud(2), "cloud_c": cloud(3),
+    "doom_buggy": DOOM_BUGGY, "raft": [
+        b([0, 0, 0], [16, 4, 16], YELLOW), b([2, 0.5, 2], [14, 4.5, 14], SKY), b([3, 1, 3], [13, 2, 13], BLUE),
+        b([7, 4, -0.5], [9, 6, 1], RED), b([7, 4, 15], [9, 6, 16.5], RED), b([-0.5, 4, 7], [1, 6, 9], RED), b([15, 4, 7], [16.5, 6, 9], RED)],
+    "tube": [b([1, 0, 1], [15, 4, 15], RED), b([4, 0.5, 4], [12, 4.5, 12], SKY), b([2, 4, 2], [5, 4.6, 5], WHITE), b([11, 4, 11], [14, 4.6, 14], WHITE)],
     "duck": DUCK, "golf_ball": GOLF_BALL, "golf_flag": GOLF_FLAG, "zip_handle": ZIP_HANDLE,
 }
 HANDHELD = {"putter": PUTTER, "mallet": MALLET}
