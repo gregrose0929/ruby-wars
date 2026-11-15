@@ -127,17 +127,20 @@ public final class HubPark {
 	}
 
 	/** Everywhere a travel pad can fly you: id, name, a few words, an icon, where you land. */
-	private record Place(String id, String name, String about, String icon, Vec3 land) {
+	private record Place(String id, String name, String about, String icon, Vec3 land, String more) {
+		Place(String id, String name, String about, String icon, Vec3 land) {
+			this(id, name, about, icon, land, "");
+		}
 	}
 
 	private static final List<Place> PLACES = List.of(
-			new Place("plaza", "The Plaza", "Toys, Sky Rings", "minecraft:bell", stand(-1, FLOOR, 6)),
-			new Place("funpark", "Fun Park", "Coaster, bumpers, more", "minecraft:minecart", stand(46, FLOOR, 5)),
-			new Place("splash", "Splash Island", "Slides, flume, fishing", "minecraft:water_bucket", stand(54, FLOOR, -76)),
-			new Place("golf", "Mini Golf", "Four crazy holes", "minecraft:slime_ball", stand(-40, FLOOR, 57)),
-			new Place("spooky", "Haunted Mansion", "Only a little bit scary", "minecraft:carved_pumpkin", stand(29, FLOOR, 44)),
-			new Place("toyland", "Toyland", "Toy Blaster, petting zoo", "minecraft:blaze_rod", stand(6, FLOOR, 44)),
-			new Place("speedway", "Speedway", "Kart racing on ice", "minecraft:snowball", stand(-109, FLOOR, -40)));
+			new Place("plaza", "The Plaza", "Toys, Sky Rings", "minecraft:bell", stand(-1, FLOOR, 6), "Parkour, pets, photo wall"),
+			new Place("funpark", "Fun Park", "Coaster, bumpers, more", "minecraft:minecart", stand(46, FLOOR, 5), "Mouse, swings, drop tower"),
+			new Place("splash", "Splash Island", "Slides, flume, fishing", "minecraft:water_bucket", stand(54, FLOOR, -76), "Rapids, capsule, aquarium"),
+			new Place("golf", "Mini Golf", "Four crazy holes", "minecraft:slime_ball", stand(-40, FLOOR, 57), "Windmill, volcano, cove"),
+			new Place("spooky", "Haunted Mansion", "Only a little bit scary", "minecraft:carved_pumpkin", stand(29, FLOOR, 44), "Ghosts, a library, a crypt"),
+			new Place("toyland", "Toyland", "Toy Blaster, petting zoo", "minecraft:blaze_rod", stand(6, FLOOR, 44), "Helter Skelter, butterflies"),
+			new Place("speedway", "Speedway", "Kart racing on ice", "minecraft:snowball", stand(-109, FLOOR, -40), "Race the computer karts"));
 
 	private static final String MAP = "Park Map";
 
@@ -590,7 +593,7 @@ public final class HubPark {
 		List<String> list = new ArrayList<>();
 		for (Place pl : PLACES) {
 			if (!pl.id().equals(here)) {
-				list.add(pl.id() + "|" + pl.name() + "|" + pl.about() + "|" + pl.icon());
+				list.add(pl.id() + "|" + pl.name() + "|" + pl.about() + "|" + pl.icon() + "|" + pl.more());
 			}
 		}
 		TRAVEL_MENU.put(p.getUUID(), p.position());
@@ -756,13 +759,15 @@ public final class HubPark {
 		Component text = Component.literal("PARK GUIDE").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
 				.append(Component.literal("\nStep on a green pad to fly to an island.\nStep on a blue pad to fly anywhere.\nRight-click the people to play!\n")
 						.withStyle(ChatFormatting.WHITE))
-				.append(Component.literal("\n\u2192 Fun Park: the Ruby Rocket coaster, bumper cars,\n   swings, slingshot, drop tower, pirate ship,\n   teacups, Big Wheel, the Stage, games")
+				.append(Component.literal("\n\u2192 Fun Park: the Ruby Rocket, the Twister Mouse,\n   bumper cars, swings, slingshot, drop tower,\n   pirate ship, teacups, Big Wheel, the Stage")
 						.withStyle(ChatFormatting.YELLOW))
-				.append(Component.literal("\n\u2193 Splash Island: slides, log flume, fishing").withStyle(ChatFormatting.AQUA))
+				.append(Component.literal("\n\u2193 Splash Island: slides, drop capsule, flume,\n   river rapids, fishing and the aquarium").withStyle(ChatFormatting.AQUA))
+				.append(Component.literal("\n\u2191 Toyland: Toy Blaster, petting zoo,\n   Helter Skelter, butterflies").withStyle(ChatFormatting.LIGHT_PURPLE))
 				.append(Component.literal("\n\u2199 Mini Golf: four crazy holes").withStyle(ChatFormatting.GREEN))
 				.append(Component.literal("\n\u2198 Haunted Mansion: only a little bit scary").withStyle(ChatFormatting.LIGHT_PURPLE))
 				.append(Component.literal("\n\u2190 Speedway: kart racing on ice").withStyle(ChatFormatting.RED))
-				.append(Component.literal("\n\u2191 Sky Parkour, and Sky Rings with Wren").withStyle(ChatFormatting.YELLOW))
+				.append(Component.literal("\n\u2190 Sky Parkour, and Sky Rings with Wren").withStyle(ChatFormatting.YELLOW))
+				.append(Component.literal("\n\nTilly has toys and gadgets (and a camera!).\nPhotos go on the Family Photo Wall.").withStyle(ChatFormatting.WHITE))
 				.append(Component.literal("\n\nYour Park Map (in your hotbar) flies you anywhere.\nCoach Kit runs Tag, Hide and Seek and more!")
 						.withStyle(ChatFormatting.WHITE));
 		keep(Props.text(level, new Vec3(-7.5, FLOOR + 1.6, 11.5), text, 0.55F, TAG));

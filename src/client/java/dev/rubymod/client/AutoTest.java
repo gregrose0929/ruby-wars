@@ -4554,6 +4554,8 @@ public final class AutoTest {
 			case "parkview" -> parkViewScript(null);
 			case "plazalook" -> plazaLookScript();
 			case "parknew3" -> parkNew3Script();
+			case "parkcheck2" -> parkCheck2Script();
+			case "photocheck" -> photoCheckScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5478,6 +5480,291 @@ public final class AutoTest {
 			tpHub(mc, "60 135 -60 facing 60 105 -10");
 		});
 		then(100, mc -> shot(mc, "new-night-coaster"));
+	}
+
+	/** The photo wall, the Park Map, finishing a coaster. */
+	private static void photoCheckScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> {
+			int slot = slotOf(mc, "Park Map");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(10, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(60, mc -> shot(mc, "pc-map"));
+		then(5, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+		});
+		then(10, mc -> tpHub(mc, "4.5 101 9.5 0 0"));
+		then(60, mc -> talk(mc, 4.5, 101, 11.5));
+		then(30, mc -> press(mc, "gadgets"));
+		then(20, mc -> {
+			int slot = slotOf(mc, "Toy Camera");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			tpHub(mc, "40 104 -10 facing 60 106 10");
+		});
+		then(40, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(60, mc -> {
+			tpHub(mc, "-5.5 102 17.0 facing -5.5 102.5 20");
+			var frames = mc.level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, mc.player.getBoundingBox().inflate(8));
+			log("photo frames near the wall: {}", frames.size());
+		});
+		then(40, mc -> shot(mc, "pc-wall"));
+		then(5, mc -> command(mc, "execute as @p run play coasters"));
+		then(300, mc -> log("coasters: {}", pg("coasters").debugState()));
+		String[] build = {"Undo (crouch: start again)", "Straight", "Turn Left", "More pieces >>", "Helix", "Finish the Circuit"};
+		for (String piece : build) {
+			then(12, mc -> {
+				int slot = slotOf(mc, piece);
+				if (slot >= 0 && slot < 9) {
+					mc.player.getInventory().setSelectedSlot(slot);
+				}
+				if (piece.startsWith("Undo")) {
+					mc.options.keyShift.setDown(true);
+				}
+			});
+			then(4, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+			then(6, mc -> {
+				mc.options.keyShift.setDown(false);
+				shot(mc, "pc-piece-" + piece.charAt(0));
+			});
+		}
+		then(5, mc -> command(mc, "gamemode spectator @p"));
+		then(5, mc -> command(mc, "execute in rubymod:arena run tp @p -110000 95 -165 facing -110000 66 -138"));
+		then(60, mc -> shot(mc, "pc-coaster"));
+	}
+
+	/** Everything that hadn't been checked: photos, the capsule, fishing, butterflies, books, the map, the new board and coaster bits. */
+	private static void parkCheck2Script() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> {
+			int slot = slotOf(mc, "Park Map");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(10, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(90, mc -> shot(mc, "c2-map"));
+		then(5, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+		});
+		then(10, mc -> tpHub(mc, "4.5 101 9.5 0 0"));
+		then(60, mc -> talk(mc, 4.5, 101, 11.5));
+		then(30, mc -> press(mc, "gadgets"));
+		then(20, mc -> {
+			int slot = slotOf(mc, "Toy Camera");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			tpHub(mc, "40 104 -10 facing 60 106 10");
+		});
+		then(40, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(60, mc -> tpHub(mc, "-5.5 102 16.5 facing -5.5 102.5 20"));
+		then(40, mc -> shot(mc, "c2-photowall"));
+		then(5, mc -> {
+			int slot = slotOf(mc, "Grappling Hook");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			tpHub(mc, "10.5 101 5.5 facing 19.5 110 12.5");
+		});
+		then(20, mc -> {
+			log("grapple: from {}", mc.player.position());
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+		});
+		then(10, mc -> log("grapple: now {}", mc.player.position()));
+		then(60, mc -> tpHub(mc, "35.5 127 -109.5 0 40"));
+		for (int i = 0; i < 8; i++) {
+			int n = i;
+			then(12, mc -> log("capsule {}: at {}", n, mc.player.position()));
+		}
+		then(40, mc -> {
+			log("capsule: landed at {} in water {}", mc.player.position(), mc.player.isInWater());
+			shot(mc, "c2-capsule");
+		});
+		then(10, mc -> tpHub(mc, "5.5 101 -140.5 180 0"));
+		then(60, mc -> talk(mc, 5.5, 101, -142.5));
+		then(30, mc -> press(mc, "rod"));
+		then(10, mc -> onServer(mc, server -> dev.rubymod.game.hub.HubGames.testBite(me(server))));
+		then(15, mc -> shot(mc, "c2-fishbar"));
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(20, mc -> log("fish: holding {}", mc.player.getMainHandItem().getHoverName().getString()));
+		then(20, mc -> talk(mc, 5.5, 101, -142.5));
+		then(30, mc -> press(mc, "book"));
+		then(20, mc -> shot(mc, "c2-fishbook"));
+		then(5, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+		});
+		then(10, mc -> tpHub(mc, "13.5 101 76.5 0 0"));
+		then(60, mc -> talk(mc, 13.5, 101, 78.5));
+		then(30, mc -> press(mc, "net"));
+		then(10, mc -> tpHub(mc, "0.5 101 0.5 0 0"));
+		then(60, mc -> {
+			int slot = slotOf(mc, "Butterfly Net");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			net.minecraft.world.entity.Display.ItemDisplay best = null;
+			for (var d : mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, mc.player.getBoundingBox().inflate(30))) {
+				var id = d.getItemStack().get(net.minecraft.core.component.DataComponents.ITEM_MODEL);
+				if (id != null && id.getPath().contains("butterfly") && (best == null || d.distanceTo(mc.player) < best.distanceTo(mc.player))) {
+					best = d;
+				}
+			}
+			log("butterfly: nearest {}", best == null ? "none" : best.position());
+			if (best != null) {
+				command(mc, String.format(java.util.Locale.ROOT, "execute in rubymod:hub run tp @p %.2f %.2f %.2f", best.getX() - 1.5, best.getY() - 1.0, best.getZ()));
+			}
+		});
+		then(3, mc -> {
+			for (var d : mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, mc.player.getBoundingBox().inflate(6))) {
+				var id = d.getItemStack().get(net.minecraft.core.component.DataComponents.ITEM_MODEL);
+				if (id != null && id.getPath().contains("butterfly")) {
+					lookAt(mc, d.position());
+					break;
+				}
+			}
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+		});
+		then(10, mc -> shot(mc, "c2-butterfly"));
+		then(5, mc -> tpHub(mc, "13.5 101 76.5 0 0"));
+		then(60, mc -> talk(mc, 13.5, 101, 78.5));
+		then(30, mc -> press(mc, "book"));
+		then(20, mc -> shot(mc, "c2-butterflybook"));
+		then(5, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+		});
+		then(10, mc -> tpHub(mc, "-3.5 101 44.5 90 0"));
+		then(60, mc -> talk(mc, -5.5, 101, 47.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 6; i++) {
+			int n = i;
+			then(60, mc -> {
+				mc.player.setYRot(mc.player.getYRot() + 60);
+				shot(mc, "c2-blaster-" + n);
+			});
+		}
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		then(20, mc -> tpHub(mc, "95.5 101 0.5 270 0"));
+		then(60, mc -> talk(mc, 96.5, 101, 0.5));
+		then(40, mc -> press(mc, "play"));
+		then(10, mc -> {
+			mc.options.keyUp.setDown(true);
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(25, mc -> shot(mc, "c2-bumper"));
+		then(5, mc -> {
+			mc.options.keyUp.setDown(false);
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			mc.options.keyShift.setDown(true);
+		});
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		then(20, mc -> tpHub(mc, "-5.5 117 87.5 90 10"));
+		for (int i = 0; i < 3; i++) {
+			int n = i;
+			then(35, mc -> shot(mc, "c2-helter-" + n));
+		}
+		then(120, mc -> {
+			command(mc, "time set 14000");
+			command(mc, "gamemode creative @p");
+		});
+		then(5, mc -> {
+			mc.player.getAbilities().flying = true;
+			tpHub(mc, "70 125 -60 facing 100 110 -10");
+		});
+		then(140, mc -> shot(mc, "c2-night"));
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @p");
+		});
+		then(10, mc -> command(mc, "execute as @p run play coasters"));
+		then(300, mc -> log("coasters: {}", pg("coasters").debugState()));
+		String[] build = {"Undo (crouch: start again)", "More pieces >>", "Big Drop", "Helix", "Tunnel", "Launch", "Track Colour", "Track Colour", "Finish the Circuit"};
+		for (String piece : build) {
+			then(12, mc -> {
+				int slot = slotOf(mc, piece);
+				if (slot >= 0 && slot < 9) {
+					mc.player.getInventory().setSelectedSlot(slot);
+				}
+				if (piece.startsWith("Undo")) {
+					mc.options.keyShift.setDown(true);
+				}
+			});
+			then(4, mc -> {
+				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+				log("piece {}: slot {}", piece, slotOf(mc, piece));
+			});
+			then(4, mc -> mc.options.keyShift.setDown(false));
+		}
+		then(10, mc -> shot(mc, "c2-coaster-built"));
+		then(5, mc -> {
+			int slot = slotOf(mc, "Ride!");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(4, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		for (int i = 0; i < 5; i++) {
+			int n = i;
+			then(30, mc -> {
+				mc.options.setCameraType(n >= 2 ? CameraType.THIRD_PERSON_BACK : CameraType.FIRST_PERSON);
+				shot(mc, "c2-coaster-ride-" + n);
+			});
+		}
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		then(300, mc -> command(mc, "execute as @p run play board"));
+		then(400, mc -> log("board: {}", pg("board").debugState()));
+		then(10, mc -> {
+			int slot = slotOf(mc, "Roll the Dice!");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+		});
+		then(20, mc -> shot(mc, "c2-board-dice"));
+		then(80, mc -> {
+			int slot = slotOf(mc, "Bird" + (char) 39 + "s-eye View");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			mc.player.setXRot(70);
+		});
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(30, mc -> shot(mc, "c2-board-birdseye"));
+		for (int i = 0; i < 40; i++) {
+			int n = i;
+			then(30, mc -> {
+				int slot = slotOf(mc, "Roll the Dice!");
+				if (slot >= 0 && slot < 9) {
+					mc.player.getInventory().setSelectedSlot(slot);
+					mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+				}
+				if (n % 8 == 0) {
+					log("board {}: {}", n, pg("board").debugState());
+					shot(mc, "c2-board-" + n);
+				}
+			});
+		}
 	}
 
 	/** Party Board, River Rapids, Twister Mouse, Helter Skelter, the drop capsule, fishing, butterflies, the camera. */

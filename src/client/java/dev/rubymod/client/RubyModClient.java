@@ -308,6 +308,7 @@ public class RubyModClient implements ClientModInitializer {
 		dev.rubymod.client.convoy.ConvoyClient.register();
 		dev.rubymod.client.TravelScreen.register();
 		dev.rubymod.client.PhotoClient.register();
+		dev.rubymod.client.BookScreen.register();
 		dev.rubymod.client.HostScreen.register();
 		// In a vehicle the vehicle HUD replaces the hotbar, hearts, hunger, armor, air and XP.
 		for (var element : java.util.List.of(VanillaHudElements.HOTBAR, VanillaHudElements.HEALTH_BAR, VanillaHudElements.FOOD_BAR,

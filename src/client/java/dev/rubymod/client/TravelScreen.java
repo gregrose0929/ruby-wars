@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** The hub's travel pads: "Where to?" with a big button for every island. Click one and off you fly. */
 public class TravelScreen extends Screen {
-	private record Place(String id, String name, String about, String icon) {
+	private record Place(String id, String name, String about, String icon, String more) {
 	}
 
 	private static final int ACCENT = 0xFF55DD77;
@@ -32,7 +32,7 @@ public class TravelScreen extends Screen {
 		for (String line : menu.places()) {
 			String[] f = line.split("[|]", -1);
 			if (f.length >= 4) {
-				places.add(new Place(f[0], f[1], f[2], f[3]));
+				places.add(new Place(f[0], f[1], f[2], f[3], f.length > 4 ? f[4] : ""));
 			}
 		}
 	}
@@ -51,10 +51,11 @@ public class TravelScreen extends Screen {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		Ui.dim(g, width, height, Ui.ease(opened, 200));
 		// Big tiles in a grid (three across when there's room), so the whole park fits on one screen.
-		int cols = width >= 400 ? 3 : 2;
+		// Three across (four when there are more than six places), so it all fits on one screen.
+		int cols = width >= 400 ? (places.size() > 6 ? 4 : 3) : 2;
 		int gap = 8;
 		int cw = Math.min(124, (width - 24 - gap * (cols - 1)) / cols);
-		int chh = 62;
+		int chh = 72;
 		int rows = (places.size() + cols - 1) / cols;
 		int total = 40 + rows * (chh + gap) + 14;
 		int oy = Ui.centre(height, total);
@@ -75,6 +76,7 @@ public class TravelScreen extends Screen {
 			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(pl.icon()))), x + cw / 2 - 8, y + 9);
 			g.centeredText(font, Ui.fit(pl.name(), cw - 8), x + cw / 2, y + 33, hover ? 0xFFFFFFFF : ACCENT);
 			g.centeredText(font, Ui.fit(pl.about(), cw - 8), x + cw / 2, y + 46, Ui.DIM);
+			g.centeredText(font, Ui.fit(pl.more(), cw - 8), x + cw / 2, y + 57, Ui.MUTED);
 		}
 		g.centeredText(font, "Esc to stay here", width / 2, y0 + rows * (chh + gap) + 2, Ui.MUTED);
 	}

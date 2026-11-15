@@ -41,8 +41,17 @@ final class Fishing {
 	}
 
 	/** A kind of fish: its name, what it looks like in your hand and in the tank, how rare (1 common .. 4 legendary), how big. */
-	private record Fish(String name, Item item, EntityType<? extends Mob> swims, int rarity, int minCm, int maxCm) {
+	private record Fish(String name, Item item, EntityType<? extends Mob> swims, int rarity, int minCm, int maxCm, int spot) {
+		Fish(String name, Item item, EntityType<? extends Mob> swims, int rarity, int minCm, int maxCm) {
+			this(name, item, swims, rarity, minCm, maxCm, 0);
+		}
 	}
+
+	/** Where you can fish: the pond (1), the River Rapids (2), Toyland's pond (3). Some fish only live in one. */
+	static final int POND = 1;
+	static final int RIVER = 2;
+	static final int TOYLAND = 3;
+	private static final String[] SPOT_NAMES = {"", "the pond", "the river", "Toyland's pond"};
 
 	private static final Fish[] FISH = {
 		new Fish("Minnow", Items.COD, EntityTypes.COD, 1, 3, 8), new Fish("Goldfish", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 1, 5, 15),
@@ -60,7 +69,12 @@ final class Fishing {
 		new Fish("Blue Tang", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 3, 15, 30), new Fish("Eel", Items.COD, EntityTypes.COD, 3, 50, 150),
 		new Fish("Mega Carp", Items.COD, EntityTypes.COD, 3, 100, 160), new Fish("Ghost Fish", Items.COD, EntityTypes.COD, 4, 20, 40),
 		new Fish("Crystal Trout", Items.SALMON, EntityTypes.SALMON, 4, 30, 60), new Fish("Moonfish", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 4, 40, 90),
-		new Fish("Ancient Coelacanth", Items.COD, EntityTypes.COD, 4, 120, 200), new Fish("Golden Ruby Fish", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 4, 50, 99)};
+		new Fish("Ancient Coelacanth", Items.COD, EntityTypes.COD, 4, 120, 200), new Fish("Golden Ruby Fish", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 4, 50, 99),
+		new Fish("Rocky Roach", Items.COD, EntityTypes.COD, 1, 10, 25, RIVER), new Fish("River Trout", Items.SALMON, EntityTypes.SALMON, 2, 25, 55, RIVER),
+		new Fish("Rapids Racer", Items.SALMON, EntityTypes.SALMON, 3, 40, 80, RIVER), new Fish("Toy Fish", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 1, 5, 12,
+			TOYLAND),
+		new Fish("Bubble Fish", Items.PUFFERFISH, EntityTypes.PUFFERFISH, 2, 8, 20, TOYLAND), new Fish("Rainbow Jelly", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH,
+			3, 10, 30, TOYLAND)};
 	private static final String[] RARITY = {"", "Common", "Uncommon", "Rare", "LEGENDARY"};
 	private static final ChatFormatting[] RARITY_COLOR = {ChatFormatting.WHITE, ChatFormatting.WHITE, ChatFormatting.GREEN, ChatFormatting.AQUA, ChatFormatting.GOLD};
 
@@ -87,6 +101,10 @@ final class Fishing {
 
 	/** Something bit (the hook came up with a catch): the fight starts. True if it did. */
 	static boolean bite(ServerPlayer p, ServerLevel level) {
+		return bite(p, level, POND);
+	}
+
+	static boolean bite(ServerPlayer p, ServerLevel level, int spot) {
 		if (FIGHTS.containsKey(p.getUUID())) {
 			return true;
 		}
@@ -95,7 +113,7 @@ final class Fishing {
 		int rarity = roll < 55 ? 1 : roll < 82 ? 2 : roll < 96 ? 3 : 4;
 		List<Fish> pool = new ArrayList<>();
 		for (Fish f : FISH) {
-			if (f.rarity() == rarity) {
+			if (f.rarity() == rarity && (f.spot() == 0 || f.spot() == spot)) {
 				pool.add(f);
 			}
 		}
@@ -172,8 +190,21 @@ final class Fishing {
 		return n;
 	}
 
-	/** Your fish book, in chat. */
+	/** Your fish book, on a screen with pictures. */
 	static void book(ServerPlayer p) {
+		load((ServerLevel) p.level());
+		Set<String> mine = BOOK.getOrDefault(p.getName().getString(), Set.of());
+		List<String> entries = new ArrayList<>();
+		for (Fish f : FISH) {
+			boolean got = mine.contains(f.name());
+			String where = f.spot() == 0 ? RARITY[f.rarity()] : RARITY[f.rarity()] + ", " + SPOT_NAMES[f.spot()];
+			entries.add(f.name() + "|" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(f.item()) + "|" + got + "|" + where);
+		}
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.rubymod.net.MorePayloads.BookScreen(
+				p.getName().getString() + "'s Fish Book: " + mine.size() + " of " + FISH.length, entries));
+	}
+
+	static void bookInChat(ServerPlayer p) {
 		load((ServerLevel) p.level());
 		Set<String> mine = BOOK.getOrDefault(p.getName().getString(), Set.of());
 		MutableComponent text = Component.literal("🐟 " + p.getName().getString() + "'s Fish Book: " + mine.size() + " of " + FISH.length + "\n")

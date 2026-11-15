@@ -202,9 +202,12 @@ final class Scenery {
 	// ----- Welcome signs -----
 
 	private static final String[][] SIGNS = {
-		{"the Fun Park", "46.5", "5.5", "Ruby Rocket coaster (Rita)", "Bumper Cars (Buzz)", "The Swings (Skye)", "The Slingshot (Zip)", "Big Wheel (Wally)",
-			"Carousel (Cora)", "Drop Tower (Tess), Pirate Ship (Polly)", "Teacups (Mabel), Balloons (Barnaby)", "The Stage (DJ Remy)", "Games, prizes, bouncy castle"},
-		{"Splash Island", "54.5", "-76.5", "Splash Tower slides (Lulu)", "Flume Falls (Flo)", "Wave pool and lazy river", "Fishing (Captain Finn)", "Swan boats"},
+		{"the Fun Park", "46.5", "5.5", "Ruby Rocket coaster (Rita)", "Twister Mouse (Minnie)", "Bumper Cars (Buzz)", "The Swings (Skye)",
+			"The Slingshot (Zip)", "Big Wheel (Wally), Carousel (Cora)", "Drop Tower (Tess), Pirate Ship (Polly)", "Teacups (Mabel), Balloons (Barnaby)",
+			"The Stage (DJ Remy)", "Games, plushie prizes, bouncy castle"},
+		{"Splash Island", "54.5", "-76.5", "Splash Tower slides (Lulu)", "The Drop Capsule (top of the tower)", "Flume Falls (Flo)", "River Rapids (Rocky)",
+			"Wave pool and lazy river", "Fishing (Captain Finn) and the aquarium", "Swan boats"},
+		{"Toyland", "6.5", "44.5", "Toy Blaster (Sparky)", "Petting Zoo (Zara)", "Helter Skelter", "Butterfly Garden (Bea)"},
 		{"Mini Golf", "-39.5", "57.5", "Four crazy holes (Gus)", "The Windmill, the Castle,", "the Volcano, Pirate Cove"},
 		{"Sky Parkour", "-21.5", "-36.5", "Jump across the sky (Pip)", "Gold blocks are checkpoints"},
 		{"the Haunted Mansion", "29.5", "44.5", "Ride a doom buggy (Mortimer)", "...if you dare!"},

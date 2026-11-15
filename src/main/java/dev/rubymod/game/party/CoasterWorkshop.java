@@ -61,7 +61,9 @@ public class CoasterWorkshop extends PartyGame {
 		STRAIGHT("Straight", Items.RAIL, ChatFormatting.WHITE), LEFT("Turn Left", Items.SPECTRAL_ARROW, ChatFormatting.YELLOW),
 		RIGHT("Turn Right", Items.ARROW, ChatFormatting.YELLOW), UP("Hill Up", Items.FEATHER, ChatFormatting.AQUA),
 		DOWN("Drop Down", Items.ANVIL, ChatFormatting.AQUA), LOOP("Loop!", Items.SLIME_BALL, ChatFormatting.GREEN),
-		LAUNCH("Launch", Items.FIREWORK_ROCKET, ChatFormatting.RED);
+		LAUNCH("Launch", Items.FIREWORK_ROCKET, ChatFormatting.RED), BIG_DROP("Big Drop", Items.POINTED_DRIPSTONE, ChatFormatting.AQUA),
+		HELIX("Helix", Items.NAUTILUS_SHELL, ChatFormatting.GREEN), TUNNEL("Tunnel", Items.COBBLESTONE, ChatFormatting.GRAY),
+		FINISH("Finish the Circuit", Items.COMPASS, ChatFormatting.GOLD);
 
 		final String label;
 		final Item icon;
@@ -76,10 +78,20 @@ public class CoasterWorkshop extends PartyGame {
 
 	private static final String UNDO = "Undo (crouch: start again)";
 	private static final String RIDE = "Ride!";
+	private static final String MORE = "More pieces >>";
+	private static final String BACK = "<< Back";
+	private static final String PAINT = "Track Colour";
+	private static final Piece[] PAGE1 = {Piece.STRAIGHT, Piece.LEFT, Piece.RIGHT, Piece.UP, Piece.DOWN, Piece.LOOP};
+	private static final Piece[] PAGE2 = {Piece.LAUNCH, Piece.BIG_DROP, Piece.HELIX, Piece.TUNNEL, Piece.FINISH};
+	private static final DyeColor[][] COLOURS = {{DyeColor.RED, DyeColor.YELLOW}, {DyeColor.BLUE, DyeColor.WHITE}, {DyeColor.LIME, DyeColor.GREEN},
+		{DyeColor.PURPLE, DyeColor.PINK}, {DyeColor.ORANGE, DyeColor.BLACK}, {null, DyeColor.WHITE}};
+	private static final String[] COLOUR_NAMES = {"Red", "Blue", "Green", "Purple", "Orange", "Rainbow"};
 
 	/** Everyone's coasters by name: plot number and pieces. */
 	private static final class Coaster {
 		int plot;
+		int colour;
+		boolean[] tunnel = new boolean[0];
 		final List<Piece> pieces = new ArrayList<>();
 		final List<UUID> shown = new ArrayList<>();
 		UUID sign;
@@ -159,9 +171,9 @@ public class CoasterWorkshop extends PartyGame {
 		BlockPos s = station(plot);
 		DyeColor[] colors = {DyeColor.RED, DyeColor.BLUE, DyeColor.LIME, DyeColor.YELLOW, DyeColor.PURPLE, DyeColor.ORANGE};
 		// A plot border on the grass, and the station: a platform, posts and a striped roof.
-		for (int x = -4; x <= 62; x++) {
+		for (int x = -16; x <= 62; x++) {
 			for (int z = -20; z <= 20; z++) {
-				if (x == -4 || x == 62 || Math.abs(z) == 20) {
+				if (x == -16 || x == 62 || Math.abs(z) == 20) {
 					setNow(level, s.offset(x, -1, z), Blocks.WOOL.pick(colors[plot]).defaultBlockState());
 				}
 			}
@@ -204,11 +216,23 @@ public class CoasterWorkshop extends PartyGame {
 		player.setGameMode(GameType.ADVENTURE);
 		clearPlayer(player);
 		player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, -1, 0, false, false));
-		for (Piece piece : Piece.values()) {
+		tools(player, 1);
+		Alerts.title(player, "COASTER WORKSHOP", "Right-click the tools in your hotbar to build. Then Ride!", ChatFormatting.GOLD);
+	}
+
+	/** The hotbar: page 1 (the basics) or page 2 (the big stuff). */
+	private static void tools(ServerPlayer player, int page) {
+		player.getInventory().clearContent();
+		for (Piece piece : page == 1 ? PAGE1 : PAGE2) {
 			give(player, tool(piece.icon, piece.label, piece.color));
 		}
-		give(player, tool(Items.BARRIER, UNDO, ChatFormatting.GRAY), tool(Items.MINECART, RIDE, ChatFormatting.GOLD));
-		Alerts.title(player, "COASTER WORKSHOP", "Right-click the tools in your hotbar to build. Then Ride!", ChatFormatting.GOLD);
+		if (page == 2) {
+			give(player, tool(Items.DYE.pick(DyeColor.MAGENTA), PAINT, ChatFormatting.LIGHT_PURPLE));
+		}
+		give(player, tool(Items.BARRIER, UNDO, ChatFormatting.GRAY), tool(Items.PAPER, page == 1 ? MORE : BACK, ChatFormatting.AQUA),
+				tool(Items.MINECART, RIDE, ChatFormatting.GOLD));
+		player.getInventory().setSelectedSlot(0);
+		player.inventoryMenu.broadcastChanges();
 	}
 
 	private static ItemStack tool(Item item, String name, ChatFormatting color) {
@@ -259,18 +283,36 @@ public class CoasterWorkshop extends PartyGame {
 		}
 		player.getCooldowns().addCooldown(stack, 6);
 		Coaster c = mine(player);
+		if (MORE.equals(name) || BACK.equals(name)) {
+			tools(player, MORE.equals(name) ? 2 : 1);
+			return false;
+		}
+		if (PAINT.equals(name)) {
+			c.colour = (c.colour + 1) % COLOURS.length;
+			redraw(level, c);
+			save();
+			player.sendOverlayMessage(Component.literal("Track colour: " + COLOUR_NAMES[c.colour]).withStyle(ChatFormatting.LIGHT_PURPLE));
+			return false;
+		}
 		for (Piece piece : Piece.values()) {
 			if (piece.label.equals(name)) {
 				if (c.pieces.size() >= MAX_PIECES) {
 					player.sendOverlayMessage(Component.literal("That's as long as a coaster can be! Undo some, or Ride!").withStyle(ChatFormatting.YELLOW));
 					return false;
 				}
+				if (!c.pieces.isEmpty() && c.pieces.get(c.pieces.size() - 1) == Piece.FINISH) {
+					player.sendOverlayMessage(Component.literal("It's finished! Ride it, or Undo to keep building.").withStyle(ChatFormatting.YELLOW));
+					return false;
+				}
+				int before = c.path.size();
 				c.pieces.add(piece);
 				lay(c);
-				if (!fits(c)) {
+				String why = !fits(c) ? "That would go off the edge of your plot! Try turning." : crashes(c, before, piece == Piece.FINISH)
+						? "That would crash into your track! Try another way." : null;
+				if (why != null) {
 					c.pieces.remove(c.pieces.size() - 1);
 					lay(c);
-					player.sendOverlayMessage(Component.literal("That would go off the edge of your plot! Try turning.").withStyle(ChatFormatting.YELLOW));
+					player.sendOverlayMessage(Component.literal(why).withStyle(ChatFormatting.YELLOW));
 					return false;
 				}
 				redraw(level, c);
@@ -327,6 +369,7 @@ public class CoasterWorkshop extends PartyGame {
 		List<Vec3> pts = new ArrayList<>();
 		List<Vec3> up = new ArrayList<>();
 		List<Boolean> boost = new ArrayList<>();
+		java.util.Set<Integer> tunnelAt = new java.util.HashSet<>();
 		Vec3 at = new Vec3(s.getX() - 1.5, s.getY() + 0.6, s.getZ() + 0.5);
 		double yaw = 0; // heading +x
 		// The station: straight along the platform.
@@ -365,6 +408,53 @@ public class CoasterWorkshop extends PartyGame {
 					}
 					at = at.add(dir(yaw).scale(7)).add(0, rise, 0);
 				}
+				case BIG_DROP -> {
+					double fall = -Math.min(12, at.y - (s.getY() + 0.6));
+					double climb = fall > -3 ? 8 : 0;
+					double rise = fall > -3 ? climb : fall;
+					for (int i = 0; i < 11; i++) {
+						double t = i / 11.0;
+						double h = rise * (0.5 - 0.5 * Math.cos(Math.PI * t));
+						add(pts, up, boost, at.add(dir(yaw).scale(i * 1.1)).add(0, h, 0), new Vec3(0, 1, 0), false);
+					}
+					at = at.add(dir(yaw).scale(12.1)).add(0, rise, 0);
+				}
+				case HELIX -> {
+					// A full circle to the right, going down (or up, if it's low already).
+					double r = 5;
+					double drop = at.y - (s.getY() + 0.6) > 5 ? -5 : 5;
+					Vec3 centre = at.add(side(yaw).scale(r));
+					for (int i = 0; i < 24; i++) {
+						double a = Math.toRadians(yaw + i * 15);
+						Vec3 q = centre.subtract(side(Math.toDegrees(a)).scale(r));
+						add(pts, up, boost, new Vec3(q.x, at.y + drop * i / 24.0, q.z), new Vec3(0, 1, 0), false);
+					}
+					at = at.add(0, drop, 0).add(dir(yaw).scale(0.5));
+				}
+				case TUNNEL -> {
+					for (int i = 0; i < 8; i++) {
+						add(pts, up, boost, at, new Vec3(0, 1, 0), false);
+						tunnelAt.add(pts.size() - 1);
+						at = at.add(dir(yaw));
+					}
+				}
+				case FINISH -> {
+					// A smooth curve back round to the start of the station.
+					Vec3 end = pts.get(0);
+					double len = Math.min(10, Math.max(5, at.distanceTo(end) * 0.45));
+					Vec3 p1 = at.add(dir(yaw).scale(len));
+					Vec3 p2 = end.add(-len, 0, 0);
+					// Keep the curve's pulls inside the plot.
+					BlockPos st = station(c.plot);
+					p1 = new Vec3(Math.max(st.getX() - 13, Math.min(st.getX() + 59, p1.x)), p1.y, Math.max(st.getZ() - 17, Math.min(st.getZ() + 18, p1.z)));
+					for (int i = 0; i < 30; i++) {
+						double t = i / 30.0;
+						double u = 1 - t;
+						Vec3 q = at.scale(u * u * u).add(p1.scale(3 * u * u * t)).add(p2.scale(3 * u * t * t)).add(end.scale(t * t * t));
+						add(pts, up, boost, q, new Vec3(0, 1, 0), false);
+					}
+					at = end;
+				}
 				case LOOP -> {
 					double r = 4.5;
 					Vec3 centre = at.add(0, r, 0);
@@ -386,11 +476,12 @@ public class CoasterWorkshop extends PartyGame {
 		add(pts, up, boost, at, new Vec3(0, 1, 0), false);
 		// Back at the start? Then it's a full circuit.
 		Vec3 start = pts.get(0);
-		c.circuit = c.pieces.size() > 3 && at.distanceTo(start) < 3.5;
+		c.circuit = c.pieces.size() > 3 && at.distanceTo(start) < 3.5 || !c.pieces.isEmpty() && c.pieces.get(c.pieces.size() - 1) == Piece.FINISH;
 		// Points STEP apart (straight lines between: the pieces are already finely laid out).
 		List<Vec3> path = new ArrayList<>();
 		List<Vec3> ups = new ArrayList<>();
 		List<Boolean> la = new ArrayList<>();
+		List<Boolean> tl = new ArrayList<>();
 		for (int i = 0; i + 1 < pts.size(); i++) {
 			Vec3 a = pts.get(i);
 			Vec3 b = pts.get(i + 1);
@@ -399,11 +490,17 @@ public class CoasterWorkshop extends PartyGame {
 				path.add(a.lerp(b, j / (double) k));
 				ups.add(up.get(i).lerp(up.get(i + 1), j / (double) k).normalize());
 				la.add(boost.get(i));
+				tl.add(tunnelAt.contains(i));
 			}
 		}
 		path.add(pts.get(pts.size() - 1));
 		ups.add(up.get(up.size() - 1));
 		la.add(false);
+		tl.add(false);
+		c.tunnel = new boolean[tl.size()];
+		for (int i = 0; i < tl.size(); i++) {
+			c.tunnel[i] = tl.get(i);
+		}
 		c.path = path;
 		c.ups = ups;
 		c.launch = new boolean[la.size()];
@@ -429,11 +526,32 @@ public class CoasterWorkshop extends PartyGame {
 		return new Vec3(-Math.sin(r), 0, Math.cos(r));
 	}
 
+	/**
+	 * Would the newest piece run into the track already there? (Its own points, and the bit just before it, don't count;
+	 * finishing the circuit may come back alongside the station.)
+	 */
+	private boolean crashes(Coaster c, int before, boolean finish) {
+		int keep = Math.max(0, before - 16);
+		for (int i = before; i < c.path.size(); i++) {
+			Vec3 q = c.path.get(i);
+			for (int j = finish ? 60 : 0; j < keep; j++) {
+				Vec3 o = c.path.get(j);
+				if (Math.hypot(q.x - o.x, q.z - o.z) < 2.2 && Math.abs(q.y - o.y) < 3.2) {
+					if (finish && i > c.path.size() - 40) {
+						continue;
+					}
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	/** Does the coaster stay on its plot (and below the sky limit)? */
 	private boolean fits(Coaster c) {
 		BlockPos s = station(c.plot);
 		for (Vec3 p : c.path) {
-			if (p.x < s.getX() - 3 || p.x > s.getX() + 61 || Math.abs(p.z - s.getZ() - 0.5) > 19 || p.y > s.getY() + 34) {
+			if (p.x < s.getX() - 15 || p.x > s.getX() + 61 || Math.abs(p.z - s.getZ() - 0.5) > 19 || p.y > s.getY() + 34) {
 				return false;
 			}
 		}
@@ -470,8 +588,11 @@ public class CoasterWorkshop extends PartyGame {
 		if (c.path.isEmpty()) {
 			lay(c);
 		}
-		BlockState rail = Blocks.CONCRETE.pick(DyeColor.RED).defaultBlockState();
-		BlockState spine = Blocks.CONCRETE.pick(DyeColor.YELLOW).defaultBlockState();
+		DyeColor[] rainbow = {DyeColor.RED, DyeColor.ORANGE, DyeColor.YELLOW, DyeColor.LIME, DyeColor.LIGHT_BLUE, DyeColor.PURPLE};
+		DyeColor[] look = COLOURS[Math.floorMod(c.colour, COLOURS.length)];
+		BlockState rail = Blocks.CONCRETE.pick(look[0] == null ? DyeColor.RED : look[0]).defaultBlockState();
+		BlockState spine = Blocks.CONCRETE.pick(look[1]).defaultBlockState();
+		BlockState rock = Blocks.STONE_BRICKS.defaultBlockState();
 		BlockState tie = Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState();
 		BlockState steel = Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState();
 		int seg = (int) Math.round(1.5 / STEP);
@@ -480,8 +601,20 @@ public class CoasterWorkshop extends PartyGame {
 			Vec3 b = c.path.get(i + seg);
 			Vec3[] fa = frame(c, i);
 			Vec3[] fb = frame(c, i + seg);
+			if (look[0] == null) {
+				rail = Blocks.CONCRETE.pick(rainbow[(i / seg) % rainbow.length]).defaultBlockState();
+			}
 			for (int s : new int[] {-1, 1}) {
 				beam(level, c, a.add(fa[2].scale(0.45 * s)), b.add(fb[2].scale(0.45 * s)), 0.15F, rail);
+			}
+			// A tunnel: stone walls and a roof (high above your head).
+			if (i < c.tunnel.length && c.tunnel[i]) {
+				Vec3 sd = new Vec3(fa[2].x, 0, fa[2].z).normalize().scale(2.4);
+				for (int k : new int[] {-1, 1}) {
+					beam(level, c, a.add(sd.scale(k)).add(0, -0.4, 0), b.add(sd.scale(k)).add(0, -0.4, 0), 0.0F, rock);
+					beam(level, c, a.add(sd.scale(k)).add(0, 1.6, 0), b.add(sd.scale(k)).add(0, 1.6, 0), 0.0F, rock);
+				}
+				beam(level, c, a.add(0, 4.2, 0), b.add(0, 4.2, 0), 0.0F, rock);
 			}
 			beam(level, c, a.add(fa[1].scale(-0.35)), b.add(fb[1].scale(-0.35)), 0.3F, spine);
 			Vec3 mid = a.lerp(b, 0.5).add(fa[1].scale(-0.15));
@@ -521,7 +654,8 @@ public class CoasterWorkshop extends PartyGame {
 		c.shown.add(e.getUUID());
 	}
 
-	private void beam(ServerLevel level, Coaster c, Vec3 a, Vec3 b, float w, BlockState state) {
+	private void beam(ServerLevel level, Coaster c, Vec3 a, Vec3 b, float w0, BlockState state) {
+		float w = w0 == 0 ? 1.0F : w0;
 		Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
 		if (d == null) {
 			return;
@@ -702,6 +836,9 @@ public class CoasterWorkshop extends PartyGame {
 				}
 				Coaster c = new Coaster();
 				c.plot = Math.max(0, Math.min(PLOTS - 1, Integer.parseInt(f[1])));
+				if (f.length > 3 && !f[3].isEmpty()) {
+					c.colour = Integer.parseInt(f[3].trim());
+				}
 				for (String p : f[2].split(",")) {
 					if (!p.isEmpty()) {
 						c.pieces.add(Piece.valueOf(p));
@@ -722,6 +859,7 @@ public class CoasterWorkshop extends PartyGame {
 			for (Piece p : e.getValue().pieces) {
 				b.append(p.name()).append(',');
 			}
+			b.append('|').append(e.getValue().colour);
 			b.append('\n');
 		}
 		try {

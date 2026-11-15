@@ -219,6 +219,18 @@ final class Butterflies {
 	static void book(ServerPlayer p) {
 		load((ServerLevel) p.level());
 		Set<String> mine = BOOK.getOrDefault(p.getName().getString(), Set.of());
+		List<String> entries = new ArrayList<>();
+		String[] rarity = {"", "Common", "Uncommon", "Rare"};
+		for (Kind k : KINDS) {
+			entries.add(k.name() + "|rubymod:park_" + k.model() + "|" + mine.contains(k.name()) + "|" + rarity[k.rarity()]);
+		}
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.rubymod.net.MorePayloads.BookScreen(
+				p.getName().getString() + "'s Butterfly Book: " + mine.size() + " of " + KINDS.length, entries));
+	}
+
+	static void bookInChat(ServerPlayer p) {
+		load((ServerLevel) p.level());
+		Set<String> mine = BOOK.getOrDefault(p.getName().getString(), Set.of());
 		MutableComponent text = Component.literal("🦋 " + p.getName().getString() + "'s Butterfly Book: " + mine.size() + " of " + KINDS.length + "\n")
 				.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
 		for (Kind k : KINDS) {

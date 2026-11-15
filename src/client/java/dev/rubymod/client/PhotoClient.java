@@ -18,12 +18,19 @@ public final class PhotoClient {
 	}
 
 	private static int countdown = -1;
+	private static boolean hid;
 	private static int[] palette;
 	private static byte[] paletteIds;
 
 	public static void register() {
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.PhotoAsk.TYPE, (payload, context) -> {
-			countdown = 1;
+			// Hide the screen clutter (as F1 does) for a moment, so the photo's just the view.
+			Minecraft mc = Minecraft.getInstance();
+			hid = !mc.gui.hud.isHidden();
+			if (hid) {
+				mc.gui.hud.toggle();
+			}
+			countdown = 2;
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			if (countdown < 0 || --countdown > 0) {
@@ -33,7 +40,13 @@ public final class PhotoClient {
 			Screenshot.takeScreenshot(mc.gameRenderer.mainRenderTarget(), image -> {
 				try {
 					byte[] out = shrink(image);
-					mc.execute(() -> ClientPlayNetworking.send(new MorePayloads.PhotoData(out)));
+					mc.execute(() -> {
+						if (hid && mc.gui.hud.isHidden()) {
+							mc.gui.hud.toggle();
+						}
+						hid = false;
+						ClientPlayNetworking.send(new MorePayloads.PhotoData(out));
+					});
 				} finally {
 					image.close();
 				}
@@ -45,10 +58,10 @@ public final class PhotoClient {
 		buildPalette();
 		int w = image.getWidth();
 		int h = image.getHeight();
-		// A square from the top of the screen down to just above the hotbar.
-		int side = Math.min(w, (int) (h * 0.8));
+		// The middle square of the view.
+		int side = Math.min(w, h);
 		int ox = (w - side) / 2;
-		int oy = (int) (h * 0.04);
+		int oy = (h - side) / 2;
 		byte[] out = new byte[128 * 128];
 		for (int y = 0; y < 128; y++) {
 			for (int x = 0; x < 128; x++) {

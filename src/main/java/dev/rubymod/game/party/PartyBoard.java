@@ -112,7 +112,7 @@ public class PartyBoard extends PartyGame {
 	@Override
 	protected String roundStatus() {
 		if (step == Step.GAME) {
-			return "Minigame: " + (anvils ? "Anvil Rain" : "Colour Floor");
+			return "Minigame: " + GAMES[game];
 		}
 		if (seats.isEmpty() || step == Step.DONE) {
 			return "Getting ready";
@@ -168,7 +168,58 @@ public class PartyBoard extends PartyGame {
 				}
 			}
 			floor(level, true);
+			decorate(level);
 		});
+	}
+
+	/** Trees, flower beds and lamps round the board, balloons, a big sign, and the viewing platform up above. */
+	private void decorate(ServerLevel level) {
+		BlockPos c = center();
+		var random = level.getRandom();
+		for (int i = 0; i < 14; i++) {
+			double a = i * Math.PI * 2 / 14 + 0.1;
+			for (double r : new double[] {9, 27}) {
+				BlockPos t = c.offset((int) Math.round(Math.cos(a) * r), 0, (int) Math.round(Math.sin(a) * r));
+				if (i % 2 == 0) {
+					for (int y = 0; y < 4; y++) {
+						setNow(level, t.above(y), Blocks.BIRCH_LOG.defaultBlockState());
+					}
+					for (int dx = -2; dx <= 2; dx++) {
+						for (int dz = -2; dz <= 2; dz++) {
+							for (int dy = 3; dy <= 5; dy++) {
+								if (Math.abs(dx) + Math.abs(dz) + Math.abs(dy - 4) <= 3 && !(dx == 0 && dz == 0 && dy < 4)) {
+									setNow(level, t.offset(dx, dy, dz), (r < 20 ? Blocks.CHERRY_LEAVES : Blocks.FLOWERING_AZALEA_LEAVES).defaultBlockState()
+											.setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+								}
+							}
+						}
+					}
+				} else {
+					setNow(level, t, (random.nextBoolean() ? Blocks.POPPY : Blocks.DANDELION).defaultBlockState());
+					setNow(level, t.offset(1, 0, 0), Blocks.ALLIUM.defaultBlockState());
+					setNow(level, t.offset(0, 0, 1), Blocks.CORNFLOWER.defaultBlockState());
+				}
+			}
+		}
+		// The viewing platform (glass), high over the middle.
+		for (int dx = -3; dx <= 3; dx++) {
+			for (int dz = -3; dz <= 3; dz++) {
+				setNow(level, c.offset(dx, 19, dz), Blocks.GLASS.defaultBlockState());
+				if (Math.abs(dx) == 3 || Math.abs(dz) == 3) {
+					setNow(level, c.offset(dx, 20, dz), Blocks.GLASS_PANE.defaultBlockState());
+				}
+			}
+		}
+		Display.TextDisplay t = EntityTypes.TEXT_DISPLAY.create(level, EntitySpawnReason.EVENT);
+		if (t != null) {
+			t.snapTo(c.getX() + 0.5, c.getY() + 6, c.getZ() + 0.5, 0, 0);
+			((dev.rubymod.mixin.TextDisplayAccessor) t).rubymod$setText(Component.literal("★ PARTY BOARD ★").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			((DisplayAccessor) t).rubymod$setBillboard(Display.BillboardConstraints.CENTER);
+			((DisplayAccessor) t).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(4, 4, 4), new Quaternionf()));
+			t.addTag(tag());
+			spawned.add(t.getUUID());
+			level.addFreshEntity(t);
+		}
 	}
 
 	private void paint(ServerLevel level, int i) {
@@ -243,6 +294,9 @@ public class PartyBoard extends PartyGame {
 				ItemStack dice = new ItemStack(Items.SLIME_BALL);
 				dice.set(DataComponents.CUSTOM_NAME, Component.literal(DICE).withStyle(ChatFormatting.GOLD));
 				give(p, dice);
+				ItemStack view = new ItemStack(Items.ENDER_EYE);
+				view.set(DataComponents.CUSTOM_NAME, Component.literal(VIEW).withStyle(ChatFormatting.AQUA));
+				give(p, view);
 				Alerts.title(p, "PARTY BOARD", "Most stars after " + ROUNDS + " rounds wins!", ChatFormatting.GOLD);
 			}
 		}
@@ -318,6 +372,25 @@ public class PartyBoard extends PartyGame {
 
 	@Override
 	public boolean allowsItemUse(ServerPlayer player, ItemStack stack) {
+		if (stack.getHoverName().getString().equals(VIEW)) {
+			// Up to the viewing platform over the board, or back to your square.
+			if (step == Step.GAME) {
+				return false;
+			}
+			if (birdseye.remove(player.getUUID())) {
+				for (Seat s : seats) {
+					if (player.getUUID().equals(s.player)) {
+						place(s);
+					}
+				}
+			} else {
+				birdseye.add(player.getUUID());
+				BlockPos c = center();
+				teleport(player, c.getX() + 0.5, c.getY() + 20, c.getZ() + 0.5, player.getYRot());
+				player.sendOverlayMessage(Component.literal("The whole board! Right-click again to go back.").withStyle(ChatFormatting.AQUA));
+			}
+			return false;
+		}
 		if (!stack.getHoverName().getString().equals(DICE)) {
 			return true;
 		}
@@ -343,6 +416,38 @@ public class PartyBoard extends PartyGame {
 		roll = 1 + level.getRandom().nextInt(6);
 		step = Step.ROLLING;
 		wait = 30;
+		// A big dice block tumbles in the air over the roller's square.
+		clearDice(level);
+		BlockPos at = squares.get(seats.get(turn).square);
+		Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
+		if (d != null) {
+			d.snapTo(at.getX() + 0.5, at.getY() + 3.5, at.getZ() + 0.5, 0, 0);
+			((BlockDisplayAccessor) d).rubymod$setBlockState(Blocks.SNOW_BLOCK.defaultBlockState());
+			((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(-0.6F, -0.6F, -0.6F), new Quaternionf(), new Vector3f(1.2F, 1.2F, 1.2F),
+					new Quaternionf()));
+			((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(2);
+			((DisplayAccessor) d).rubymod$setBrightness(new net.minecraft.util.Brightness(15, 15));
+			d.addTag(tag());
+			spawned.add(d.getUUID());
+			level.addFreshEntity(d);
+			dice = d.getUUID();
+		}
+	}
+
+	private UUID dice;
+	private UUID diceText;
+	private final Set<UUID> birdseye = new HashSet<>();
+	private static final String VIEW = "Bird's-eye View";
+
+	private void clearDice(ServerLevel level) {
+		for (UUID id : new UUID[] {dice, diceText}) {
+			Entity e = id == null ? null : level.getEntity(id);
+			if (e != null) {
+				e.discard();
+			}
+		}
+		dice = null;
+		diceText = null;
 	}
 
 	@Override
@@ -382,6 +487,28 @@ public class PartyBoard extends PartyGame {
 					}
 					level.playSound(null, squares.get(s.square), SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.PLAYERS, 1.0F, 1.5F);
 				}
+				Entity d = dice == null ? null : level.getEntity(dice);
+				if (d != null && wait > 6) {
+					d.setYRot(d.getYRot() + 47);
+					d.setXRot((d.getXRot() + 61) % 90 - 45);
+					d.teleportTo(d.getX(), d.getY() + Math.sin(wait * 0.6) * 0.1, d.getZ());
+				}
+				if (wait == 6 && d != null) {
+					d.setYRot(0);
+					d.setXRot(0);
+					Display.TextDisplay t = EntityTypes.TEXT_DISPLAY.create(level, EntitySpawnReason.EVENT);
+					if (t != null) {
+						t.snapTo(d.getX(), d.getY() + 0.9, d.getZ(), 0, 0);
+						((dev.rubymod.mixin.TextDisplayAccessor) t).rubymod$setText(Component.literal(String.valueOf(roll)).withStyle(ChatFormatting.GOLD,
+								ChatFormatting.BOLD));
+						((DisplayAccessor) t).rubymod$setBillboard(Display.BillboardConstraints.CENTER);
+						((DisplayAccessor) t).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(3, 3, 3), new Quaternionf()));
+						t.addTag(tag());
+						spawned.add(t.getUUID());
+						level.addFreshEntity(t);
+						diceText = t.getUUID();
+					}
+				}
 				if (--wait <= 0) {
 					left = roll;
 					step = Step.MOVING;
@@ -419,6 +546,9 @@ public class PartyBoard extends PartyGame {
 				}
 			}
 			case LANDED -> {
+				if (wait == 20) {
+					clearDice(level);
+				}
 				if (--wait <= 0) {
 					turn++;
 					if (turn >= seats.size()) {
@@ -434,11 +564,15 @@ public class PartyBoard extends PartyGame {
 			default -> {
 			}
 		}
-		// People stay on their square between turns.
+		// People stay on their square between turns (unless they're up on the viewing platform).
 		if (step != Step.GAME && roundTicks % 20 == 0) {
 			for (Seat o : seats) {
 				ServerPlayer q = o.player == null ? null : PartyGames.player(server, o.player);
-				if (q != null && q.position().distanceTo(Vec3.atBottomCenterOf(squares.get(o.square))) > 3) {
+				if (q != null && birdseye.contains(q.getUUID()) && o == seats.get(turn) && step == Step.TURN) {
+					birdseye.remove(q.getUUID());
+					place(o);
+				}
+				if (q != null && !birdseye.contains(q.getUUID()) && q.position().distanceTo(Vec3.atBottomCenterOf(squares.get(o.square))) > 3) {
 					place(o);
 				}
 			}
@@ -505,25 +639,108 @@ public class PartyBoard extends PartyGame {
 
 	// ----- Minigames -----
 
+	private static final String[] GAMES = {"ANVIL RAIN", "COLOUR FLOOR", "HOT POTATO", "DASH", "MUSICAL CHAIRS", "SNOWBALL SPLAT"};
+	private static final String[] HOW = {"Dodge the falling anvils (watch for the shadows)!", "Stand on the colour I call before the rest vanish!",
+		"Don't be holding the potato when it pops! Run into someone to pass it on.", "Race to the gold line at the far end! First two win.",
+		"Walk round while the music plays. When it stops, stand on a GOLD chair!", "Throw snowballs at each other! Most hits wins."};
+	private final List<Integer> order = new ArrayList<>();
+	private int game;
+	private UUID potato;
+	private int potatoPops;
+	private int passedAt;
+	private UUID potatoMark;
+	private final List<UUID> finished = new ArrayList<>();
+	private final Map<UUID, Integer> hits = new HashMap<>();
+	private final Map<UUID, UUID> thrown = new HashMap<>();
+	private boolean music;
+	private int musicUntil;
+
 	private void startGame(ServerLevel level) {
 		step = Step.GAME;
-		anvils = round % 2 == 0;
+		birdseye.clear();
+		clearDice(level);
+		if (order.isEmpty()) {
+			for (int i = 0; i < GAMES.length; i++) {
+				order.add(i);
+			}
+			Collections.shuffle(order);
+		}
+		game = order.get(round % order.size());
+		anvils = game == 0;
 		gameT = -60;
 		out.clear();
 		falling.clear();
 		fallingAt.clear();
-		floor(level, anvils);
+		finished.clear();
+		hits.clear();
+		thrown.clear();
+		potato = null;
+		floor(level, game != 1);
 		BlockPos g = game();
 		int k = 0;
+		List<ServerPlayer> in = new ArrayList<>();
 		for (Seat s : seats) {
 			ServerPlayer p = s.player == null ? null : PartyGames.player(server, s.player);
-			if (p != null) {
-				double a = k++ * Math.PI / 2;
+			if (p == null) {
+				continue;
+			}
+			in.add(p);
+			double a = k++ * Math.PI / 2;
+			if (game == 3) {
+				teleport(p, g.getX() - 6 + k * 3 + 0.5, g.getY(), g.getZ() - 7.5, 0);
+			} else {
 				teleport(p, g.getX() + 0.5 + Math.cos(a) * 3, g.getY(), g.getZ() + 0.5 + Math.sin(a) * 3, 0);
-				Alerts.title(p, anvils ? "ANVIL RAIN" : "COLOUR FLOOR", anvils ? "Dodge the falling anvils (watch for shadows)!"
-						: "Stand on the colour I call before the rest vanish!", ChatFormatting.LIGHT_PURPLE);
+			}
+			Alerts.title(p, GAMES[game], HOW[game], ChatFormatting.LIGHT_PURPLE);
+			if (game == 5) {
+				ItemStack balls = new ItemStack(Items.SNOWBALL, 16);
+				give(p, balls);
 			}
 		}
+		if (game == 3) {
+			// The dash: rows of walls with gaps, and a gold finish line.
+			var random = level.getRandom();
+			for (int row = -4; row <= 5; row += 3) {
+				int gap = random.nextInt(13) - 6;
+				for (int x = -8; x <= 8; x++) {
+					if (Math.abs(x - gap) > 1 && !(Math.abs(x - gap - 7) <= 1)) {
+						level.setBlock(g.offset(x, 0, row), Blocks.WOOL.pick(DyeColor.ORANGE).defaultBlockState(), 2);
+						level.setBlock(g.offset(x, 1, row), Blocks.WOOL.pick(DyeColor.ORANGE).defaultBlockState(), 2);
+					}
+				}
+			}
+			for (int x = -8; x <= 8; x++) {
+				level.setBlock(g.offset(x, -1, 8), Blocks.GOLD_BLOCK.defaultBlockState(), 2);
+			}
+		}
+		if (game == 2 && !in.isEmpty()) {
+			potato = in.get(level.getRandom().nextInt(in.size())).getUUID();
+			potatoPops = 15 * 20;
+			passedAt = 0;
+		}
+		if (game == 4) {
+			music = false;
+			musicUntil = 20;
+		}
+	}
+
+	/** Gold chairs for musical chairs: one fewer than the people still in. */
+	private void chairs(ServerLevel level, int n) {
+		floor(level, true);
+		BlockPos g = game();
+		var random = level.getRandom();
+		for (int i = 0; i < Math.max(1, n); i++) {
+			double a = random.nextDouble() * Math.PI * 2;
+			double r = 2 + random.nextDouble() * 5;
+			level.setBlock(g.offset((int) Math.round(Math.cos(a) * r), -1, (int) Math.round(Math.sin(a) * r)), Blocks.GOLD_BLOCK.defaultBlockState(), 2);
+		}
+	}
+
+	private void knockOut(ServerPlayer p, String why) {
+		BlockPos g = game();
+		out.add(p.getUUID());
+		Alerts.title(p, why, "Watch the others...", ChatFormatting.RED);
+		teleport(p, g.getX() + 0.5, g.getY(), g.getZ() + 11.5, 180);
 	}
 
 	private void tickGame(ServerLevel level) {
@@ -533,124 +750,262 @@ public class PartyBoard extends PartyGame {
 		if (gameT < 0) {
 			return;
 		}
-		// Anyone who falls (or is squashed) is out.
+		List<ServerPlayer> in = new ArrayList<>();
 		for (Seat s : seats) {
 			ServerPlayer p = s.player == null ? null : PartyGames.player(server, s.player);
-			if (p != null && !out.contains(p.getUUID()) && p.getY() < g.getY() - 1.5) {
-				out.add(p.getUUID());
-				Alerts.title(p, "OUT!", "Watch the others...", ChatFormatting.RED);
-				teleport(p, g.getX() + 0.5, g.getY(), g.getZ() + 11.5, 180);
-			}
-		}
-		if (anvils) {
-			// Shadows warn where each anvil will land; then it drops.
-			if (gameT % Math.max(4, 12 - gameT / 60) == 0) {
-				BlockPos at = g.offset(random.nextInt(17) - 8, -1, random.nextInt(17) - 8);
-				Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
-				if (d != null) {
-					d.snapTo(at.getX(), at.getY() + 14, at.getZ(), 0, 0);
-					((BlockDisplayAccessor) d).rubymod$setBlockState(Blocks.ANVIL.defaultBlockState());
-					((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(2);
-					d.addTag(tag());
-					spawned.add(d.getUUID());
-					level.addFreshEntity(d);
-					falling.add(d.getUUID());
-					fallingAt.put(d.getUUID(), at);
-					level.setBlock(at, Blocks.WOOL.pick(DyeColor.GRAY).defaultBlockState(), 2);
-				}
-			}
-			for (var it = falling.iterator(); it.hasNext();) {
-				UUID id = it.next();
-				Entity d = level.getEntity(id);
-				BlockPos at = fallingAt.get(id);
-				if (d == null) {
-					it.remove();
-					continue;
-				}
-				double y = d.getY() - 0.8;
-				if (y <= at.getY() + 1) {
-					level.playSound(null, at, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.7F, 1.0F);
-					level.sendParticles(ParticleTypes.CLOUD, at.getX() + 0.5, at.getY() + 1, at.getZ() + 0.5, 6, 0.3, 0.1, 0.3, 0.02);
-					for (ServerPlayer p : online()) {
-						if (!out.contains(p.getUUID()) && Math.abs(p.getX() - at.getX() - 0.5) < 0.9 && Math.abs(p.getZ() - at.getZ() - 0.5) < 0.9
-								&& Math.abs(p.getY() - at.getY() - 1) < 1.5) {
-							out.add(p.getUUID());
-							Alerts.title(p, "BONK! OUT!", "Watch the others...", ChatFormatting.RED);
-							teleport(p, g.getX() + 0.5, g.getY(), g.getZ() + 11.5, 180);
-						}
-					}
-					level.setBlock(at, Blocks.WOOL.pick(DyeColor.WHITE).defaultBlockState(), 2);
-					d.discard();
-					spawned.remove(id);
-					it.remove();
+			if (p != null && !out.contains(p.getUUID())) {
+				if (p.getY() < g.getY() - 1.5) {
+					knockOut(p, "OUT!");
 				} else {
-					d.teleportTo(d.getX(), y, d.getZ());
+					in.add(p);
 				}
 			}
-		} else {
-			// Every few seconds: a colour is called; then everything else vanishes for a moment.
-			int cycle = Math.max(60, 110 - gameT / 6);
-			int t = gameT % cycle;
-			DyeColor[] colors = {DyeColor.RED, DyeColor.YELLOW, DyeColor.LIME, DyeColor.LIGHT_BLUE};
-			String[] names = {"RED", "YELLOW", "GREEN", "BLUE"};
-			ChatFormatting[] fmt = {ChatFormatting.RED, ChatFormatting.YELLOW, ChatFormatting.GREEN, ChatFormatting.AQUA};
-			if (t == 0) {
-				int pick = random.nextInt(4);
-				safe = colors[pick];
-				floor(level, false);
-				for (ServerPlayer p : online()) {
-					Alerts.title(p, names[pick] + "!", "Stand on " + names[pick].toLowerCase(), fmt[pick]);
+		}
+		boolean over = false;
+		switch (game) {
+			case 0 -> tickAnvils(level, g, random);
+			case 1 -> tickColours(level, g, random);
+			case 2 -> {
+				ServerPlayer holder = potato == null ? null : PartyGames.player(server, potato);
+				if (holder == null || out.contains(potato)) {
+					potato = in.isEmpty() ? null : in.get(random.nextInt(in.size())).getUUID();
+					holder = potato == null ? null : PartyGames.player(server, potato);
 				}
-				level.playSound(null, g, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.PLAYERS, 1.5F, 1.0F);
+				if (holder != null) {
+					level.sendParticles(ParticleTypes.FLAME, holder.getX(), holder.getY() + 2.3, holder.getZ(), 3, 0.15, 0.1, 0.15, 0.01);
+					if (gameT % 20 == 0) {
+						holder.sendOverlayMessage(Component.literal("YOU'VE GOT THE POTATO! Run into someone!").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+						level.playSound(null, holder.blockPosition(), SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.PLAYERS, 1.0F, 2.0F);
+					}
+					for (ServerPlayer q : in) {
+						if (q != holder && q.distanceTo(holder) < 1.4 && gameT - passedAt > 15) {
+							potato = q.getUUID();
+							passedAt = gameT;
+							level.playSound(null, q.blockPosition(), SoundEvents.CHICKEN_EGG, SoundSource.PLAYERS, 1.2F, 1.4F);
+							Alerts.title(q, "", "You've got the potato!", ChatFormatting.RED);
+							break;
+						}
+					}
+					if (--potatoPops <= 0) {
+						level.sendParticles(ParticleTypes.EXPLOSION, holder.getX(), holder.getY() + 1, holder.getZ(), 3, 0.3, 0.3, 0.3, 0);
+						level.playSound(null, holder.blockPosition(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.0F, 1.4F);
+						knockOut(holder, "POP! OUT!");
+						potato = null;
+						potatoPops = 12 * 20;
+					}
+				}
 			}
-			if (t == cycle - 25 && safe != null) {
-				for (int x = -8; x <= 8; x++) {
-					for (int z = -8; z <= 8; z++) {
-						BlockPos b = g.offset(x, -1, z);
-						if (!level.getBlockState(b).is(Blocks.WOOL.pick(safe))) {
-							level.setBlock(b, Blocks.AIR.defaultBlockState(), 2);
+			case 3 -> {
+				for (ServerPlayer p : in) {
+					if (!finished.contains(p.getUUID()) && level.getBlockState(p.blockPosition().below()).is(Blocks.GOLD_BLOCK)) {
+						finished.add(p.getUUID());
+						Alerts.title(p, finished.size() <= 2 ? "#" + finished.size() + "!" : "Finished!", "", ChatFormatting.GOLD);
+					}
+				}
+				if (finished.size() >= Math.min(2, in.size()) && !in.isEmpty()) {
+					over = true;
+				}
+			}
+			case 4 -> {
+				if (--musicUntil <= 0) {
+					if (!music) {
+						// The music starts: chairs out, walk round.
+						music = true;
+						musicUntil = 60 + random.nextInt(80);
+						chairs(level, in.size() - 1);
+						for (ServerPlayer p : in) {
+							Alerts.title(p, "♪ ♫ ♪", "Walk round... wait for the music to stop!", ChatFormatting.AQUA);
+						}
+					} else {
+						// It stops: anyone not on gold in a moment is out.
+						music = false;
+						musicUntil = 40;
+						for (ServerPlayer p : in) {
+							Alerts.title(p, "STOP!", "Find a gold chair!", ChatFormatting.RED);
+						}
+					}
+				}
+				if (music && gameT % 5 == 0) {
+					float[] tune = {1.0F, 1.26F, 1.5F, 1.26F, 1.68F, 1.5F, 1.26F, 1.0F};
+					level.playSound(null, g, SoundEvents.NOTE_BLOCK_HARP.value(), SoundSource.PLAYERS, 1.5F, tune[(gameT / 5) % tune.length]);
+				}
+				if (!music && musicUntil == 1) {
+					List<UUID> sitting = new ArrayList<>();
+					for (ServerPlayer p : in) {
+						BlockPos under = p.blockPosition().below();
+						if (level.getBlockState(under).is(Blocks.GOLD_BLOCK) && !sitting.contains(null)) {
+							sitting.add(p.getUUID());
+							level.setBlock(under, Blocks.WOOL.pick(DyeColor.WHITE).defaultBlockState(), 2);
+						}
+					}
+					for (ServerPlayer p : in) {
+						if (!sitting.contains(p.getUUID())) {
+							knockOut(p, "No chair! OUT!");
 						}
 					}
 				}
 			}
-		}
-		// Thirty seconds, or everyone's out: whoever's left wins 10 coins (computer players: about half the time).
-		boolean anyoneIn = false;
-		for (Seat s : seats) {
-			if (s.player != null && !out.contains(s.player)) {
-				anyoneIn = true;
+			case 5 -> {
+				// Snowballs: count a hit when one reaches someone else.
+				for (Entity e : level.getEntities((Entity) null, new net.minecraft.world.phys.AABB(g).inflate(14, 8, 14),
+						e -> e instanceof net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball)) {
+					var owner = ((net.minecraft.world.entity.projectile.Projectile) e).getOwner();
+					if (!(owner instanceof ServerPlayer thrower)) {
+						continue;
+					}
+					for (ServerPlayer q : in) {
+						if (q != thrower && e.distanceTo(q) < 1.3) {
+							int n = hits.merge(thrower.getUUID(), 1, Integer::sum);
+							thrower.sendOverlayMessage(Component.literal("SPLAT! " + n + " hits").withStyle(ChatFormatting.AQUA));
+							level.sendParticles(ParticleTypes.ITEM_SNOWBALL, q.getX(), q.getY() + 1, q.getZ(), 12, 0.3, 0.3, 0.3, 0.1);
+							e.discard();
+							break;
+						}
+					}
+				}
+			}
+			default -> {
 			}
 		}
 		boolean people = seats.stream().anyMatch(s -> s.player != null);
-		if (gameT >= 30 * 20 || people && !anyoneIn) {
-			List<String> winners = new ArrayList<>();
-			for (Seat s : seats) {
-				boolean won = s.player != null ? !out.contains(s.player) : random.nextBoolean();
-				if (won) {
-					s.coins += 10;
-					winners.add(s.name);
-				}
-			}
-			for (UUID id : falling) {
-				Entity e = level.getEntity(id);
-				if (e != null) {
-					e.discard();
-				}
-			}
-			falling.clear();
-			floor(level, true);
-			for (ServerPlayer p : online()) {
-				Alerts.title(p, "+10 coins", winners.isEmpty() ? "Nobody made it!" : String.join(", ", winners), ChatFormatting.GOLD);
-			}
-			round++;
-			for (Seat s : seats) {
-				place(s);
-			}
-			if (round >= ROUNDS) {
-				finish();
+		if (game != 5 && game != 3 && people && in.isEmpty()) {
+			over = true;
+		}
+		if (game == 4 && people && in.size() <= 1 && gameT > 40) {
+			over = true;
+		}
+		if (gameT >= 30 * 20 || over) {
+			endGame(level, g, random);
+		}
+	}
+
+	private void endGame(ServerLevel level, BlockPos g, net.minecraft.util.RandomSource random) {
+		int best = hits.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+		List<String> winners = new ArrayList<>();
+		for (Seat s : seats) {
+			boolean won;
+			if (s.player == null) {
+				won = random.nextBoolean();
+			} else if (game == 3) {
+				int at = finished.indexOf(s.player);
+				won = at >= 0 && at < 2;
+			} else if (game == 5) {
+				won = hits.getOrDefault(s.player, 0) > 0 && hits.getOrDefault(s.player, 0) == best;
 			} else {
-				step = Step.TURN;
-				wait = 40;
+				won = !out.contains(s.player);
+			}
+			if (won) {
+				s.coins += 10;
+				winners.add(s.name);
+			}
+			ServerPlayer p = s.player == null ? null : PartyGames.player(server, s.player);
+			if (p != null) {
+				for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+					if (p.getInventory().getItem(i).is(Items.SNOWBALL)) {
+						p.getInventory().setItem(i, ItemStack.EMPTY);
+					}
+				}
+			}
+		}
+		for (UUID id : falling) {
+			Entity e = level.getEntity(id);
+			if (e != null) {
+				e.discard();
+			}
+		}
+		falling.clear();
+		// Clear the stage (the dash's walls), lay the plain floor.
+		for (int x = -8; x <= 8; x++) {
+			for (int z = -8; z <= 8; z++) {
+				level.setBlock(g.offset(x, 0, z), Blocks.AIR.defaultBlockState(), 2);
+				level.setBlock(g.offset(x, 1, z), Blocks.AIR.defaultBlockState(), 2);
+			}
+		}
+		floor(level, true);
+		for (ServerPlayer p : online()) {
+			Alerts.title(p, "+10 coins", winners.isEmpty() ? "Nobody made it!" : String.join(", ", winners), ChatFormatting.GOLD);
+		}
+		round++;
+		for (Seat s : seats) {
+			place(s);
+		}
+		if (round >= ROUNDS) {
+			finish();
+		} else {
+			step = Step.TURN;
+			wait = 40;
+		}
+	}
+
+	private void tickAnvils(ServerLevel level, BlockPos g, net.minecraft.util.RandomSource random) {
+		// Shadows warn where each anvil will land; then it drops.
+		if (gameT % Math.max(4, 12 - gameT / 60) == 0) {
+			BlockPos at = g.offset(random.nextInt(17) - 8, -1, random.nextInt(17) - 8);
+			Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
+			if (d != null) {
+				d.snapTo(at.getX(), at.getY() + 14, at.getZ(), 0, 0);
+				((BlockDisplayAccessor) d).rubymod$setBlockState(Blocks.ANVIL.defaultBlockState());
+				((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(2);
+				d.addTag(tag());
+				spawned.add(d.getUUID());
+				level.addFreshEntity(d);
+				falling.add(d.getUUID());
+				fallingAt.put(d.getUUID(), at);
+				level.setBlock(at, Blocks.WOOL.pick(DyeColor.GRAY).defaultBlockState(), 2);
+			}
+		}
+		for (var it = falling.iterator(); it.hasNext();) {
+			UUID id = it.next();
+			Entity d = level.getEntity(id);
+			BlockPos at = fallingAt.get(id);
+			if (d == null) {
+				it.remove();
+				continue;
+			}
+			double y = d.getY() - 0.8;
+			if (y <= at.getY() + 1) {
+				level.playSound(null, at, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.7F, 1.0F);
+				level.sendParticles(ParticleTypes.CLOUD, at.getX() + 0.5, at.getY() + 1, at.getZ() + 0.5, 6, 0.3, 0.1, 0.3, 0.02);
+				for (ServerPlayer p : online()) {
+					if (!out.contains(p.getUUID()) && Math.abs(p.getX() - at.getX() - 0.5) < 0.9 && Math.abs(p.getZ() - at.getZ() - 0.5) < 0.9
+							&& Math.abs(p.getY() - at.getY() - 1) < 1.5) {
+						knockOut(p, "BONK! OUT!");
+					}
+				}
+				level.setBlock(at, Blocks.WOOL.pick(DyeColor.WHITE).defaultBlockState(), 2);
+				d.discard();
+				spawned.remove(id);
+				it.remove();
+			} else {
+				d.teleportTo(d.getX(), y, d.getZ());
+			}
+		}
+	}
+
+	private void tickColours(ServerLevel level, BlockPos g, net.minecraft.util.RandomSource random) {
+		// Every few seconds: a colour is called; then everything else vanishes for a moment.
+		int cycle = Math.max(60, 110 - gameT / 6);
+		int t = gameT % cycle;
+		DyeColor[] colors = {DyeColor.RED, DyeColor.YELLOW, DyeColor.LIME, DyeColor.LIGHT_BLUE};
+		String[] names = {"RED", "YELLOW", "GREEN", "BLUE"};
+		ChatFormatting[] fmt = {ChatFormatting.RED, ChatFormatting.YELLOW, ChatFormatting.GREEN, ChatFormatting.AQUA};
+		if (t == 0) {
+			int pick = random.nextInt(4);
+			safe = colors[pick];
+			floor(level, false);
+			for (ServerPlayer p : online()) {
+				Alerts.title(p, names[pick] + "!", "Stand on " + names[pick].toLowerCase(), fmt[pick]);
+			}
+			level.playSound(null, g, SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.PLAYERS, 1.5F, 1.0F);
+		}
+		if (t == cycle - 25 && safe != null) {
+			for (int x = -8; x <= 8; x++) {
+				for (int z = -8; z <= 8; z++) {
+					BlockPos b = g.offset(x, -1, z);
+					if (!level.getBlockState(b).is(Blocks.WOOL.pick(safe))) {
+						level.setBlock(b, Blocks.AIR.defaultBlockState(), 2);
+					}
+				}
 			}
 		}
 	}

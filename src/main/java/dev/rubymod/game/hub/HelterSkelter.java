@@ -90,6 +90,8 @@ final class HelterSkelter {
 		ride.seatHeight = 0.15;
 		ride.upright = true;
 		ride.waitTicks = 10;
+		ride.lookAhead = true;
+		ride.again = "Wheee! Climb the tower to go again!";
 		// The slide's surface (wooden, striped), and a low rim on the outside.
 		for (int i = 0; i < path.size() - 8; i++) {
 			Vec3 p = path.get(i);

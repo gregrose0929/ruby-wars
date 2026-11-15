@@ -51,6 +51,10 @@ final class TrackRide {
 	boolean sideBySide;
 	/** Riders sway from side to side as they go (hanging from the Sky Zip). */
 	boolean sway;
+	/** Keep riders looking down the track ahead (the Helter Skelter: otherwise you'd soon be facing the tower). */
+	boolean lookAhead;
+	/** What it says as you get off (else "Talk to <host> to ride again!"). */
+	String again;
 	/** Called for each rider as they get off (the Toy Blaster tots up your score). */
 	java.util.function.Consumer<ServerPlayer> onLeave;
 	/** Called for each rider as they get on. */
@@ -217,7 +221,7 @@ final class TrackRide {
 				for (UUID id : new ArrayList<>(c.riders)) {
 					ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
 					if (p != null) {
-						letOff(p, "Talk to " + hostName + " to ride again!");
+						letOff(p, again != null ? again : "Talk to " + hostName + " to ride again!");
 					}
 				}
 				remove(level, c);
@@ -339,6 +343,10 @@ final class TrackRide {
 				}
 				for (Entity rider : seat.getPassengers()) {
 					rider.resetFallDistance();
+					if (lookAhead && c.wait <= 0 && rider instanceof ServerPlayer rp && level.getGameTime() % 4 == 0) {
+						Vec3 ahead = at(c.d + 4);
+						rp.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, new Vec3(ahead.x, rp.getEyeY() - 0.8, ahead.z));
+					}
 				}
 			}
 		}

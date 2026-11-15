@@ -401,7 +401,10 @@ public final class HubGames {
 
 	/** A catch from the hub's pond (anything a fishing line pulls out there is a toy). True if it was one. */
 	public static boolean fished(ItemEntity item, ServerLevel level) {
-		if (!HubPark.POND.contains(item.position())) {
+		int spot = HubPark.POND.contains(item.position()) ? Fishing.POND
+				: Math.hypot(item.getX() - Rapids.CX, item.getZ() - Rapids.CZ) < 20 && item.getY() < HubPark.FLOOR + 3 ? Fishing.RIVER
+						: Toyland.POND.contains(item.position()) ? Fishing.TOYLAND : 0;
+		if (spot == 0) {
 			return false;
 		}
 		var random = level.getRandom();
@@ -414,7 +417,7 @@ public final class HubGames {
 		// Mostly a fish (which fights!); now and then something silly.
 		if (near != null && random.nextInt(5) != 0) {
 			item.discard();
-			Fishing.bite(near, level);
+			Fishing.bite(near, level, spot);
 			return true;
 		}
 		Object[] c = CATCHES[5 + random.nextInt(CATCHES.length - 5)];
@@ -439,6 +442,11 @@ public final class HubGames {
 			}
 		}
 		return true;
+	}
+
+	/** For autotests: a fish bites right now. */
+	public static void testBite(ServerPlayer p) {
+		Fishing.bite(p, (ServerLevel) p.level());
 	}
 
 	/** Onto the catch board. */

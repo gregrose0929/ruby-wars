@@ -45,7 +45,9 @@ final class Toyland {
 	private Toyland() {
 	}
 
-	static final int[][] CIRCLES = {{4, 66, 22}, {22, 66, 14}, {-9, 87, 11}};
+	static final int[][] CIRCLES = {{4, 66, 22}, {22, 66, 14}, {-9, 87, 11}, {23, 86, 7}};
+	/** Toyland's little fishing pond. */
+	static final net.minecraft.world.phys.AABB POND = new net.minecraft.world.phys.AABB(19, FLOOR - 4, 83, 27, FLOOR + 2, 89);
 	static final int MX = 8;
 	static final int MZ = 66;
 	private static final String BLASTER = "Toy Blaster";
@@ -78,6 +80,18 @@ final class Toyland {
 		blasterRide(level);
 		zoo(level);
 		HelterSkelter.build(level);
+		// A little fishing pond (a few fish here live nowhere else).
+		for (int x = 19; x <= 27; x++) {
+			for (int z = 83; z <= 89; z++) {
+				boolean rim = x == 19 || x == 27 || z == 83 || z == 89;
+				for (int y = -3; y <= 0; y++) {
+					HubPark.set(level, x, FLOOR + y, z, rim ? Blocks.MOSSY_COBBLESTONE.defaultBlockState() : y == -3 ? Blocks.SAND.defaultBlockState()
+							: Blocks.WATER.defaultBlockState());
+				}
+			}
+		}
+		HubPark.set(level, 21, FLOOR, 85, Blocks.LILY_PAD.defaultBlockState());
+		HubPark.label(level, 23.5, FLOOR + 3, 82.5, "TOY POND\nfish here with a Pond Rod!", ChatFormatting.AQUA, 0.7F);
 		Butterflies.build(level);
 	}
 

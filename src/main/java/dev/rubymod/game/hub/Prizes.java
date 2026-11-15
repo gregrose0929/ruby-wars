@@ -30,7 +30,9 @@ final class Prizes {
 	private Prizes() {
 	}
 
-	private static final int SPOTS = 16;
+	private static final int SPOTS = 32;
+	private static final List<String> WHO = new ArrayList<>();
+	private static final List<UUID> TAGS = new ArrayList<>();
 	private static final Map<String, Integer> COUNT = new LinkedHashMap<>();
 	private static final List<String> SHOWN = new ArrayList<>();
 	private static final List<UUID> MODELS = new ArrayList<>();
@@ -39,15 +41,17 @@ final class Prizes {
 	static void build(ServerLevel level) {
 		MODELS.clear();
 		// A shelf unit: two shelves of dark oak between posts, east of the spawn.
+		TAGS.clear();
 		for (int x = 10; x <= 13; x++) {
-			HubPark.set(level, x, FLOOR + 1, 13, Blocks.DARK_OAK_SLAB.defaultBlockState());
-			HubPark.set(level, x, FLOOR + 2, 13, Blocks.DARK_OAK_SLAB.defaultBlockState()
-					.setValue(net.minecraft.world.level.block.SlabBlock.TYPE, net.minecraft.world.level.block.state.properties.SlabType.TOP));
-			HubPark.set(level, x, FLOOR + 1, 14, Blocks.DARK_OAK_PLANKS.defaultBlockState());
-			HubPark.set(level, x, FLOOR + 2, 14, Blocks.DARK_OAK_PLANKS.defaultBlockState());
-			HubPark.set(level, x, FLOOR + 3, 14, Blocks.DARK_OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.SOUTH));
+			for (int y = 1; y <= 4; y++) {
+				HubPark.set(level, x, FLOOR + y, 13, y % 2 == 1 ? Blocks.DARK_OAK_SLAB.defaultBlockState()
+						: Blocks.DARK_OAK_SLAB.defaultBlockState().setValue(net.minecraft.world.level.block.SlabBlock.TYPE,
+								net.minecraft.world.level.block.state.properties.SlabType.TOP));
+				HubPark.set(level, x, FLOOR + y, 14, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+			}
+			HubPark.set(level, x, FLOOR + 5, 14, Blocks.DARK_OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.SOUTH));
 		}
-		Display.TextDisplay t = Props.text(level, new Vec3(11.5, FLOOR + 4.4, 13.2), Component.literal("PRIZE SHELF"), 0.6F, HubPark.TAG);
+		Display.TextDisplay t = Props.text(level, new Vec3(11.5, FLOOR + 6.4, 13.2), Component.literal("PRIZE SHELF"), 0.6F, HubPark.TAG);
 		HubPark.keep(t);
 		board = t == null ? null : t.getUUID();
 		for (int i = 0; i < SHOWN.size(); i++) {
@@ -64,6 +68,12 @@ final class Prizes {
 	private static void place(ServerLevel level, int i) {
 		Display.ItemDisplay m = HubPark.model(level, spot(i), 0, SHOWN.get(i), 0.45F, 0.22F);
 		MODELS.add(m == null ? null : m.getUUID());
+		// A tiny name card in front: who won it.
+		Vec3 s = spot(i);
+		Display.TextDisplay t = Props.text(level, new Vec3(s.x, s.y - 0.08, s.z - 0.28), Component.literal(i < WHO.size() ? WHO.get(i) : "")
+				.withStyle(ChatFormatting.WHITE), 0.18F, HubPark.TAG);
+		HubPark.keep(t);
+		TAGS.add(t == null ? null : t.getUUID());
 	}
 
 	private static final String[][] PLUSHIES = {{"plush_bunny", "a bunny plushie"}, {"plush_cat", "a kitty plushie"}, {"plush_pig", "a piggy plushie"},
@@ -81,16 +91,27 @@ final class Prizes {
 		COUNT.merge(p.getName().getString(), 1, Integer::sum);
 		if (SHOWN.size() >= SPOTS) {
 			SHOWN.remove(0);
+			if (!WHO.isEmpty()) {
+				WHO.remove(0);
+			}
 			HubPark.discard(level, MODELS.remove(0));
+			if (!TAGS.isEmpty()) {
+				HubPark.discard(level, TAGS.remove(0));
+			}
 			for (int i = 0; i < MODELS.size(); i++) {
 				Display.ItemDisplay d = MODELS.get(i) == null ? null : (Display.ItemDisplay) level.getEntity(MODELS.get(i));
+				Vec3 s = spot(i);
 				if (d != null) {
-					Vec3 s = spot(i);
 					d.teleportTo(s.x, s.y, s.z);
+				}
+				net.minecraft.world.entity.Entity t = i < TAGS.size() && TAGS.get(i) != null ? level.getEntity(TAGS.get(i)) : null;
+				if (t != null) {
+					t.teleportTo(s.x, s.y - 0.08, s.z - 0.28);
 				}
 			}
 		}
 		SHOWN.add(model);
+		WHO.add(p.getName().getString());
 		place(level, SHOWN.size() - 1);
 		text(level);
 		p.sendSystemMessage(Component.literal("★ You won " + what + "! It's on the Prize Shelf on the plaza.").withStyle(ChatFormatting.GOLD));
