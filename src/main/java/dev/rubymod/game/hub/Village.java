@@ -78,7 +78,7 @@ final class Village {
 		// The catch board.
 		HubPark.box(level, 3, FLOOR + 1, 43, 6, FLOOR + 3, 43, Blocks.DARK_OAK_PLANKS.defaultBlockState());
 		HubPark.box(level, 3, FLOOR + 4, 43, 6, FLOOR + 4, 43, Blocks.DARK_OAK_SLAB.defaultBlockState());
-		Display.TextDisplay t = Props.text(level, new Vec3(5.0, FLOOR + 1.3, 44.0), Component.literal("BIG CATCH BOARD"), 0.6F, HubPark.TAG);
+		Display.TextDisplay t = Props.text(level, HubPark.shift(new Vec3(5.0, FLOOR + 1.3, 44.0)), Component.literal("BIG CATCH BOARD"), 0.6F, HubPark.TAG);
 		HubPark.keep(t);
 		board = t == null ? null : t.getUUID();
 		catchBoard(level);
@@ -91,7 +91,7 @@ final class Village {
 		HubPark.set(level, 4, FLOOR + 1, 59, Blocks.BARREL.defaultBlockState());
 		SWANS.clear();
 		for (Vec3 home : new Vec3[] {new Vec3(-5.5, FLOOR + 0.9, 48.5), new Vec3(2.5, FLOOR + 0.9, 55.5), new Vec3(-5.5, FLOOR + 0.9, 55.5)}) {
-			SWANS.add(new Swan(home, new UUID[2]));
+			SWANS.add(new Swan(HubPark.shift(home), new UUID[2]));
 		}
 		HubPark.label(level, -9.5, FLOOR + 2.6, 50.5, "SWAN BOATS\nright-click a swan, steer with W A S D", ChatFormatting.WHITE, 0.7F);
 		HubHosts.add(level, new Vec3(-3.5, FLOOR + 1, 44.5), 180, VillagerProfession.FISHERMAN, VillagerType.SWAMP,

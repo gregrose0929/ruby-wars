@@ -146,6 +146,13 @@ final class Spooky {
 			}
 		}
 		scenes(level);
+		// Soft light all along the ride, so you can see where you're going (and what's coming for you).
+		for (int i = 0; i < path.size(); i += 16) {
+			BlockPos lp = BlockPos.containing(path.get(i).add(0, 3.2, 0));
+			if (level.getBlockState(lp).isAir()) {
+				level.setBlock(lp, Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 11), 2);
+			}
+		}
 		HubHosts.add(level, new Vec3(30.5, FLOOR + 1, 37.5), 270, VillagerProfession.LEATHERWORKER, VillagerType.SWAMP,
 				new HubHosts.Host("ghost", "Mortimer", "Haunted Mansion", 0xB070FF, "minecraft:carved_pumpkin",
 						"Ride a doom buggy through the Haunted Mansion: the portrait hall, the ghosts' ballroom, the library, the attic... "
@@ -268,7 +275,7 @@ final class Spooky {
 			{41, 9, 37}, {36, 9, 38}, {39, 9, 44}, {41, 9, 47}, {38, 2, 44}, {40, 2, 47}}) {
 			BlockPos lp = new BlockPos(l[0], FLOOR + l[1], l[2]);
 			if (level.getBlockState(lp).isAir()) {
-				level.setBlock(lp, Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 10), 2);
+				level.setBlock(lp, Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 12), 2);
 			}
 		}
 		// The porch.
@@ -405,8 +412,14 @@ final class Spooky {
 		}
 	}
 
-	private static void scare(ServerLevel level, double x, double y, double z, String model, Vec3 hide, Vec3 show, float size,
+	private static void scare(ServerLevel level, double x, double y, double z, String model, Vec3 hide, Vec3 show0, float size,
 			BiConsumer<ServerLevel, TrackRide.Car> also) {
+		Vec3 show = clear(show0, 1.9 + size / 2);
+		// ...but not into a wall: back towards where it was until it's in the room.
+		for (int k = 0; k < 20 && !level.getBlockState(BlockPos.containing(show.x, show.y + size / 2, show.z)).isAir()
+				&& !level.getBlockState(BlockPos.containing(show.x, show.y + size / 2, show.z)).is(Blocks.LIGHT); k++) {
+			show = show.lerp(show0, 0.15);
+		}
 		Display.ItemDisplay d = HubPark.model(level, hide, 90, model, size, 0);
 		if (d == null) {
 			return;
@@ -428,6 +441,31 @@ final class Spooky {
 			lvl.sendParticles(ParticleTypes.SOUL, prop.show().x, prop.show().y + 1, prop.show().z, 10, 0.3, 0.5, 0.3, 0.02);
 			also.accept(lvl, car);
 		});
+	}
+
+	/** Where a scare jumps to, moved out (if need be) so it's well clear of the riders' heads. */
+	private static Vec3 clear(Vec3 show, double gap) {
+		Vec3 near = null;
+		double best = Double.MAX_VALUE;
+		for (Vec3 p : path) {
+			if (Math.abs(p.y - show.y) > 3.5) {
+				continue;
+			}
+			double d = Math.hypot(p.x - show.x, p.z - show.z);
+			if (d < best) {
+				best = d;
+				near = p;
+			}
+		}
+		if (near == null || best >= gap) {
+			return show;
+		}
+		Vec3 out = new Vec3(show.x - near.x, 0, show.z - near.z);
+		if (out.lengthSqr() < 1e-4) {
+			out = new Vec3(1, 0, 0);
+		}
+		out = out.normalize().scale(gap);
+		return new Vec3(near.x + out.x, show.y, near.z + out.z);
 	}
 
 	static void tick(ServerLevel level) {

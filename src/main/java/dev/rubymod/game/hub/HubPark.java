@@ -70,7 +70,30 @@ public final class HubPark {
 	/** The park's display entities from this build (any others with the tag are from before, and go). */
 	private static final Set<UUID> KEEP = new HashSet<>();
 
-	static final AABB WHOLE_HUB = new AABB(-130, FLOOR - 40, -130, 130, FLOOR + 70, 130);
+	static final AABB WHOLE_HUB = new AABB(-175, FLOOR - 40, -175, 175, FLOOR + 70, 175);
+
+	/**
+	 * While an area is being built somewhere other than where its coordinates were first laid out, every block and
+	 * prop the helpers place is shifted by this much (see {@link #at(int, int)}).
+	 */
+	static int OX;
+	static int OZ;
+
+	/** Build what {@code builder} lays out, shifted by dx, dz. */
+	static void at(int dx, int dz, Runnable builder) {
+		OX = dx;
+		OZ = dz;
+		try {
+			builder.run();
+		} finally {
+			OX = 0;
+			OZ = 0;
+		}
+	}
+
+	static Vec3 shift(Vec3 v) {
+		return v.add(OX, 0, OZ);
+	}
 	// Fun Park
 	private static final int FX = 56;
 	private static final int FZ = 2;
@@ -79,19 +102,25 @@ public final class HubPark {
 	static final List<BlockPos> GALLERY_WALL = new ArrayList<>();
 	static final BlockState GALLERY_WALL_BLOCK = Blocks.SPRUCE_PLANKS.defaultBlockState();
 	// The Pond
-	static final AABB POND = new AABB(-8, FLOOR - 4, 46, 6, FLOOR + 2, 57);
+	/** The pond and its fishing village were laid out at (0, 56); they're built shifted by this, on Splash Island. */
+	static final int POND_DX = 9;
+	static final int POND_DZ = -187;
+	static final AABB POND = new AABB(-8 + POND_DX, FLOOR - 4, 46 + POND_DZ, 6 + POND_DX, FLOOR + 2, 57 + POND_DZ);
 	// Mini Golf
 	static final List<BlockPos> GOLF_TEES = new ArrayList<>();
 	static final List<BlockPos> GOLF_HOLES = new ArrayList<>();
 	// The Stage
-	static final Vec3 STAGE_CENTER = new Vec3(-46, FLOOR + 2, -40);
+	/** The stage was laid out at (-46, -34); it's built shifted by this, into the Fun Park. */
+	static final int STAGE_DX = 156;
+	static final int STAGE_DZ = 60;
+	static final Vec3 STAGE_CENTER = new Vec3(-46 + STAGE_DX, FLOOR + 2, -40 + STAGE_DZ);
 	static final List<BlockPos> DANCE_FLOOR = new ArrayList<>();
 	// The plaza's things you click.
 	private static final BlockPos TOY_CHEST = new BlockPos(3, FLOOR + 1, 10);
 	private static final BlockPos FIREWORKS = new BlockPos(-6, FLOOR + 2, -4);
-	private static final BlockPos ROD_BARREL = new BlockPos(-2, FLOOR + 1, 45);
+	private static final BlockPos ROD_BARREL = new BlockPos(-2 + POND_DX, FLOOR + 1, 45 + POND_DZ);
 	private static final BlockPos SNOW_PILE = new BlockPos(68, FLOOR + 1, 5);
-	private static final BlockPos JUKEBOX = new BlockPos(-46, FLOOR + 2, -40);
+	private static final BlockPos JUKEBOX = new BlockPos(-46 + STAGE_DX, FLOOR + 2, -40 + STAGE_DZ);
 
 	/** A launch pad: straight to {@code to}, or (when that's null) a travel pad that asks where you'd like to go. */
 	private record Pad(String label, Vec3 to, String here) {
@@ -102,18 +131,12 @@ public final class HubPark {
 	}
 
 	private static final List<Place> PLACES = List.of(
-			new Place("plaza", "The Plaza", "Toys and fireworks", "minecraft:bell", stand(-1, FLOOR, 6)),
-			new Place("funpark", "Fun Park", "Rides, games, bumper cars", "minecraft:minecart", stand(46, FLOOR, 5)),
-			new Place("tower", "Splash Tower", "Tube slide and zip line", "minecraft:water_bucket", stand(37, FLOOR, -40)),
-			new Place("pond", "Fishing Village", "Fishing and swings", "minecraft:fishing_rod", stand(6, FLOOR, 46)),
+			new Place("plaza", "The Plaza", "Toys, Sky Rings", "minecraft:bell", stand(-1, FLOOR, 6)),
+			new Place("funpark", "Fun Park", "Coaster, bumpers, more", "minecraft:minecart", stand(46, FLOOR, 5)),
+			new Place("splash", "Splash Island", "Slides, flume, fishing", "minecraft:water_bucket", stand(54, FLOOR, -76)),
 			new Place("golf", "Mini Golf", "Four crazy holes", "minecraft:slime_ball", stand(-40, FLOOR, 57)),
-			new Place("stage", "The Stage", "Pick songs, dance", "minecraft:jukebox", stand(-37, FLOOR, -35)),
-			new Place("gallery", "The Gallery", "Build Battle winner", "minecraft:painting", stand(-33, FLOOR - 2, 6)),
-			new Place("parkour", "Sky Parkour", "Jump across the sky", "minecraft:feather", stand(-22, FLOOR + 3, -36)),
-			new Place("spooky", "Spooky Hollow", "The Haunted Mansion", "minecraft:carved_pumpkin", stand(29, FLOOR, 44)),
-			new Place("flume", "Flume Falls", "Log flume, big splash", "minecraft:oak_log", stand(-5, FLOOR, -61)),
-			new Place("speedway", "Speedway", "Go-kart racing", "minecraft:minecart", stand(-96, FLOOR, 22)),
-			new Place("thrill", "Thrill Zone", "Drop tower, ship, games", "minecraft:firework_rocket", stand(83, FLOOR, 38)));
+			new Place("spooky", "Haunted Mansion", "Only a little bit scary", "minecraft:carved_pumpkin", stand(29, FLOOR, 44)),
+			new Place("speedway", "Speedway", "Kart racing on ice", "minecraft:snowball", stand(-109, FLOOR, -40)));
 
 	private static final String MAP = "Park Map";
 
@@ -147,7 +170,7 @@ public final class HubPark {
 
 	/** A block you bounce on (the bouncy castle's floor). */
 	static void bouncy(BlockPos pos) {
-		TRAMPOLINES.add(pos);
+		TRAMPOLINES.add(pos.offset(OX, 0, OZ));
 	}
 	private static final List<BlockPos> LAMPS = new ArrayList<>();
 	private static boolean lampsLit;
@@ -159,7 +182,7 @@ public final class HubPark {
 	private static final BlockPos SLIDE_START = new BlockPos(48, FLOOR + 16, -44);
 	private static final BlockPos ZIP_START = new BlockPos(40, FLOOR + 16, -44);
 	private static final BlockPos CANNON = new BlockPos(0, FLOOR, 20);
-	private static final Vec3 CANNON_TARGET = new Vec3(-8.5, FLOOR - 1, 62.5);
+	private static final Vec3 CANNON_TARGET = new Vec3(-8.5 + POND_DX, FLOOR - 1, 62.5 + POND_DZ);
 	private static final Map<UUID, Integer> CANNON_COUNT = new HashMap<>();
 	// Parkour: its platforms' tops, which are checkpoints, and each player's last checkpoint.
 	private static final List<BlockPos> PARKOUR = new ArrayList<>();
@@ -313,7 +336,7 @@ public final class HubPark {
 	// ----- Building -----
 
 	static void set(ServerLevel level, int x, int y, int z, BlockState state) {
-		BlockPos pos = new BlockPos(x, y, z);
+		BlockPos pos = new BlockPos(x + OX, y, z + OZ);
 		if (level.getBlockState(pos) != state) {
 			level.setBlock(pos, state, Block.UPDATE_CLIENTS);
 		}
@@ -330,7 +353,7 @@ public final class HubPark {
 	}
 
 	static void ifAir(ServerLevel level, int x, int y, int z, BlockState state) {
-		if (level.getBlockState(new BlockPos(x, y, z)).isAir()) {
+		if (level.getBlockState(new BlockPos(x + OX, y, z + OZ)).isAir()) {
 			set(level, x, y, z, state);
 		}
 	}
@@ -362,19 +385,63 @@ public final class HubPark {
 		}
 	}
 
+	/**
+	 * One big island made of overlapping circles ({x, z, radius} each): grass on top, a rocky underside tapering
+	 * down, a hedge only round the outside edge.
+	 */
+	static void blob(ServerLevel level, int[][] circles, int top) {
+		int x1 = Integer.MAX_VALUE;
+		int x2 = Integer.MIN_VALUE;
+		int z1 = Integer.MAX_VALUE;
+		int z2 = Integer.MIN_VALUE;
+		for (int[] c : circles) {
+			x1 = Math.min(x1, c[0] - c[2] - 1);
+			x2 = Math.max(x2, c[0] + c[2] + 1);
+			z1 = Math.min(z1, c[1] - c[2] - 1);
+			z2 = Math.max(z2, c[1] + c[2] + 1);
+		}
+		BlockState air = Blocks.AIR.defaultBlockState();
+		for (int x = x1; x <= x2; x++) {
+			for (int z = z1; z <= z2; z++) {
+				// How far in from the edge: the deepest any circle has this column.
+				double in = -1;
+				for (int[] c : circles) {
+					in = Math.max(in, c[2] - Math.hypot(x - c[0], z - c[1]));
+				}
+				if (in < -0.4) {
+					continue;
+				}
+				set(level, x, top, z, Blocks.GRASS_BLOCK.defaultBlockState());
+				for (int y = 1; y <= 12; y++) {
+					set(level, x, top + y, z, air);
+				}
+				for (int dd = 1; dd <= 30; dd++) {
+					boolean solid = in > dd * 1.15 - Math.sin(x * 0.7 + z * 0.5) * 0.8;
+					set(level, x, top - dd, z, !solid ? air : dd == 1 ? Blocks.DIRT.defaultBlockState()
+							: (x * 7 + z * 11 + dd * 5) % 37 == 0 ? ModBlocks.RUBY_BLOCK.defaultBlockState()
+									: dd < 4 ? Blocks.STONE.defaultBlockState() : Blocks.DEEPSLATE.defaultBlockState());
+				}
+				if (in < 0.9) {
+					set(level, x, top + 1, z, Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+				}
+			}
+		}
+	}
+
 	static void lamp(ServerLevel level, int x, int y, int z) {
 		box(level, x, y, z, x, y + 2, z, Blocks.DARK_OAK_FENCE.defaultBlockState());
 		set(level, x, y + 3, z, Blocks.GLASS.defaultBlockState());
-		LAMPS.add(new BlockPos(x, y + 3, z));
+		LAMPS.add(new BlockPos(x + OX, y + 3, z + OZ));
 	}
 
 	static Display.TextDisplay label(ServerLevel level, double x, double y, double z, String text, ChatFormatting color, float scale) {
-		Display.TextDisplay d = Props.text(level, new Vec3(x, y, z), Component.literal(text).withStyle(color, ChatFormatting.BOLD), scale, TAG);
+		Display.TextDisplay d = Props.text(level, new Vec3(x + OX, y, z + OZ), Component.literal(text).withStyle(color, ChatFormatting.BOLD), scale, TAG);
 		keep(d);
 		return d;
 	}
 
-	static Display.BlockDisplay piece(ServerLevel level, Vec3 at, BlockState state, Vector3f size, Quaternionf rot) {
+	static Display.BlockDisplay piece(ServerLevel level, Vec3 at0, BlockState state, Vector3f size, Quaternionf rot) {
+		Vec3 at = shift(at0);
 		Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
 		if (d == null) {
 			return null;
@@ -390,7 +457,9 @@ public final class HubPark {
 	}
 
 	/** A long box from {@code a} to {@code b} ({@code w} wide, {@code h} tall, its middle on the line): rails, beams, struts. */
-	static Display.BlockDisplay beam(ServerLevel level, Vec3 a, Vec3 b, float w, float h, BlockState state) {
+	static Display.BlockDisplay beam(ServerLevel level, Vec3 a0, Vec3 b0, float w, float h, BlockState state) {
+		Vec3 a = shift(a0);
+		Vec3 b = shift(b0);
 		Display.BlockDisplay d = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
 		if (d == null) {
 			return null;
@@ -422,7 +491,8 @@ public final class HubPark {
 	 * Like Props.model, but noted as wanted before it's added to the world (the clean-up of leftovers runs as an entity
 	 * loads, and would otherwise take a tagged model straight away).
 	 */
-	private static Display.ItemDisplay parkModel(ServerLevel level, Vec3 at, float yaw, String id, float size, float up, boolean temp) {
+	private static Display.ItemDisplay parkModel(ServerLevel level, Vec3 at0, float yaw, String id, float size, float up, boolean temp) {
+		Vec3 at = shift(at0);
 		Display.ItemDisplay d = EntityTypes.ITEM_DISPLAY.create(level, EntitySpawnReason.EVENT);
 		if (d == null) {
 			return null;
@@ -482,7 +552,7 @@ public final class HubPark {
 				set(level, x + dx, y, z + dz, dx == 0 && dz == 0 ? Blocks.EMERALD_BLOCK.defaultBlockState() : Blocks.CONCRETE.pick(DyeColor.LIME).defaultBlockState());
 				set(level, x + dx, y + 1, z + dz, Blocks.AIR.defaultBlockState());
 				set(level, x + dx, y + 2, z + dz, Blocks.AIR.defaultBlockState());
-				PADS.put(new BlockPos(x + dx, y, z + dz), pad);
+				PADS.put(new BlockPos(x + dx + OX, y, z + dz + OZ), pad);
 			}
 		}
 		label(level, x + 0.5, y + 2.6, z + 0.5, "↗ " + label, ChatFormatting.GREEN, 1.0F);
@@ -496,7 +566,7 @@ public final class HubPark {
 				set(level, x + dx, y, z + dz, dx == 0 && dz == 0 ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.CONCRETE.pick(DyeColor.LIGHT_BLUE).defaultBlockState());
 				set(level, x + dx, y + 1, z + dz, Blocks.AIR.defaultBlockState());
 				set(level, x + dx, y + 2, z + dz, Blocks.AIR.defaultBlockState());
-				PADS.put(new BlockPos(x + dx, y, z + dz), pad);
+				PADS.put(new BlockPos(x + dx + OX, y, z + dz + OZ), pad);
 			}
 		}
 		label(level, x + 0.5, y + 2.9, z + 0.5, "✈ Fly anywhere", ChatFormatting.AQUA, 1.1F);
@@ -540,8 +610,8 @@ public final class HubPark {
 	}
 
 	public static void build(ServerLevel level) {
-		for (int cx = -8; cx <= 7; cx++) {
-			for (int cz = -6; cz <= 4; cz++) {
+		for (int cx = -11; cx <= 10; cx++) {
+			for (int cz = -10; cz <= 7; cz++) {
 				level.getChunk(cx, cz);
 			}
 		}
@@ -559,29 +629,36 @@ public final class HubPark {
 		PARKOUR.clear();
 		CHECKPOINTS.clear();
 		COASTER_BOARD.clear();
+		moveOut(level);
 		HubRides.reset();
 		HubGames.reset();
 		HubHosts.reset();
 		FunPark.reset();
+		BumperBoats.reset();
+		FunRides.reset();
 		MiniGolf.reset();
 		Coaster.reset();
 		Spooky.reset();
-		Flume.reset();
 		Village.reset();
 		Speedway.reset();
 		Thrill.reset();
 		WaterPark.reset();
 		SkyZip.reset();
+		SkyRings.reset();
+		HubToys.reset();
 		plaza(level);
 		FunPark.build(level);
+		BumperBoats.build(level);
+		FunRides.build(level);
+		SplashIsland.build(level);
 		WaterPark.build(level);
 		SkyZip.build(level);
-		pond(level);
+		SkyRings.build(level);
+		at(POND_DX, POND_DZ, () -> pond(level));
 		MiniGolf.build(level);
-		stage(level);
+		at(STAGE_DX, STAGE_DZ, () -> stage(level));
 		parkour(level);
 		Spooky.build(level);
-		Flume.build(level);
 		HubPlay.build(level);
 		Speedway.build(level);
 		Thrill.build(level);
@@ -605,21 +682,20 @@ public final class HubPark {
 	private static void plaza(ServerLevel level) {
 		// Launch pads round the garden, one to each island.
 		pad(level, 21, FLOOR, 0, "Fun Park", stand(46, FLOOR, 5));
-		pad(level, 19, FLOOR, -8, "Splash Tower", stand(37, FLOOR, -40));
-		pad(level, 11, FLOOR, 18, "Fishing Village", stand(6, FLOOR, 46));
+		pad(level, 19, FLOOR, -8, "Splash Island", stand(54, FLOOR, -76));
+		pad(level, 11, FLOOR, 18, "Haunted Mansion", stand(29, FLOOR, 44));
 		pad(level, -11, FLOOR, 18, "Mini Golf", stand(-40, FLOOR, 57));
-		pad(level, -20, FLOOR, 9, "The Gallery", stand(-33, FLOOR - 2, 6));
-		pad(level, -20, FLOOR, -4, "The Stage", stand(-37, FLOOR, -35));
+		pad(level, -20, FLOOR, 9, "Speedway", stand(-109, FLOOR, -40));
 		pad(level, -17, FLOOR, -10, "Sky Parkour", stand(-22, FLOOR + 3, -36));
-		// The gallery island (the Build Battle showcase) had no way back: a travel pad on its south edge, clear of the plot.
-		travelPad(level, -41, FLOOR - 2, -3, "gallery");
 		// The toy chest, the fireworks button.
 		set(level, TOY_CHEST.getX(), TOY_CHEST.getY(), TOY_CHEST.getZ(), Blocks.BARREL.defaultBlockState());
 		HubHosts.add(level, new Vec3(4.5, FLOOR + 1, 11.5), 180, net.minecraft.world.entity.npc.villager.VillagerProfession.MASON,
 				net.minecraft.world.entity.npc.villager.VillagerType.PLAINS, new HubHosts.Host("toys", "Tilly", "Toy Maker", 0xFF7CC0, "minecraft:firework_star",
-						"Toys to play with in the hub: a Confetti Cannon, a Rubber Chicken (bonk your friends!), a Bouncy Ball and snowballs. "
+						"Pick a box of toys! The classics (confetti cannon, rubber chicken, bouncy ball, snowballs), outdoor toys (a kite, a "
+								+ "frisbee, a beach ball, a pogo stick), or silly ones (bubbles, water balloons, a sparkler, a whoopee cushion). "
 								+ "Right-click to use them. They stay in the hub.",
-						"Toys: right-click Tilly for some!", HubHosts.play("Give me toys!"), (q, key) -> HubGames.toyChest(q)));
+						"Toys: right-click Tilly for some!", q -> List.of("classic|The classics", "outdoor|Kite, frisbee, beach ball, pogo",
+								"silly|Bubbles, balloons, sparkler, cushion"), (q, key) -> HubGames.toyChest(q, key)));
 		guide(level);
 		set(level, FIREWORKS.getX(), FIREWORKS.getY() - 1, FIREWORKS.getZ(), Blocks.QUARTZ_PILLAR.defaultBlockState());
 		set(level, FIREWORKS.getX(), FIREWORKS.getY(), FIREWORKS.getZ(), Blocks.STONE_BUTTON.defaultBlockState().setValue(ButtonBlock.FACE, AttachFace.FLOOR));
@@ -629,7 +705,7 @@ public final class HubPark {
 			set(level, -13, FLOOR + 1, z, Blocks.DARK_OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
 			set(level, 13, FLOOR + 1, z, Blocks.DARK_OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
 		}
-		// The cannon: aimed over the garden at the Pond's splash pool.
+		// The cannon: aimed over the park at the splash pool on Splash Island.
 		box(level, -1, FLOOR, 19, 1, FLOOR, 21, Blocks.POLISHED_BLACKSTONE.defaultBlockState());
 		set(level, 0, FLOOR, 20, Blocks.REDSTONE_BLOCK.defaultBlockState());
 		Vec3 aim = CANNON_TARGET.subtract(0.5, FLOOR, 20.5).normalize();
@@ -656,20 +732,71 @@ public final class HubPark {
 		Component text = Component.literal("PARK GUIDE").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
 				.append(Component.literal("\nStep on a green pad to fly to an island.\nStep on a blue pad to fly anywhere.\nRight-click the people to play!\n")
 						.withStyle(ChatFormatting.WHITE))
-				.append(Component.literal("\n\u2192 Fun Park (east): coaster, Big Wheel, carousel,\n   bumper cars, duck shoot, bouncy castle")
+				.append(Component.literal("\n\u2192 Fun Park: the Ruby Rocket coaster, bumper cars,\n   swings, slingshot, drop tower, pirate ship,\n   teacups, Big Wheel, the Stage, games")
 						.withStyle(ChatFormatting.YELLOW))
-				.append(Component.literal("\n\u2197 Splash Tower: tube slide, zip line, pool").withStyle(ChatFormatting.AQUA))
-				.append(Component.literal("\n\u2193 Fishing Village: fishing, swings").withStyle(ChatFormatting.AQUA))
+				.append(Component.literal("\n\u2193 Splash Island: slides, log flume, fishing").withStyle(ChatFormatting.AQUA))
 				.append(Component.literal("\n\u2199 Mini Golf: four crazy holes").withStyle(ChatFormatting.GREEN))
-				.append(Component.literal("\n\u2196 The Stage: pick songs, dance").withStyle(ChatFormatting.LIGHT_PURPLE))
-				.append(Component.literal("\n\u2191 Sky Parkour: how fast can you go?").withStyle(ChatFormatting.YELLOW))
-				.append(Component.literal("\n\u2198 Spooky Hollow: the Ghost Train").withStyle(ChatFormatting.LIGHT_PURPLE))
-				.append(Component.literal("\n\u2191 Flume Falls: the log flume").withStyle(ChatFormatting.AQUA))
-				.append(Component.literal("\n\u2190 Speedway: go-kart races").withStyle(ChatFormatting.RED))
-				.append(Component.literal("\n\u2198 Thrill Zone: drop tower, pirate ship, teacups,\n   balloon tours and carnival games").withStyle(ChatFormatting.GOLD))
+				.append(Component.literal("\n\u2198 Haunted Mansion: only a little bit scary").withStyle(ChatFormatting.LIGHT_PURPLE))
+				.append(Component.literal("\n\u2190 Speedway: kart racing on ice").withStyle(ChatFormatting.RED))
+				.append(Component.literal("\n\u2191 Sky Parkour, and Sky Rings with Wren").withStyle(ChatFormatting.YELLOW))
 				.append(Component.literal("\n\nYour Park Map (in your hotbar) flies you anywhere.\nCoach Kit runs Tag, Hide and Seek and more!")
 						.withStyle(ChatFormatting.WHITE));
 		keep(Props.text(level, new Vec3(-7.5, FLOOR + 1.6, 11.5), text, 0.55F, TAG));
+	}
+
+	/**
+	 * The park was rearranged (the gallery went, islands merged and grew): clear away the old islands, once. A marker in
+	 * the world's folder says it's been done.
+	 */
+	private static void moveOut(ServerLevel level) {
+		java.nio.file.Path mark = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("rubywars").resolve("park_v3");
+		if (java.nio.file.Files.exists(mark)) {
+			return;
+		}
+		// x, z, radius: the gallery, the stage, the pond, the old tower and its slides, the flume, Spooky Hollow, the old
+		// Speedway, and the old coaster's footings round the plaza.
+		int[][] old = {{-41, 6, 12}, {-46, -34, 14}, {0, 56, 16}, {44, -44, 26}, {6, -63, 16}, {44, 40, 18}, {-96, 6, 32}};
+		for (int[] o : old) {
+			for (int x = -o[2]; x <= o[2]; x++) {
+				for (int z = -o[2]; z <= o[2]; z++) {
+					if (x * x + z * z > o[2] * o[2]) {
+						continue;
+					}
+					for (int y = FLOOR - 32; y <= FLOOR + 48; y++) {
+						BlockPos p = new BlockPos(o[0] + x, y, o[1] + z);
+						if (!level.getBlockState(p).isAir()) {
+							level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+						}
+					}
+				}
+			}
+		}
+		// The old coaster's support footings in the sky, and the old islets.
+		for (int x = -130; x <= 130; x++) {
+			for (int z = -130; z <= 130; z++) {
+				for (int y = FLOOR - 13; y <= FLOOR - 4; y++) {
+					BlockPos p = new BlockPos(x, y, z);
+					if (Math.hypot(x, z) > 25 && level.getBlockState(p).is(Blocks.GRASS_BLOCK) && level.getBlockState(p.below()).is(Blocks.DIRT)) {
+						for (int dx = -5; dx <= 5; dx++) {
+							for (int dz = -5; dz <= 5; dz++) {
+								for (int dy = -9; dy <= 7; dy++) {
+									BlockPos q = p.offset(dx, dy, dz);
+									if (Math.hypot(q.getX(), q.getZ()) > 25 && q.getY() < FLOOR - 2 && !level.getBlockState(q).isAir()) {
+										level.setBlock(q, Blocks.AIR.defaultBlockState(), 2);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		try {
+			java.nio.file.Files.createDirectories(mark.getParent());
+			java.nio.file.Files.writeString(mark, "done");
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't mark the park as moved", e);
+		}
 	}
 
 	/** Is anyone (in the hub) within {@code r} blocks of x, z? */
@@ -686,6 +813,7 @@ public final class HubPark {
 	private static void arrows(ServerLevel level) {
 		Vec3 spawn = new Vec3(0.5, FLOOR + 1.03, 8.5);
 		int[][] pads = {{21, 0}, {19, -8}, {11, 18}, {-11, 18}, {-20, 9}, {-20, -4}, {-17, -10}};
+		// (the one at -20, -4 is the Sky Rings launch pad now)
 		BlockState glow = Blocks.CONCRETE.pick(DyeColor.LIME).defaultBlockState();
 		for (int[] pad : pads) {
 			Vec3 to = new Vec3(pad[0] + 0.5, FLOOR + 1.03, pad[1] + 0.5);
@@ -733,16 +861,16 @@ public final class HubPark {
 		var random = level.getRandom();
 		for (ServerPlayer p : level.players()) {
 			Vec3 at = p.position();
-			if (at.distanceTo(new Vec3(FunPark.FX, FLOOR, FunPark.FZ)) < 24) {
+			if (at.distanceTo(new Vec3(FunPark.MX, FLOOR, FunPark.MZ)) < 45) {
 				if (tick % 240 == 0) {
 					hear(p, dev.rubymod.registry.ModSounds.PARK_CARNIVAL, new Vec3(56, FLOOR + 3, 2), 0.7F);
 				}
 				if (tick % 160 == 80) {
 					hear(p, dev.rubymod.registry.ModSounds.PARK_CROWD, at, 0.35F);
 				}
-			} else if (at.distanceTo(new Vec3(0, FLOOR, 56)) < 20) {
+			} else if (at.distanceTo(new Vec3(SplashIsland.MX, FLOOR, SplashIsland.MZ)) < 55) {
 				if (tick % 180 == 0) {
-					hear(p, dev.rubymod.registry.ModSounds.PARK_WAVES, new Vec3(-1, FLOOR, 52), 0.6F);
+					hear(p, dev.rubymod.registry.ModSounds.PARK_WAVES, at.add(random.nextDouble() * 10 - 5, 0, random.nextDouble() * 10 - 5), 0.6F);
 				}
 				if (random.nextInt(9) == 0) {
 					hear(p, dev.rubymod.registry.ModSounds.PARK_GULLS, at.add(random.nextDouble() * 16 - 8, 8, random.nextDouble() * 16 - 8), 0.6F);
@@ -750,10 +878,6 @@ public final class HubPark {
 			} else if (at.distanceTo(new Vec3(Spooky.CX, FLOOR, Spooky.CZ)) < 20) {
 				if (tick % 200 == 0) {
 					hear(p, dev.rubymod.registry.ModSounds.PARK_SPOOKY, new Vec3(Spooky.CX, FLOOR + 3, Spooky.CZ), 0.8F);
-				}
-			} else if (at.distanceTo(new Vec3(Flume.CX, FLOOR, Flume.CZ)) < 20) {
-				if (tick % 180 == 0) {
-					hear(p, dev.rubymod.registry.ModSounds.PARK_WAVES, new Vec3(2, FLOOR, -55), 0.5F);
 				}
 			}
 		}
@@ -768,9 +892,7 @@ public final class HubPark {
 	// ----- The Pond -----
 
 	private static void pond(ServerLevel level) {
-		island(level, 0, 56, 14, FLOOR);
 		label(level, 0.5, FLOOR + 9, 56.5, "FISHING VILLAGE", ChatFormatting.AQUA, 2.4F);
-		travelPad(level, 9, FLOOR, 48, "pond");
 		// The fishing pond, with a dock.
 		box(level, -8, FLOOR - 4, 46, 5, FLOOR - 4, 57, Blocks.CLAY.defaultBlockState());
 		for (int x = -8; x <= 5; x++) {
@@ -780,7 +902,7 @@ public final class HubPark {
 			}
 		}
 		box(level, -1, FLOOR, 46, 0, FLOOR, 50, Blocks.SPRUCE_PLANKS.defaultBlockState());
-		set(level, ROD_BARREL.getX(), ROD_BARREL.getY(), ROD_BARREL.getZ(), Blocks.BARREL.defaultBlockState());
+		set(level, -2, FLOOR + 1, 45, Blocks.BARREL.defaultBlockState());
 		for (int i = 0; i < 6; i++) {
 			set(level, -6 + i * 2, FLOOR, 54 - (i % 3), Blocks.LILY_PAD.defaultBlockState());
 		}
@@ -799,8 +921,8 @@ public final class HubPark {
 		}
 		box(level, 4, FLOOR + 6, 62, 10, FLOOR + 6, 62, Blocks.OAK_LOG.defaultBlockState().setValue(net.minecraft.world.level.block.RotatedPillarBlock.AXIS,
 				Direction.Axis.X));
-		HubRides.swing(level, new Vec3(6.5, FLOOR + 5.9, 62.5), 4.3);
-		HubRides.swing(level, new Vec3(8.5, FLOOR + 5.9, 62.5), 4.3);
+		HubRides.swing(level, shift(new Vec3(6.5, FLOOR + 5.9, 62.5)), 4.3);
+		HubRides.swing(level, shift(new Vec3(8.5, FLOOR + 5.9, 62.5)), 4.3);
 		label(level, 7.5, FLOOR + 8, 62.5, "SWINGS\nright-click a seat", ChatFormatting.YELLOW, 0.8F);
 		for (int z = 50; z <= 52; z++) {
 			set(level, 9, FLOOR + 1, z, Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
@@ -813,10 +935,6 @@ public final class HubPark {
 	// ----- The Stage -----
 
 	private static void stage(ServerLevel level) {
-		int cx = -46;
-		int cz = -34;
-		island(level, cx, cz, 12, FLOOR);
-		travelPad(level, -36, FLOOR, -31, "stage");
 		// The stage, its back wall of lights, the DJ's jukebox.
 		box(level, -52, FLOOR + 1, -43, -40, FLOOR + 1, -38, Blocks.DARK_OAK_PLANKS.defaultBlockState());
 		for (int x = -52; x <= -40; x++) {
@@ -824,7 +942,7 @@ public final class HubPark {
 				set(level, x, y, -44, (x + y) % 3 == 0 ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState());
 			}
 		}
-		set(level, JUKEBOX.getX(), JUKEBOX.getY(), JUKEBOX.getZ(), Blocks.JUKEBOX.defaultBlockState());
+		set(level, -46, FLOOR + 2, -40, Blocks.JUKEBOX.defaultBlockState());
 		for (int x : new int[] {-51, -41}) {
 			box(level, x, FLOOR + 2, -42, x, FLOOR + 3, -42, Blocks.NOTE_BLOCK.defaultBlockState());
 		}
@@ -833,7 +951,7 @@ public final class HubPark {
 			for (int z = -36; z <= -29; z++) {
 				set(level, x, FLOOR - 1, z, Blocks.SEA_LANTERN.defaultBlockState());
 				set(level, x, FLOOR, z, Blocks.STAINED_GLASS.pick((x + z) % 2 == 0 ? DyeColor.PURPLE : DyeColor.BLACK).defaultBlockState());
-				DANCE_FLOOR.add(new BlockPos(x, FLOOR, z));
+				DANCE_FLOOR.add(new BlockPos(x + OX, FLOOR, z + OZ));
 			}
 		}
 		// The photo spot: a pretty wall, and a star to stand on.
@@ -911,33 +1029,40 @@ public final class HubPark {
 		HubGames.tick(level);
 		HubHosts.tick(level, tick);
 		// Each area only runs while someone's close enough to see it (riders are, by being on it).
-		if (near(level, 0, 0, 70)) {
+		if (near(level, FunPark.MX, FunPark.MZ, 95) || Coaster.busy()) {
 			Coaster.tick(level, tick);
 		}
-		if (near(level, FunPark.FX, FunPark.FZ, 45)) {
+		if (near(level, FunPark.MX, FunPark.MZ, 60) || BumperBoats.busy() || FunRides.busy()) {
 			FunPark.tick(level);
+			BumperBoats.tick(level);
+			FunRides.tick(level);
 		}
 		if (near(level, -44, 44, 40)) {
 			MiniGolf.tick(level);
 		}
-		if (near(level, WaterPark.CX, WaterPark.CZ, 45)) {
+		if (near(level, WaterPark.CX + WaterPark.DX, WaterPark.CZ + WaterPark.DZ, 45)) {
 			WaterPark.tick(level);
 		}
+		SplashIsland.tick(level, tick);
 		SkyZip.tick(level, tick);
-		if (near(level, -46, -34, 40)) {
+		if (near(level, STAGE_CENTER.x, STAGE_CENTER.z, 40)) {
 			Concert.tick(level);
 		}
 		if (near(level, Spooky.CX, Spooky.CZ, 40)) {
 			Spooky.tick(level);
 		}
-		if (near(level, Flume.CX, Flume.CZ, 40)) {
-			Flume.tick(level, tick);
-		}
-		if (near(level, 0, 56, 40)) {
+		if (near(level, POND.getCenter().x, POND.getCenter().z, 40)) {
 			Village.tick(level, tick);
 		}
 		HubPlay.tick(level);
-		if (near(level, Speedway.CX, Speedway.CZ, 60)) {
+		SkyRings.tick(level);
+		HubToys.tick(level);
+		if (tick % 20 == 0) {
+			for (ServerPlayer p : level.players()) {
+				SkyRings.tidy(p);
+			}
+		}
+		if (near(level, Speedway.CX, Speedway.CZ, 60) || Speedway.busy()) {
 			Speedway.tick(level, tick);
 		}
 		if (near(level, Thrill.CX, Thrill.CZ, 50) || Thrill.busy()) {
@@ -997,7 +1122,7 @@ public final class HubPark {
 				if (count >= 60) {
 					CANNON_COUNT.remove(p.getUUID());
 					Vec3 from = new Vec3(0.5, FLOOR + 2, 20.5);
-					HubRides.start(p, HubRides.arc(from, CANNON_TARGET, 18, 70), HubRides.Kind.FLIGHT, null, 0, 0, 0);
+					HubRides.start(p, HubRides.arc(from, CANNON_TARGET, 45, 150), HubRides.Kind.FLIGHT, null, 0, 0, 0);
 					level.playSound(null, BlockPos.containing(from), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.5F, 1.2F);
 					level.sendParticles(ParticleTypes.EXPLOSION, from.x, from.y + 1, from.z, 3, 0.5, 0.5, 0.5, 0);
 					Alerts.title(p, "BOOM!", "", ChatFormatting.RED);
@@ -1082,7 +1207,8 @@ public final class HubPark {
 	/** Butterflies by day, fireflies by night. */
 	private static void sparkle(ServerLevel level) {
 		var random = level.getRandom();
-		int[][] spots = {{FX, FZ, 15}, {0, 56, 12}, {-44, 44, 14}, {-46, -34, 10}, {44, -44, 9}, {0, 0, 20}};
+		int[][] spots = {{FX, FZ, 15}, {FunPark.MX, FunPark.MZ + 20, 20}, {SplashIsland.MX, SplashIsland.MZ, 25}, {8, -134, 12}, {-44, 44, 14},
+			{STAGE_DX - 46, STAGE_DZ - 34, 10}, {0, 0, 20}};
 		int[] s = spots[random.nextInt(spots.length)];
 		double a = random.nextDouble() * Math.PI * 2;
 		double r = random.nextDouble() * s[2];

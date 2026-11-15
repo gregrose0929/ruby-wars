@@ -116,7 +116,8 @@ public final class HubHosts {
 	}
 
 	/** Put a host at {@code at}, facing {@code yaw}, dressed as {@code profession} from {@code type}. */
-	static void add(ServerLevel level, Vec3 at, float yaw, ResourceKey<VillagerProfession> profession, ResourceKey<VillagerType> type, Host host) {
+	static void add(ServerLevel level, Vec3 at0, float yaw, ResourceKey<VillagerProfession> profession, ResourceKey<VillagerType> type, Host host) {
+		Vec3 at = HubPark.shift(at0);
 		Villager v = EntityTypes.VILLAGER.create(level, EntitySpawnReason.EVENT);
 		if (v == null) {
 			return;

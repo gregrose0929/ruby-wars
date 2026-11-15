@@ -4547,6 +4547,10 @@ public final class AutoTest {
 			case "parkpretty" -> parkPrettyScript();
 			case "parkbig" -> parkBigScript();
 			case "parkfix" -> parkFixScript();
+			case "parkfun" -> parkFunScript();
+			case "parksplash" -> parkSplashScript();
+			case "parkall" -> parkAllScript();
+			case "parkcheck" -> parkCheckScript();
 			case "parkswan" -> parkSwanScript();
 			case "parkducks" -> parkDucksScript();
 			case "parktour" -> parkTourScript();
@@ -4889,6 +4893,16 @@ public final class AutoTest {
 		lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(pos));
 		mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pos),
 				net.minecraft.core.Direction.UP, pos, false));
+	}
+
+	/** The inventory slot holding the item with this name, or -1. */
+	private static int slotOf(Minecraft mc, String name) {
+		for (int i = 0; i < 36; i++) {
+			if (mc.player.getInventory().getItem(i).getHoverName().getString().equals(name)) {
+				return i;
+			}
+		}
+		return -1;
 	}
 
 	private static int slotOf(Minecraft mc, net.minecraft.world.item.Item item) {
@@ -5316,6 +5330,425 @@ public final class AutoTest {
 				tpHub(mc, v[1] + " facing " + v[2]);
 			});
 			then(120, mc -> shot(mc, "fix-view-" + v[0]));
+		}
+	}
+
+	/** The Park Map screen, the bumper cars and the dark bits of the mansion. */
+	private static void parkCheckScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		then(160, mc -> {
+			int slot = slotOf(mc, "Park Map");
+			log("map slot {}", slot);
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(10, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(90, mc -> {
+			log("map: {}", mc.gui.screen() instanceof TravelScreen t ? t.ids() : "NO SCREEN");
+			shot(mc, "check-map");
+		});
+		then(10, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+		});
+		then(5, mc -> tpHub(mc, "95.5 101 0.5 270 0"));
+		then(60, mc -> talk(mc, 96.5, 101, 0.5));
+		then(40, mc -> press(mc, "play"));
+		then(10, mc -> {
+			mc.options.keyUp.setDown(true);
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(20, mc -> mc.options.keyLeft.setDown(true));
+		then(20, mc -> {
+			mc.options.keyLeft.setDown(false);
+			shot(mc, "check-bumper-1");
+		});
+		then(20, mc -> shot(mc, "check-bumper-2"));
+		then(5, mc -> {
+			mc.options.keyUp.setDown(false);
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			mc.options.keyShift.setDown(true);
+		});
+		then(20, mc -> mc.options.keyShift.setDown(false));
+		then(10, mc -> log("bumper: after riding {}", mc.player.isPassenger()));
+		then(5, mc -> tpHub(mc, "29.5 101 36.0 0 0"));
+		then(80, mc -> talk(mc, 30.5, 101, 37.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 2; i++) {
+			int n = i;
+			then(50, mc -> shot(mc, "check-mansion-" + n));
+		}
+	}
+
+	/** The ice Speedway, Sky Rings, the new toys, the Park Map, the Haunted Mansion and the bumper cars again. */
+	private static void parkAllScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		// The Park Map, from the Fun Park's travel pad.
+		then(160, mc -> tpHub(mc, "42.5 101 6.5 0 0"));
+		then(40, mc -> {
+			if (mc.gui.screen() instanceof TravelScreen t) {
+				log("map: {}", t.ids());
+			} else {
+				log("map: NO SCREEN");
+			}
+			shot(mc, "all-map");
+		});
+		then(20, mc -> {
+			if (mc.gui.screen() instanceof TravelScreen t) {
+				t.pick(t.ids().indexOf("speedway"));
+			}
+		});
+		then(160, mc -> log("map: flew to {}", mc.player.position()));
+		// The Speedway: race the computer karts.
+		then(10, mc -> tpHub(mc, "-106.5 101 -33.5 180 0"));
+		then(60, mc -> talk(mc, -106.5, 101, -35.5));
+		then(30, mc -> press(mc, "bots"));
+		then(20, mc -> log("kart: riding {} passengers {}", mc.player.getVehicle(), mc.player.getVehicle() == null ? 0 : mc.player.getVehicle().getPassengers().size()));
+		then(5, mc -> shot(mc, "all-kart-grid"));
+		then(420, mc -> onServer(mc, server -> log("karts at GO: {}", dev.rubymod.game.hub.Speedway.debug(server.getLevel(dev.rubymod.game.Hub.HUB)))));
+		then(5, mc -> mc.options.keyUp.setDown(true));
+		for (int i = 0; i < 12; i++) {
+			int n = i;
+			then(30, mc -> {
+				mc.options.keyRight.setDown(n % 3 == 1);
+				onServer(mc, server -> log("karts {}: {}", n, dev.rubymod.game.hub.Speedway.debug(server.getLevel(dev.rubymod.game.Hub.HUB))));
+				if (n % 3 == 0) {
+					shot(mc, "all-kart-" + n);
+				}
+				if (n == 4) {
+					mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+				}
+				if (n == 6) {
+					mc.options.setCameraType(CameraType.FIRST_PERSON);
+				}
+			});
+		}
+		then(5, mc -> {
+			mc.options.keyUp.setDown(false);
+			mc.options.keyRight.setDown(false);
+			mc.options.keyShift.setDown(true);
+		});
+		then(15, mc -> mc.options.keyShift.setDown(false));
+		then(20, mc -> log("kart: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// Sky Rings.
+		then(5, mc -> tpHub(mc, "-15.5 101 -4.5 90 0"));
+		then(60, mc -> talk(mc, -16.5, 101, -4.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 10; i++) {
+			int n = i;
+			then(20, mc -> {
+				if (n == 5) {
+					lookAt(mc, new net.minecraft.world.phys.Vec3(-7.5, 162, -35.5));
+				}
+				log("rings {}: at {} flying {} chest {}", n, mc.player.position(), mc.player.isFallFlying(),
+						mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).getHoverName().getString());
+				if (n % 3 == 2) {
+					shot(mc, "all-rings-" + n);
+				}
+			});
+		}
+		then(300, mc -> log("rings: after at {} chest {}", mc.player.position(),
+				mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).getHoverName().getString()));
+		// The new toys.
+		then(5, mc -> tpHub(mc, "4.5 101 9.5 0 0"));
+		then(60, mc -> talk(mc, 4.5, 101, 11.5));
+		then(30, mc -> press(mc, "outdoor"));
+		then(20, mc -> talk(mc, 4.5, 101, 11.5));
+		then(30, mc -> press(mc, "silly"));
+		then(20, mc -> {
+			StringBuilder b = new StringBuilder();
+			for (int i = 0; i < 36; i++) {
+				var st = mc.player.getInventory().getItem(i);
+				if (!st.isEmpty()) {
+					b.append(st.getHoverName().getString()).append(" x").append(st.getCount()).append(", ");
+				}
+			}
+			log("toys: {}", b);
+			mc.player.setYRot(180);
+			mc.player.setXRot(-10);
+		});
+		String[] toys = {"Kite", "Bubble Wand", "Frisbee", "Beach Ball", "Water Balloon", "Whoopee Cushion"};
+		for (String t : toys) {
+			then(10, mc -> {
+				int slot = slotOf(mc, t);
+				if (slot >= 0 && slot < 9) {
+					mc.player.getInventory().setSelectedSlot(slot);
+				}
+			});
+			then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+			then(25, mc -> shot(mc, "all-toy-" + t.replace(' ', '-')));
+		}
+		then(10, mc -> {
+			int slot = slotOf(mc, "Pogo Stick");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(15, mc -> log("pogo: y {}", mc.player.getY()));
+		then(7, mc -> log("pogo: y {}", mc.player.getY()));
+		then(7, mc -> log("pogo: y {}", mc.player.getY()));
+		then(5, mc -> {
+			int slot = slotOf(mc, "Sparkler");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(20, mc -> shot(mc, "all-toy-sparkler"));
+		then(5, mc -> {
+			int slot = slotOf(mc, "Kite");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			mc.player.setXRot(-25);
+		});
+		then(40, mc -> shot(mc, "all-toy-kite-3rd"));
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		// The Haunted Mansion.
+		then(5, mc -> tpHub(mc, "29.5 101 36.0 0 0"));
+		then(80, mc -> talk(mc, 30.5, 101, 37.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 12; i++) {
+			int n = i;
+			then(100, mc -> {
+				log("mansion {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				shot(mc, "all-mansion-" + n);
+			});
+		}
+		then(400, mc -> log("mansion: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// Bumper cars, in third person.
+		then(5, mc -> tpHub(mc, "95.5 101 0.5 270 0"));
+		then(60, mc -> talk(mc, 96.5, 101, 0.5));
+		then(40, mc -> press(mc, "play"));
+		then(10, mc -> {
+			mc.options.keyUp.setDown(true);
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(20, mc -> mc.options.keyLeft.setDown(true));
+		then(20, mc -> {
+			mc.options.keyLeft.setDown(false);
+			shot(mc, "all-bumper-3rd");
+		});
+		then(20, mc -> shot(mc, "all-bumper-3rd-2"));
+		then(5, mc -> {
+			mc.options.keyUp.setDown(false);
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+		});
+		String[][] views = {
+			{"speedway", "-110 150 -70", "-110 100 0"},
+			{"speedway-2", "-60 125 30", "-110 100 0"},
+			{"rings", "0 175 60", "40 140 -40"},
+			{"plaza", "-30 125 -30", "0 101 0"},
+			{"mansion", "20 120 70", "44 105 40"},
+		};
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		for (String[] v : views) {
+			then(20, mc -> {
+				mc.player.getAbilities().flying = true;
+				tpHub(mc, v[1] + " facing " + v[2]);
+			});
+			then(140, mc -> shot(mc, "all-view-" + v[0]));
+		}
+	}
+
+	/** Splash Island (the flume, the tower's slides), and the Swings and the Slingshot again. */
+	private static void parkSplashScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		// The Swings.
+		then(160, mc -> tpHub(mc, "86.5 101 16.5 180 0"));
+		then(60, mc -> talk(mc, 86.5, 101, 14.5));
+		then(30, mc -> press(mc, "play"));
+		then(20, mc -> log("swings: riding {}", mc.player.isPassenger()));
+		for (int i = 0; i < 6; i++) {
+			int n = i;
+			then(100, mc -> {
+				log("swings {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				mc.options.setCameraType(n % 2 == 1 ? CameraType.THIRD_PERSON_BACK : CameraType.FIRST_PERSON);
+			});
+			then(10, mc -> shot(mc, "splash-swings-" + n));
+		}
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		then(400, mc -> log("swings: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// The Slingshot.
+		then(5, mc -> tpHub(mc, "88.5 101 15.5 0 0"));
+		then(60, mc -> talk(mc, 88.0, 101, 17.0));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 10; i++) {
+			int n = i;
+			then(15, mc -> {
+				log("sling {}: at {}", n, mc.player.position());
+				if (n == 5) {
+					shot(mc, "splash-sling-up");
+				}
+			});
+		}
+		then(160, mc -> log("sling: landed at {} on ground {}", mc.player.position(), mc.player.onGround()));
+		// Flume Falls.
+		then(5, mc -> tpHub(mc, "47.5 101 -97.5 270 0"));
+		then(80, mc -> talk(mc, 48.5, 101, -97.5));
+		then(30, mc -> press(mc, "play"));
+		for (int i = 0; i < 30; i++) {
+			int n = i;
+			then(40, mc -> {
+				log("flume {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				shot(mc, "splash-flume-" + n);
+			});
+		}
+		then(200, mc -> log("flume: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// The Twister, off the tower.
+		then(5, mc -> tpHub(mc, "29.5 101 -94.5 180 0"));
+		then(80, mc -> talk(mc, 30.5, 101, -93.5));
+		then(30, mc -> press(mc, "top"));
+		then(40, mc -> {
+			log("tower: at {}", mc.player.position());
+			tpHub(mc, "34.5 127 -99.5 90 0");
+		});
+		for (int i = 0; i < 8; i++) {
+			int n = i;
+			then(30, mc -> {
+				log("twister {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				shot(mc, "splash-twister-" + n);
+			});
+		}
+		then(200, mc -> log("twister: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		String[][] views = {
+			{"island", "40 160 -30", "44 100 -104"},
+			{"island-2", "110 150 -160", "44 100 -100"},
+			{"flume", "110 130 -70", "80 110 -105"},
+			{"mountain", "60 125 -140", "88 115 -112"},
+			{"bridge", "60 108 -70", "75 101 -83"},
+			{"pond", "-10 115 -110", "8 100 -134"},
+			{"waterpark", "0 125 -70", "30 105 -100"},
+		};
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		for (String[] v : views) {
+			then(20, mc -> {
+				mc.player.getAbilities().flying = true;
+				tpHub(mc, v[1] + " facing " + v[2]);
+			});
+			then(140, mc -> shot(mc, "splash-view-" + v[0]));
+		}
+	}
+
+	/** The big Fun Park: bumper boats, the Swings, the Slingshot, the launched coaster. */
+	private static void parkFunScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> command(mc, "execute as @p run hub"));
+		// Bumper cars: drive a lap of the rink.
+		then(160, mc -> tpHub(mc, "95.5 101 0.5 270 0"));
+		then(80, mc -> talk(mc, 96.5, 101, 0.5));
+		then(30, mc -> press(mc, "play"));
+		then(20, mc -> {
+			log("bumper: riding {} passengers {}", mc.player.getVehicle(), mc.player.getVehicle() == null ? 0 : mc.player.getVehicle().getPassengers().size());
+			mc.options.keyUp.setDown(true);
+		});
+		then(30, mc -> shot(mc, "fun-bumper-1"));
+		then(10, mc -> mc.options.keyLeft.setDown(true));
+		then(25, mc -> mc.options.keyLeft.setDown(false));
+		then(30, mc -> {
+			shot(mc, "fun-bumper-2");
+			log("bumper: at {}", mc.player.position());
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(20, mc -> shot(mc, "fun-bumper-3rd"));
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			mc.options.keyUp.setDown(false);
+			mc.options.keyShift.setDown(true);
+		});
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		then(20, mc -> log("bumper: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// The Swings.
+		then(5, mc -> tpHub(mc, "86.5 101 16.5 180 0"));
+		then(60, mc -> talk(mc, 86.5, 101, 14.5));
+		then(30, mc -> press(mc, "play"));
+		then(20, mc -> log("swings: riding {}", mc.player.isPassenger()));
+		for (int i = 0; i < 9; i++) {
+			int n = i;
+			then(100, mc -> {
+				log("swings {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				if (n == 4) {
+					mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+				}
+				if (n == 5) {
+					mc.options.setCameraType(CameraType.FIRST_PERSON);
+				}
+				shot(mc, "fun-swings-" + n);
+			});
+		}
+		then(250, mc -> log("swings: after riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// The Slingshot.
+		then(5, mc -> tpHub(mc, "88.5 101 15.5 0 0"));
+		then(60, mc -> talk(mc, 88.0, 101, 17.0));
+		then(30, mc -> press(mc, "play"));
+		then(40, mc -> shot(mc, "fun-sling-ready"));
+		for (int i = 0; i < 8; i++) {
+			int n = i;
+			then(20, mc -> {
+				log("sling {}: at {}", n, mc.player.position());
+				if (n == 3) {
+					mc.player.setXRot(60);
+					shot(mc, "fun-sling-up");
+				}
+			});
+		}
+		then(200, mc -> log("sling: landed at {} on ground {}", mc.player.position(), mc.player.onGround()));
+		// The Ruby Rocket.
+		then(5, mc -> tpHub(mc, "54.5 101 -13.5 180 0"));
+		then(60, mc -> talk(mc, 54.5, 101, -15.5));
+		then(30, mc -> press(mc, "play"));
+		then(10, mc -> log("coaster: riding {}", mc.player.isPassenger()));
+		for (int i = 0; i < 24; i++) {
+			int n = i;
+			then(20, mc -> onServer(mc, server -> log("coaster {}: {} at {}", n, dev.rubymod.game.hub.Coaster.debug(), me(server).position())));
+			if (i % 2 == 1) {
+				then(1, mc -> shot(mc, "fun-coaster-" + n));
+			}
+		}
+		then(5, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
+		for (int i = 0; i < 6; i++) {
+			int n = i;
+			then(20, mc -> {
+				onServer(mc, server -> log("coaster 3rd {}: {}", n, dev.rubymod.game.hub.Coaster.debug()));
+				shot(mc, "fun-coaster-3rd-" + n);
+			});
+		}
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		then(400, mc -> onServer(mc, server -> log("coaster: after {} riding {} at {}", dev.rubymod.game.hub.Coaster.debug(), me(server).isPassenger(), me(server).position())));
+		String[][] views = {
+			{"funpark", "40 150 -60", "86 100 10"},
+			{"funpark-2", "140 140 70", "86 100 10"},
+			{"bumper", "110 115 -24", "110 101 0"},
+			{"swings", "70 112 -12", "84 105 2"},
+			{"tophat", "70 120 -50", "98 120 -20"},
+			{"helix", "10 110 -10", "33 100 6"},
+			{"dive", "40 90 60", "62 90 40"},
+			{"stage", "110 112 50", "110 102 22"},
+		};
+		then(5, mc -> command(mc, "gamemode creative @p"));
+		for (String[] v : views) {
+			then(20, mc -> {
+				mc.player.getAbilities().flying = true;
+				tpHub(mc, v[1] + " facing " + v[2]);
+			});
+			then(120, mc -> shot(mc, "fun-view-" + v[0]));
 		}
 	}
 

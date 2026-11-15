@@ -28,7 +28,7 @@ final class SkyZip {
 	}
 
 	private static final Vec3 PLAZA = new Vec3(19.5, FLOOR, 12.5);
-	private static final Vec3 WATER = new Vec3(44.5, FLOOR, -44.5);
+	private static final Vec3 WATER = new Vec3(30.5, FLOOR, -99.5);
 	private static final Vec3 THRILL = new Vec3(100.5, FLOOR, 26.5);
 	private static final double HANG = 2.3;
 	private static TrackRide zip;
@@ -101,7 +101,7 @@ final class SkyZip {
 		}
 		HubHosts.add(level, new Vec3(16.5, FLOOR + 1, 15.5), 0, VillagerProfession.CARTOGRAPHER, VillagerType.SAVANNA,
 				new HubHosts.Host("skyzip", "Ziggy", "Sky Zip", 0xFFAA40, "minecraft:lead",
-						"Clip on and zip high over the park: to the top of the Splash Tower, over the Fun Park to the Thrill Zone, and all the way "
+						"Clip on and zip high over the park: out to the top of the Splash Tower on Splash Island, across to the Fun Park, and all the way "
 								+ "back here. Fast and windy! About forty seconds.",
 						"Sky Zip: right-click Ziggy to fly!", HubHosts.rideButtons("Ride the Sky Zip!"), (p, key) -> zip.board(p, HubHosts.group(p, key))));
 	}

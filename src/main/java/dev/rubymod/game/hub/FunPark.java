@@ -54,11 +54,18 @@ final class FunPark {
 
 	static final int FX = 56;
 	static final int FZ = 2;
+	/** The big Fun Park: the old Fun Park, the old Thrill Zone, and the land between and beyond (x, z, radius). */
+	static final int[][] CIRCLES = {{56, 2, 20}, {78, 16, 22}, {84, 40, 24}, {106, 4, 24}, {110, 26, 16}, {84, 0, 14}, {50, -20, 9}, {98, -21, 9}, {72, -19, 7}};
+	/** Roughly the middle, and how far it reaches (for "is anyone near"). */
+	static final int MX = 84;
+	static final int MZ = 16;
 
 	// ----- Building -----
 
 	static void build(ServerLevel level) {
-		HubPark.island(level, FX, FZ, 17, FLOOR);
+		// The old coaster station by the plaza goes; the Fun Park and the Thrill Zone become one big island.
+		HubPark.clear(level, 33, FLOOR, -5, 48, FLOOR + 7, 5);
+		HubPark.blob(level, CIRCLES, FLOOR);
 		// The midway: a sandy path from the arch to the bouncy castle.
 		HubPark.box(level, 46, FLOOR, 1, 66, FLOOR, 3, Blocks.SMOOTH_SANDSTONE.defaultBlockState());
 		for (int x = 47; x <= 66; x += 3) {
@@ -69,8 +76,7 @@ final class FunPark {
 		galleryBooth(level);
 		wheel(level);
 		carousel(level);
-		bumperRink(level);
-		castle(level);
+		HubPark.at(-19, 10, () -> castle(level));
 		stand(level, 55, -3, DyeColor.RED, "POPCORN", Blocks.WOOL.pick(DyeColor.WHITE).defaultBlockState());
 		stand(level, 56, 5, DyeColor.PINK, "CANDY FLOSS", Blocks.WOOL.pick(DyeColor.PINK).defaultBlockState());
 		HubPark.travelPad(level, 42, FLOOR, 6, "funpark");
@@ -502,10 +508,10 @@ final class FunPark {
 	// ----- The carousel -----
 
 	private static final Vec3 CAROUSEL = new Vec3(63.5, FLOOR + 1, 10.5);
-	private static final int HORSES = 8;
-	private static final double HORSE_R = 3.7;
+	private static final int HORSES = 10;
+	private static final double HORSE_R = 4.7;
 	private static final double CAROUSEL_SPIN = Math.PI * 2 / 360;
-	private static final Vec3 CAROUSEL_EXIT = new Vec3(57.5, FLOOR + 1, 7.5);
+	private static final Vec3 CAROUSEL_EXIT = new Vec3(54.5, FLOOR + 1, 9.5);
 	private static final UUID[] HORSE = new UUID[HORSES];
 	private static final UUID[] HORSE_SEATS = new UUID[HORSES];
 	private static double turn;
@@ -517,36 +523,36 @@ final class FunPark {
 		CAROUSEL_RIDERS.clear();
 		int cx = 63;
 		int cz = 10;
-		for (int dx = -7; dx <= 7; dx++) {
-			for (int dz = -7; dz <= 7; dz++) {
+		for (int dx = -9; dx <= 9; dx++) {
+			for (int dz = -9; dz <= 9; dz++) {
 				double r = Math.sqrt(dx * dx + dz * dz);
-				if (r <= 5.6) {
-					HubPark.set(level, cx + dx, FLOOR, cz + dz, r > 4.9 ? Blocks.GOLD_BLOCK.defaultBlockState()
+				if (r <= 6.8) {
+					HubPark.set(level, cx + dx, FLOOR, cz + dz, r > 6.1 ? Blocks.GOLD_BLOCK.defaultBlockState()
 							: (Math.floor(r) % 2 == 0 ? Blocks.SMOOTH_QUARTZ : Blocks.POLISHED_DIORITE).defaultBlockState());
 				}
-				if (r <= 6.6) {
+				if (r <= 8.0) {
 					// A cone roof in red and white segments, with a yellow valance and lights round its rim.
 					int sector = (int) Math.floor((Math.atan2(dz, dx) + Math.PI) / (Math.PI / 4));
-					int h = FLOOR + 6 + (int) Math.floor((6.6 - r) / 1.5);
+					int h = FLOOR + 7 + (int) Math.floor((8.0 - r) / 1.5);
 					HubPark.set(level, cx + dx, h, cz + dz, Blocks.WOOL.pick(sector % 2 == 0 ? DyeColor.RED : DyeColor.WHITE).defaultBlockState());
-					if (r > 5.7) {
+					if (r > 7.1) {
 						HubPark.set(level, cx + dx, FLOOR + 5, cz + dz, (dx + dz) % 3 == 0 ? Blocks.SEA_LANTERN.defaultBlockState()
 								: Blocks.WOOL.pick(DyeColor.YELLOW).defaultBlockState());
 					}
 				}
 			}
 		}
-		HubPark.box(level, cx, FLOOR + 1, cz, cx, FLOOR + 6, cz, Blocks.GOLD_BLOCK.defaultBlockState());
-		HubPark.set(level, cx, FLOOR + 11, cz, Blocks.WOOL.pick(DyeColor.YELLOW).defaultBlockState());
-		HubPark.label(level, CAROUSEL.x, FLOOR + 12.6, CAROUSEL.z, "CAROUSEL", ChatFormatting.LIGHT_PURPLE, 1.8F);
+		HubPark.box(level, cx, FLOOR + 1, cz, cx, FLOOR + 7, cz, Blocks.GOLD_BLOCK.defaultBlockState());
+		HubPark.set(level, cx, FLOOR + 13, cz, Blocks.WOOL.pick(DyeColor.YELLOW).defaultBlockState());
+		HubPark.label(level, CAROUSEL.x, FLOOR + 14.6, CAROUSEL.z, "CAROUSEL", ChatFormatting.LIGHT_PURPLE, 2.2F);
 		String[] coats = {"white", "brown", "black", "gold"};
 		for (int i = 0; i < HORSES; i++) {
-			Display.ItemDisplay h = HubPark.tempModel(level, horseSpot(i), 0, "horse_" + coats[i % coats.length], 2.2F, 0);
+			Display.ItemDisplay h = HubPark.tempModel(level, horseSpot(i), 0, "horse_" + coats[i % coats.length], 2.6F, 0);
 			HORSE[i] = h == null ? null : h.getUUID();
 			Display.BlockDisplay s = HubPark.seat(level, horseSpot(i));
 			HORSE_SEATS[i] = s == null ? null : s.getUUID();
 		}
-		HubHosts.add(level, new Vec3(57.5, FLOOR + 1, 9.5), 270, VillagerProfession.SHEPHERD, VillagerType.SNOW,
+		HubHosts.add(level, new Vec3(54.5, FLOOR + 1, 12.5), 270, VillagerProfession.SHEPHERD, VillagerType.SNOW,
 				new HubHosts.Host("carousel", "Cora", "Carousel", 0xFF7CC0, "minecraft:saddle",
 						"Round and round on a painted horse, up and down to the music! Rides last about 40 seconds. Crouch to get off.",
 						"Carousel: right-click Cora to ride!", HubHosts.rideButtons("Ride a horse!"), (p, key) -> {
@@ -559,7 +565,7 @@ final class FunPark {
 	private static Vec3 horseSpot(int i) {
 		double a = turn + i * Math.PI * 2 / HORSES;
 		double bob = 0.35 * Math.sin(turn * 6 + i * Math.PI / 2);
-		return CAROUSEL.add(Math.cos(a) * HORSE_R, 1.1 + bob, Math.sin(a) * HORSE_R);
+		return CAROUSEL.add(Math.cos(a) * HORSE_R, 1.3 + bob, Math.sin(a) * HORSE_R);
 	}
 
 	private static void rideHorse(ServerPlayer p) {
@@ -592,7 +598,7 @@ final class FunPark {
 			}
 			Entity s = HORSE_SEATS[i] == null ? null : level.getEntity(HORSE_SEATS[i]);
 			if (s != null) {
-				s.teleportTo(at.x, at.y + 0.3, at.z);
+				s.teleportTo(at.x, at.y + 0.4, at.z);
 				s.setYRot(yaw);
 			}
 		}
@@ -619,215 +625,6 @@ final class FunPark {
 			if (pitch > 0) {
 				level.playSound(null, BlockPos.containing(CAROUSEL), SoundEvents.NOTE_BLOCK_FLUTE.value(), SoundSource.RECORDS, 1.2F, pitch);
 				level.playSound(null, BlockPos.containing(CAROUSEL), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.RECORDS, 0.5F, pitch);
-			}
-		}
-	}
-
-	// ----- Bumper cars -----
-
-	private static final double RINK_X1 = 47.9;
-	private static final double RINK_X2 = 55.1;
-	private static final double RINK_Z1 = 9.9;
-	private static final double RINK_Z2 = 14.1;
-	private static final Vec3 RINK_EXIT = new Vec3(51.5, FLOOR + 1, 6.5);
-	private static final String[] CAR_COLORS = {"red", "blue", "green", "yellow", "pink", "purple"};
-
-	private static final class Car {
-		final UUID driver;
-		final UUID model;
-		final UUID seat;
-		Vec3 pos;
-		Vec3 vel = Vec3.ZERO;
-		float yaw;
-		int bonk;
-		String color;
-
-		Car(UUID driver, UUID model, UUID seat, Vec3 pos, float yaw) {
-			this.driver = driver;
-			this.model = model;
-			this.seat = seat;
-			this.pos = pos;
-			this.yaw = yaw;
-		}
-	}
-
-	private static final List<Car> CARS = new ArrayList<>();
-
-	private static void bumperRink(ServerLevel level) {
-		CARS.clear();
-		HubPark.box(level, 46, FLOOR, 8, 56, FLOOR, 15, Blocks.POLISHED_BLACKSTONE.defaultBlockState());
-		for (int x = 46; x <= 56; x++) {
-			for (int z = 8; z <= 15; z++) {
-				boolean edge = x == 46 || x == 56 || z == 8 || z == 15;
-				boolean gate = z == 8 && x >= 51 && x <= 52;
-				HubPark.set(level, x, FLOOR + 1, z, edge && !gate ? Blocks.CONCRETE.pick((x + z) % 2 == 0 ? DyeColor.YELLOW : DyeColor.BLACK).defaultBlockState()
-						: Blocks.AIR.defaultBlockState());
-				if (!edge && (x + z) % 4 == 0) {
-					HubPark.set(level, x, FLOOR, z, Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState());
-				}
-			}
-		}
-		// Posts and the sparky ceiling grid the cars' poles touch.
-		BlockState steel = Blocks.CONCRETE.pick(DyeColor.LIGHT_GRAY).defaultBlockState();
-		for (int x : new int[] {46, 56}) {
-			for (int z : new int[] {8, 15}) {
-				HubPark.box(level, x, FLOOR + 2, z, x, FLOOR + 5, z, Blocks.IRON_BARS.defaultBlockState());
-			}
-		}
-		for (double x = 46.5; x <= 56.5; x += 2) {
-			HubPark.beam(level, new Vec3(x, FLOOR + 5.6, 8.5), new Vec3(x, FLOOR + 5.6, 15.5), 0.08F, 0.08F, steel);
-		}
-		for (double z = 8.5; z <= 15.5; z += 1.75) {
-			HubPark.beam(level, new Vec3(46.5, FLOOR + 5.6, z), new Vec3(56.5, FLOOR + 5.6, z), 0.08F, 0.08F, steel);
-		}
-		HubPark.label(level, 51.5, FLOOR + 7, 11.5, "BUMPER CARS", ChatFormatting.GREEN, 1.8F);
-		// A couple parked by the gate, waiting for drivers.
-		HubPark.model(level, new Vec3(53.0, FLOOR + 1, 6.3), 90, "bumper_blue", 1.6F, 0.8F);
-		HubPark.model(level, new Vec3(54.8, FLOOR + 1, 6.3), 90, "bumper_yellow", 1.6F, 0.8F);
-		HubHosts.add(level, new Vec3(49.5, FLOOR + 1, 6.5), 0, VillagerProfession.ARMORER, VillagerType.DESERT,
-				new HubHosts.Host("bumper", "Buzz", "Bumper Cars", 0x60FF80, "minecraft:minecart",
-						"Drive a bumper car and bonk your friends! W to go, S to go back, A and D to turn. Crouch to get out.",
-						"Bumper Cars: right-click Buzz to drive!", HubHosts.rideButtons("Drive a bumper car!"), (p, key) -> {
-							for (ServerPlayer q : HubHosts.group(p, key)) {
-								drive(q);
-							}
-						}));
-	}
-
-	private static void drive(ServerPlayer p) {
-		ServerLevel level = (ServerLevel) p.level();
-		if (p.isPassenger()) {
-			return;
-		}
-		if (CARS.size() >= CAR_COLORS.length) {
-			p.sendOverlayMessage(Component.literal("All the cars are out! Try again in a moment.").withStyle(ChatFormatting.YELLOW));
-			return;
-		}
-		Set<String> used = new HashSet<>();
-		for (Car c : CARS) {
-			used.add(c.color);
-		}
-		var random = level.getRandom();
-		Vec3 at = new Vec3(RINK_X1 + 1 + random.nextDouble() * (RINK_X2 - RINK_X1 - 2), FLOOR + 1, RINK_Z1 + 1 + random.nextDouble() * (RINK_Z2 - RINK_Z1 - 2));
-		String color = CAR_COLORS[0];
-		for (String c : CAR_COLORS) {
-			if (!used.contains(c)) {
-				color = c;
-				break;
-			}
-		}
-		Display.ItemDisplay model = HubPark.tempModel(level, at, 180, "bumper_" + color, 1.6F, 0.8F);
-		Display.BlockDisplay seat = HubPark.seat(level, at.add(0, 0.35, 0));
-		if (model == null || seat == null) {
-			return;
-		}
-		p.startRiding(seat, true, true);
-		Car car = new Car(p.getUUID(), model.getUUID(), seat.getUUID(), at, 180);
-		car.color = color;
-		CARS.add(car);
-		p.sendOverlayMessage(Component.literal("W to go, A and D to turn. Bonk someone! (Crouch to get out)").withStyle(ChatFormatting.GREEN));
-		level.playSound(null, p.blockPosition(), SoundEvents.PISTON_EXTEND, SoundSource.PLAYERS, 0.6F, 1.6F);
-	}
-
-	private static void tickCars(ServerLevel level) {
-		for (Iterator<Car> it = CARS.iterator(); it.hasNext();) {
-			Car c = it.next();
-			ServerPlayer p = level.getServer().getPlayerList().getPlayer(c.driver);
-			Entity seat = level.getEntity(c.seat);
-			if (p == null || seat == null || p.getVehicle() != seat) {
-				HubPark.discard(level, c.model);
-				HubPark.discard(level, c.seat);
-				it.remove();
-				if (p != null && p.level() == level) {
-					letOff(p, RINK_EXIT, "Talk to Buzz to drive again!");
-				}
-				continue;
-			}
-			Input in = p.getLastClientInput();
-			if (in.left()) {
-				c.yaw -= 5.5F;
-			}
-			if (in.right()) {
-				c.yaw += 5.5F;
-			}
-			Vec3 ahead = new Vec3(-Math.sin(Math.toRadians(c.yaw)), 0, Math.cos(Math.toRadians(c.yaw)));
-			if (in.forward()) {
-				c.vel = c.vel.add(ahead.scale(0.035));
-			} else if (in.backward()) {
-				c.vel = c.vel.add(ahead.scale(-0.02));
-			}
-			c.vel = c.vel.scale(0.9);
-			if (c.vel.length() > 0.34) {
-				c.vel = c.vel.normalize().scale(0.34);
-			}
-			c.pos = c.pos.add(c.vel);
-			boolean wall = false;
-			if (c.pos.x < RINK_X1 || c.pos.x > RINK_X2) {
-				c.vel = new Vec3(-c.vel.x * 0.7, 0, c.vel.z);
-				c.pos = new Vec3(Math.max(RINK_X1, Math.min(RINK_X2, c.pos.x)), c.pos.y, c.pos.z);
-				wall = true;
-			}
-			if (c.pos.z < RINK_Z1 || c.pos.z > RINK_Z2) {
-				c.vel = new Vec3(c.vel.x, 0, -c.vel.z * 0.7);
-				c.pos = new Vec3(c.pos.x, c.pos.y, Math.max(RINK_Z1, Math.min(RINK_Z2, c.pos.z)));
-				wall = true;
-			}
-			if (wall && c.vel.length() > 0.08 && c.bonk <= 0) {
-				level.playSound(null, BlockPos.containing(c.pos), SoundEvents.SLIME_SQUISH, SoundSource.PLAYERS, 0.8F, 0.8F);
-				c.bonk = 6;
-			}
-			if (c.bonk > 0) {
-				c.bonk--;
-			}
-		}
-		// Bonking each other.
-		for (int i = 0; i < CARS.size(); i++) {
-			for (int j = i + 1; j < CARS.size(); j++) {
-				Car a = CARS.get(i);
-				Car b = CARS.get(j);
-				Vec3 d = b.pos.subtract(a.pos);
-				double dist = d.horizontalDistance();
-				if (dist < 1.45 && dist > 1e-4) {
-					Vec3 n = new Vec3(d.x / dist, 0, d.z / dist);
-					double push = (1.45 - dist) / 2;
-					a.pos = a.pos.subtract(n.scale(push));
-					b.pos = b.pos.add(n.scale(push));
-					double va = a.vel.dot(n);
-					double vb = b.vel.dot(n);
-					if (va - vb > 0) {
-						a.vel = a.vel.add(n.scale(vb - va - 0.08));
-						b.vel = b.vel.add(n.scale(va - vb + 0.08));
-						if (a.bonk <= 0 && va - vb > 0.06) {
-							Vec3 mid = a.pos.lerp(b.pos, 0.5);
-							level.playSound(null, BlockPos.containing(mid), SoundEvents.NOTE_BLOCK_BASEDRUM.value(), SoundSource.PLAYERS, 1.2F, 1.4F);
-							level.playSound(null, BlockPos.containing(mid), SoundEvents.SLIME_ATTACK, SoundSource.PLAYERS, 0.8F, 1.0F);
-							level.sendParticles(ParticleTypes.CRIT, mid.x, mid.y + 0.6, mid.z, 12, 0.3, 0.2, 0.3, 0.2);
-							for (Car c : new Car[] {a, b}) {
-								ServerPlayer p = level.getServer().getPlayerList().getPlayer(c.driver);
-								if (p != null) {
-									p.sendOverlayMessage(Component.literal("BONK!").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
-								}
-								c.bonk = 8;
-							}
-						}
-					}
-				}
-			}
-		}
-		for (Car c : CARS) {
-			Entity m = level.getEntity(c.model);
-			if (m != null) {
-				m.teleportTo(c.pos.x, c.pos.y, c.pos.z);
-				m.setYRot(c.yaw);
-			}
-			Entity s = level.getEntity(c.seat);
-			if (s != null) {
-				Vec3 back = new Vec3(Math.sin(Math.toRadians(c.yaw)), 0, -Math.cos(Math.toRadians(c.yaw))).scale(0.1);
-				s.teleportTo(c.pos.x + back.x, c.pos.y + 0.35, c.pos.z + back.z);
-				s.setYRot(c.yaw);
-			}
-			if (c.vel.length() > 0.2 && tick % 7 == 0) {
-				level.sendParticles(ParticleTypes.ELECTRIC_SPARK, c.pos.x, FLOOR + 5.5, c.pos.z, 3, 0.1, 0.05, 0.1, 0.05);
 			}
 		}
 	}
@@ -897,11 +694,9 @@ final class FunPark {
 		tickBooth(level);
 		tickWheel(level);
 		tickCarousel(level);
-		tickCars(level);
 	}
 
 	static void reset() {
-		CARS.clear();
 		WHEEL_QUEUE.clear();
 		WHEEL_RIDERS.clear();
 		CAROUSEL_RIDERS.clear();

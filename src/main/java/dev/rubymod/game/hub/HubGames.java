@@ -77,7 +77,7 @@ public final class HubGames {
 		return isToy(stack) && stack.getHoverName().getString().equals(name);
 	}
 
-	private static void hand(ServerPlayer p, ItemStack stack) {
+	static void hand(ServerPlayer p, ItemStack stack) {
 		// One of each: a second click doesn't pile them up.
 		for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
 			ItemStack have = p.getInventory().getItem(i);
@@ -127,7 +127,7 @@ public final class HubGames {
 	/** Where each game's things belong (x, z, radius): leave and they're put back. Prizes left over from before go too. */
 	private static final java.util.Map<String, double[]> HOME = java.util.Map.of(
 			"Putter", new double[] {-44, 44, 22},
-			"Pond Rod", new double[] {0, 56, 20},
+			"Pond Rod", new double[] {HubPark.POND_DX, 56 + HubPark.POND_DZ, 20},
 			"Gallery Snowball", new double[] {56, 2, 22},
 			"Mallet", new double[] {84, 40, 26},
 			"Basketball", new double[] {84, 40, 26},
@@ -163,10 +163,21 @@ public final class HubGames {
 
 	/** The toy chest on the plaza. */
 	static void toyChest(ServerPlayer p) {
-		hand(p, toy(Items.FIREWORK_STAR, 1, "Confetti Cannon", ChatFormatting.LIGHT_PURPLE));
-		hand(p, toy(Items.CHICKEN, 1, "Rubber Chicken", ChatFormatting.YELLOW));
-		hand(p, toy(Items.SLIME_BALL, 1, "Bouncy Ball", ChatFormatting.GREEN));
-		hand(p, toy(Items.SNOWBALL, 16, "Snowball", ChatFormatting.WHITE));
+		toyChest(p, "classic");
+	}
+
+	/** One of Tilly's bundles: the classics, the outdoor toys, or the silly ones. */
+	static void toyChest(ServerPlayer p, String key) {
+		if ("outdoor".equals(key) || "silly".equals(key)) {
+			for (ItemStack s : HubToys.bundle(key)) {
+				hand(p, s);
+			}
+		} else {
+			hand(p, toy(Items.FIREWORK_STAR, 1, "Confetti Cannon", ChatFormatting.LIGHT_PURPLE));
+			hand(p, toy(Items.CHICKEN, 1, "Rubber Chicken", ChatFormatting.YELLOW));
+			hand(p, toy(Items.SLIME_BALL, 1, "Bouncy Ball", ChatFormatting.GREEN));
+			hand(p, toy(Items.SNOWBALL, 16, "Snowball", ChatFormatting.WHITE));
+		}
 		p.inventoryMenu.broadcastChanges();
 		p.sendSystemMessage(Component.literal("Toys! Right-click to use them. They stay in the hub.").withStyle(ChatFormatting.LIGHT_PURPLE));
 		p.level().playSound(null, p.blockPosition(), SoundEvents.CHEST_OPEN, SoundSource.PLAYERS, 0.8F, 1.3F);
@@ -213,7 +224,7 @@ public final class HubGames {
 			level.playSound(null, p.blockPosition(), SoundEvents.SNOWBALL_THROW, SoundSource.PLAYERS, 0.8F, 0.6F);
 			return true;
 		}
-		return false;
+		return HubToys.use(p, held);
 	}
 
 	static void squawk(ServerLevel level, Vec3 at) {

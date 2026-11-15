@@ -77,7 +77,7 @@ final class Concert {
 			if (d == null) {
 				continue;
 			}
-			d.snapTo(xs[i], FLOOR + 9.2, -36.6, 0, 0);
+			d.snapTo(xs[i] + HubPark.OX, FLOOR + 9.2, -36.6 + HubPark.OZ, 0, 0);
 			((BlockDisplayAccessor) d).rubymod$setBlockState(Blocks.STAINED_GLASS.pick(colors[i]).defaultBlockState());
 			((DisplayAccessor) d).rubymod$setViewRange(6.0F);
 			((DisplayAccessor) d).rubymod$setBrightness(net.minecraft.util.Brightness.FULL_BRIGHT);

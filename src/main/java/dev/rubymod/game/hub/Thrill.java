@@ -51,13 +51,12 @@ final class Thrill {
 	private static int tick;
 
 	static void build(ServerLevel level) {
-		HubPark.island(level, CX, CZ, 22, FLOOR);
 		HubPark.clear(level, CX - 22, FLOOR + 13, CZ - 22, CX + 22, FLOOR + 48, CZ + 22);
 		// Paths between everything.
 		HubPark.box(level, CX - 14, FLOOR, CZ - 1, CX + 16, FLOOR, CZ + 1, Blocks.SMOOTH_SANDSTONE.defaultBlockState());
 		HubPark.box(level, CX - 1, FLOOR, CZ - 12, CX + 1, FLOOR, CZ + 10, Blocks.SMOOTH_SANDSTONE.defaultBlockState());
 		HubPark.label(level, CX + 0.5, FLOOR + 30, CZ + 4.5, "THRILL ZONE", ChatFormatting.GOLD, 3.0F);
-		HubPark.travelPad(level, CX + 3, FLOOR, CZ + 3, "thrill");
+		HubPark.travelPad(level, CX + 3, FLOOR, CZ + 3, "funpark");
 		dropTower(level);
 		pirateShip(level);
 		teacups(level);
@@ -81,6 +80,7 @@ final class Thrill {
 	}
 
 	private static Drop drop = Drop.IDLE;
+	private static boolean launch;
 	private static int dropTimer;
 	private static double dropY = FLOOR + 1;
 	private static double dropV;
@@ -105,8 +105,20 @@ final class Thrill {
 		placeDrop(level);
 		HubHosts.add(level, new Vec3(93.5, FLOOR + 1, 35.5), 135, VillagerProfession.ARMORER, VillagerType.SAVANNA,
 				new HubHosts.Host("drop", "Tess", "Drop Tower", 0xFF4050, "minecraft:feather",
-						"Up, up, up to the very top of the tower... a little wait... then DROP! Four seats.",
-						"Drop Tower: right-click Tess... if you're brave!", HubHosts.rideButtons("Ride the Drop Tower!"), (p, key) -> {
+						"Two ways to ride! DROP: slowly up to the very top... a little wait... then you FALL. LAUNCH: blasted up the tower in "
+								+ "two seconds, then down again. Four seats.",
+						"Drop Tower: right-click Tess... if you're brave!", p -> {
+							List<String> b = new ArrayList<>();
+							b.add("drop|Drop (slow up, big fall)");
+							b.add("launch|Launch (BLAST up!)");
+							if (!HubHosts.friends(p).isEmpty()) {
+								b.add("friends|Drop, with my friends");
+							}
+							return b;
+						}, (p, key) -> {
+							if (drop == Drop.IDLE) {
+								launch = "launch".equals(key);
+							}
 							if (drop != Drop.IDLE && drop != Drop.BOARD) {
 								p.sendOverlayMessage(Component.literal("It's up there right now! Wait for it to come down.").withStyle(ChatFormatting.YELLOW));
 								return;
@@ -131,10 +143,28 @@ final class Thrill {
 					drop = Drop.IDLE;
 				} else if (--dropTimer <= 0) {
 					drop = Drop.UP;
-					tell(riders, "Going up...");
+					dropV = 0;
+					tell(riders, launch ? "3... 2... 1... LAUNCH!" : "Going up...");
+					if (launch) {
+						level.playSound(null, BlockPos.containing(TOWER), SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 2.0F, 0.6F);
+						for (ServerPlayer p : riders) {
+							p.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.SPEED, 60, 5, false, false));
+						}
+					}
 				}
 			}
 			case UP -> {
+				if (launch) {
+					dropV = Math.min(1.6, dropV + 0.12);
+					dropY += dropV;
+					if (dropY >= TOP) {
+						dropY = TOP;
+						drop = Drop.HOLD;
+						dropTimer = 15;
+						tell(riders, "WHOA!");
+					}
+					break;
+				}
 				dropY += 0.15;
 				if (tick % 8 == 0) {
 					level.playSound(null, BlockPos.containing(TOWER.x, dropY, TOWER.z), SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 0.8F, 0.6F);
@@ -199,14 +229,14 @@ final class Thrill {
 
 	// ----- The Pirate Ship -----
 
-	private static final Vec3 PIVOT = new Vec3(76.0, FLOOR + 12, 31.0);
-	private static final double ARM = 9.5;
-	private static final float SHIP = 4.5F;
+	private static final Vec3 PIVOT = new Vec3(72.0, FLOOR + 15, 31.0);
+	private static final double ARM = 12.0;
+	private static final float SHIP = 6.0F;
 	private static final Vec3 SHIP_EXIT = new Vec3(76.5, FLOOR + 1, 36.5);
 	private static UUID ship;
 	private static final List<UUID> ARMS = new ArrayList<>();
-	private static final UUID[] SHIP_SEATS = new UUID[6];
-	private static final double[][] SHIP_SPOTS = {{-4, -0.8}, {0, -0.8}, {4, -0.8}, {-4, 0.8}, {0, 0.8}, {4, 0.8}};
+	private static final UUID[] SHIP_SEATS = new UUID[10];
+	private static final double[][] SHIP_SPOTS = {{-6, -1}, {-3, -1}, {0, -1}, {3, -1}, {6, -1}, {-6, 1}, {-3, 1}, {0, 1}, {3, 1}, {6, 1}};
 	private static int shipT = -1;
 	private static double swing;
 
@@ -215,12 +245,12 @@ final class Thrill {
 		swing = 0;
 		ARMS.clear();
 		BlockState wood = Blocks.CONCRETE.pick(DyeColor.BROWN).defaultBlockState();
-		for (double z : new double[] {27.0, 35.0}) {
-			double toward = z < 31 ? 28.6 : 33.4;
-			HubPark.beam(level, new Vec3(70.5, FLOOR + 1, z), new Vec3(PIVOT.x, PIVOT.y, toward), 0.45F, 0.45F, wood);
-			HubPark.beam(level, new Vec3(81.5, FLOOR + 1, z), new Vec3(PIVOT.x, PIVOT.y, toward), 0.45F, 0.45F, wood);
+		for (double z : new double[] {25.5, 36.5}) {
+			double toward = z < 31 ? 28.0 : 34.0;
+			HubPark.beam(level, new Vec3(PIVOT.x - 8, FLOOR + 1, z), new Vec3(PIVOT.x, PIVOT.y, toward), 0.6F, 0.6F, wood);
+			HubPark.beam(level, new Vec3(PIVOT.x + 8, FLOOR + 1, z), new Vec3(PIVOT.x, PIVOT.y, toward), 0.6F, 0.6F, wood);
 		}
-		HubPark.beam(level, new Vec3(PIVOT.x, PIVOT.y, 28.4), new Vec3(PIVOT.x, PIVOT.y, 33.6), 0.5F, 0.5F, Blocks.CONCRETE.pick(DyeColor.GRAY).defaultBlockState());
+		HubPark.beam(level, new Vec3(PIVOT.x, PIVOT.y, 27.8), new Vec3(PIVOT.x, PIVOT.y, 34.2), 0.6F, 0.6F, Blocks.CONCRETE.pick(DyeColor.GRAY).defaultBlockState());
 		Display.ItemDisplay m = HubPark.model(level, PIVOT, 0, "pirate_ship", SHIP, 0);
 		if (m != null) {
 			ship = m.getUUID();
@@ -241,7 +271,7 @@ final class Thrill {
 			SHIP_SEATS[i] = s == null ? null : s.getUUID();
 		}
 		placeShip(level, 0);
-		HubPark.box(level, 69, FLOOR, 29, 83, FLOOR, 33, Blocks.SAND.defaultBlockState());
+		HubPark.box(level, 62, FLOOR, 28, 82, FLOOR, 34, Blocks.SMOOTH_SANDSTONE.defaultBlockState());
 		HubPark.label(level, PIVOT.x, PIVOT.y + 3, PIVOT.z, "PIRATE SHIP", ChatFormatting.GOLD, 2.0F);
 		HubHosts.add(level, new Vec3(79.5, FLOOR + 1, 36.5), 180, VillagerProfession.FISHERMAN, VillagerType.TAIGA,
 				new HubHosts.Host("ship", "Captain Polly", "Pirate Ship", 0xFFAA40, "minecraft:oak_boat",
@@ -267,11 +297,11 @@ final class Thrill {
 			if (shipT < 60) {
 				amp = 0;
 			} else if (shipT < 300) {
-				amp = (shipT - 60) / 240.0 * 70;
+				amp = (shipT - 60) / 240.0 * 58;
 			} else if (shipT < 520) {
-				amp = 70;
+				amp = 58;
 			} else {
-				amp = Math.max(0, (680 - shipT) / 160.0 * 70);
+				amp = Math.max(0, (680 - shipT) / 160.0 * 58);
 			}
 			swing = Math.toRadians(amp * Math.sin((shipT - 60) * Math.PI * 2 / 110));
 			if (shipT > 60 && Math.abs(Math.sin((shipT - 60) * Math.PI * 2 / 110)) > 0.995 && amp > 40) {
@@ -327,8 +357,8 @@ final class Thrill {
 	// ----- The Teacups -----
 
 	private static final Vec3 CUPS = new Vec3(72.5, FLOOR + 1, 46.5);
-	private static final Vec3 CUPS_EXIT = new Vec3(65.5, FLOOR + 1, 46.5);
-	private static final int CUP_COUNT = 6;
+	private static final Vec3 CUPS_EXIT = new Vec3(62.5, FLOOR + 1, 46.5);
+	private static final int CUP_COUNT = 8;
 	private static final UUID[] CUP = new UUID[CUP_COUNT];
 	private static final UUID[] CUP_SEATS = new UUID[CUP_COUNT * 2];
 	private static final double[] CUP_SPIN = new double[CUP_COUNT];
@@ -338,12 +368,12 @@ final class Thrill {
 	private static void teacups(ServerLevel level) {
 		CUP_RIDERS.clear();
 		DyeColor[] floor = {DyeColor.PINK, DyeColor.WHITE, DyeColor.LIGHT_BLUE, DyeColor.WHITE};
-		for (int dx = -7; dx <= 7; dx++) {
-			for (int dz = -7; dz <= 7; dz++) {
+		for (int dx = -9; dx <= 9; dx++) {
+			for (int dz = -9; dz <= 9; dz++) {
 				double r = Math.sqrt(dx * dx + dz * dz);
-				if (r <= 6.6) {
+				if (r <= 8.6) {
 					int sector = (int) Math.floor((Math.atan2(dz, dx) + Math.PI) / (Math.PI / 4));
-					HubPark.set(level, 72 + dx, FLOOR, 46 + dz, r > 6 ? Blocks.GOLD_BLOCK.defaultBlockState()
+					HubPark.set(level, 72 + dx, FLOOR, 46 + dz, r > 8 ? Blocks.GOLD_BLOCK.defaultBlockState()
 							: Blocks.CONCRETE.pick(floor[sector % floor.length]).defaultBlockState());
 				}
 			}
@@ -356,9 +386,9 @@ final class Thrill {
 		HubPark.set(level, 75, FLOOR + 3, 46, Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState());
 		HubPark.set(level, 70, FLOOR + 2, 46, Blocks.CONCRETE.pick(DyeColor.PINK).defaultBlockState());
 		HubPark.label(level, CUPS.x, FLOOR + 6, CUPS.z, "TEACUPS", ChatFormatting.LIGHT_PURPLE, 1.8F);
-		String[] colors = {"pink", "blue", "yellow", "green", "purple", "red"};
+		String[] colors = {"pink", "blue", "yellow", "green", "purple", "red", "pink", "blue"};
 		for (int i = 0; i < CUP_COUNT; i++) {
-			Display.ItemDisplay c = HubPark.tempModel(level, cupSpot(i), 0, "teacup_" + colors[i], 2.4F, 1.2F);
+			Display.ItemDisplay c = HubPark.tempModel(level, cupSpot(i), 0, "teacup_" + colors[i], 3.0F, 1.5F);
 			CUP[i] = c == null ? null : c.getUUID();
 			CUP_SPIN[i] = i * 60;
 			for (int k = 0; k < 2; k++) {
@@ -366,7 +396,7 @@ final class Thrill {
 				CUP_SEATS[i * 2 + k] = s == null ? null : s.getUUID();
 			}
 		}
-		HubHosts.add(level, new Vec3(66.5, FLOOR + 1, 42.5), 225, VillagerProfession.SHEPHERD, VillagerType.PLAINS,
+		HubHosts.add(level, new Vec3(62.5, FLOOR + 1, 42.5), 225, VillagerProfession.SHEPHERD, VillagerType.PLAINS,
 				new HubHosts.Host("cups", "Mabel", "Teacups", 0xFF7CC0, "minecraft:flower_pot",
 						"Spin round and round in a giant teacup! Two to a cup. It lasts about 30 seconds (crouch to get off).",
 						"Teacups: right-click Mabel for a spin!", HubHosts.rideButtons("Spin in a teacup!"), (p, key) -> {
@@ -380,7 +410,7 @@ final class Thrill {
 
 	private static Vec3 cupSpot(int i) {
 		double a = cupTurn + i * Math.PI * 2 / CUP_COUNT;
-		return CUPS.add(Math.cos(a) * 4.0, 0, Math.sin(a) * 4.0);
+		return CUPS.add(Math.cos(a) * 5.6, 0, Math.sin(a) * 5.6);
 	}
 
 	private static void tickCups(ServerLevel level) {
@@ -398,7 +428,7 @@ final class Thrill {
 				Entity s = CUP_SEATS[i * 2 + k] == null ? null : level.getEntity(CUP_SEATS[i * 2 + k]);
 				if (s != null) {
 					double a = Math.toRadians(CUP_SPIN[i]) + k * Math.PI;
-					s.teleportTo(at.x + Math.cos(a) * 0.45, at.y + 0.45, at.z + Math.sin(a) * 0.45);
+					s.teleportTo(at.x + Math.cos(a) * 0.6, at.y + 0.55, at.z + Math.sin(a) * 0.6);
 					s.setYRot((float) CUP_SPIN[i] + k * 180);
 				}
 			}
@@ -427,8 +457,8 @@ final class Thrill {
 	private static final Vec3 BALLOON = new Vec3(100.5, FLOOR + 1, 38.5);
 	/** Up from the Thrill Zone, over every island in turn, and home. x, z, height. */
 	private static final double[][] TOUR = {{100.5, 38.5, 1}, {100, 40, 6}, {96, 44, 14}, {84, 46, 22}, {64, 44, 30}, {44, 40, 34}, {20, 50, 30},
-		{0, 56, 29}, {-24, 52, 29}, {-44, 44, 29}, {-70, 26, 29}, {-96, 6, 30}, {-70, -6, 30}, {-46, -30, 30}, {-22, -58, 31}, {6, -63, 30},
-		{30, -56, 30}, {44, -44, 30}, {52, -20, 28}, {56, 2, 28}, {72, 16, 24}, {86, 16, 18}, {94, 20, 14}, {101, 30, 6}, {100.5, 38.5, 1}};
+		{0, 56, 29}, {-24, 52, 29}, {-44, 44, 29}, {-70, 26, 29}, {-100, 6, 30}, {-110, -20, 30}, {-60, -40, 30}, {-22, -58, 31}, {6, -70, 30},
+		{30, -66, 34}, {44, -44, 32}, {52, -20, 30}, {56, 2, 30}, {70, -2, 30}, {100, 0, 30}, {112, 14, 24}, {108, 30, 14}, {102, 36, 6}, {100.5, 38.5, 1}};
 
 	private static void balloon(ServerLevel level) {
 		List<Vec3> pts = new ArrayList<>();

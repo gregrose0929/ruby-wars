@@ -50,8 +50,8 @@ final class HubPlay {
 	}
 
 	private static final Vec3 KIT = new Vec3(-3.5, FLOOR + 1, 11.5);
-	private static final AABB CASTLE = new AABB(67, FLOOR, -1, 72, FLOOR + 6, 6);
-	private static final Vec3 CASTLE_FRONT = new Vec3(64.5, FLOOR + 1, 2.5);
+	private static final AABB CASTLE = new AABB(48, FLOOR, 9, 53, FLOOR + 6, 16);
+	private static final Vec3 CASTLE_FRONT = new Vec3(45.5, FLOOR + 1, 12.5);
 
 	private static Game game;
 	/** Before it starts: ticks left to join. Then: ticks left to play. */

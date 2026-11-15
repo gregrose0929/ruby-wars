@@ -731,7 +731,6 @@ public final class Hub {
 		islet(level, -28, FLOOR + 5, 22, 4);
 		islet(level, 4, FLOOR - 12, -36, 5);
 		islet(level, -6, FLOOR + 8, 36, 3);
-		galleryBase(level);
 		podiumBase(level);
 		dev.rubymod.game.hub.HubPark.build(level);
 		// The war room: a table between the Rift and Convoy gates, with the season's map on it.
@@ -950,7 +949,8 @@ public final class Hub {
 	public static void showcase(ServerLevel from, BlockPos corner, int size, int height, String builder, String theme) {
 		MinecraftServer server = from.getServer();
 		ServerLevel hub = server.getLevel(HUB);
-		if (hub == null) {
+		if (hub == null || GALLERY_X != 0) {
+			// The gallery island's gone (the park took its place).
 			return;
 		}
 		int x0 = GALLERY_X - size / 2;
@@ -1139,7 +1139,6 @@ public final class Hub {
 			new Label("party_title", 0.5, FLOOR + 13.2, PARTY_Z, 3.0F),
 			new Label("party_info", 0.5, FLOOR + 3.0, PARTY_Z - 2.1, 1.4F),
 			new Label("welcome", 0.5, FLOOR + 3.6, 0.5, 0.9F),
-			new Label("gallery", -27.5, FLOOR + 5.0, 6.5, 1.5F),
 			new Label("war", 0.5, FLOOR + 3.4, WAR_Z + 0.5, 0.8F),
 			new Label("board_party", -9.0, FLOOR + 1.0, 5.5, 1.6F),
 			new Label("board_records", 10.0, FLOOR + 1.0, 5.5, 1.6F));

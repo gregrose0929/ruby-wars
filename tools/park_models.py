@@ -202,11 +202,11 @@ BAT = [
 
 LOG_BOAT = [
     b([2, 0, -2], [14, 2, 18], WOOD),                                   # hull
-    b([1, 2, -2], [3, 8, 18], WOOD), b([13, 2, -2], [15, 8, 18], WOOD),  # sides
-    b([2, 2, -3], [14, 9, -1], WOOD), b([2, 2, 17], [14, 8, 19], WOOD),  # ends
-    b([3, 8.5, -3.2], [13, 9, -2.8], ORANGE),                           # cut log rings
-    b([0.8, 3, 2], [1, 7, 5], ORANGE), b([15, 3, 9], [15.2, 7, 12], ORANGE),   # bark knots
-    b([3, 2, 2], [13, 5, 6], GRAY), b([3, 2, 10], [13, 5, 14], GRAY),    # seats
+    b([1, 2, -2], [3, 6, 18], WOOD), b([13, 2, -2], [15, 6, 18], WOOD),  # sides (low: you see over them)
+    b([2, 2, -3], [14, 7, -1], WOOD), b([2, 2, 17], [14, 6, 19], WOOD),  # ends
+    b([3, 6.5, -3.2], [13, 7, -2.8], ORANGE),                           # cut log rings
+    b([0.8, 3, 2], [1, 5.5, 5], ORANGE), b([15, 3, 9], [15.2, 5.5, 12], ORANGE),   # bark knots
+    b([3, 2, 2], [13, 4, 6], GRAY), b([3, 2, 10], [13, 4, 14], GRAY),    # seats
 ]
 
 SWAN = [
@@ -333,14 +333,66 @@ def cloud(seed):
 
 DOOM_BUGGY = [
     b([1, 0, 0], [15, 3, 16], BLACK),                                   # base
-    b([1, 3, 12], [15, 11, 16], BLACK),                                 # rounded back (behind the riders)
-    b([2, 11, 13], [14, 12.5, 16], BLACK),
-    b([0, 3, 0], [1, 7, 16], BLACK), b([15, 3, 0], [16, 7, 16], BLACK),  # low sides
-    b([1, 3, -0.5], [15, 6, 1], BLACK),                                 # front
-    b([1.2, 3.1, 11.8], [14.8, 10.5, 12], PURPLE),                      # padded lining
-    b([2, 3, 6], [14, 5, 12], PURPLE),                                  # seat
-    b([2, 6, 3], [14, 6.8, 3.8], PURPLE),                               # lap bar
-    b([-0.2, 5, 0], [0, 7, 16], PURPLE), b([16, 5, 0], [16.2, 7, 16], PURPLE),   # trim
+    b([1, 3, 13], [15, 8, 16], BLACK),                                  # low rounded back (behind the riders' backs)
+    b([0, 3, 0], [1, 5.5, 16], BLACK), b([15, 3, 0], [16, 5.5, 16], BLACK),  # low sides
+    b([1, 3, -0.5], [15, 5, 1], BLACK),                                 # front
+    b([1.2, 3.1, 12.8], [14.8, 7.5, 13], PURPLE),                       # padded lining
+    b([2, 3, 6], [14, 4.5, 12.8], PURPLE),                              # seat
+    b([2, 5, 3], [14, 5.6, 3.8], PURPLE),                               # lap bar
+    b([-0.2, 4, 0], [0, 5.5, 16], PURPLE), b([16, 4, 0], [16.2, 5.5, 16], PURPLE),   # trim
+]
+
+
+def bumper_boat(color):
+    """A round bumper car for the ice rink, open in the middle (the driver sits in it; nothing near their head)."""
+    return [
+        b([0, 0, 0], [16, 3, 16], BLACK),                               # fat rubber bumper all round
+        b([1, 3, 1], [15, 4, 15], color),                               # deck
+        b([1, 4, 0.5], [15, 7, 4.5], color),                            # front
+        b([0.5, 4, 4.5], [2.5, 7, 13], color), b([13.5, 4, 4.5], [15.5, 7, 13], color),   # sides
+        b([1, 4, 12], [15, 7.5, 15.5], color),                          # back
+        b([3, 7.5, 12.5], [13, 11, 14], WHITE),                         # seat back (low)
+        b([7.4, 7, 3.6], [8.6, 9, 4.8], STEEL),                         # steering column
+        b([5.5, 8.8, 3.0], [10.5, 9.6, 5.4], BLACK),                    # wheel
+        b([3, 4.5, -0.3], [5, 6, 0.5], YELLOW), b([11, 4.5, -0.3], [13, 6, 0.5], YELLOW),   # headlights
+        b([-0.2, 1, 3], [0, 2, 13], WHITE), b([16, 1, 3], [16.2, 2, 13], WHITE),         # stripes
+        b([4, 7, 15.5], [12, 8, 16], YELLOW),
+    ]
+
+
+def swing_chair(color):
+    """An open swing chair; its arms are where the chains hold on (out at the sides, away from the rider's head)."""
+    return [
+        b([2, 0, 3], [14, 1.5, 13], color),                             # seat
+        b([2, 1.5, 12], [14, 7, 13.5], color),                          # back (low)
+        b([0, 0, 3], [2, 3, 13], STEEL), b([14, 0, 3], [16, 3, 13], STEEL),   # arms
+        b([2, -1, 1], [14, 0, 4], color),                               # foot rest
+        b([0.5, 3, 7.5], [1.5, 4, 8.5], YELLOW), b([14.5, 3, 7.5], [15.5, 4, 8.5], YELLOW),
+    ]
+
+
+def coaster_solo(body, trim):
+    """A one-seat coaster car: low sides, a low seat back, a lap bar, nothing up by the rider's head."""
+    return [
+        b([2, 0, 1], [14, 2, 15], BLACK),                               # chassis
+        *[b([x, 0, z], [x + 1.5, 2.5, z + 3], GRAY) for x in (0.5, 14) for z in (2, 11)],   # wheels
+        b([1, 2, 0], [15, 3.5, 16], body),                              # floor
+        b([1, 3.5, 2], [2.5, 7, 14], body), b([13.5, 3.5, 2], [15, 7, 14], body),   # sides
+        b([1, 3.5, -1.5], [15, 7, 2.5], body),                          # nose
+        b([2, 7, -1], [14, 7.8, 2.5], trim),
+        b([3, 4, -1.7], [5, 5.5, -1.5], YELLOW), b([11, 4, -1.7], [13, 5.5, -1.5], YELLOW),   # headlights
+        b([2.5, 3.5, 12], [13.5, 10, 14], body),                        # seat back
+        b([1, 3.5, 14], [15, 6, 16], trim),                             # tail
+        b([4, 7.5, 4.5], [12, 8.3, 5.5], YELLOW),                       # lap bar
+        b([0.8, 5, 4], [1, 6, 13], WHITE), b([15, 5, 4], [15.2, 6, 13], WHITE),   # stripes
+    ]
+
+
+SWING_CROWN = [
+    b([2, 0, 0], [14, 1.2, 16], RED), b([0, 0, 2], [16, 1.2, 14], WHITE), b([1, 0.1, 1], [15, 1.1, 15], YELLOW),
+    *[b([x, -0.8, z], [x + 1, 0, z + 1], YELLOW) for x, z in ((1.5, 7.5), (13.5, 7.5), (7.5, 1.5), (7.5, 13.5), (3, 3), (12, 3), (3, 12), (12, 12))],
+    b([3, 1.2, 3], [13, 2.4, 13], RED), b([5, 2.4, 5], [11, 3.6, 11], WHITE), b([6.5, 3.6, 6.5], [9.5, 5, 9.5], BLUE),
+    b([7.5, 5, 7.5], [8.5, 6.5, 8.5], GOLD),
 ]
 
 
@@ -365,6 +417,13 @@ MODELS = {
         b([0, 0, 0], [16, 4, 16], YELLOW), b([2, 0.5, 2], [14, 4.5, 14], SKY), b([3, 1, 3], [13, 2, 13], BLUE),
         b([7, 4, -0.5], [9, 6, 1], RED), b([7, 4, 15], [9, 6, 16.5], RED), b([-0.5, 4, 7], [1, 6, 9], RED), b([15, 4, 7], [16.5, 6, 9], RED)],
     "tube": [b([1, 0, 1], [15, 4, 15], RED), b([4, 0.5, 4], [12, 4.5, 12], SKY), b([2, 4, 2], [5, 4.6, 5], WHITE), b([11, 4, 11], [14, 4.6, 14], WHITE)],
+    **{f"bumper_boat_{n}": bumper_boat(c) for n, c in (("red", RED), ("blue", BLUE), ("green", GREEN), ("yellow", YELLOW), ("pink", PINK),
+                                                       ("purple", PURPLE), ("orange", ORANGE), ("sky", SKY))},
+    **{f"swing_chair_{n}": swing_chair(c) for n, c in (("red", RED), ("blue", BLUE), ("green", GREEN), ("yellow", YELLOW), ("pink", PINK),
+                                                       ("purple", PURPLE), ("orange", ORANGE), ("sky", SKY))},
+    "swing_crown": SWING_CROWN,
+    "coaster_solo_red": coaster_solo(RED, YELLOW), "coaster_solo_yellow": coaster_solo(YELLOW, RED),
+    "coaster_solo_blue": coaster_solo(BLUE, WHITE), "coaster_solo_green": coaster_solo(GREEN, YELLOW),
     "duck": DUCK, "golf_ball": GOLF_BALL, "golf_flag": GOLF_FLAG, "zip_handle": ZIP_HANDLE,
 }
 HANDHELD = {"putter": PUTTER, "mallet": MALLET}

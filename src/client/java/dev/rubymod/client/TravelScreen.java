@@ -50,29 +50,31 @@ public class TravelScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		Ui.dim(g, width, height, Ui.ease(opened, 200));
-		int cols = width >= 330 ? 2 : 1;
-		int gap = 6;
-		int cw = Math.min(170, (width - 24 - gap * (cols - 1)) / cols);
-		int chh = 34;
+		// Big tiles in a grid (three across when there's room), so the whole park fits on one screen.
+		int cols = width >= 400 ? 3 : 2;
+		int gap = 8;
+		int cw = Math.min(124, (width - 24 - gap * (cols - 1)) / cols);
+		int chh = 62;
 		int rows = (places.size() + cols - 1) / cols;
 		int total = 40 + rows * (chh + gap) + 14;
 		int oy = Ui.centre(height, total);
 		Ui.heading(g, "Where to?", width / 2, oy + 4, Ui.TEXT, 1.5F, true);
 		g.centeredText(font, "Click a place to fly there.", width / 2, oy + 22, Ui.DIM);
-		int x0 = (width - (cols * cw + (cols - 1) * gap)) / 2;
 		int y0 = oy + 38;
 		boxes.clear();
 		for (int i = 0; i < places.size(); i++) {
 			Place pl = places.get(i);
+			int inRow = Math.min(cols, places.size() - (i / cols) * cols);
+			int x0 = (width - (inRow * cw + (inRow - 1) * gap)) / 2;
 			int x = x0 + (i % cols) * (cw + gap);
 			int y = y0 + (i / cols) * (chh + gap) + Math.round((1 - Ui.ease(opened + 40L * i, 220)) * 10);
 			boxes.add(new int[] {x, y, cw, chh});
 			boolean hover = Ui.inside(mouseX, mouseY, x, y, cw, chh);
 			Ui.card(g, x, y, cw, chh, ACCENT, Ui.hover("travel:" + pl.id(), hover));
-			Ui.inset(g, x + 5, y + 5, 24, 24);
-			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(pl.icon()))), x + 9, y + 9);
-			Ui.text(g, Ui.fit(pl.name(), cw - 40), x + 34, y + 7, hover ? 0xFFFFFFFF : ACCENT);
-			Ui.text(g, Ui.fit(pl.about(), cw - 40), x + 34, y + 19, Ui.DIM);
+			Ui.inset(g, x + cw / 2 - 12, y + 5, 24, 24);
+			g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(pl.icon()))), x + cw / 2 - 8, y + 9);
+			g.centeredText(font, Ui.fit(pl.name(), cw - 8), x + cw / 2, y + 33, hover ? 0xFFFFFFFF : ACCENT);
+			g.centeredText(font, Ui.fit(pl.about(), cw - 8), x + cw / 2, y + 46, Ui.DIM);
 		}
 		g.centeredText(font, "Esc to stay here", width / 2, y0 + rows * (chh + gap) + 2, Ui.MUTED);
 	}

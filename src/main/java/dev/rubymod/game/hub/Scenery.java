@@ -57,8 +57,15 @@ final class Scenery {
 	 * gently lit after dark (dimmer at Spooky Hollow, to keep it spooky).
 	 */
 	private static void glow(ServerLevel level) {
-		int[][] islands = {{0, 0, 23, 11}, {56, 2, 17, 12}, {44, -44, 11, 12}, {0, 56, 14, 12}, {-44, 44, 16, 12}, {-46, -34, 12, 11}, {-41, 6, 9, 11},
-			{44, 40, 16, 6}, {6, -63, 14, 12}, {-96, 6, 30, 12}, {84, 40, 22, 12}};
+		List<int[]> islands = new ArrayList<>();
+		islands.add(new int[] {0, 0, 23, 11});
+		islands.add(new int[] {-44, 44, 16, 12});
+		islands.add(new int[] {44, 40, 16, 6});
+		for (int[][] group : new int[][][] {FunPark.CIRCLES, SplashIsland.CIRCLES, Speedway.CIRCLES}) {
+			for (int[] c : group) {
+				islands.add(new int[] {c[0], c[1], c[2] - 1, 12});
+			}
+		}
 		for (int[] is : islands) {
 			BlockState light = Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, is[3]);
 			for (int x = -is[2]; x <= is[2]; x += 6) {
@@ -103,8 +110,8 @@ final class Scenery {
 
 	/** Little floating islets with a tree on top, below the park, filling the sky between the big islands. */
 	private static void islets(ServerLevel level) {
-		int[][] spots = {{36, 24, -9}, {-64, -14, -8}, {24, -82, -10}, {66, -24, -9}, {60, 72, -8}, {-66, 64, -10}, {-10, -106, -9}, {112, 8, -8},
-			{-114, 40, -9}, {-22, 84, -10}, {-30, -60, -12}, {100, -20, -11}};
+		int[][] spots = {{36, 30, -11}, {-64, -14, -8}, {60, 72, -8}, {-66, 64, -10}, {-22, 84, -10}, {-30, -60, -12}, {-10, -110, -9}, {140, -30, -9},
+			{-60, -70, -10}, {100, 80, -9}, {-150, 50, -10}, {130, -110, -11}};
 		var random = new java.util.Random(9);
 		for (int[] s : spots) {
 			int top = FLOOR + s[2];
@@ -195,18 +202,13 @@ final class Scenery {
 	// ----- Welcome signs -----
 
 	private static final String[][] SIGNS = {
-		{"Fun Park", "46.5", "5.5", "Ruby Rocket coaster (Rita)", "Big Wheel (Wally)", "Carousel (Cora)", "Bumper Cars (Buzz)", "Duck Shoot (Dot)",
-			"Bouncy Castle"},
-		{"Splash Tower", "37.5", "-40.5", "Lulu takes you to the top", "Tube slide (blue pad)", "Zip line (gold pad)", "Diving board and pool"},
-		{"Fishing Village", "6.5", "46.5", "Fishing (Captain Finn)", "Swan boats", "Swings and the splash pool", "The Big Catch Board"},
+		{"the Fun Park", "46.5", "5.5", "Ruby Rocket coaster (Rita)", "Bumper Cars (Buzz)", "The Swings (Skye)", "The Slingshot (Zip)", "Big Wheel (Wally)",
+			"Carousel (Cora)", "Drop Tower (Tess), Pirate Ship (Polly)", "Teacups (Mabel), Balloons (Barnaby)", "The Stage (DJ Remy)", "Games, prizes, bouncy castle"},
+		{"Splash Island", "54.5", "-76.5", "Splash Tower slides (Lulu)", "Flume Falls (Flo)", "Wave pool and lazy river", "Fishing (Captain Finn)", "Swan boats"},
 		{"Mini Golf", "-39.5", "57.5", "Four crazy holes (Gus)", "The Windmill, the Castle,", "the Volcano, Pirate Cove"},
-		{"The Stage", "-36.5", "-35.5", "Pick a song (DJ Remy)", "The dance floor", "The photo spot"},
 		{"Sky Parkour", "-21.5", "-36.5", "Jump across the sky (Pip)", "Gold blocks are checkpoints"},
-		{"Spooky Hollow", "29.5", "44.5", "The Haunted Mansion (Mortimer)", "...if you dare!"},
-		{"Flume Falls", "-4.5", "-60.5", "The Log Flume (Flo)", "The Splash Zone"},
-		{"Speedway", "-95.5", "22.5", "Go-kart races (Rex)", "The bridge, the jump, boost pads", "Tonight's records"},
-		{"Thrill Zone", "83.5", "38.5", "Drop Tower (Tess)", "Pirate Ship (Captain Polly)", "Teacups (Mabel)", "Balloon Tours (Barnaby)",
-			"Carnival games and prizes!"},
+		{"the Haunted Mansion", "29.5", "44.5", "Ride a doom buggy (Mortimer)", "...if you dare!"},
+		{"the Speedway", "-108.5", "-39.5", "Kart racing on ice (Rex)", "Blue strips = BOOST!", "Tonight's records"},
 	};
 
 	private static void signs(ServerLevel level) {

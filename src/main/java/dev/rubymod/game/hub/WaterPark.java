@@ -36,29 +36,35 @@ final class WaterPark {
 	private WaterPark() {
 	}
 
+	/** Laid out round (44, -44); built shifted by DX, DZ, on Splash Island. */
+	static final int DX = -14;
+	static final int DZ = -56;
 	static final int CX = 44;
 	static final int CZ = -44;
 	static final int TOP = FLOOR + 26;
-	private static final Vec3 BEACH = new Vec3(44.5, FLOOR + 1, -48.5);
-	private static final AABB POOL = new AABB(37, FLOOR - 3, -59, 52, FLOOR + 2, -49.5);
+	private static final Vec3 BEACH = new Vec3(44.5 + DX, FLOOR + 1, -48.5 + DZ);
+	private static final AABB POOL = new AABB(37 + DX, FLOOR - 3, -59 + DZ, 52 + DX, FLOOR + 2, -49.5 + DZ);
 
 	private static TrackRide twister;
 	private static TrackRide freeFall;
 	private static TrackRide raft;
 	private static TrackRide river;
-	private static final BlockPos TWISTER_PAD = new BlockPos(48, TOP, -44);
-	private static final BlockPos FALL_PAD = new BlockPos(40, TOP, -44);
-	private static final BlockPos RAFT_PAD = new BlockPos(44, TOP, -40);
+	private static final BlockPos TWISTER_PAD = new BlockPos(48 + DX, TOP, -44 + DZ);
+	private static final BlockPos FALL_PAD = new BlockPos(40 + DX, TOP, -44 + DZ);
+	private static final BlockPos RAFT_PAD = new BlockPos(44 + DX, TOP, -40 + DZ);
 	private static final Set<UUID> ON_PAD = new HashSet<>();
 	private static int tick;
 
 	static void build(ServerLevel level) {
+		HubPark.at(DX, DZ, () -> layout(level));
+	}
+
+	private static void layout(ServerLevel level) {
 		ON_PAD.clear();
-		HubPark.island(level, CX, CZ, 16, FLOOR);
 		HubPark.clear(level, CX - 19, FLOOR + 1, CZ - 19, CX + 19, FLOOR + 40, CZ + 19);
 		for (int x = -16; x <= 16; x++) {
 			for (int z = -16; z <= 16; z++) {
-				BlockPos p = new BlockPos(CX + x, FLOOR, CZ + z);
+				BlockPos p = new BlockPos(CX + x + DX, FLOOR, CZ + z + DZ);
 				if (level.getBlockState(p).is(Blocks.GRASS_BLOCK)) {
 					level.setBlock(p, Blocks.SAND.defaultBlockState(), 2);
 				}
@@ -70,7 +76,6 @@ final class WaterPark {
 		slides(level);
 		dress(level);
 		HubPark.label(level, CX + 0.5, TOP + 9, CZ + 0.5, "SPLASH TOWER", ChatFormatting.AQUA, 3.0F);
-		HubPark.travelPad(level, 36, FLOOR, -46, "tower");
 		HubHosts.add(level, new Vec3(CX + 0.5, FLOOR + 1, CZ + 6.5), 0, VillagerProfession.NITWIT, VillagerType.DESERT,
 				new HubHosts.Host("tower", "Lulu", "Splash Tower", 0x40C8FF, "minecraft:water_bucket",
 						"Up at the top of the tower there are three slides: step on BLUE for the Twister (fast, loops out over the sky), RED for "
@@ -85,7 +90,7 @@ final class WaterPark {
 							return b;
 						}, (p, key) -> {
 							if ("top".equals(key)) {
-								p.teleportTo(CX + 0.5, TOP + 1, CZ + 3.5);
+								p.teleportTo(CX + DX + 0.5, TOP + 1, CZ + DZ + 3.5);
 								p.setYRot(180);
 								p.resetFallDistance();
 								p.sendOverlayMessage(Component.literal("Blue: Twister.  Red: Free Fall.  Yellow: Family Raft.").withStyle(ChatFormatting.AQUA));
@@ -121,7 +126,7 @@ final class WaterPark {
 				double r = Math.hypot(x, z);
 				int bx = CX + x;
 				int bz = CZ + z;
-				if (POOL.contains(bx + 0.5, FLOOR - 1, bz + 0.5)) {
+				if (POOL.contains(bx + DX + 0.5, FLOOR - 1, bz + DZ + 0.5)) {
 					continue;
 				}
 				if (r >= 11 && r <= 14) {
@@ -140,12 +145,12 @@ final class WaterPark {
 		List<Vec3> ring = new ArrayList<>();
 		for (int i = 0; i <= 64; i++) {
 			double a = Math.PI / 2 + i * Math.PI * 2 / 64;
-			ring.add(new Vec3(CX + 0.5 + Math.cos(a) * 12.5, FLOOR + 0.75, CZ + 0.5 + Math.sin(a) * 12.5));
+			ring.add(new Vec3(CX + DX + 0.5 + Math.cos(a) * 12.5, FLOOR + 0.75, CZ + DZ + 0.5 + Math.sin(a) * 12.5));
 		}
 		List<Vec3> path = HubRides.even(ring, TrackRide.STEP);
 		double[] speed = new double[path.size()];
 		java.util.Arrays.fill(speed, 0.11);
-		river = new TrackRide("river", path, speed, "tube", 1.5F, new Vec3(44.5, FLOOR + 1, -35.5), "Lulu");
+		river = new TrackRide("river", path, speed, "tube", 1.5F, new Vec3(44.5 + DX, FLOOR + 1, -35.5 + DZ), "Lulu");
 		river.seatsPer = 1;
 		river.seatHeight = 0.15;
 		river.upright = true;
@@ -181,12 +186,12 @@ final class WaterPark {
 				HubPark.set(level, x, TOP + 1, z, rim && !gap ? Blocks.GLASS_PANE.defaultBlockState() : Blocks.AIR.defaultBlockState());
 			}
 		}
-		HubPark.set(level, TWISTER_PAD.getX(), TWISTER_PAD.getY(), TWISTER_PAD.getZ(), Blocks.GLAZED_TERRACOTTA.pick(DyeColor.BLUE).defaultBlockState());
-		HubPark.set(level, FALL_PAD.getX(), FALL_PAD.getY(), FALL_PAD.getZ(), Blocks.GLAZED_TERRACOTTA.pick(DyeColor.RED).defaultBlockState());
-		HubPark.set(level, RAFT_PAD.getX(), RAFT_PAD.getY(), RAFT_PAD.getZ(), Blocks.GLAZED_TERRACOTTA.pick(DyeColor.YELLOW).defaultBlockState());
-		HubPark.label(level, TWISTER_PAD.getX() + 0.5, TOP + 3, TWISTER_PAD.getZ() + 0.5, "THE TWISTER\nstep on the blue", ChatFormatting.AQUA, 0.8F);
-		HubPark.label(level, FALL_PAD.getX() + 0.5, TOP + 3, FALL_PAD.getZ() + 0.5, "FREE FALL\nstep on the red", ChatFormatting.RED, 0.8F);
-		HubPark.label(level, RAFT_PAD.getX() + 0.5, TOP + 3, RAFT_PAD.getZ() + 0.5, "FAMILY RAFT\nstep on the yellow", ChatFormatting.YELLOW, 0.8F);
+		HubPark.set(level, (TWISTER_PAD.getX() - DX), TWISTER_PAD.getY(), (TWISTER_PAD.getZ() - DZ), Blocks.GLAZED_TERRACOTTA.pick(DyeColor.BLUE).defaultBlockState());
+		HubPark.set(level, (FALL_PAD.getX() - DX), FALL_PAD.getY(), (FALL_PAD.getZ() - DZ), Blocks.GLAZED_TERRACOTTA.pick(DyeColor.RED).defaultBlockState());
+		HubPark.set(level, (RAFT_PAD.getX() - DX), RAFT_PAD.getY(), (RAFT_PAD.getZ() - DZ), Blocks.GLAZED_TERRACOTTA.pick(DyeColor.YELLOW).defaultBlockState());
+		HubPark.label(level, (TWISTER_PAD.getX() - DX) + 0.5, TOP + 3, (TWISTER_PAD.getZ() - DZ) + 0.5, "THE TWISTER\nstep on the blue", ChatFormatting.AQUA, 0.8F);
+		HubPark.label(level, (FALL_PAD.getX() - DX) + 0.5, TOP + 3, (FALL_PAD.getZ() - DZ) + 0.5, "FREE FALL\nstep on the red", ChatFormatting.RED, 0.8F);
+		HubPark.label(level, (RAFT_PAD.getX() - DX) + 0.5, TOP + 3, (RAFT_PAD.getZ() - DZ) + 0.5, "FAMILY RAFT\nstep on the yellow", ChatFormatting.YELLOW, 0.8F);
 		HubPark.box(level, CX, TOP + 1, CZ, CX, TOP + 4, CZ, Blocks.BIRCH_FENCE.defaultBlockState());
 		for (int dx = -3; dx <= 3; dx++) {
 			for (int dz = -3; dz <= 3; dz++) {
@@ -211,22 +216,22 @@ final class WaterPark {
 				Vec3 back = new Vec3(p.x - q.x, 0, p.z - q.z);
 				back = back.lengthSqr() < 1e-6 ? sd : back.normalize();
 				Vec3 w = p.add(back.scale(1.1));
-				HubPark.ifAir(level, (int) Math.floor(w.x), (int) Math.floor(p.y), (int) Math.floor(w.z), side);
+				HubPark.ifAir(level, (int) Math.floor(w.x) - HubPark.OX, (int) Math.floor(p.y), (int) Math.floor(w.z) - HubPark.OZ, side);
 				continue;
 			}
 			for (double w = -width; w <= width; w += 0.5) {
 				Vec3 f = p.add(sd.scale(w));
-				HubPark.ifAir(level, (int) Math.floor(f.x), fy, (int) Math.floor(f.z), floor);
+				HubPark.ifAir(level, (int) Math.floor(f.x) - HubPark.OX, fy, (int) Math.floor(f.z) - HubPark.OZ, floor);
 			}
 			for (int s : new int[] {-1, 1}) {
 				Vec3 r = p.add(sd.scale(s * (width + 1.05)));
-				HubPark.ifAir(level, (int) Math.floor(r.x), fy + 1, (int) Math.floor(r.z), side);
+				HubPark.ifAir(level, (int) Math.floor(r.x) - HubPark.OX, fy + 1, (int) Math.floor(r.z) - HubPark.OZ, side);
 				if (tube) {
-					HubPark.ifAir(level, (int) Math.floor(r.x), fy + 2, (int) Math.floor(r.z), side);
+					HubPark.ifAir(level, (int) Math.floor(r.x) - HubPark.OX, fy + 2, (int) Math.floor(r.z) - HubPark.OZ, side);
 				}
 			}
 			if (tube && i % 2 == 0) {
-				HubPark.ifAir(level, (int) Math.floor(p.x), fy + 3, (int) Math.floor(p.z), Blocks.STAINED_GLASS.pick(DyeColor.WHITE).defaultBlockState());
+				HubPark.ifAir(level, (int) Math.floor(p.x) - HubPark.OX, fy + 3, (int) Math.floor(p.z) - HubPark.OZ, Blocks.STAINED_GLASS.pick(DyeColor.WHITE).defaultBlockState());
 			}
 		}
 	}
@@ -234,7 +239,7 @@ final class WaterPark {
 	private static List<Vec3> path(double[][] c) {
 		List<Vec3> pts = new ArrayList<>();
 		for (double[] p : c) {
-			pts.add(new Vec3(p[0] + 0.5, FLOOR + 1 + p[2], p[1] + 0.5));
+			pts.add(new Vec3(p[0] + DX + 0.5, FLOOR + 1 + p[2], p[1] + DZ + 0.5));
 		}
 		return HubRides.spline(pts, TrackRide.STEP);
 	}
@@ -259,7 +264,7 @@ final class WaterPark {
 		twister.seatHeight = 0.15;
 		twister.waitTicks = 20;
 		chute(level, tw, 2, tw.size() - 4, Blocks.CONCRETE.pick(DyeColor.YELLOW).defaultBlockState(), Blocks.STAINED_GLASS.pick(DyeColor.LIGHT_BLUE).defaultBlockState(),
-				true, 0.5);
+				false, 0.5);
 		splashAtEnd(twister);
 		// Free Fall: off the west edge, nearly straight down, then out into the pool.
 		List<Vec3> ff = path(new double[][] {{40, -44, 26.2}, {37.5, -44, 25.5}, {36, -44, 22}, {34.6, -44, 8}, {34.5, -46, 3}, {36, -51, 1}, {39, -54, -0.25}});
@@ -375,11 +380,11 @@ final class WaterPark {
 					p.sendOverlayMessage(Component.literal("WAVE INCOMING!").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
 				}
 			}
-			level.playSound(null, BlockPos.containing(44.5, FLOOR, -55), dev.rubymod.registry.ModSounds.PARK_WAVES, SoundSource.AMBIENT, 1.5F, 1.0F);
+			level.playSound(null, BlockPos.containing(44.5 + DX, FLOOR, -55 + DZ), dev.rubymod.registry.ModSounds.PARK_WAVES, SoundSource.AMBIENT, 1.5F, 1.0F);
 		}
 		if (phase < 30 && phase % 2 == 0) {
-			double z = -59.5 + phase * 0.32;
-			for (double x = 37.5; x < 52; x += 1.0) {
+			double z = -59.5 + DZ + phase * 0.32;
+			for (double x = 37.5 + DX; x < 52 + DX; x += 1.0) {
 				level.sendParticles(ParticleTypes.SPLASH, x, FLOOR + 1, z, 3, 0.3, 0.1, 0.1, 0.1);
 			}
 			for (ServerPlayer p : level.players()) {

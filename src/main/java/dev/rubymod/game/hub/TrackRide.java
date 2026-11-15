@@ -40,6 +40,8 @@ final class TrackRide {
 	double seatHeight = Double.NaN;
 	/** How far up the model sits from the path (by default, half its size: its bottom on the path). */
 	double modelUp = Double.NaN;
+	/** The most the car tips nose-up or nose-down (degrees). */
+	double maxPitch = 90;
 	/** Stays level (the balloon) instead of tilting with the path. */
 	boolean upright;
 	/** Two seats side by side (the doom buggy) instead of one behind the other. */
@@ -149,6 +151,11 @@ final class TrackRide {
 			Display.BlockDisplay seat = HubPark.seat(level, p);
 			c.seats[s] = seat == null ? null : seat.getUUID();
 		}
+		// The car rides along with the first seat, so your game moves them together: the car never slides into you.
+		Entity first = c.seats[0] == null ? null : level.getEntity(c.seats[0]);
+		if (first != null) {
+			m.startRiding(first, true, true);
+		}
 		cars.add(c);
 		place(level, c);
 		return c;
@@ -211,7 +218,12 @@ final class TrackRide {
 		c.face = target;
 		c.faceUntil = (int) (c.d / STEP) + ahead;
 		for (ServerPlayer p : riders(level, c)) {
-			p.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, target);
+			// Never look steeply down (you'd just see the inside of the car).
+			Vec3 eye = p.getEyePosition();
+			double h = Math.hypot(target.x - eye.x, target.z - eye.z);
+			double low = eye.y - h * 0.36;
+			Vec3 look = target.y < low ? new Vec3(target.x, low, target.z) : target;
+			p.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, look);
 		}
 	}
 
@@ -273,12 +285,8 @@ final class TrackRide {
 			yaw = (float) Math.toDegrees(Math.atan2(-look.x, look.z));
 		}
 		float pitch = upright ? 0 : (float) -Math.toDegrees(Math.asin(Math.max(-1, Math.min(1, dir.y))));
-		Entity m = level.getEntity(c.model);
-		if (m != null) {
-			m.teleportTo(p.x, p.y, p.z);
-			m.setYRot(yaw);
-			m.setXRot(pitch);
-		}
+		pitch = (float) Math.max(-maxPitch, Math.min(maxPitch, pitch));
+		Vec3 seat0 = null;
 		Vec3 flat = new Vec3(dir.x, 0, dir.z).normalize();
 		Vec3 side = new Vec3(-flat.z, 0, flat.x);
 		for (int s = 0; s < seatsPer; s++) {
@@ -298,10 +306,32 @@ final class TrackRide {
 				}
 				seat.teleportTo(sp.x, sp.y, sp.z);
 				seat.setYRot(yaw);
+				if (s == 0) {
+					seat0 = sp;
+				}
 				for (Entity rider : seat.getPassengers()) {
 					rider.resetFallDistance();
 				}
 			}
+		}
+		Entity m = level.getEntity(c.model);
+		if (m instanceof Display d) {
+			Entity first = c.seats.length == 0 || c.seats[0] == null ? null : level.getEntity(c.seats[0]);
+			if (first != null && m.getVehicle() != first) {
+				m.startRiding(first, true, true);
+			}
+			if (m.getVehicle() == null || seat0 == null) {
+				m.teleportTo(p.x, p.y, p.z);
+				seat0 = p;
+			}
+			// The car's turn and tilt, and where its middle is from the seat it rides with.
+			org.joml.Quaternionf q = new org.joml.Quaternionf().rotateY((float) Math.toRadians(-yaw)).rotateX((float) Math.toRadians(pitch));
+			float up = (float) (Double.isNaN(modelUp) ? size / 2 : modelUp);
+			org.joml.Vector3f off = q.transform(new org.joml.Vector3f(0, up, 0)).add((float) (p.x - seat0.x), (float) (p.y - seat0.y), (float) (p.z - seat0.z));
+			((dev.rubymod.mixin.DisplayAccessor) d).rubymod$setTransformationInterpolationDelay(0);
+			((dev.rubymod.mixin.DisplayAccessor) d).rubymod$setTransformationInterpolationDuration(2);
+			((dev.rubymod.mixin.DisplayAccessor) d).rubymod$setTransformation(new com.mojang.math.Transformation(off,
+					new org.joml.Quaternionf(q).rotateY((float) Math.PI), new org.joml.Vector3f(size, size, size), new org.joml.Quaternionf()));
 		}
 	}
 
