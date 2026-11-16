@@ -63,6 +63,11 @@ final class TrackRide {
 	int waitTicks = 80;
 	/** A loop (the Park Train): cars can start anywhere on it and go once round, back to where they got on. */
 	boolean loop;
+	/** Cars that keep going with nobody on (the parade's floats, the train that's always running). */
+	boolean keepEmpty;
+	/** A different model for each car (the parade's floats): by the number of cars made so far. */
+	java.util.function.IntFunction<String> modelFor;
+	private int made;
 	/** Where someone who gets off goes, from where the car is (the nearest station): else the exit. */
 	java.util.function.Function<Vec3, Vec3> exitNear;
 	/** Things that happen as a car passes a point on the path (keyed by the point's index). */
@@ -76,6 +81,8 @@ final class TrackRide {
 		int wait = 80;
 		/** Stopped at a station for a while. */
 		int pause;
+		/** Keeps going with nobody on. */
+		boolean keep;
 		final Set<UUID> riders = new LinkedHashSet<>();
 		Vec3 pos = Vec3.ZERO;
 		/** Something the car turns to face for a while (a scene in the Haunted Mansion). */
@@ -162,6 +169,78 @@ final class TrackRide {
 		}
 	}
 
+	/** A car on its way with nobody on yet (it doesn't wait at the start). */
+	Car spawnEmpty(ServerLevel level, double from) {
+		Car c = spawn(level, from);
+		if (c != null) {
+			c.wait = 0;
+			c.keep = true;
+		}
+		return c;
+	}
+
+	/** Hop on whichever car is nearest {@code p} (within {@code within}) with a seat free. */
+	boolean boardNearest(ServerPlayer p, double within) {
+		ServerLevel level = (ServerLevel) p.level();
+		Car best = null;
+		for (Car c : cars) {
+			if (c.riders.size() < seatsPer && c.pos.distanceTo(p.position()) < within
+					&& (best == null || c.pos.distanceTo(p.position()) < best.pos.distanceTo(p.position()))) {
+				best = c;
+			}
+		}
+		if (best == null || riding(p)) {
+			return false;
+		}
+		Entity seat = level.getEntity(best.seats[best.riders.size()]);
+		if (seat == null) {
+			return false;
+		}
+		if (p.isPassenger()) {
+			p.stopRiding();
+		}
+		p.startRiding(seat, true, true);
+		HubRides.faceSeat(p, seat);
+		best.riders.add(p.getUUID());
+		if (onBoard != null) {
+			onBoard.accept(p);
+		}
+		p.sendOverlayMessage(Component.literal("All aboard! (crouch to get off)").withStyle(ChatFormatting.LIGHT_PURPLE));
+		return true;
+	}
+
+	/** Which car, if any, is stopped at distance {@code at} along the path (for the train that's always running). */
+	Car stoppedAt(double at) {
+		for (Car c : cars) {
+			double d = loop ? Math.floorMod((long) Math.round((c.d - at) / STEP), (long) (path.size() - 1)) : Math.abs(c.d - at) / STEP;
+			if (c.pause > 0 && (d < 12 || d > path.size() - 13) && c.riders.size() < seatsPer) {
+				return c;
+			}
+		}
+		return null;
+	}
+
+	/** Get on a particular car (one that's stopped at your station). */
+	boolean boardCar(ServerPlayer p, Car c) {
+		ServerLevel level = (ServerLevel) p.level();
+		if (riding(p) || c.riders.size() >= seatsPer) {
+			return false;
+		}
+		Entity seat = level.getEntity(c.seats[c.riders.size()]);
+		if (seat == null) {
+			return false;
+		}
+		if (p.isPassenger()) {
+			p.stopRiding();
+		}
+		p.startRiding(seat, true, true);
+		HubRides.faceSeat(p, seat);
+		c.riders.add(p.getUUID());
+		c.pause = Math.max(c.pause, 60);
+		p.sendOverlayMessage(Component.literal("All aboard! (crouch to get off)").withStyle(ChatFormatting.LIGHT_PURPLE));
+		return true;
+	}
+
 	boolean riding(ServerPlayer p) {
 		for (Car c : cars) {
 			if (c.riders.contains(p.getUUID())) {
@@ -178,7 +257,8 @@ final class TrackRide {
 		c.d = from;
 		c.start = from;
 		Vec3 p = at(from);
-		Display.ItemDisplay m = HubPark.tempModel(level, p, 0, model, size, (float) (Double.isNaN(modelUp) ? size / 2 : modelUp));
+		Display.ItemDisplay m = HubPark.tempModel(level, p, 0, modelFor != null ? modelFor.apply(made++) : model, size,
+				(float) (Double.isNaN(modelUp) ? size / 2 : modelUp));
 		if (m == null) {
 			return null;
 		}
@@ -213,7 +293,7 @@ final class TrackRide {
 				}
 			}
 			if (c.wait > 0) {
-				if (c.riders.isEmpty()) {
+				if (c.riders.isEmpty() && !c.keep) {
 					remove(level, c);
 					it.remove();
 					continue;
@@ -226,7 +306,7 @@ final class TrackRide {
 				continue;
 			}
 			if (c.pause > 0) {
-				if (c.riders.isEmpty()) {
+				if (c.riders.isEmpty() && !c.keep) {
 					remove(level, c);
 					it.remove();
 					continue;
@@ -244,6 +324,16 @@ final class TrackRide {
 				if (e != null) {
 					e.accept(level, c);
 				}
+			}
+			if (c.keep && loop && c.d >= c.start + length()) {
+				for (UUID id : new ArrayList<>(c.riders)) {
+					ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
+					if (p != null) {
+						letOff(p, again != null ? again : "Talk to " + hostName + " to ride again!", c.pos);
+					}
+				}
+				c.riders.clear();
+				c.start = c.d;
 			}
 			if (c.d >= c.start + length()) {
 				for (UUID id : new ArrayList<>(c.riders)) {

@@ -4565,6 +4565,8 @@ public final class AutoTest {
 			case "audit" -> auditScript();
 			case "labelcheck" -> labelCheckScript();
 			case "recheck" -> recheckScript();
+			case "newlook" -> newLookScript();
+			case "ridetest" -> rideTestScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5491,6 +5493,213 @@ public final class AutoTest {
 		then(100, mc -> shot(mc, "new-night-coaster"));
 	}
 
+	/** The plunge and the cable car, closely: where the rider is, every few ticks. */
+	private static void rideTestScript() {
+		then(0, mc -> command(mc, "time set noon"));
+		then(40, mc -> tpHub(mc, "4.5 101 13.5"));
+		then(200, mc -> talk(mc, 4.5, 101, 11.5));
+		then(20, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			tpHub(mc, "-10.5 101 -12.5");
+		});
+		then(60, mc -> {
+			var vs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, mc.player.getBoundingBox().inflate(40),
+					v -> v.getCustomName() != null && v.getCustomName().getString().contains("Gil"));
+			log("ridetest: gil first {}", vs.isEmpty() ? "none" : vs.get(0).position());
+			for (var v : mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, mc.player.getBoundingBox().inflate(30))) {
+				log("ridetest: villager {} at {}", v.getCustomName() == null ? "?" : v.getCustomName().getString(), v.position());
+			}
+			if (!vs.isEmpty()) {
+				var g = vs.get(0);
+				tpHub(mc, (g.getX() + 1.5) + " " + g.getY() + " " + g.getZ() + " facing " + g.getX() + " " + (g.getY() + 1.5) + " " + g.getZ());
+			}
+		});
+		then(40, mc -> {
+			var vs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, mc.player.getBoundingBox().inflate(4),
+					v -> v.getCustomName() != null && v.getCustomName().getString().contains("Gil"));
+			if (!vs.isEmpty()) {
+				mc.gameMode.interact(mc.player, vs.get(0), new net.minecraft.world.phys.EntityHitResult(vs.get(0)), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(20, mc -> press(mc, "play"));
+		then(200, mc -> log("ridetest cable first: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK));
+		then(5, mc -> shot(mc, "rt-cable1"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+		then(300, mc -> log("ridetest cable first: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		then(40, mc -> tpHub(mc, "103.5 101 -126.5"));
+		then(100, mc -> talk(mc, 102.5, 101, -128.5));
+		then(20, mc -> press(mc, "play"));
+		for (int k = 0; k < 70; k++) {
+			then(4, mc -> log("ridetest plunge: riding {} at {} msg {}", mc.player.isPassenger(), mc.player.position(), ""));
+		}
+		then(5, mc -> {
+			var vs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, new net.minecraft.world.phys.AABB(-40, 90, -40, 10, 110, 10),
+					v -> v.getCustomName() != null && v.getCustomName().getString().contains("Gil"));
+			log("ridetest: gil {}", vs.isEmpty() ? "none" : vs.get(0).position());
+			if (!vs.isEmpty()) {
+				var g = vs.get(0);
+				tpHub(mc, (g.getX() + 1.5) + " " + g.getY() + " " + g.getZ() + " facing " + g.getX() + " " + (g.getY() + 1.5) + " " + g.getZ());
+			}
+		});
+		then(60, mc -> {
+			var vs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, mc.player.getBoundingBox().inflate(4),
+					v -> v.getCustomName() != null && v.getCustomName().getString().contains("Gil"));
+			if (!vs.isEmpty()) {
+				mc.gameMode.interact(mc.player, vs.get(0), new net.minecraft.world.phys.EntityHitResult(vs.get(0)), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(20, mc -> press(mc, "play"));
+		for (int k = 0; k < 12; k++) {
+			then(30, mc -> log("ridetest cable: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		}
+		then(5, mc -> {
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+		});
+		then(5, mc -> shot(mc, "rt-cable"));
+		then(5, mc -> {
+			mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+			tpHub(mc, "-12.5 101 -9.5 facing -14 102.5 -9.5");
+		});
+		then(200, mc -> talk(mc, -14.0, 101, -9.5));
+		then(30, mc -> press(mc, "play"));
+		then(100, mc -> log("ridetest cable last: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+	}
+
+	/** The eight new things: bridges, cable car, bandstand, buskers, eggs, gardens, Rubi, the rainbow, the plunge, the tunnel, the parade. */
+	private static void newLookScript() {
+		then(0, mc -> command(mc, "time set noon"));
+		String[][] views = {{"28 106 6 facing 34 101 -2", "n01-bridge"}, {"-6 108 -6 facing -14 108 -14", "n02-cabletower"},
+			{"-30 118 -20 facing -50 112 -30", "n03-cable"}, {"56 107 -88 facing 66 103 -98", "n04-bandstand"}, {"-60 103 -91 facing -57 102 -94", "n05-busker"},
+			{"5 103 12 facing 0 102 0", "n06-plaza"}, {"-82 103 -55 facing -82 102 -58", "n07-garden"}, {"-80 102 -63 facing -81 102 -66", "n08-starter"},
+			{"96 108 -118 facing 116 96 -131", "n09-plunge"}, {"130 80 -120 facing 120 72 -132", "n10-pool"}, {"-74 126 -26 facing -84 122 -37", "n11-tunnel"},
+			{"0 150 30 facing -20 100 -40", "n12-overview"}};
+		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(200, mc -> command(mc, "gamemode creative @a"));
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			mc.player.onUpdateAbilities();
+			tpHub(mc, views[0][0]);
+		});
+		for (int k = 0; k < views.length; k++) {
+			int n = k;
+			then(80, mc -> {
+				mc.player.getAbilities().flying = true;
+				shot(mc, views[n][1]);
+				if (n + 1 < views.length) {
+					tpHub(mc, views[n + 1][0]);
+				}
+			});
+		}
+		// The nearest golden egg: go and pick it up.
+		then(5, mc -> {
+			net.minecraft.world.entity.Display.ItemDisplay best = null;
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof net.minecraft.world.entity.Display.ItemDisplay d
+						&& String.valueOf(d.getItemStack().get(net.minecraft.core.component.DataComponents.ITEM_MODEL)).contains("golden_egg")
+						&& (best == null || d.distanceTo(mc.player) < best.distanceTo(mc.player))) {
+					best = d;
+				}
+			}
+			log("newlook: egg {}", best == null ? "none" : best.position());
+			if (best != null) {
+				tpHub(mc, (best.getX() + 2.5) + " " + (best.getY() + 1) + " " + best.getZ() + " facing " + best.getX() + " " + best.getY() + " " + best.getZ());
+				EGG[0] = best.position();
+			}
+		});
+		then(40, mc -> shot(mc, "n13-egg"));
+		then(5, mc -> {
+			command(mc, "gamemode adventure @a");
+			if (EGG[0] != null) {
+				tpHub(mc, EGG[0].x + " " + (EGG[0].y - 0.3) + " " + EGG[0].z);
+			}
+		});
+		then(30, mc -> log("newlook: after the egg, holding {}", mc.player.getMainHandItem().getHoverName().getString()));
+		// Rubi: a hug.
+		then(5, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(60, mc -> {
+			var hugs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Interaction.class, mc.player.getBoundingBox().inflate(25));
+			log("newlook: rubi hug boxes {}", hugs.size());
+			if (!hugs.isEmpty()) {
+				var h = hugs.get(0);
+				tpHub(mc, (h.getX() + 2) + " 101 " + h.getZ() + " facing " + h.getX() + " 102.5 " + h.getZ());
+			}
+		});
+		then(20, mc -> {
+			var hugs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Interaction.class, mc.player.getBoundingBox().inflate(6));
+			if (!hugs.isEmpty()) {
+				mc.gameMode.interact(mc.player, hugs.get(0), new net.minecraft.world.phys.EntityHitResult(hugs.get(0)), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(15, mc -> shot(mc, "n14-rubi"));
+		// The cable car.
+		then(5, mc -> tpHub(mc, "-8.5 101 -14.5"));
+		then(60, mc -> {
+			var vs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, mc.player.getBoundingBox().inflate(14),
+					v -> v.getCustomName() != null && v.getCustomName().getString().contains("Gil"));
+			log("newlook: gil {}", vs.size());
+			if (!vs.isEmpty()) {
+				mc.gameMode.interact(mc.player, vs.get(0), new net.minecraft.world.phys.EntityHitResult(vs.get(0)), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(20, mc -> press(mc, "play"));
+		then(200, mc -> {
+			log("newlook: cable riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+		});
+		then(10, mc -> shot(mc, "n15-cableride"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+		then(260, mc -> log("newlook: cable riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// The plunge.
+		then(5, mc -> tpHub(mc, "103.5 101 -126.5"));
+		then(60, mc -> talk(mc, 102.5, 101, -128.5));
+		then(20, mc -> press(mc, "play"));
+		then(120, mc -> {
+			log("newlook: plunge riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+		});
+		then(40, mc -> shot(mc, "n16-plunge-edge"));
+		then(30, mc -> {
+			log("newlook: plunge at {}", mc.player.position());
+			shot(mc, "n17-plunge-drop");
+		});
+		then(40, mc -> {
+			log("newlook: plunge at {}", mc.player.position());
+			shot(mc, "n18-plunge-pool");
+			mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+		});
+		// The parade, at night.
+		then(400, mc -> {
+			log("newlook: plunge done riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			command(mc, "time set 13600");
+			command(mc, "gamemode creative @a");
+		});
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			mc.player.onUpdateAbilities();
+			tpHub(mc, "-70 107 -42 facing -80 102 -52");
+		});
+		then(500, mc -> shot(mc, "n19-parade"));
+		then(5, mc -> tpHub(mc, "-62 107 -62 facing -62 102 -80"));
+		then(200, mc -> shot(mc, "n20-parade2"));
+		then(5, mc -> {
+			command(mc, "gamemode adventure @a");
+			tpHub(mc, "-57.5 101 -89.5");
+		});
+		then(40, mc -> talk(mc, -56.5, 101, -91.5));
+		then(20, mc -> press(mc, "ride"));
+		then(60, mc -> {
+			log("newlook: float riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+		});
+		then(10, mc -> shot(mc, "n21-float"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+	}
+
+	private static final net.minecraft.world.phys.Vec3[] EGG = new net.minecraft.world.phys.Vec3[1];
+
 	/** Another look at the spots that were fixed. */
 	private static void recheckScript() {
 		then(0, mc -> command(mc, "time set noon"));
@@ -5691,7 +5900,7 @@ public final class AutoTest {
 		then(5, mc -> tpHub(mc, "-18.5 101 1.5"));
 		then(20, mc -> command(mc, "gamemode adventure @a"));
 		then(200, mc -> {
-			var vs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, mc.player.getBoundingBox().inflate(20),
+			var vs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, mc.player.getBoundingBox().inflate(40),
 					v -> v.getCustomName() != null && v.getCustomName().getString().contains("Conductor"));
 			log("trainlook: conductors near {}", vs.size());
 			if (!vs.isEmpty()) {

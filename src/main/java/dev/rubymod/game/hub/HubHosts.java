@@ -139,6 +139,15 @@ public final class HubHosts {
 		HOSTS.add(new Placed(host, v.getUUID(), at));
 	}
 
+	static boolean isHost(Entity e) {
+		for (Placed h : HOSTS) {
+			if (h.entity().equals(e.getUUID())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** Right-clicked something in the hub: if it's a host, open their card. */
 	static boolean clicked(ServerPlayer p, Entity e) {
 		for (Placed h : HOSTS) {

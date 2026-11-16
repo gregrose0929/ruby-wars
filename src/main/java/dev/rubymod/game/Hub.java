@@ -589,7 +589,7 @@ public final class Hub {
 			if (player.gameMode.getGameModeForPlayer() == GameType.SURVIVAL || player.isSpectator()) {
 				player.setGameMode(GameType.ADVENTURE);
 			}
-			if (player.getY() < FLOOR - 24) {
+			if (player.getY() < FLOOR - 24 && !player.isPassenger()) {
 				player.teleportTo(hub, 0.5, FLOOR + 1, SPAWN_Z + 0.5, Set.<Relative>of(), 180.0F, 0.0F, true);
 				player.resetFallDistance();
 			}

@@ -13,6 +13,7 @@ import dev.rubymod.mixin.DisplayAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Display;
@@ -77,6 +78,7 @@ final class ParkTrain {
 
 	static void build(ServerLevel level) {
 		clearOldTrack(level);
+		clearTunnel(level);
 		for (int s = 0; s < STATIONS.length; s++) {
 			LAND[s] = ground(level, STATIONS[s].ground(), null);
 			HOST[s] = ground(level, LAND[s].add(2, 0, 0), LAND[s]);
@@ -167,6 +169,9 @@ final class ParkTrain {
 		}
 		// A toot as it sets off.
 		train.events.put(8, (lv, car) -> lv.playSound(null, BlockPos.containing(car.pos), SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), SoundSource.AMBIENT, 1.5F, 1.6F));
+		// One train's always going round (stopping at every station); and the tunnel.
+		train.spawnEmpty(level, 0);
+		tunnel(level, path);
 		track(level, path);
 		for (int s = 0; s < STATIONS.length; s++) {
 			station(level, s);
@@ -437,7 +442,100 @@ final class ParkTrain {
 						"All aboard the Park Train! It puffs round the whole park, high in the sky, stopping at every island. "
 								+ "Crouch at any station to get off there, or stay on and go all the way round. Four seats: bring your friends!",
 						"Park Train: right-click the Conductor to ride!", HubHosts.rideButtons("All aboard!"),
-						(p, key) -> train.board(p, HubHosts.group(p, key), STOP_AT[s])));
+						(p, key) -> {
+							// The train that's always running, if it's in the station: hop on. Else a train just for you.
+							TrackRide.Car here = train.stoppedAt(STOP_AT[s]);
+							if (here != null) {
+								for (ServerPlayer q : HubHosts.group(p, key)) {
+									train.boardCar(q, here);
+								}
+							} else {
+								train.board(p, HubHosts.group(p, key), STOP_AT[s]);
+							}
+						}));
+	}
+
+	// ----- The tunnel -----
+
+	/** Where the tunnel's little mountain floats: over the line between Home Street and the Speedway. */
+	private static final int TX = -84;
+	private static final int TZ = -38;
+
+	/** Last time's mountain goes before the line's height is worked out (else the line would climb over it). */
+	private static void clearTunnel(ServerLevel level) {
+		for (int x = TX - 12; x <= TX + 12; x++) {
+			for (int z = TZ - 12; z <= TZ + 12; z++) {
+				for (int y = FLOOR + 10; y <= FLOOR + 56; y++) {
+					BlockPos p = new BlockPos(x, y, z);
+					BlockState s = level.getBlockState(p);
+					if (s.is(Blocks.STONE) || s.is(Blocks.ANDESITE) || s.is(Blocks.MOSSY_COBBLESTONE) || s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT)
+							|| s.is(Blocks.STONE_BRICKS) || s.is(Blocks.LIGHT) || s.is(Blocks.AZALEA) || s.is(Blocks.FLOWERING_AZALEA) || s.is(Blocks.MOSS_BLOCK)
+							|| s.is(Blocks.SHORT_GRASS) || s.is(Blocks.LANTERN)) {
+						level.setBlock(p, Blocks.AIR.defaultBlockState(), 18);
+					}
+				}
+			}
+		}
+	}
+
+	/** A little rocky mountain floating round the line, with a tunnel through it (stone arches at each end, lit inside). */
+	private static void tunnel(ServerLevel level, List<Vec3> path) {
+		int c = 0;
+		for (int i = 0; i < path.size(); i++) {
+			if (Math.hypot(path.get(i).x - TX, path.get(i).z - TZ) < Math.hypot(path.get(c).x - TX, path.get(c).z - TZ)) {
+				c = i;
+			}
+		}
+		Vec3 mid = path.get(c);
+		double cy = height + 1.5;
+		for (int dx = -9; dx <= 9; dx++) {
+			for (int dz = -9; dz <= 9; dz++) {
+				for (int dy = -7; dy <= 8; dy++) {
+					double e = (dx * dx) / 64.0 + (dz * dz) / 64.0 + (dy * dy) / (dy < 0 ? 40.0 : 30.0);
+					double wob = Math.sin((mid.x + dx) * 0.9) * Math.cos((mid.z + dz) * 0.8) * 0.12;
+					if (e > 1 + wob) {
+						continue;
+					}
+					BlockPos p = BlockPos.containing(mid.x + dx, cy + dy, mid.z + dz);
+					// The bore: the train's way through.
+					double side = 99;
+					for (int k = Math.max(0, c - 70); k < Math.min(path.size(), c + 70); k += 2) {
+						Vec3 q = path.get(k);
+						side = Math.min(side, Math.hypot(q.x - (p.getX() + 0.5), q.z - (p.getZ() + 0.5)));
+					}
+					if (side < 2.3 && p.getY() >= height - 1 && p.getY() <= height + 3) {
+						if (p.getY() == height + 3 && (p.getX() + p.getZ()) % 4 == 0) {
+							level.setBlock(p, Blocks.LIGHT.defaultBlockState(), 2);
+						}
+						continue;
+					}
+					boolean top = e > 0.78 && dy > 1;
+					boolean arch = side < 3.4 && p.getY() >= height - 1 && p.getY() <= height + 4;
+					BlockState s = arch ? Blocks.STONE_BRICKS.defaultBlockState() : top ? Blocks.GRASS_BLOCK.defaultBlockState()
+							: (p.getX() * 7 + p.getY() * 3 + p.getZ() * 5) % 9 == 0 ? Blocks.ANDESITE.defaultBlockState()
+									: (p.getX() + p.getY() * 2 + p.getZ()) % 11 == 0 ? Blocks.MOSSY_COBBLESTONE.defaultBlockState() : Blocks.STONE.defaultBlockState();
+					level.setBlock(p, s, 2);
+				}
+			}
+		}
+		// Bushes and flowers on top.
+		for (int dx = -8; dx <= 8; dx++) {
+			for (int dz = -8; dz <= 8; dz++) {
+				for (int y = (int) cy + 9; y > (int) cy; y--) {
+					BlockPos p = BlockPos.containing(mid.x + dx, y, mid.z + dz);
+					if (level.getBlockState(p).is(Blocks.GRASS_BLOCK)) {
+						BlockPos up = p.above();
+						int h = Math.floorMod(p.getX() * 31 + p.getZ() * 17, 10);
+						if (level.getBlockState(up).isAir()) {
+							level.setBlock(up, h == 0 ? Blocks.FLOWERING_AZALEA.defaultBlockState() : h < 4 ? Blocks.SHORT_GRASS.defaultBlockState()
+									: Blocks.AIR.defaultBlockState(), 2);
+						}
+						break;
+					}
+				}
+			}
+		}
+		dev.rubymod.RubyMod.LOGGER.info("Park Train: tunnel at {} {}", (int) mid.x, (int) mid.z);
 	}
 
 	/** A point in a station's own axes (u along the track, v across to the platform side). */

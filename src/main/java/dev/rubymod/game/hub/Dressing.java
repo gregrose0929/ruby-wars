@@ -58,6 +58,11 @@ final class Dressing {
 		int phase;
 	}
 
+	/** The first waterfall (for the rainbow). */
+	static Vec3 firstFall() {
+		return FALLS.isEmpty() ? null : FALLS.get(0);
+	}
+
 	static void reset() {
 		FALLS.clear();
 		BALLOONS.clear();

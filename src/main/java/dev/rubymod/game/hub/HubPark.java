@@ -232,7 +232,7 @@ public final class HubPark {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
 			}
-			if (HubHosts.clicked(sp, entity) || Pets.clicked(sp, entity) || Toyland.pet(sp, entity)) {
+			if (HubHosts.clicked(sp, entity) || Pets.clicked(sp, entity) || Toyland.pet(sp, entity) || Wonder.clicked(sp, entity)) {
 				return InteractionResult.SUCCESS;
 			}
 			if (HubRides.mountSwing(sp, entity)) {
@@ -674,6 +674,12 @@ public final class HubPark {
 		ParkTrain.reset();
 		SkyTours.reset();
 		Dressing.reset();
+		Bridges.reset();
+		Music.reset();
+		Parade.reset();
+		Eggs.reset();
+		Wonder.reset();
+		Plunge.reset();
 		plaza(level);
 		FunPark.build(level);
 		BumperBoats.build(level);
@@ -703,6 +709,9 @@ public final class HubPark {
 		Scenery.build(level);
 		ParkTrain.build(level);
 		SkyTours.build(level);
+		Bridges.build(level);
+		Parade.build(level);
+		Plunge.build(level);
 		// Last of all: nothing solid near a rider's head, on any ride.
 		for (TrackRide r : TrackRide.ALL) {
 			int n = r.clearHeadroom(level);
@@ -713,7 +722,10 @@ public final class HubPark {
 		Coaster.clearHeadroom(level);
 		// (the green arrows on the ground are gone: they looked messy)
 		plazaLights(level);
+		Music.build(level);
 		Dressing.build(level);
+		Eggs.build(level);
+		Wonder.build(level, Dressing.firstFall());
 
 	}
 
@@ -1136,6 +1148,13 @@ public final class HubPark {
 		ParkTrain.tick(level);
 		SkyTours.tick(level);
 		Dressing.tick(level, tick);
+		Bridges.tick(level);
+		Music.tick(level);
+		Parade.tick(level);
+		Eggs.tick(level);
+		HomeStreet.tick(level, tick);
+		Wonder.tick(level);
+		Plunge.tick(level);
 		if (Museum.near(level)) {
 			Museum.tick(level, tick);
 		}

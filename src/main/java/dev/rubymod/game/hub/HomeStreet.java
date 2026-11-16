@@ -159,6 +159,7 @@ public final class HomeStreet {
 		furn("jukebox", "Record Player", Items.JUKEBOX, one(Blocks.JUKEBOX.defaultBlockState()));
 		furn("cake", "Cake", Items.CAKE, one(Blocks.CAKE.defaultBlockState()));
 		furn("fridge", "Fridge", Items.IRON_BLOCK, stack(Blocks.IRON_BLOCK.defaultBlockState(), Blocks.IRON_BLOCK.defaultBlockState()));
+		furn("pet_bed", "Pet Bed", Items.WOOL_SLAB.pick(DyeColor.RED), one(Blocks.WOOL_SLAB.pick(DyeColor.RED).defaultBlockState()));
 		furn("tv", "Telly", Items.COAL_BLOCK,
 				f -> List.of(new Part(0, 0, 0, Blocks.SPRUCE_SLAB.defaultBlockState()), new Part(0, 1, 0, Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState())));
 	}
@@ -182,6 +183,8 @@ public final class HomeStreet {
 		int wall;
 		int floor;
 		final List<Placed> furniture = new ArrayList<>();
+		/** The front garden: cell number to {what's planted, the game time it was planted}. */
+		final Map<Integer, String[]> garden = new HashMap<>();
 	}
 
 	/** A house: its corner (x0, z0, 9x9 outside, 7x7 inside), and whether it's on the north side (door to the south). */
@@ -237,6 +240,8 @@ public final class HomeStreet {
 		SHOP.clear();
 		MOVE_OUT.clear();
 		load(level);
+		loadMail(level);
+		java.util.Arrays.fill(FLAGS, null);
 		HubPark.blob(level, CIRCLES, FLOOR);
 		street(level);
 		square(level);
@@ -248,6 +253,29 @@ public final class HomeStreet {
 		MainStreet.build(level);
 		Museum.build(level);
 		HubPark.travelPad(level, -62, FLOOR, -42, "home");
+		HubHosts.add(level, new Vec3(-65.5, FLOOR + 1, -44.5), 0, VillagerProfession.FARMER, VillagerType.PLAINS,
+				new HubHosts.Host("garden", "Rosie", "Gardener", 0x60C040, "minecraft:wheat_seeds",
+						"Every house has a little garden out the front! Take some seeds, right-click your garden to plant them, and in a few "
+								+ "minutes they'll be ready to pick: carrots, potatoes, bread from your wheat, beetroot soup, or a bunch of flowers. "
+								+ "You can post what you grow to someone: hold it and right-click their red mailbox!",
+						"Seeds: right-click Rosie!", p -> {
+							List<String> b = new ArrayList<>();
+							for (int i = 0; i < CROPS.length; i++) {
+								b.add(CROPS[i] + "|" + CROP_NAMES[i]);
+							}
+							return b;
+						}, (p, key) -> {
+							int i = java.util.Arrays.asList(CROPS).indexOf(key);
+							if (i < 0) {
+								return;
+							}
+							ItemStack s = HubGames.toy(CROP_ICONS[i], 1, CROP_NAMES[i], ChatFormatting.GREEN);
+							CompoundTag tag = s.get(DataComponents.CUSTOM_DATA).copyTag();
+							tag.putString(SEED, key);
+							s.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+							HubGames.give(p, s);
+							p.sendOverlayMessage(Component.literal("Here you go! Right-click the soil in front of your house to plant them.").withStyle(ChatFormatting.GREEN));
+						}));
 		HubPark.label(level, -61.5, FLOOR + 7, -38.5, "HOME STREET", ChatFormatting.GOLD, 2.6F);
 		HubPark.label(level, -61.5, FLOOR + 5.6, -38.5, "Pick a house with a red mailbox, and make it yours!", ChatFormatting.WHITE, 0.8F);
 	}
@@ -402,11 +430,11 @@ public final class HomeStreet {
 	private static void bunting(ServerLevel level) {
 		List<Vec3[]> strings = new ArrayList<>();
 		for (int z = -116; z <= -64; z += 9) {
-			strings.add(new Vec3[] {new Vec3(-66.5, FLOOR + 4.7, z + 0.5), new Vec3(-56.5, FLOOR + 4.7, z + 0.5)});
+			strings.add(new Vec3[] {new Vec3(-66.5, FLOOR + 5.9, z + 0.5), new Vec3(-56.5, FLOOR + 5.9, z + 0.5)});
 		}
 		for (int x = -86; x <= -38; x += 8) {
 			if (x < -67 || x > -57) {
-				strings.add(new Vec3[] {new Vec3(x + 0.5, FLOOR + 4.7, -56.5), new Vec3(x + 0.5, FLOOR + 4.7, -46.5)});
+				strings.add(new Vec3[] {new Vec3(x + 0.5, FLOOR + 5.9, -56.5), new Vec3(x + 0.5, FLOOR + 5.9, -46.5)});
 			}
 		}
 		DyeColor[] flags = {DyeColor.RED, DyeColor.YELLOW, DyeColor.LIGHT_BLUE, DyeColor.LIME, DyeColor.PINK, DyeColor.ORANGE};
@@ -419,7 +447,7 @@ public final class HomeStreet {
 			boolean alongX = Math.abs(b.x - a.x) > Math.abs(b.z - a.z);
 			for (int i = 1; i <= steps; i++) {
 				double t = i / (double) steps;
-				Vec3 p = a.lerp(b, t).add(0, -Math.sin(t * Math.PI) * 1.1, 0);
+				Vec3 p = a.lerp(b, t).add(0, -Math.sin(t * Math.PI) * 0.6, 0);
 				HubPark.beam(level, last, p, 0.04F, 0.04F, Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState());
 				if (i < steps) {
 					org.joml.Quaternionf rot = alongX ? new org.joml.Quaternionf().rotateZ((float) Math.PI / 4) : new org.joml.Quaternionf().rotateX((float) Math.PI / 4);
@@ -533,9 +561,233 @@ public final class HomeStreet {
 		HubPark.set(level, mb.getX(), FLOOR + 1, mb.getZ(), Blocks.OAK_FENCE.defaultBlockState());
 		HubPark.set(level, mb.getX(), mb.getY(), mb.getZ(), Blocks.CONCRETE.pick(DyeColor.RED).defaultBlockState());
 		nameLabel(level, h);
+		if (home.furniture.isEmpty()) {
+			starter(h, home);
+		}
 		for (Placed f : home.furniture) {
 			put(level, h, f);
 		}
+		garden(level, h, home);
+		mailFlag(level, h);
+	}
+
+	/** A new house isn't bare: a bed, a table and chair, a rug, a lamp, a bookshelf, a plant and a pet bed. */
+	private static void starter(House h, Home home) {
+		boolean n = h.north();
+		Direction back = n ? Direction.NORTH : Direction.SOUTH;
+		int[][] spots = {{2, 2}, {5, 3}, {4, 3}, {4, 5}, {7, 1}, {1, 6}, {7, 6}, {6, 5}};
+		String[] what = {"bed_red", "table", "chair", "rug_red", "lamp", "bookshelf", "pot_poppy", "pet_bed"};
+		Direction[] facing = {back, Direction.NORTH, Direction.EAST, Direction.NORTH, Direction.NORTH, Direction.NORTH, Direction.NORTH, Direction.NORTH};
+		for (int i = 0; i < what.length; i++) {
+			int dz = n ? spots[i][1] : 8 - spots[i][1];
+			home.furniture.add(new Placed(what[i], spots[i][0], 1, dz, facing[i]));
+		}
+	}
+
+	// ----- Gardens -----
+
+	private static final String SEED = "rubymod_seed";
+	private static final String[] CROPS = {"carrots", "potatoes", "wheat", "beetroot", "flowers"};
+	private static final String[] CROP_NAMES = {"Carrot Seeds", "Potato Seeds", "Wheat Seeds", "Beetroot Seeds", "Flower Seeds"};
+	private static final Item[] CROP_ICONS = {Items.CARROT, Items.POTATO, Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS, Items.POPPY};
+	/** How long a crop takes to grow (four minutes). */
+	private static final long GROW = 4800;
+
+	/** The front garden's cells (the soil): either side of the path, by the front wall. */
+	private static List<BlockPos> gardenCells(House h) {
+		List<BlockPos> out = new ArrayList<>();
+		for (int dx : new int[] {0, 1, 2, 6, 7}) {
+			out.add(new BlockPos(h.x0() + dx, FLOOR, h.outZ()));
+		}
+		return out;
+	}
+
+	private static void garden(ServerLevel level, House h, Home home) {
+		List<BlockPos> cells = gardenCells(h);
+		long now = level.getGameTime();
+		for (int i = 0; i < cells.size(); i++) {
+			BlockPos soil = cells.get(i);
+			String[] g = home.garden.get(i);
+			if (g == null) {
+				continue;
+			}
+			level.setBlock(soil, Blocks.FARMLAND.defaultBlockState().setValue(net.minecraft.world.level.block.FarmlandBlock.MOISTURE, 7), 18);
+			double grown = Math.max(0, Math.min(1, (now - Long.parseLong(g[1])) / (double) GROW));
+			BlockState crop = switch (g[0]) {
+				case "carrots" -> ((net.minecraft.world.level.block.CropBlock) Blocks.CARROTS).getStateForAge((int) Math.round(grown * 7));
+				case "potatoes" -> ((net.minecraft.world.level.block.CropBlock) Blocks.POTATOES).getStateForAge((int) Math.round(grown * 7));
+				case "wheat" -> ((net.minecraft.world.level.block.CropBlock) Blocks.WHEAT).getStateForAge((int) Math.round(grown * 7));
+				case "beetroot" -> ((net.minecraft.world.level.block.CropBlock) Blocks.BEETROOTS).getStateForAge((int) Math.round(grown * 3));
+				default -> grown < 1 ? Blocks.SHORT_GRASS.defaultBlockState()
+						: new BlockState[] {Blocks.POPPY.defaultBlockState(), Blocks.CORNFLOWER.defaultBlockState(), Blocks.PINK_TULIP.defaultBlockState(),
+							Blocks.ALLIUM.defaultBlockState(), Blocks.OXEYE_DAISY.defaultBlockState()}[i];
+			};
+			if (level.getBlockState(soil.above()) != crop) {
+				level.setBlock(soil.above(), crop, 18);
+			}
+		}
+	}
+
+	private static boolean ripe(ServerLevel level, String[] g) {
+		return g != null && level.getGameTime() - Long.parseLong(g[1]) >= GROW;
+	}
+
+	private static String seed(ItemStack s) {
+		var data = s.get(DataComponents.CUSTOM_DATA);
+		return data == null ? null : data.copyTag().getStringOr(SEED, null);
+	}
+
+	/** Right-clicking someone's front garden. */
+	private static void gardenClick(ServerPlayer p, House h, int cell, ItemStack held) {
+		ServerLevel level = (ServerLevel) p.level();
+		Home home = home(h.index());
+		if (!p.getName().getString().equals(home.owner)) {
+			p.sendOverlayMessage(Component.literal(home.owner == null ? "A garden for whoever lives here." : home.owner + "'s garden. Lovely!")
+					.withStyle(ChatFormatting.GREEN));
+			return;
+		}
+		String[] g = home.garden.get(cell);
+		BlockPos soil = gardenCells(h).get(cell);
+		if (g != null && ripe(level, g)) {
+			int k = java.util.Arrays.asList(CROPS).indexOf(g[0]);
+			ItemStack crop = switch (k) {
+				case 0 -> MainStreet.snack(Items.CARROT, null, "Fresh Carrots", 2);
+				case 1 -> MainStreet.snack(Items.BAKED_POTATO, null, "Baked Potato", 2);
+				case 2 -> MainStreet.snack(Items.BREAD, null, "Fresh Bread", 3);
+				case 3 -> MainStreet.snack(Items.BEETROOT_SOUP, null, "Beetroot Soup", 3);
+				default -> HubGames.toy(Items.POPPY, 1, "Bunch of Flowers", ChatFormatting.LIGHT_PURPLE);
+			};
+			MainStreet.hold(p, crop);
+			home.garden.remove(cell);
+			level.setBlock(soil.above(), Blocks.AIR.defaultBlockState(), 18);
+			level.playSound(null, soil, SoundEvents.CROP_BREAK, SoundSource.PLAYERS, 1.0F, 1.0F);
+			level.sendParticles(ParticleTypes.HAPPY_VILLAGER, soil.getX() + 0.5, soil.getY() + 1.3, soil.getZ() + 0.5, 10, 0.3, 0.3, 0.3, 0);
+			p.sendOverlayMessage(Component.literal("You picked " + crop.getHoverName().getString() + "! Plant some more?").withStyle(ChatFormatting.GREEN));
+			save(level);
+			return;
+		}
+		if (g != null) {
+			long left = Math.max(1, (GROW - (level.getGameTime() - Long.parseLong(g[1]))) / 20 / 60 + 1);
+			p.sendOverlayMessage(Component.literal("Still growing! About " + left + (left == 1 ? " minute" : " minutes") + " to go.").withStyle(ChatFormatting.GREEN));
+			return;
+		}
+		String kind = seed(held);
+		if (kind == null) {
+			p.sendOverlayMessage(Component.literal("Your garden! Get seeds from Rosie on the green, then right-click here to plant them.").withStyle(ChatFormatting.GREEN));
+			return;
+		}
+		home.garden.put(cell, new String[] {kind, String.valueOf(level.getGameTime())});
+		garden(level, h, home);
+		level.playSound(null, soil, SoundEvents.CROP_PLANTED, SoundSource.PLAYERS, 1.0F, 1.0F);
+		p.sendOverlayMessage(Component.literal("Planted! Come back in a few minutes to pick them.").withStyle(ChatFormatting.GREEN));
+		save(level);
+	}
+
+	/** Every so often: gardens grow. */
+	static void tick(ServerLevel level, int tick) {
+		if (tick % 200 != 0) {
+			return;
+		}
+		for (House h : HOUSES) {
+			Home home = home(h.index());
+			if (!home.garden.isEmpty()) {
+				garden(level, h, home);
+			}
+		}
+	}
+
+	// ----- Post -----
+
+	/** Post waiting in each person's mailbox: {who it's from, the thing}. */
+	private static final Map<String, List<String[]>> MAIL = new HashMap<>();
+	private static final UUID[] FLAGS = new UUID[8];
+
+	private static boolean giftable(ItemStack s) {
+		if (!HubGames.isToy(s)) {
+			return false;
+		}
+		CompoundTag t = s.get(DataComponents.CUSTOM_DATA).copyTag();
+		return t.contains("rubymod_scoops") || t.contains("rubymod_bites") || t.contains("rubymod_fossil") || s.getHoverName().getString().equals("Bunch of Flowers");
+	}
+
+	private static String pack(ServerLevel level, ItemStack s) {
+		var ops = level.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
+		return ItemStack.CODEC.encodeStart(ops, s).result().map(Object::toString).orElse(null);
+	}
+
+	private static ItemStack unpack(ServerLevel level, String snbt) {
+		try {
+			var ops = level.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
+			return ItemStack.CODEC.parse(ops, net.minecraft.nbt.TagParser.parseCompoundFully(snbt)).result().orElse(ItemStack.EMPTY);
+		} catch (Exception e) {
+			return ItemStack.EMPTY;
+		}
+	}
+
+	/** A note over the mailbox when there's post waiting. */
+	private static void mailFlag(ServerLevel level, House h) {
+		if (FLAGS[h.index()] != null) {
+			HubPark.discard(level, FLAGS[h.index()]);
+			FLAGS[h.index()] = null;
+		}
+		Home home = home(h.index());
+		List<String[]> post = home.owner == null ? null : MAIL.get(home.owner);
+		if (post != null && !post.isEmpty()) {
+			BlockPos mb = h.mailbox();
+			var d = HubPark.label(level, mb.getX() + 0.5, FLOOR + 3.4, mb.getZ() + 0.5, "\u2709 Post for " + home.owner + "! (" + post.size() + ")",
+					ChatFormatting.YELLOW, 0.6F);
+			FLAGS[h.index()] = d == null ? null : d.getUUID();
+		}
+	}
+
+	private static java.nio.file.Path mailFile(ServerLevel level) {
+		return level.getServer().getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve("mail.txt");
+	}
+
+	private static void loadMail(ServerLevel level) {
+		MAIL.clear();
+		try {
+			java.nio.file.Path f = mailFile(level);
+			if (Files.exists(f)) {
+				for (String line : Files.readAllLines(f)) {
+					String[] q = line.split("\t", 3);
+					if (q.length == 3) {
+						MAIL.computeIfAbsent(q[0], k -> new ArrayList<>()).add(new String[] {q[1], q[2]});
+					}
+				}
+			}
+		} catch (Exception e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the post", e);
+		}
+	}
+
+	private static void saveMail(ServerLevel level) {
+		StringBuilder b = new StringBuilder();
+		for (var e : MAIL.entrySet()) {
+			for (String[] m : e.getValue()) {
+				b.append(e.getKey()).append('\t').append(m[0]).append('\t').append(m[1]).append('\n');
+			}
+		}
+		try {
+			Files.createDirectories(mailFile(level).getParent());
+			Files.writeString(mailFile(level), b.toString());
+		} catch (Exception e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the post", e);
+		}
+	}
+
+	/** Who's in the house of {@code p}'s, and are they at home with a pet bed there: where it is (for their pet). */
+	static Vec3 petBed(ServerPlayer p) {
+		House h = mine(p);
+		if (h == null || !h.inside(p.blockPosition())) {
+			return null;
+		}
+		for (Placed f : home(h.index()).furniture) {
+			if (f.id().equals("pet_bed")) {
+				return Vec3.atBottomCenterOf(h.origin().offset(f.dx(), f.dy(), f.dz())).add(0, 0.5, 0);
+			}
+		}
+		return null;
 	}
 
 	private static void walls(ServerLevel level, House h, Home home) {
@@ -804,6 +1056,13 @@ public final class HomeStreet {
 				mailbox(p, h);
 				return InteractionResult.SUCCESS;
 			}
+			List<BlockPos> cells = gardenCells(h);
+			for (int i = 0; i < cells.size(); i++) {
+				if (pos.equals(cells.get(i)) || pos.equals(cells.get(i).above())) {
+					gardenClick(p, h, i, held);
+					return InteractionResult.SUCCESS;
+				}
+			}
 		}
 		House h = at(pos);
 		House mine = mine(p);
@@ -902,6 +1161,20 @@ public final class HomeStreet {
 			HubPark.burst(level, Vec3.atCenterOf(h.mailbox()).add(0, 3, 0));
 			return;
 		}
+		if (home.owner.equals(name) && !p.isShiftKeyDown() && MAIL.containsKey(name) && !MAIL.get(name).isEmpty()) {
+			for (String[] m : MAIL.remove(name)) {
+				ItemStack gift = unpack(level, m[1]);
+				if (!gift.isEmpty()) {
+					MainStreet.hold(p, gift);
+					p.sendSystemMessage(Component.literal("\u2709 Post from " + m[0] + ": " + gift.getHoverName().getString() + "!").withStyle(ChatFormatting.YELLOW));
+				}
+			}
+			saveMail(level);
+			mailFlag(level, h);
+			level.playSound(null, h.mailbox(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.8F, 1.5F);
+			HubPark.burst(level, Vec3.atCenterOf(h.mailbox()).add(0, 2, 0));
+			return;
+		}
 		if (home.owner.equals(name)) {
 			if (p.isShiftKeyDown()) {
 				Long asked = MOVE_OUT.get(p.getUUID());
@@ -925,6 +1198,24 @@ public final class HomeStreet {
 			}
 			p.sendOverlayMessage(Component.literal("Your house! " + home.furniture.size() + " things inside.").withStyle(ChatFormatting.GOLD));
 			return;
+		}
+		// Someone else's, holding a treat: it goes in the post.
+		ItemStack held = p.getMainHandItem();
+		if (giftable(held)) {
+			String packed = pack(level, held);
+			if (packed != null) {
+				MAIL.computeIfAbsent(home.owner, k -> new ArrayList<>()).add(new String[] {name, packed});
+				p.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+				saveMail(level);
+				mailFlag(level, h);
+				level.playSound(null, h.mailbox(), SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 1.2F);
+				p.sendOverlayMessage(Component.literal("Posted to " + home.owner + "! They'll find it in their mailbox.").withStyle(ChatFormatting.YELLOW));
+				ServerPlayer owner = level.getServer().getPlayerList().getPlayerByName(home.owner);
+				if (owner != null && owner != p) {
+					owner.sendSystemMessage(Component.literal("\u2709 " + name + " posted you something! Check your mailbox on Home Street.").withStyle(ChatFormatting.YELLOW));
+				}
+				return;
+			}
 		}
 		// Someone else's: ding dong!
 		level.playSound(null, h.mailbox(), SoundEvents.NOTE_BLOCK_BELL.value(), SoundSource.PLAYERS, 1.0F, 1.2F);
@@ -1100,6 +1391,14 @@ public final class HomeStreet {
 						h.furniture.add(new Placed(q[0], Integer.parseInt(q[1]), Integer.parseInt(q[2]), Integer.parseInt(q[3]), d == null ? Direction.NORTH : d));
 					}
 				}
+				if (s.length >= 6) {
+					for (String cell : s[5].split(";")) {
+						String[] q = cell.split(",");
+						if (q.length == 3) {
+							h.garden.put(Integer.parseInt(q[0]), new String[] {q[1], q[2]});
+						}
+					}
+				}
 			}
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read Home Street", e);
@@ -1115,6 +1414,12 @@ public final class HomeStreet {
 				Placed f = h.furniture.get(k);
 				b.append(k == 0 ? "" : ";").append(f.id()).append(',').append(f.dx()).append(',').append(f.dy()).append(',').append(f.dz()).append(',')
 						.append(f.f().getSerializedName());
+			}
+			b.append('|');
+			boolean first = true;
+			for (var g : h.garden.entrySet()) {
+				b.append(first ? "" : ";").append(g.getKey()).append(',').append(g.getValue()[0]).append(',').append(g.getValue()[1]);
+				first = false;
 			}
 			b.append('\n');
 		}

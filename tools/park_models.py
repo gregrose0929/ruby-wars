@@ -694,6 +694,109 @@ def teacup(color, trim):
     ]
 
 
+def float_base(skirt, trim):
+    """A parade float's cart: a decorated platform on wheels, a bench in the middle for two riders."""
+    return [
+        b([1, 1.2, 0], [15, 3.2, 16], skirt), b([0.8, 3.2, -0.2], [15.2, 3.7, 16.2], trim),
+        *[b([x, 1.4, z], [x + 0.3, 2.9, z + 1.6], trim) for x in (0.8, 14.9) for z in (1, 4.5, 8, 11.5)],   # scallops
+        *[e for z in (2.8, 13.2) for x in (0.4, 14.8) for e in wheel(x, z, 2.8, SOOT)],
+        b([2.5, 3.7, 6.6], [13.5, 4.9, 9.6], DKWOOD), b([2.5, 4.9, 9.2], [13.5, 7.2, 9.8], DKWOOD),          # bench
+    ]
+
+
+def float_icecream():
+    return float_base(PINK, WHITE) + [
+        # A giant cone at the back with three scoops and a cherry.
+        b([6, 3.7, 11], [10, 5.5, 15], GOLD), b([5.4, 5.5, 10.4], [10.6, 7.5, 15.6], ORANGE), b([5, 7.5, 10], [11, 8.5, 16], GOLD),
+        *puff(8, 9.6, 13, 3.2, PINK), *puff(8, 12, 13, 2.8, CREAM), *puff(8, 14, 13, 2.2, WOOD),
+        b([7.4, 14.6, 12.4], [8.6, 15.6, 13.6], RED),
+        # Little cones at the front.
+        *[e for x in (3, 11) for e in [b([x, 3.7, 1], [x + 2, 5.5, 3], GOLD), b([x - 0.3, 5.5, 0.7], [x + 2.3, 7, 3.3], LIME if x < 8 else SKY)]],
+        *[b([x, 8.6 + (x % 3), 11.2], [x + 0.4, 8.9 + (x % 3), 11.4], c) for x, c in ((6, YELLOW), (9, BLUE), (7.5, LIME))],   # sprinkles
+    ]
+
+
+def float_ship():
+    return float_base(DKWOOD, GOLD) + [
+        b([1.4, 3.7, 0], [14.6, 6, 1], WOOD), b([3, 3.7, -1.5], [13, 5.5, 0], WOOD), b([6, 3.7, -2.5], [10, 5, -1.5], WOOD),   # the bow
+        b([1.4, 3.7, 0], [2.2, 6, 16], WOOD), b([13.8, 3.7, 0], [14.6, 6, 16], WOOD), b([1.4, 3.7, 15.2], [14.6, 7, 16], WOOD),
+        b([1.3, 5.6, 0], [2.3, 6.1, 16], GOLD), b([13.7, 5.6, 0], [14.7, 6.1, 16], GOLD),
+        b([7.4, 3.7, 12], [8.6, 15.6, 13.2], DKWOOD),                                         # mast
+        b([3.5, 7, 12.8], [12.5, 13.5, 13.2], CREAM), b([4.5, 13.5, 12.8], [11.5, 14.3, 13.2], CREAM),   # sail
+        b([5.5, 9, 12.7], [10.5, 11.5, 12.8], RED),
+        b([8.6, 14, 12.4], [11.5, 15.4, 12.6], RED),                                          # flag
+        *[b([x, 4.6, 3], [x + 0.6, 5.6, 6], SOOT) for x in (0.8, 14.6)],                       # cannons
+    ]
+
+
+def float_dragon():
+    return float_base(DKGREEN, GOLD) + [
+        # A friendly red dragon: a long neck up at the front, a smiling head, wings, a curly tail with spikes.
+        b([5.5, 3.7, 0.5], [10.5, 7, 4.5], RED), b([6.2, 7, 0], [9.8, 10, 3], RED), b([5.8, 10, -1.5], [10.2, 13, 2.5], RED),
+        b([6.4, 10.5, -2.5], [9.6, 12.2, -1.5], RED_DARK), b([6, 12.6, -0.5], [7, 13.4, 0.5], WHITE), b([9, 12.6, -0.5], [10, 13.4, 0.5], WHITE),
+        b([6.3, 12.8, -0.6], [6.8, 13.3, -0.5], SOOT), b([9.2, 12.8, -0.6], [9.7, 13.3, -0.5], SOOT),
+        b([6.2, 13, 1.5], [7.2, 14.8, 2.5], GOLD), b([8.8, 13, 1.5], [9.8, 14.8, 2.5], GOLD),   # horns
+        b([5, 3.7, 10.5], [11, 7.5, 15], RED), b([6.5, 3.7, 15], [9.5, 6, 16], RED),           # body and tail
+        *[b([7.5, 7.5, z], [8.5, 9, z + 1], GOLD) for z in (11, 12.8, 14.4)],                   # spikes
+        b([0, 6, 10], [5, 7, 14], RED_DARK, {"angle": 22.5, "axis": "z", "origin": [5, 6.5, 12]}),     # wings
+        b([11, 6, 10], [16, 7, 14], RED_DARK, {"angle": -22.5, "axis": "z", "origin": [11, 6.5, 12]}),
+    ]
+
+
+def float_cake():
+    return float_base(SKY, WHITE) + [
+        # A three-tier birthday cake with icing drips and candles.
+        b([3.5, 3.7, 10], [12.5, 7, 16], CREAM), b([3.3, 6.4, 9.8], [12.7, 7.2, 16.2], PINK),
+        b([5, 7.2, 11], [11, 10, 15], PINK), b([4.8, 9.4, 10.8], [11.2, 10.2, 15.2], WHITE),
+        b([6.2, 10.2, 11.8], [9.8, 12.4, 14.2], CREAM), b([6, 12, 11.6], [10, 12.6, 14.4], PINK),
+        *[b([x, 12.6, 12.5], [x + 0.6, 14.4, 13.1], c) for x, c in ((6.7, YELLOW), (7.7, BLUE), (8.7, PINK))],
+        *[b([x, 14.4, 12.6], [x + 0.4, 15, 13.0], ORANGE) for x in (6.8, 7.8, 8.8)],
+        # Presents at the front.
+        b([2.5, 3.7, 1], [6.5, 6.5, 5], RED), b([4.2, 3.7, 0.9], [4.8, 6.6, 5.1], GOLD),
+        b([9.5, 3.7, 1.5], [13, 6, 5], LIME), b([11, 3.7, 1.4], [11.6, 6.1, 5.1], PURPLE),
+    ]
+
+
+def rainbow():
+    import math
+    els = []
+    bands = [RED, ORANGE, YELLOW, LIME, SKY, BLUE, PURPLE]
+    for k, c in enumerate(bands):
+        r = 7.6 - k * 0.85
+        for i in range(17):
+            a = math.pi * i / 16
+            x = 8 + math.cos(a) * r
+            y = math.sin(a) * r
+            els.append(b([x - 0.55, y, 7.8], [x + 0.55, y + 0.9, 8.2], c))
+    return els
+
+
+def mascot(wave):
+    """Rubi the Ruby Dragon: chubby, red, a cream tummy, big eyes, little gold horns, wings and a tail."""
+    els = [
+        b([5, 0, 6], [7.5, 1.4, 10], RED_DARK), b([8.5, 0, 6], [11, 1.4, 10], RED_DARK),
+        b([5.5, 1.4, 7], [7.5, 3.8, 9.5], RED), b([8.5, 1.4, 7], [10.5, 3.8, 9.5], RED),
+        *puff(8, 7, 8, 4.0, RED),
+        b([5.8, 4.4, 4.0], [10.2, 9.4, 4.8], CREAM),
+        *puff(8, 11.8, 7.6, 3.0, RED),
+        b([6.4, 10.2, 3.6], [9.6, 12.2, 5], RED), b([6.9, 11.4, 3.5], [7.5, 11.9, 3.6], SOOT), b([8.5, 11.4, 3.5], [9.1, 11.9, 3.6], SOOT),
+        b([5.6, 12.4, 4.6], [7.2, 14.2, 4.9], WHITE), b([8.8, 12.4, 4.6], [10.4, 14.2, 4.9], WHITE),
+        b([6.1, 12.6, 4.5], [6.9, 13.6, 4.6], SOOT), b([9.3, 12.6, 4.5], [10.1, 13.6, 4.6], SOOT),
+        b([5.0, 11.2, 5.0], [5.8, 11.9, 5.3], PINK), b([10.2, 11.2, 5.0], [11.0, 11.9, 5.3], PINK),
+        b([6.0, 14.2, 7.0], [7.0, 15.8, 8.0], GOLD), b([9.0, 14.2, 7.0], [10.0, 15.8, 8.0], GOLD),
+        b([3.0, 6.0, 7.0], [4.4, 9.0, 9.0], RED),
+        b([2.0, 7.5, 10.5], [6.0, 11.5, 11.2], RED_DARK), b([10.0, 7.5, 10.5], [14.0, 11.5, 11.2], RED_DARK),
+        b([7.0, 2.0, 11.0], [9.0, 4.0, 14.5], RED), b([7.3, 3.0, 14.5], [8.7, 5.0, 16.0], GOLD),
+        *[b([7.5, y, 11.6], [8.5, y + 1.2, 12.4], GOLD) for y in (6.0, 8.0, 10.0)],
+    ]
+    if wave:
+        els.append(b([11.6, 9.0, 7.0], [13.0, 13.6, 9.0], RED))
+        els.append(b([11.4, 13.4, 6.8], [13.2, 14.6, 9.2], RED_DARK))
+    else:
+        els.append(b([11.6, 6.0, 7.0], [13.0, 9.0, 9.0], RED))
+    return els
+
+
 CAFE = {
     "cone_0": cone(0), "cone_1": cone(1), "cone_2": cone(2), "cone_3": cone(3),
     "cup_cocoa": cup(WOOD), "cup_lemonade": cup(PINK),
@@ -749,6 +852,11 @@ MODELS = {
     "bus": BUS,
     "train": TRAIN,
     "track": TRACK,
+    "rainbow": rainbow(), "mascot": mascot(False), "mascot_wave": mascot(True),
+    "golden_egg": [b([5.5, 0, 5.5], [10.5, 2, 10.5], GOLD), b([4.5, 2, 4.5], [11.5, 7, 11.5], GOLD), b([5, 7, 5], [11, 9.5, 11], GOLD),
+                   b([6, 9.5, 6], [10, 11, 10], GOLD), b([4.3, 4.2, 4.3], [11.7, 5.2, 11.7], RED), b([4.4, 5.6, 4.4], [11.6, 6.1, 11.6], BUTTER),
+                   b([6.5, 8, 4.8], [7.5, 9, 4.9], BUTTER)],
+    "float_icecream": float_icecream(), "float_ship": float_ship(), "float_dragon": float_dragon(), "float_cake": float_cake(),
     "balloon_red": balloon([RED, WHITE]), "balloon_blue": balloon([NAVY, SKY, BUTTER]),
     "balloon_rainbow": balloon([RED, ORANGE, YELLOW, LIME, BLUE, PURPLE]),
     "bird_up": bird(True), "bird_down": bird(False),

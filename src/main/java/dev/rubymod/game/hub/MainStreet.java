@@ -266,7 +266,7 @@ final class MainStreet {
 	}
 
 	/** Into their hand: swapped for what they're holding if that's a cone or a snack, else into the inventory. */
-	private static void hold(ServerPlayer p, ItemStack s) {
+	static void hold(ServerPlayer p, ItemStack s) {
 		ItemStack held = p.getMainHandItem();
 		if (held.isEmpty() || scoops(held) != null || bites(held) >= 0) {
 			p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, s);
@@ -307,7 +307,7 @@ final class MainStreet {
 
 	// ----- The café -----
 
-	private static ItemStack snack(Item icon, String model, String name, int bites) {
+	static ItemStack snack(Item icon, String model, String name, int bites) {
 		ItemStack s = HubGames.toy(icon, 1, name, ChatFormatting.GOLD);
 		if (model != null) {
 			s.set(DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_" + model));
@@ -513,7 +513,7 @@ final class MainStreet {
 		return data != null && data.copyTag().contains(COSTUME);
 	}
 
-	private static ItemStack hat(int i) {
+	static ItemStack hat(int i) {
 		String id = HATS[i];
 		if (id.startsWith("hat_")) {
 			ItemStack s = wearable(Items.STICK, HAT_NAMES[i]);
