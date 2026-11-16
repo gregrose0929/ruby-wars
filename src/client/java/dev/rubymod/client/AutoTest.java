@@ -4556,6 +4556,9 @@ public final class AutoTest {
 			case "parknew3" -> parkNew3Script();
 			case "parkcheck2" -> parkCheck2Script();
 			case "photocheck" -> photoCheckScript();
+			case "homecheck" -> homeCheckScript();
+			case "traincheck" -> trainCheckScript();
+			case "finalcheck" -> finalCheckScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5481,6 +5484,312 @@ public final class AutoTest {
 		});
 		then(100, mc -> shot(mc, "new-night-coaster"));
 	}
+
+	/** The fixes: ice cream with something in your hand, a hat seen from the front, a Sky Tour, off the train at Mini Golf, Pie Mystery's lobby. */
+	private static void finalCheckScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+			command(mc, "give @p minecraft:stick");
+		});
+		then(40, mc -> tpHub(mc, "-73.5 101 -80.5 facing -75 101 -81"));
+		then(240, mc -> mc.player.getInventory().setSelectedSlot(slotOf(mc, net.minecraft.world.item.Items.STICK) < 9 ? Math.max(0, slotOf(mc, net.minecraft.world.item.Items.STICK)) : 0));
+		for (int k = 0; k < 3; k++) {
+			int z = -82 + k * 2;
+			then(15, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-75, 101, z)));
+		}
+		then(10, mc -> {
+			log("icecream: holding {}", mc.player.getMainHandItem().getHoverName().getString());
+			lookAt(mc, mc.player.getEyePosition().add(-1, -0.6, 0.3));
+		});
+		then(10, mc -> shot(mc, "fc-cone"));
+		then(5, mc -> {
+			if (System.getenv("CONE_ONLY") != null) {
+				mc.stop();
+			}
+		});
+		// The hat.
+		then(5, mc -> tpHub(mc, "-70.5 101 -108.5 facing -72.5 102 -110.5"));
+		then(80, mc -> talk(mc, -72.5, 101, -110.5));
+		then(30, mc -> press(mc, "hat"));
+		then(20, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+		});
+		then(10, mc -> talk(mc, -72.5, 101, -110.5));
+		then(30, mc -> press(mc, "hat"));
+		then(20, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			log("costume: head {}", mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).getHoverName().getString());
+			tpHub(mc, "-62.5 101 -98.5 facing -62.5 101 -90");
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+		});
+		then(40, mc -> shot(mc, "fc-hat"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+		// A Sky Tour.
+		then(5, mc -> tpHub(mc, "-2.5 101 13.0 facing -2.5 102 15.5"));
+		then(60, mc -> talk(mc, -2.5, 101, 15.5));
+		then(20, mc -> press(mc, "play"));
+		then(300, mc -> {
+			log("tour: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+		});
+		then(30, mc -> shot(mc, "fc-tour"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+		then(300, mc -> {
+			log("tour: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			shot(mc, "fc-tour2");
+		});
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		then(30, mc -> log("tour: hopped off, riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		// The train, off at Mini Golf.
+		then(5, mc -> tpHub(mc, "-8.5 101 -7.5 facing -8.5 102 -9.5"));
+		then(60, mc -> talk(mc, -8.5, 101, -9.5));
+		then(20, mc -> press(mc, "play"));
+		then(500, mc -> log("train: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		then(40, mc -> {
+			log("train: got off, riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			shot(mc, "fc-trainoff");
+		});
+		// Pie Mystery: into its lobby.
+		then(5, mc -> command(mc, "execute as @p run play pie"));
+		then(200, mc -> log("pie: {}", pg("pie").debugState()));
+		then(5, mc -> shot(mc, "fc-pie"));
+	}
+
+	/** The Park Train (on at the plaza, off at Mini Golf), and a costume seen from the front. */
+	private static void trainCheckScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(40, mc -> tpHub(mc, "-70.5 101 -100.5 facing -72.5 102 -110.5"));
+		then(60, mc -> tpHub(mc, "-70.5 101 -108.5 facing -72.5 102 -110.5"));
+		then(30, mc -> talk(mc, -72.5, 101, -110.5));
+		then(20, mc -> press(mc, "hat"));
+		then(10, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			talk(mc, -72.5, 101, -110.5);
+		});
+		then(20, mc -> press(mc, "hat"));
+		then(10, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			tpHub(mc, "-62.5 101 -98.5 facing -62.5 101 -90");
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+		});
+		then(30, mc -> shot(mc, "tc-crown"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+		then(5, mc -> tpHub(mc, "-8.5 101 -7.5 facing -8.5 102 -9.5"));
+		then(60, mc -> talk(mc, -8.5, 101, -9.5));
+		then(20, mc -> press(mc, "play"));
+		for (int k = 0; k < 8; k++) {
+			int n = k;
+			then(100, mc -> {
+				log("train {}: riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				if (n == 2 || n == 5) {
+					mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+				}
+			});
+			then(5, mc -> {
+				shot(mc, "tc-ride-" + n);
+				mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+			});
+		}
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		then(20, mc -> {
+			log("train: got off, riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			shot(mc, "tc-off");
+		});
+		then(5, mc -> command(mc, "gamemode spectator @p"));
+		then(5, mc -> tpHub(mc, "20 150 -40 facing 0 120 10"));
+		then(80, mc -> shot(mc, "tc-air"));
+	}
+
+	/** Home Street, Main Street, the museum and Fossil Beach. */
+	private static void homeCheckScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode spectator @a");
+		});
+		then(40, mc -> tpHub(mc, "-62 165 -78 facing -62 100 -77"));
+		then(120, mc -> shot(mc, "hc-air"));
+		then(5, mc -> tpHub(mc, "-62 125 -20 facing -62 100 -75"));
+		then(60, mc -> shot(mc, "hc-air2"));
+		then(5, mc -> tpHub(mc, "120 130 -150 facing 98 100 -128"));
+		then(60, mc -> shot(mc, "hc-beach-air"));
+		then(5, mc -> {
+			command(mc, "gamemode adventure @a");
+			tpHub(mc, "-78.5 101 -55.5 facing -78.5 102 -58");
+		});
+		then(40, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-78, 102, -58)));
+		then(30, mc -> shot(mc, "hc-house"));
+		// The furniture shop.
+		then(5, mc -> tpHub(mc, "-54.5 101 -80.5 facing -45 101 -80"));
+		then(40, mc -> shot(mc, "hc-shop"));
+		then(5, mc -> tpHub(mc, "-52.5 101 -85.5 facing -52 101 -87"));
+		then(20, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-52, 101, -87)));
+		then(10, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-46, 101, -87)));
+		then(10, mc -> log("shop: chair slot {} sofa slot {}", slotOf(mc, "Wooden Chair"), slotOf(mc, "Blue Sofa")));
+		then(5, mc -> tpHub(mc, "-40.5 101 -85.5 facing -39 101.5 -85"));
+		then(20, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-39, 101, -85)));
+		then(10, mc -> log("shop: paint slot {}", slotOf(mc, "Pink Wall Paint")));
+		// Furnish house 0 (x -85..-77, z -67..-59).
+		then(5, mc -> tpHub(mc, "-79.5 101 -60.5 facing -82 100.5 -64"));
+		String[] put = {"Wooden Chair", "Blue Sofa"};
+		int[][] where = {{-82, -63}, {-82, -65}};
+		for (int k = 0; k < put.length; k++) {
+			String name = put[k];
+			int[] w = where[k];
+			then(20, mc -> {
+				int slot = slotOf(mc, name);
+				if (slot >= 0 && slot < 9) {
+					mc.player.getInventory().setSelectedSlot(slot);
+				}
+			});
+			then(5, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(w[0], 100, w[1])));
+			then(10, mc -> log("house: {} at {} -> {}", name, w[0] + "," + w[1], mc.level.getBlockState(new net.minecraft.core.BlockPos(w[0], 101, w[1]))));
+		}
+		then(10, mc -> {
+			int slot = slotOf(mc, "Pink Wall Paint");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(5, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-85, 102, -63)));
+		then(20, mc -> {
+			log("house: wall now {}", mc.level.getBlockState(new net.minecraft.core.BlockPos(-85, 102, -64)));
+			shot(mc, "hc-inside");
+		});
+		// Ice cream.
+		then(5, mc -> tpHub(mc, "-73.5 101 -80.5 facing -75 101 -81"));
+		for (int k = 0; k < 3; k++) {
+			int z = -82 + k * 2;
+			then(15, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-75, 101, z)));
+		}
+		then(10, mc -> {
+			log("icecream: holding {}", mc.player.getMainHandItem().getHoverName().getString());
+			lookAt(mc, mc.player.getEyePosition().add(-1, -0.4, 0));
+		});
+		then(10, mc -> shot(mc, "hc-icecream"));
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(10, mc -> log("icecream: after a bite {}", mc.player.getMainHandItem().getHoverName().getString()));
+		// Café and costumes.
+		then(5, mc -> tpHub(mc, "-74.5 101 -92.5 facing -77.5 102 -92.5"));
+		then(40, mc -> talk(mc, -77.5, 101, -92.5));
+		then(20, mc -> press(mc, "cocoa"));
+		then(15, mc -> {
+			log("cafe: holding {}", mc.player.getMainHandItem().getHoverName().getString());
+			shot(mc, "hc-cafe");
+		});
+		then(5, mc -> tpHub(mc, "-70.5 101 -108.5 facing -72.5 102 -110.5"));
+		then(40, mc -> talk(mc, -72.5, 101, -110.5));
+		then(20, mc -> press(mc, "hat"));
+		then(15, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			talk(mc, -72.5, 101, -110.5);
+		});
+		then(20, mc -> press(mc, "outfit"));
+		then(15, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			log("costume: head {} chest {}", mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).getHoverName().getString(),
+					mc.player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).getHoverName().getString());
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+		});
+		then(20, mc -> shot(mc, "hc-costume"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+		// The museum: a shovel, then Fossil Beach.
+		then(5, mc -> tpHub(mc, "-53.5 101 -107.5 facing -51.5 102 -107.5"));
+		then(40, mc -> talk(mc, -51.5, 101, -107.5));
+		then(20, mc -> press(mc, "shovel"));
+		then(10, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			tpHub(mc, "-48.5 101 -104.5 facing -48.5 102 -116");
+		});
+		then(40, mc -> shot(mc, "hc-fossilhall"));
+		then(5, mc -> tpHub(mc, "-48.5 101 -102.5 facing -48.5 102 -96"));
+		then(40, mc -> shot(mc, "hc-tank"));
+		then(5, mc -> tpHub(mc, "100.5 101 -130.5"));
+		then(60, mc -> {
+			net.minecraft.core.BlockPos found = null;
+			for (int x = 88; x <= 112 && found == null; x++) {
+				for (int z = -142; z <= -118 && found == null; z++) {
+					var bp = new net.minecraft.core.BlockPos(x, 100, z);
+					if (mc.level.getBlockState(bp).is(net.minecraft.world.level.block.Blocks.SUSPICIOUS_SAND)) {
+						found = bp;
+					}
+				}
+			}
+			log("beach: dig spot {}", found);
+			DIG[0] = found;
+			int slot = slotOf(mc, "Fossil Shovel");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			if (found != null) {
+				tpHub(mc, (found.getX() + 1.5) + " 101 " + (found.getZ() + 0.5));
+			}
+		});
+		for (int k = 0; k < 4; k++) {
+			then(15, mc -> {
+				if (DIG[0] != null) {
+					clickBlock(mc, DIG[0]);
+				}
+			});
+		}
+		then(20, mc -> {
+			int n = 0;
+			for (int i = 0; i < 36; i++) {
+				if (mc.player.getInventory().getItem(i).getHoverName().getString().contains("(fossil)")) {
+					n++;
+				}
+			}
+			log("beach: fossils held {}", n);
+			shot(mc, "hc-beach");
+		});
+		then(5, mc -> tpHub(mc, "-53.5 101 -107.5 facing -51.5 102 -107.5"));
+		then(40, mc -> talk(mc, -51.5, 101, -107.5));
+		then(20, mc -> press(mc, "give"));
+		then(20, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			tpHub(mc, "-48.5 101 -114.5 facing -54 101.5 -118");
+		});
+		then(40, mc -> shot(mc, "hc-donated"));
+		// The bus.
+		then(5, mc -> tpHub(mc, "-60.5 101 -43.5 facing -60.5 102 -45.5"));
+		then(40, mc -> talk(mc, -60.5, 101, -45.5));
+		then(20, mc -> press(mc, "play"));
+		then(140, mc -> {
+			log("bus: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+		});
+		then(60, mc -> shot(mc, "hc-bus"));
+		then(200, mc -> {
+			log("bus: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+			shot(mc, "hc-bus2");
+			mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+		});
+	}
+
+	private static final net.minecraft.core.BlockPos[] DIG = new net.minecraft.core.BlockPos[1];
 
 	/** The photo wall, the Park Map, finishing a coaster. */
 	private static void photoCheckScript() {

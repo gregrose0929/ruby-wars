@@ -528,6 +528,10 @@ public final class GameEvents {
 			BlockPos pos = hit.getBlockPos();
 			BlockState state = level.getBlockState(pos);
 			if (player instanceof ServerPlayer hubber && level.dimension() == Hub.HUB) {
+				InteractionResult home = dev.rubymod.game.hub.HomeStreet.useBlock(hubber, hand, hit);
+				if (home != null) {
+					return home;
+				}
 				InteractionResult park = dev.rubymod.game.hub.HubPark.useBlock(hubber, pos, state);
 				if (park != null) {
 					return park;

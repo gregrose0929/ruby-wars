@@ -1,0 +1,231 @@
+{
+	"textures": {
+		"parts": "rubymod:item/park_parts",
+		"particle": "rubymod:item/park_parts"
+	},
+	"elements": [
+		{
+			"from": [
+				7,
+				0,
+				7
+			],
+			"to": [
+				9,
+				2,
+				9
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						0.5,
+						4.5,
+						3.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						0.5,
+						4.5,
+						3.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						0.5,
+						4.5,
+						3.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						0.5,
+						4.5,
+						3.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						0.5,
+						4.5,
+						3.5,
+						7.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						0.5,
+						4.5,
+						3.5,
+						7.5
+					],
+					"texture": "#parts"
+				}
+			}
+		},
+		{
+			"from": [
+				3,
+				0.5,
+				7
+			],
+			"to": [
+				7,
+				2.5,
+				9
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				}
+			}
+		},
+		{
+			"from": [
+				9,
+				0.5,
+				7
+			],
+			"to": [
+				13,
+				2.5,
+				9
+			],
+			"faces": {
+				"north": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"south": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"east": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"west": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"up": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				},
+				"down": {
+					"uv": [
+						0.5,
+						12.5,
+						3.5,
+						15.5
+					],
+					"texture": "#parts"
+				}
+			}
+		}
+	],
+	"display": {
+		"head": {
+			"rotation": [
+				0,
+				0,
+				0
+			],
+			"translation": [
+				0,
+				14.4,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		}
+	}
+}

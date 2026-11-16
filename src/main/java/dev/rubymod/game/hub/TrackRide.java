@@ -61,6 +61,10 @@ final class TrackRide {
 	java.util.function.Consumer<ServerPlayer> onBoard;
 	/** How long a car waits at the station for friends. */
 	int waitTicks = 80;
+	/** A loop (the Park Train): cars can start anywhere on it and go once round, back to where they got on. */
+	boolean loop;
+	/** Where someone who gets off goes, from where the car is (the nearest station): else the exit. */
+	java.util.function.Function<Vec3, Vec3> exitNear;
 	/** Things that happen as a car passes a point on the path (keyed by the point's index). */
 	final Map<Integer, BiConsumer<ServerLevel, Car>> events = new HashMap<>();
 
@@ -68,7 +72,10 @@ final class TrackRide {
 		UUID model;
 		UUID[] seats = new UUID[2];
 		double d;
+		double start;
 		int wait = 80;
+		/** Stopped at a station for a while. */
+		int pause;
 		final Set<UUID> riders = new LinkedHashSet<>();
 		Vec3 pos = Vec3.ZERO;
 		/** Something the car turns to face for a while (a scene in the Haunted Mansion). */
@@ -97,6 +104,9 @@ final class TrackRide {
 	}
 
 	Vec3 at(double d) {
+		if (loop) {
+			d = d - Math.floor(d / length()) * length();
+		}
 		double f = Math.max(0, Math.min(path.size() - 1.001, d / STEP));
 		int i = (int) Math.floor(f);
 		return path.get(i).lerp(path.get(i + 1), f - i);
@@ -104,6 +114,11 @@ final class TrackRide {
 
 	/** Get a group on: into the car waiting at the station (a new one if there isn't one, or it's full). */
 	void board(ServerPlayer p, List<ServerPlayer> group) {
+		board(p, group, 0);
+	}
+
+	/** Get on at distance {@code from} along the path (a station on a loop). */
+	void board(ServerPlayer p, List<ServerPlayer> group, double from) {
 		ServerLevel level = (ServerLevel) p.level();
 		for (ServerPlayer q : group) {
 			if (riding(q)) {
@@ -111,19 +126,19 @@ final class TrackRide {
 			}
 			Car car = null;
 			for (Car c : cars) {
-				if (c.wait > 0 && c.riders.size() < seatsPer) {
+				if (c.wait > 0 && c.riders.size() < seatsPer && Math.abs(c.start - from) < 1) {
 					car = c;
 				}
 			}
 			if (car == null) {
 				for (Car c : cars) {
-					if (c.d < 4) {
+					if (Math.abs(c.start - from) < 1 && c.d - c.start < 4) {
 						q.sendOverlayMessage(Component.literal("The car's full! The next one comes along in a moment.").withStyle(ChatFormatting.YELLOW));
 						car = null;
 						return;
 					}
 				}
-				car = spawn(level);
+				car = spawn(level, from);
 				if (car == null) {
 					return;
 				}
@@ -156,11 +171,13 @@ final class TrackRide {
 		return false;
 	}
 
-	private Car spawn(ServerLevel level) {
+	private Car spawn(ServerLevel level, double from) {
 		Car c = new Car();
 		c.seats = new UUID[seatsPer];
 		c.wait = waitTicks;
-		Vec3 p = at(0);
+		c.d = from;
+		c.start = from;
+		Vec3 p = at(from);
 		Display.ItemDisplay m = HubPark.tempModel(level, p, 0, model, size, (float) (Double.isNaN(modelUp) ? size / 2 : modelUp));
 		if (m == null) {
 			return null;
@@ -192,7 +209,7 @@ final class TrackRide {
 				}
 				if (!onCar(p, c)) {
 					r.remove();
-					letOff(p, "You hopped off! Talk to " + hostName + " to ride again.");
+					letOff(p, "You hopped off! Talk to " + hostName + " to ride again.", c.pos);
 				}
 			}
 			if (c.wait > 0) {
@@ -208,20 +225,31 @@ final class TrackRide {
 				place(level, c);
 				continue;
 			}
+			if (c.pause > 0) {
+				if (c.riders.isEmpty()) {
+					remove(level, c);
+					it.remove();
+					continue;
+				}
+				c.pause--;
+				place(level, c);
+				continue;
+			}
 			int before = (int) (c.d / STEP);
-			c.d += speed[Math.min(speed.length - 1, before)];
+			int n = path.size() - 1;
+			c.d += speed[Math.min(speed.length - 1, loop ? Math.floorMod(before, n) : before)];
 			int after = (int) (c.d / STEP);
 			for (int i = before + 1; i <= after; i++) {
-				BiConsumer<ServerLevel, Car> e = events.get(i);
+				BiConsumer<ServerLevel, Car> e = events.get(loop ? Math.floorMod(i, n) : i);
 				if (e != null) {
 					e.accept(level, c);
 				}
 			}
-			if (c.d >= length()) {
+			if (c.d >= c.start + length()) {
 				for (UUID id : new ArrayList<>(c.riders)) {
 					ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
 					if (p != null) {
-						letOff(p, again != null ? again : "Talk to " + hostName + " to ride again!");
+						letOff(p, again != null ? again : "Talk to " + hostName + " to ride again!", c.pos);
 					}
 				}
 				remove(level, c);
@@ -279,11 +307,11 @@ final class TrackRide {
 		return false;
 	}
 
-	private void letOff(ServerPlayer p, String message) {
+	private void letOff(ServerPlayer p, String message, Vec3 carAt) {
 		if (onLeave != null) {
 			onLeave.accept(p);
 		}
-		FunPark.letOff(p, exit, message);
+		FunPark.letOff(p, exitNear != null && carAt != null ? exitNear.apply(carAt) : exit, message);
 	}
 
 	private void remove(ServerLevel level, Car c) {

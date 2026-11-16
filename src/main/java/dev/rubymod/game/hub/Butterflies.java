@@ -76,6 +76,30 @@ final class Butterflies {
 	private static boolean loaded;
 	private static int tick;
 
+	// ----- For the museum -----
+
+	static List<String> names() {
+		List<String> out = new ArrayList<>();
+		for (Kind k : KINDS) {
+			out.add(k.name());
+		}
+		return out;
+	}
+
+	static String model(String name) {
+		for (Kind k : KINDS) {
+			if (k.name().equals(name)) {
+				return k.model();
+			}
+		}
+		return "butterfly_red";
+	}
+
+	static Set<String> caughtBy(ServerLevel level, String player) {
+		load(level);
+		return BOOK.getOrDefault(player, Set.of());
+	}
+
 	static void build(ServerLevel level) {
 		FLIES.clear();
 		load(level);

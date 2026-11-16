@@ -66,7 +66,7 @@ final class Toyland {
 
 	private static final List<Target> TARGETS = new ArrayList<>();
 	private static final Map<UUID, Integer> SCORE = new HashMap<>();
-	private static final List<UUID> ANIMALS = new ArrayList<>();
+	static final List<UUID> ANIMALS = new ArrayList<>();
 	private static int tick;
 
 	static void build(ServerLevel level) {
@@ -362,7 +362,7 @@ final class Toyland {
 						}));
 	}
 
-	private static void animal(ServerLevel level, EntityType<? extends Mob> type, int x, int z, boolean baby, DyeColor wool) {
+	static void animal(ServerLevel level, EntityType<? extends Mob> type, int x, int z, boolean baby, DyeColor wool) {
 		Mob m = type.create(level, EntitySpawnReason.EVENT);
 		if (m == null) {
 			return;

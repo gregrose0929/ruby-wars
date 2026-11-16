@@ -172,6 +172,30 @@ final class Fishing {
 		}
 	}
 
+	// ----- For the museum -----
+
+	static java.util.List<String> names() {
+		java.util.List<String> out = new java.util.ArrayList<>();
+		for (Fish f : FISH) {
+			out.add(f.name());
+		}
+		return out;
+	}
+
+	static Set<String> caughtBy(ServerLevel level, String player) {
+		load(level);
+		return BOOK.getOrDefault(player, Set.of());
+	}
+
+	static EntityType<? extends Mob> swims(String name) {
+		for (Fish f : FISH) {
+			if (f.name().equals(name)) {
+				return f.swims();
+			}
+		}
+		return null;
+	}
+
 	private static Set<String> everyone() {
 		Set<String> all = new LinkedHashSet<>();
 		for (Set<String> s : BOOK.values()) {

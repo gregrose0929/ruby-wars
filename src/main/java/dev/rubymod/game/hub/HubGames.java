@@ -407,6 +407,16 @@ public final class HubGames {
 		if (spot == 0) {
 			return false;
 		}
+		// Only a catch if someone's actually fishing there (not just anything that falls in the water).
+		boolean fishing = false;
+		for (ServerPlayer p : level.players()) {
+			if (p.distanceToSqr(item) < 24 * 24 && p.getMainHandItem().is(Items.FISHING_ROD)) {
+				fishing = true;
+			}
+		}
+		if (!fishing) {
+			return false;
+		}
 		var random = level.getRandom();
 		ServerPlayer near = null;
 		for (ServerPlayer p : level.players()) {

@@ -441,6 +441,76 @@ def plush(body, belly, kind):
     return e
 
 
+def tb(frm, to, i):
+    """A box drawn white and tinted (tint index i: the item's custom model data colours)."""
+    e = b(frm, to, WHITE)
+    for f in e["faces"].values():
+        f["tintindex"] = i
+    return e
+
+
+def cone(n):
+    els = [b([7, 0, 7], [9, 2, 9], GOLD), b([6.5, 2, 6.5], [9.5, 4, 9.5], GOLD), b([6, 4, 6], [10, 6, 10], ORANGE),
+           b([5.5, 6, 5.5], [10.5, 8, 10.5], GOLD), b([5.2, 7.6, 5.2], [10.8, 8.4, 10.8], ORANGE)]
+    for k in range(n):
+        y = 8 + k * 3.2
+        els.append(tb([5, y, 5], [11, y + 3.4, 11], k))
+        els.append(tb([5.8, y + 3.4, 5.8], [10.2, y + 4, 10.2], k))
+    return els
+
+
+def cup(drink):
+    return [b([5, 0, 5], [11, 6, 11], WHITE), b([5.5, 6, 5.5], [10.5, 6.2, 10.5], drink), b([11, 1.5, 7.3], [12.5, 4.5, 8.7], WHITE),
+            b([6, 1.5, 4.9], [10, 2.5, 5.0], PINK)]
+
+
+BUS = [
+    b([2, 0.6, 1], [14, 3, 15], BLACK),                                   # underside
+    *[b([x, 0, z], [x + 1.2, 2.6, z + 2.6], GRAY) for x in (1.4, 13.4) for z in (2, 11.4)],  # wheels
+    b([2.5, 2.6, 0.5], [13.5, 6.5, 15.5], YELLOW),                        # body
+    b([2.5, 6.5, 0.5], [3.2, 9.5, 15.5], YELLOW), b([12.8, 6.5, 0.5], [13.5, 9.5, 15.5], YELLOW),  # window pillars
+    *[b([2.4, 6.5, z], [13.6, 9.5, z + 0.8], YELLOW) for z in (0.5, 4.5, 8.5, 12, 14.7)],
+    b([2.5, 9.5, 0.5], [13.5, 10.5, 15.5], WHITE),                        # roof
+    b([2.4, 5.4, 0.5], [13.6, 5.9, 15.5], RED),                           # stripe
+    b([4, 3.2, 0.2], [6, 4.6, 0.5], WHITE), b([10, 3.2, 0.2], [12, 4.6, 0.5], WHITE),  # headlights
+    b([5, 7, 0.3], [11, 9, 0.5], SKY),                                    # windscreen
+    b([6, 10.5, 1], [10, 11.2, 2.2], RED),                                # sign
+]
+
+TRAIN = [
+    b([2, 0.6, -3], [14, 2.6, 16], BLACK),                                # chassis
+    *[b([x, 0, z], [x + 1.2, 3.2, z + 3.2], RED) for x in (1.2, 13.6) for z in (-2, 5, 11.5)],  # wheels
+    b([4, 2.6, -4], [12, 9, 2], GREEN),                                   # boiler
+    b([3.6, 4, -4.4], [12.4, 4.8, 2], GOLD), b([3.6, 7, -4.4], [12.4, 7.8, 2], GOLD),  # bands
+    b([6.5, 9, -2.5], [9.5, 13.5, 0.5], BLACK), b([6, 13, -3], [10, 14, 1], GOLD),     # chimney
+    b([6.5, 4, -4.6], [9.5, 7, -4.2], YELLOW),                            # lamp
+    b([3, 0.8, -5], [13, 2.2, -4], RED),                                  # buffer
+    b([2, 2.6, 2], [14, 3.6, 16], GREEN),                                 # floor
+    b([2, 3.6, 2], [3, 6, 16], GREEN), b([13, 3.6, 2], [14, 6, 16], GREEN),  # sides
+    b([2, 3.6, 15], [14, 7, 16], GREEN),                                  # back
+    b([3, 3.6, 3.5], [13, 5, 6.5], BLACK), b([3, 5, 6.5], [13, 8, 7.5], BLACK),       # front bench
+    b([3, 3.6, 10], [13, 5, 13], BLACK), b([3, 5, 13], [13, 8.5, 14.2], BLACK),       # back bench
+    *[b([x, 6, z], [x + 0.8, 11, z + 0.8], GOLD) for x in (2, 13.2) for z in (2, 15.2)],  # posts
+    b([1.5, 11, 1.5], [14.5, 12, 16.5], RED),                             # canopy
+]
+
+CAFE = {
+    "cone_0": cone(0), "cone_1": cone(1), "cone_2": cone(2), "cone_3": cone(3),
+    "cup_cocoa": cup(WOOD), "cup_lemonade": cup(PINK),
+}
+
+
+HATS = {
+    "hat_party": [b([5, 0, 5], [11, 3, 11], PINK), b([6, 3, 6], [10, 6, 10], YELLOW), b([7, 6, 7], [9, 9, 9], PINK), b([7.5, 9, 7.5], [8.5, 10, 8.5], WHITE)],
+    "hat_crown": [b([4, 0, 4], [12, 2, 12], GOLD), *[b([x, 2, z], [x + 1.5, 4.5, z + 1.5], GOLD) for x, z in ((4, 4), (10.5, 4), (4, 10.5), (10.5, 10.5))],
+                  b([7, 2, 3.5], [9, 3.5, 4.5], RED)],
+    "hat_bow": [b([7, 0, 7], [9, 2, 9], RED), b([3, 0.5, 7], [7, 2.5, 9], PINK), b([9, 0.5, 7], [13, 2.5, 9], PINK)],
+    "hat_top": [b([3, 0, 3], [13, 1, 13], BLACK), b([5, 1, 5], [11, 8, 11], BLACK), b([5, 2, 5], [11, 3, 11], RED)],
+    "hat_flower": [*[b([x, 0, z], [x + 2, 2, z + 2], c) for (x, z, c) in ((3, 7, PINK), (7, 3, YELLOW), (11, 7, PINK), (7, 11, YELLOW), (5, 5, WHITE),
+                                                                        (9, 9, WHITE), (9, 5, LIME), (5, 9, LIME))]],
+}
+
+
 SWING_CROWN = [
     b([2, 0, 0], [14, 1.2, 16], RED), b([0, 0, 2], [16, 1.2, 14], WHITE), b([1, 0.1, 1], [15, 1.1, 15], YELLOW),
     *[b([x, -0.8, z], [x + 1, 0, z + 1], YELLOW) for x, z in ((1.5, 7.5), (13.5, 7.5), (7.5, 1.5), (7.5, 13.5), (3, 3), (12, 3), (3, 12), (12, 12))],
@@ -475,6 +545,10 @@ MODELS = {
     **{f"swing_chair_{n}": swing_chair(c) for n, c in (("red", RED), ("blue", BLUE), ("green", GREEN), ("yellow", YELLOW), ("pink", PINK),
                                                        ("purple", PURPLE), ("orange", ORANGE), ("sky", SKY))},
     "swing_crown": SWING_CROWN,
+    **HATS,
+    "bus": BUS,
+    "train": TRAIN,
+    "empty": [],
     **{f"butterfly_{n}": butterfly(c, d) for n, c, d in (("red", RED, BLACK), ("orange", ORANGE, WHITE), ("yellow", YELLOW, ORANGE), ("lime", LIME, GREEN),
                                                         ("sky", SKY, WHITE), ("blue", BLUE, SKY), ("purple", PURPLE, PINK), ("pink", PINK, WHITE),
                                                         ("white", WHITE, SKY), ("gold", GOLD, YELLOW), ("ruby", RED_DARK, GOLD))},
@@ -488,6 +562,16 @@ MODELS = {
     "duck": DUCK, "golf_ball": GOLF_BALL, "golf_flag": GOLF_FLAG, "zip_handle": ZIP_HANDLE,
 }
 HANDHELD = {"putter": PUTTER, "mallet": MALLET}
+HELD_DISPLAY = {
+    "thirdperson_righthand": {"rotation": [0, 0, 0], "translation": [0, 2, 1], "scale": [0.55, 0.55, 0.55]},
+    "thirdperson_lefthand": {"rotation": [0, 0, 0], "translation": [0, 2, 1], "scale": [0.55, 0.55, 0.55]},
+    "firstperson_righthand": {"rotation": [0, -20, 0], "translation": [1, 2, 0], "scale": [0.6, 0.6, 0.6]},
+    "firstperson_lefthand": {"rotation": [0, 20, 0], "translation": [1, 2, 0], "scale": [0.6, 0.6, 0.6]},
+    "gui": {"rotation": [20, 45, 0], "translation": [0, -1, 0], "scale": [0.75, 0.75, 0.75]},
+    "ground": {"rotation": [0, 0, 0], "translation": [0, 2, 0], "scale": [0.5, 0.5, 0.5]},
+    "fixed": {"rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.8, 0.8, 0.8]},
+}
+HAT_HEAD = {"head": {"rotation": [0, 0, 0], "translation": [0, 14.4, 0], "scale": [1, 1, 1]}}
 
 
 def write(path, obj):
@@ -501,12 +585,21 @@ def main():
     write_png(f"{ASSETS}/textures/item/park_parts.png", atlas())
     tex = {"parts": f"{NS}:item/park_parts", "particle": f"{NS}:item/park_parts"}
     for name, elements in MODELS.items():
-        write(f"{ASSETS}/models/item/park_{name}.json", {"textures": tex, "elements": elements})
+        model = {"textures": tex, "elements": elements}
+        if name.startswith("hat_"):
+            model["display"] = HAT_HEAD
+        write(f"{ASSETS}/models/item/park_{name}.json", model)
         write(f"{ASSETS}/items/park_{name}.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/park_{name}"}})
+    for name, elements in CAFE.items():
+        write(f"{ASSETS}/models/item/park_{name}.json", {"textures": tex, "elements": elements, "display": HELD_DISPLAY})
+        model = {"type": "minecraft:model", "model": f"{NS}:item/park_{name}"}
+        if name.startswith("cone_"):
+            model["tints"] = [{"type": "minecraft:custom_model_data", "index": i, "default": 16777215} for i in range(3)]
+        write(f"{ASSETS}/items/park_{name}.json", {"model": model})
     for name, elements in HANDHELD.items():
         write(f"{ASSETS}/models/item/park_{name}.json", {"parent": "minecraft:item/handheld", "textures": tex, "elements": elements})
         write(f"{ASSETS}/items/park_{name}.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/park_{name}"}})
-    print(f"park models written: {len(MODELS) + len(HANDHELD)}")
+    print(f"park models written: {len(MODELS) + len(HANDHELD) + len(CAFE)}")
 
 
 if __name__ == "__main__":

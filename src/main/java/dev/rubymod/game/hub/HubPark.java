@@ -140,7 +140,9 @@ public final class HubPark {
 			new Place("golf", "Mini Golf", "Four crazy holes", "minecraft:slime_ball", stand(-40, FLOOR, 57), "Windmill, volcano, cove"),
 			new Place("spooky", "Haunted Mansion", "Only a little bit scary", "minecraft:carved_pumpkin", stand(29, FLOOR, 44), "Ghosts, a library, a crypt"),
 			new Place("toyland", "Toyland", "Toy Blaster, petting zoo", "minecraft:blaze_rod", stand(6, FLOOR, 44), "Helter Skelter, butterflies"),
-			new Place("speedway", "Speedway", "Kart racing on ice", "minecraft:snowball", stand(-109, FLOOR, -40), "Race the computer karts"));
+			new Place("speedway", "Speedway", "Kart racing on ice", "minecraft:snowball", stand(-109, FLOOR, -40), "Race the computer karts"),
+			new Place("home", "Home Street", "Your own little house", "minecraft:oak_door", stand(-62, FLOOR, -40), "Main Street shops, museum"),
+			new Place("beach", "Fossil Beach", "Dig up fossils", "minecraft:wooden_shovel", stand(97, FLOOR, -125), "Shovels at the museum"));
 
 	private static final String MAP = "Park Map";
 
@@ -230,7 +232,7 @@ public final class HubPark {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
 			}
-			if (HubHosts.clicked(sp, entity) || Toyland.pet(sp, entity)) {
+			if (HubHosts.clicked(sp, entity) || Pets.clicked(sp, entity) || Toyland.pet(sp, entity)) {
 				return InteractionResult.SUCCESS;
 			}
 			if (HubRides.mountSwing(sp, entity)) {
@@ -243,6 +245,10 @@ public final class HubPark {
 
 	/** Right-clicking a block in the hub. Null: not one of ours. */
 	public static InteractionResult useBlock(ServerPlayer p, BlockPos pos, BlockState state) {
+		InteractionResult dig = Museum.useBlock(p, pos);
+		if (dig != null) {
+			return dig;
+		}
 		if (pos.equals(TOY_CHEST)) {
 			HubGames.toyChest(p);
 			return InteractionResult.SUCCESS;
@@ -272,6 +278,9 @@ public final class HubPark {
 
 	/** Right-clicking with an item in the hub: the toys. */
 	public static boolean useItem(ServerPlayer p, ItemStack held) {
+		if (MainStreet.useItem(p, held)) {
+			return true;
+		}
 		if (MiniGolf.isPutter(held)) {
 			return MiniGolf.putt(p);
 		}
@@ -660,12 +669,17 @@ public final class HubPark {
 		Butterflies.reset();
 		Photos.reset();
 		SpinCoaster.reset();
+		MainStreet.reset();
+		Museum.reset();
+		ParkTrain.reset();
+		SkyTours.reset();
 		plaza(level);
 		FunPark.build(level);
 		BumperBoats.build(level);
 		FunRides.build(level);
 		SplashIsland.build(level);
 		Toyland.build(level);
+		HomeStreet.build(level);
 		SpinCoaster.build(level);
 		Photos.build(level);
 		WaterPark.build(level);
@@ -686,6 +700,8 @@ public final class HubPark {
 		Seasons.build(level);
 		Coaster.build(level);
 		Scenery.build(level);
+		ParkTrain.build(level);
+		SkyTours.build(level);
 		// Last of all: nothing solid near a rider's head, on any ride.
 		for (TrackRide r : TrackRide.ALL) {
 			int n = r.clearHeadroom(level);
@@ -767,6 +783,9 @@ public final class HubPark {
 				.append(Component.literal("\n\u2198 Haunted Mansion: only a little bit scary").withStyle(ChatFormatting.LIGHT_PURPLE))
 				.append(Component.literal("\n\u2190 Speedway: kart racing on ice").withStyle(ChatFormatting.RED))
 				.append(Component.literal("\n\u2190 Sky Parkour, and Sky Rings with Wren").withStyle(ChatFormatting.YELLOW))
+				.append(Component.literal("\n\u2196 Home Street: your own house! And Main Street:\n   ice cream, caf\u00e9, costumes, furniture, museum").withStyle(ChatFormatting.GOLD))
+				.append(Component.literal("\n\u2192 Fossil Beach (by Splash Island): dig up fossils").withStyle(ChatFormatting.GOLD))
+				.append(Component.literal("\n\nThe Park Train goes round every island.\nCaptain Cloud flies you on a happy ghast!").withStyle(ChatFormatting.AQUA))
 				.append(Component.literal("\n\nTilly has toys and gadgets (and a camera!).\nPhotos go on the Family Photo Wall.").withStyle(ChatFormatting.WHITE))
 				.append(Component.literal("\n\nYour Park Map (in your hotbar) flies you anywhere.\nCoach Kit runs Tag, Hide and Seek and more!")
 						.withStyle(ChatFormatting.WHITE));
@@ -1110,6 +1129,12 @@ public final class HubPark {
 			Booths.tick(level);
 		}
 		Pets.tick(level, tick);
+		MainStreet.tick(level, tick);
+		ParkTrain.tick(level);
+		SkyTours.tick(level);
+		if (Museum.near(level)) {
+			Museum.tick(level, tick);
+		}
 		Seasons.tick(level, tick);
 		Scenery.tick(level, tick);
 		ambience(level);
