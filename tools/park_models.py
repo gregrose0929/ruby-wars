@@ -14,19 +14,24 @@ NS = "rubymod"
 ASSETS = f"src/main/resources/assets/{NS}"
 
 BLACK, GRAY, STEEL, WHITE, RED, RED_DARK, YELLOW, GOLD, BLUE, SKY, GREEN, LIME, PINK, PURPLE, ORANGE, WOOD = range(16)
+(DKGREEN, MAROON, CREAM, BRASS, DKWOOD, NAVY, IRON, RUST, STONE, TEAL, SAND, LTWOOD, SOOT, COPPER, GLASS, BUTTER) = range(16, 32)
 COLORS = [
     (34, 34, 40), (92, 96, 108), (176, 182, 192), (242, 242, 242),
     (226, 40, 52), (150, 22, 34), (255, 212, 44), (232, 168, 36),
     (44, 112, 232), (116, 204, 255), (52, 182, 72), (146, 232, 64),
     (255, 124, 192), (152, 72, 224), (255, 142, 32), (150, 100, 60),
+    (32, 96, 58), (118, 30, 40), (238, 226, 196), (200, 162, 72),
+    (72, 50, 34), (32, 46, 96), (62, 64, 72), (138, 72, 44),
+    (150, 150, 146), (40, 140, 140), (222, 202, 150), (182, 142, 94),
+    (24, 24, 28), (190, 108, 66), (150, 196, 214), (250, 232, 150),
 ]
 
 
 def atlas():
     rnd = random.Random(7)
-    img = [[(0, 0, 0, 255)] * 16 for _ in range(16)]
+    img = [[(0, 0, 0, 255)] * 32 for _ in range(32)]
     for i, (r, g, b) in enumerate(COLORS):
-        ox, oy = (i % 4) * 4, (i // 4) * 4
+        ox, oy = (i % 8) * 4, (i // 8) * 4
         for y in range(4):
             for x in range(4):
                 n = rnd.randint(-5, 5) + (8 if y == 0 else (-10 if y == 3 else 0))
@@ -35,8 +40,8 @@ def atlas():
 
 
 def uv(s):
-    u, v = (s % 4) * 4, (s // 4) * 4
-    return [u + 0.5, v + 0.5, u + 3.5, v + 3.5]
+    u, v = (s % 8) * 2, (s // 8) * 2
+    return [u + 0.25, v + 0.25, u + 1.75, v + 1.75]
 
 
 def b(frm, to, s, rot=None):
@@ -464,20 +469,17 @@ def cup(drink):
             b([6, 1.5, 4.9], [10, 2.5, 5.0], PINK)]
 
 
-BUS = [
-    b([2, 0.6, 1], [14, 3, 15], BLACK),                                   # underside
-    *[b([x, 0, z], [x + 1.2, 2.6, z + 2.6], GRAY) for x in (1.4, 13.4) for z in (2, 11.4)],  # wheels
-    b([2.5, 2.6, 0.5], [13.5, 6.5, 15.5], YELLOW),                        # body
-    b([2.5, 6.5, 0.5], [3.2, 9.5, 15.5], YELLOW), b([12.8, 6.5, 0.5], [13.5, 9.5, 15.5], YELLOW),  # window pillars
-    *[b([2.4, 6.5, z], [13.6, 9.5, z + 0.8], YELLOW) for z in (0.5, 4.5, 8.5, 12, 14.7)],
-    b([2.5, 9.5, 0.5], [13.5, 10.5, 15.5], WHITE),                        # roof
-    b([2.4, 5.4, 0.5], [13.6, 5.9, 15.5], RED),                           # stripe
-    b([4, 3.2, 0.2], [6, 4.6, 0.5], WHITE), b([10, 3.2, 0.2], [12, 4.6, 0.5], WHITE),  # headlights
-    b([5, 7, 0.3], [11, 9, 0.5], SKY),                                    # windscreen
-    b([6, 10.5, 1], [10, 11.2, 2.2], RED),                                # sign
+
+TRACK = [
+    b([4.5, -2.5, 0], [11.5, 0.8, 16], IRON),                              # the girder underneath
+    b([4, -2.8, 0], [12, -2.2, 16], SOOT),
+    b([1.5, 0.8, 0], [14.5, 1.2, 16], STONE),                              # ballast
+    *[b([1, 1.2, z], [15, 2.2, z + 2.2], DKWOOD) for z in (0.4, 4.4, 8.4, 12.4)],  # sleepers
+    *[b([x, 2.2, 0], [x + 1.2, 3.2, 16], IRON) for x in (2.9, 11.9)],      # rails
+    *[b([x, 3.2, 0], [x + 1.2, 3.5, 16], STEEL) for x in (2.9, 11.9)],
 ]
 
-TRAIN = [
+TRAIN_OLD = [
     b([2, 0.6, -3], [14, 2.6, 16], BLACK),                                # chassis
     *[b([x, 0, z], [x + 1.2, 3.2, z + 3.2], RED) for x in (1.2, 13.6) for z in (-2, 5, 11.5)],  # wheels
     b([4, 2.6, -4], [12, 9, 2], GREEN),                                   # boiler
@@ -492,6 +494,74 @@ TRAIN = [
     b([3, 3.6, 10], [13, 5, 13], BLACK), b([3, 5, 13], [13, 8.5, 14.2], BLACK),       # back bench
     *[b([x, 6, z], [x + 0.8, 11, z + 0.8], GOLD) for x in (2, 13.2) for z in (2, 15.2)],  # posts
     b([1.5, 11, 1.5], [14.5, 12, 16.5], RED),                             # canopy
+]
+
+def wheel(x, z, d, colour):
+    """A round-ish wheel, side on: three boxes making an octagon, with a brass hub."""
+    r = d / 2
+    k = r * 0.42
+    return [b([x, 0 + r - k, z - r], [x + 0.8, r + k, z + r], colour), b([x, 0, z - k], [x + 0.8, d, z + k], colour),
+            b([x, r - r * 0.72, z - r * 0.72], [x + 0.8, r + r * 0.72, z + r * 0.72], colour),
+            b([x + (0.8 if x > 8 else -0.2), r - 0.5, z - 0.5], [x + (1.0 if x > 8 else 0), r + 0.5, z + 0.5], BRASS)]
+
+
+BUS = [
+    b([2.6, 1.8, 0.6], [13.4, 2.8, 15.4], SOOT),                          # skirt
+    *[e for z in (3.2, 12.6) for x in (1.8, 13.4) for e in wheel(x, z, 3.2, SOOT)],
+    b([2.5, 2.8, 0.4], [13.5, 6.4, 15.6], YELLOW),                        # body
+    b([2.4, 4.6, 0.4], [13.6, 5.2, 15.6], RED),                           # stripe
+    *[b([2.5, 6.4, z], [13.5, 9.6, z + 0.7], YELLOW) for z in (0.4, 14.9)],   # front and back pillars
+    *[b([x, 6.4, z], [x + 0.6, 9.6, z + 0.6], YELLOW) for x in (2.5, 12.9) for z in (4.6, 8.2, 11.8)],
+    b([3.2, 6.4, 0.3], [12.8, 9.2, 0.5], GLASS),                          # windscreen
+    b([2.3, 9.6, 0.2], [13.7, 10.4, 15.8], CREAM), b([3, 10.4, 1], [13, 10.8, 15], CREAM),   # roof
+    b([4.5, 10.4, 0.1], [11.5, 11.4, 0.9], BUTTER),                       # destination board
+    b([2.8, 2.6, 0.1], [13.2, 3.2, 0.4], STEEL),                          # bumper
+    b([3.4, 3.6, 0.2], [5, 4.6, 0.4], BUTTER), b([11, 3.6, 0.2], [12.6, 4.6, 0.4], BUTTER),  # headlights
+    b([6, 3.4, 0.2], [10, 4.4, 0.4], SOOT),                               # grille
+    b([3.2, 2.8, 3.6], [12.8, 3.6, 15], DKWOOD),                          # floor
+    *[b([3.4, 3.6, z], [12.6, 4.8, z + 2.6], RED) for z in (4, 10.4)],      # seats
+    *[b([3.4, 4.8, z], [12.6, 7.4, z + 0.8], RED) for z in (6.4, 12.8)],
+]
+
+
+TRAIN = [
+    # Frame and buffers.
+    b([4, 1.6, -15], [12, 2.6, 15.5], SOOT),
+    b([3, 1.4, -15.4], [13, 3.0, -14.4], RED),
+    *[b([x, 1.8, -16], [x + 1.6, 2.6, -15.4], STEEL) for x in (3.6, 10.8)],
+    # Driving wheels (red with black tyres), coupling rods.
+    *[e for z in (-11.5, -7.5, -3.5) for x in (3.4, 11.8) for e in wheel(x, z, 3.6, RED)],
+    *[b([x, 1.5, -12], [x + 0.3, 2.0, -3], STEEL) for x in (3.1, 12.6)],
+    # Boiler: rounded, dark green with brass bands.
+    b([5, 3, -14], [11, 9, -2], DKGREEN), b([4.4, 3.6, -14], [11.6, 8.4, -2], DKGREEN), b([5.6, 2.6, -14], [10.4, 9.4, -2], DKGREEN),
+    *[b([4.2, 3.4, z], [11.8, 8.6, z + 0.6], BRASS) for z in (-12.6, -8.6, -4.6)],
+    # Smokebox and front.
+    b([4.8, 2.8, -15], [11.2, 9.2, -14], SOOT), b([6.5, 4.5, -15.2], [9.5, 7.5, -15], IRON),
+    b([7.4, 5.4, -15.4], [8.6, 6.6, -15.2], BRASS),
+    b([7, 9.2, -14.2], [9, 10.2, -13.2], BUTTER),                          # headlamp
+    # Chimney, dome, whistle.
+    b([6.8, 9, -13], [9.2, 13, -10.6], SOOT), b([6.2, 13, -13.6], [9.8, 13.8, -10], SOOT),
+    b([7, 9, -7.4], [9, 10.6, -5.4], BRASS), b([7.4, 10.6, -7], [8.6, 11.2, -5.8], BRASS),
+    b([7.6, 9, -3.2], [8.4, 10.6, -2.6], BRASS),
+    # The cab: green sides with windows, a black roof.
+    b([3.6, 2.6, -2.4], [12.4, 3.2, 2.4], DKWOOD),
+    b([3.6, 3.2, -2.4], [4.4, 10, 2.4], DKGREEN), b([11.6, 3.2, -2.4], [12.4, 10, 2.4], DKGREEN),
+    b([3.5, 6.2, -1.8], [4.5, 8.6, 0.6], GLASS), b([11.5, 6.2, -1.8], [12.5, 8.6, 0.6], GLASS),
+    b([4.4, 3.2, -2.4], [11.6, 6.4, -1.8], DKGREEN), b([4.4, 6.4, -2.4], [5.4, 10, -1.8], DKGREEN), b([10.6, 6.4, -2.4], [11.6, 10, -1.8], DKGREEN),
+    b([3.2, 10, -3], [12.8, 10.8, 2.8], SOOT),
+    b([3.5, 3.0, -2.5], [12.5, 3.4, 2.5], BRASS),
+    # The carriage: maroon sides, cream panels, brass trim, two wooden benches, a striped canopy.
+    b([3.6, 2.6, 2.8], [12.4, 3.2, 15.4], DKWOOD),
+    *[e for z in (5, 12) for x in (4.4, 10.8) for e in wheel(x, z, 2.6, SOOT)],
+    b([3.4, 3.2, 2.8], [4.2, 6.6, 15.4], MAROON), b([11.8, 3.2, 2.8], [12.6, 6.6, 15.4], MAROON),
+    b([3.3, 4.2, 4], [3.4, 5.8, 14.4], CREAM), b([12.6, 4.2, 4], [12.7, 5.8, 14.4], CREAM),
+    b([3.2, 6.6, 2.8], [4.4, 7.1, 15.4], BRASS), b([11.6, 6.6, 2.8], [12.8, 7.1, 15.4], BRASS),
+    b([3.4, 3.2, 15], [12.6, 7.4, 15.6], MAROON),
+    b([4.4, 3.2, 3.8], [11.6, 4.6, 6.4], LTWOOD), b([4.4, 4.6, 6.2], [11.6, 7.6, 7.0], LTWOOD),
+    b([4.4, 3.2, 10.2], [11.6, 4.6, 12.8], LTWOOD), b([4.4, 4.6, 12.6], [11.6, 7.8, 13.4], LTWOOD),
+    *[b([x, 7, z], [x + 0.6, 13, z + 0.6], BRASS) for x in (3.5, 11.9) for z in (3, 14.8)],
+    *[b([3, 13, 2.6 + i * 1.6], [13, 13.6, 4.2 + i * 1.6], CREAM if i % 2 == 0 else MAROON) for i in range(8)],
+    b([3, 13.6, 2.6], [13, 13.9, 15.4], MAROON),
 ]
 
 CAFE = {
@@ -548,6 +618,7 @@ MODELS = {
     **HATS,
     "bus": BUS,
     "train": TRAIN,
+    "track": TRACK,
     "empty": [],
     **{f"butterfly_{n}": butterfly(c, d) for n, c, d in (("red", RED, BLACK), ("orange", ORANGE, WHITE), ("yellow", YELLOW, ORANGE), ("lime", LIME, GREEN),
                                                         ("sky", SKY, WHITE), ("blue", BLUE, SKY), ("purple", PURPLE, PINK), ("pink", PINK, WHITE),

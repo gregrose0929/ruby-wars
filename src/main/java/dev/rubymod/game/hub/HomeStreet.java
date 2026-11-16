@@ -266,13 +266,13 @@ public final class HomeStreet {
 		// Street lamps and trees along the pavements.
 		for (int x = -86; x <= -38; x += 8) {
 			if (x < -67 || x > -57) {
-				HubPark.lamp(level, x, FLOOR + 1, -57);
-				HubPark.lamp(level, x, FLOOR + 1, -47);
+				lamp(level, x, -57);
+				lamp(level, x, -47);
 			}
 		}
 		for (int z = -116; z <= -64; z += 9) {
-			HubPark.lamp(level, -67, FLOOR + 1, z);
-			HubPark.lamp(level, -57, FLOOR + 1, z);
+			lamp(level, -67, z);
+			lamp(level, -57, z);
 		}
 		// The little green by the travel pad: benches and flowers.
 		for (int x = -66; x <= -58; x++) {
@@ -285,6 +285,13 @@ public final class HomeStreet {
 		}
 		HubPark.set(level, -65, FLOOR + 1, -39, Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
 		HubPark.set(level, -59, FLOOR + 1, -39, Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
+	}
+
+	/** A street lamp: a dark post with a little arm and a lantern hanging from it. */
+	private static void lamp(ServerLevel level, int x, int z) {
+		HubPark.box(level, x, FLOOR + 1, z, x, FLOOR + 3, z, Blocks.DARK_OAK_FENCE.defaultBlockState());
+		HubPark.set(level, x, FLOOR + 4, z, Blocks.POLISHED_BLACKSTONE_WALL.defaultBlockState());
+		HubPark.set(level, x, FLOOR + 5, z, Blocks.LANTERN.defaultBlockState());
 	}
 
 	private static final BlockState[] ROOFS = {Blocks.BRICK_STAIRS.defaultBlockState(), Blocks.DARK_OAK_STAIRS.defaultBlockState(),
@@ -331,11 +338,21 @@ public final class HomeStreet {
 				}
 			}
 		}
+		// A brick chimney, with a wisp of smoke.
+		int cz = h.north() ? z0 + 2 : z0 + 6;
+		HubPark.box(level, x0 + 6, FLOOR + 6, cz, x0 + 6, FLOOR + 11, cz, Blocks.BRICKS.defaultBlockState());
+		HubPark.set(level, x0 + 6, FLOOR + 12, cz, Blocks.CAMPFIRE.defaultBlockState());
 		// The front door.
 		Direction out = h.north() ? Direction.SOUTH : Direction.NORTH;
 		BlockState door = Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.FACING, out.getOpposite());
 		HubPark.set(level, x0 + 4, FLOOR + 1, h.doorZ(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
 		HubPark.set(level, x0 + 4, FLOOR + 2, h.doorZ(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+		// A little porch roof over the door, with a lantern.
+		for (int x = x0 + 3; x <= x0 + 5; x++) {
+			HubPark.set(level, x, FLOOR + 4, h.outZ(), stair.setValue(StairBlock.FACING, out.getOpposite())
+					.setValue(StairBlock.HALF, net.minecraft.world.level.block.state.properties.Half.TOP));
+		}
+		HubPark.set(level, x0 + 3, FLOOR + 3, h.outZ(), Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
 		// The garden path, flowers, and the mailbox.
 		int dz = h.north() ? 1 : -1;
 		for (int k = 1; k <= 2; k++) {
@@ -434,9 +451,13 @@ public final class HomeStreet {
 				boolean edge = x == x1 || x == x2 || z == z1 || z == z2;
 				HubPark.set(level, x, FLOOR, z, (x + z) % 2 == 0 ? Blocks.BIRCH_PLANKS.defaultBlockState() : Blocks.OAK_PLANKS.defaultBlockState());
 				for (int y = 1; y <= 6; y++) {
-					boolean door = x == x1 && y <= 3 && z >= -81 && z <= -79;
-					boolean window = x == x1 && y >= 2 && y <= 4 && (z == -87 || z == -86 || z == -74 || z == -73);
-					HubPark.set(level, x, FLOOR + y, z, !edge || door ? Blocks.AIR.defaultBlockState() : window ? Blocks.GLASS.defaultBlockState() : wall);
+					boolean front = x == x1;
+					boolean door = front && y <= 3 && z >= -81 && z <= -79;
+					boolean transom = front && y == 4 && z >= -81 && z <= -79;
+					boolean window = front && y >= 2 && y <= 4 && (z >= -88 && z <= -84 || z >= -76 && z <= -72);
+					boolean column = front && (z == z1 || z == z2 || z == -82 || z == -78 || z == -89 || z == -71 || z == -83 || z == -77);
+					HubPark.set(level, x, FLOOR + y, z, !edge || door ? Blocks.AIR.defaultBlockState() : window || transom ? Blocks.GLASS_PANE.defaultBlockState()
+							: column ? Blocks.QUARTZ_PILLAR.defaultBlockState() : front ? Blocks.CONCRETE.pick(DyeColor.CYAN).defaultBlockState() : wall);
 				}
 				HubPark.set(level, x, FLOOR + 7, z, edge ? Blocks.STRIPPED_OAK_LOG.defaultBlockState() : Blocks.BIRCH_PLANKS.defaultBlockState());
 			}
@@ -499,7 +520,33 @@ public final class HomeStreet {
 			SHOP.put(new BlockPos(x, FLOOR + 1, z1 + 1), "floor:" + k);
 		}
 		HubPark.label(level, -48.5, FLOOR + 2.6, z1 + 1.8, "FLOORS: right-click one", ChatFormatting.AQUA, 0.6F);
-		HubPark.label(level, x1 - 0.1, FLOOR + 8.6, -79.5, "FERN'S FURNITURE", ChatFormatting.GOLD, 1.8F);
+		// The shop front: panes joined up, a moulding, a sign board, a striped awning, planters.
+		for (int z = z1; z <= z2; z++) {
+			for (int y = 1; y <= 6; y++) {
+				BlockPos p = new BlockPos(x1, FLOOR + y, z);
+				BlockState st = level.getBlockState(p);
+				if (st.is(Blocks.GLASS_PANE)) {
+					level.setBlock(p, Block.updateFromNeighbourShapes(st, level, p), 2);
+				}
+			}
+			HubPark.set(level, x1 - 1, FLOOR + 7, z, Blocks.SMOOTH_QUARTZ_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST)
+					.setValue(StairBlock.HALF, net.minecraft.world.level.block.state.properties.Half.TOP));
+			boolean awning = z >= -88 && z <= -72;
+			if (awning) {
+				HubPark.set(level, x1 - 1, FLOOR + 5, z, Blocks.WOOL_STAIRS.pick(Math.floorMod(z, 2) == 0 ? DyeColor.WHITE : DyeColor.CYAN).defaultBlockState()
+						.setValue(StairBlock.FACING, Direction.EAST));
+			}
+			if (z >= -88 && z <= -84 || z >= -76 && z <= -72) {
+				HubPark.ifAir(level, x1 - 1, FLOOR + 1, z, Math.floorMod(z, 2) == 0 ? Blocks.FLOWERING_AZALEA.defaultBlockState() : Blocks.AZALEA.defaultBlockState());
+			}
+		}
+		for (int z = -86; z <= -74; z++) {
+			for (int y = 8; y <= 10; y++) {
+				boolean rim = y == 10 || z == -86 || z == -74;
+				HubPark.set(level, x1, FLOOR + y, z, rim ? Blocks.STRIPPED_OAK_LOG.defaultBlockState() : Blocks.DARK_OAK_PLANKS.defaultBlockState());
+			}
+		}
+		HubPark.label(level, x1 - 0.7, FLOOR + 8.7, -79.5, "FERN'S FURNITURE", ChatFormatting.GOLD, 1.6F);
 		HubHosts.add(level, new Vec3(x1 + 2.5, FLOOR + 1, -83.5), -90, VillagerProfession.CARTOGRAPHER, VillagerType.PLAINS,
 				new HubHosts.Host("furniture", "Fern", "Furniture Shop", 0xC08040, "minecraft:oak_stairs",
 						"Everything in the shop is free! Right-click a piece to take it, then right-click the floor in your house to put it down. "

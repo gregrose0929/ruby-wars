@@ -151,8 +151,27 @@ final class Museum {
 		for (int z : new int[] {-110, -104}) {
 			HubPark.box(level, X1 - 1, FLOOR + 1, z, X1 - 1, FLOOR + 7, z, pillar);
 		}
-		HubPark.label(level, X1 - 1.3, FLOOR + 9.6, -106.5, "PARK MUSEUM", ChatFormatting.GOLD, 2.0F);
-		HubPark.label(level, X1 - 1.3, FLOOR + 8.6, -106.5, "Everything here was found by someone in the family!", ChatFormatting.WHITE, 0.6F);
+		// A classical front: a beam across the columns and a triangular pediment over it.
+		for (int z = -111; z <= -103; z++) {
+			HubPark.set(level, X1 - 1, FLOOR + 8, z, Blocks.CUT_SANDSTONE.defaultBlockState());
+		}
+		for (int k = 0; k <= 4; k++) {
+			for (int z = -111 + k; z <= -103 - k; z++) {
+				boolean left = z == -111 + k;
+				boolean right = z == -103 - k;
+				BlockState b = k == 4 ? Blocks.SMOOTH_SANDSTONE.defaultBlockState()
+						: left ? Blocks.SMOOTH_SANDSTONE_STAIRS.defaultBlockState().setValue(net.minecraft.world.level.block.StairBlock.FACING, net.minecraft.core.Direction.SOUTH)
+								: right ? Blocks.SMOOTH_SANDSTONE_STAIRS.defaultBlockState().setValue(net.minecraft.world.level.block.StairBlock.FACING, net.minecraft.core.Direction.NORTH)
+										: Blocks.SMOOTH_SANDSTONE.defaultBlockState();
+				HubPark.set(level, X1 - 1, FLOOR + 9 + k, z, b);
+			}
+		}
+		HubPark.set(level, X1 - 1, FLOOR + 10, -107, Blocks.GOLD_BLOCK.defaultBlockState());
+		for (int z = -110; z <= -104; z++) {
+			HubPark.set(level, X1 - 2, FLOOR, z, Blocks.SMOOTH_QUARTZ_STAIRS.defaultBlockState().setValue(net.minecraft.world.level.block.StairBlock.FACING, net.minecraft.core.Direction.EAST));
+		}
+		HubPark.label(level, X1 - 1.7, FLOOR + 7.0, -106.5, "PARK MUSEUM", ChatFormatting.GOLD, 1.6F);
+		HubPark.label(level, X1 - 1.7, FLOOR + 6.3, -106.5, "Everything here was found by someone in the family!", ChatFormatting.WHITE, 0.55F);
 		// The tank.
 		for (int x = TX1 - 1; x <= TX2 + 1; x++) {
 			for (int z = TZ1 - 1; z <= TZ2 + 1; z++) {
@@ -294,6 +313,33 @@ final class Museum {
 			}
 			HubPark.set(level, t[0], FLOOR + 6, t[1], Blocks.JUNGLE_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
 		}
+		// Beach umbrellas with towels, and a sandcastle.
+		net.minecraft.world.item.DyeColor[][] stripes = {{net.minecraft.world.item.DyeColor.RED, net.minecraft.world.item.DyeColor.WHITE},
+			{net.minecraft.world.item.DyeColor.LIGHT_BLUE, net.minecraft.world.item.DyeColor.YELLOW}};
+		int[][] brollies = {{c[0] + 4, c[1] - 5}, {c[0] - 5, c[1] + 4}};
+		for (int u = 0; u < brollies.length; u++) {
+			int bx = brollies[u][0];
+			int bz = brollies[u][1];
+			HubPark.box(level, bx, FLOOR + 1, bz, bx, FLOOR + 3, bz, Blocks.BIRCH_FENCE.defaultBlockState());
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					boolean mid = dx == 0 && dz == 0;
+					HubPark.set(level, bx + dx, FLOOR + 4, bz + dz, mid ? Blocks.WOOL.pick(stripes[u][0]).defaultBlockState()
+							: Blocks.WOOL_SLAB.pick(stripes[u][Math.floorMod(dx + dz, 2)]).defaultBlockState());
+				}
+			}
+			HubPark.set(level, bx, FLOOR + 5, bz, Blocks.CARPET.pick(stripes[u][1]).defaultBlockState());
+			HubPark.set(level, bx + 1, FLOOR + 1, bz + 1, Blocks.CARPET.pick(stripes[u][1]).defaultBlockState());
+			HubPark.set(level, bx + 1, FLOOR + 1, bz + 2, Blocks.CARPET.pick(stripes[u][1]).defaultBlockState());
+		}
+		int sx = c[0] - 2;
+		int sz = c[1] + 6;
+		HubPark.box(level, sx, FLOOR + 1, sz, sx + 2, FLOOR + 1, sz + 2, Blocks.SANDSTONE.defaultBlockState());
+		for (int[] t : new int[][] {{0, 0}, {2, 0}, {0, 2}, {2, 2}}) {
+			HubPark.set(level, sx + t[0], FLOOR + 2, sz + t[1], Blocks.SANDSTONE_WALL.defaultBlockState());
+		}
+		HubPark.set(level, sx + 1, FLOOR + 2, sz + 1, Blocks.CHISELED_SANDSTONE.defaultBlockState());
+		HubPark.set(level, sx + 1, FLOOR + 3, sz + 1, Blocks.BANNER.pick(net.minecraft.world.item.DyeColor.RED).defaultBlockState());
 		HubPark.label(level, c[0] + 0.5, FLOOR + 4.5, c[1] + 0.5, "FOSSIL BEACH", ChatFormatting.GOLD, 1.8F);
 		HubPark.label(level, c[0] + 0.5, FLOOR + 3.6, c[1] + 0.5, "Dig the speckled sand with a Fossil Shovel\n(from Professor Pebble at the museum)",
 				ChatFormatting.WHITE, 0.6F);

@@ -97,12 +97,22 @@ final class MainStreet {
 			for (int z = z1; z <= z2; z++) {
 				boolean edge = x == x1 || x == x2 || z == z1 || z == z2;
 				HubPark.set(level, x, FLOOR, z, (x + z) % 2 == 0 ? floorA : floorB);
+				int dz = Math.abs(z - doorZ);
 				for (int y = 1; y <= 5; y++) {
-					boolean door = x == x2 && y <= 3 && Math.abs(z - doorZ) <= 1;
-					boolean window = x == x2 && y >= 2 && y <= 3 && (Math.abs(z - doorZ) == 3 || Math.abs(z - doorZ) == 4);
-					HubPark.set(level, x, FLOOR + y, z, !edge || door ? Blocks.AIR.defaultBlockState() : window ? Blocks.GLASS.defaultBlockState() : wall);
+					boolean front = x == x2;
+					boolean door = front && y <= 3 && dz <= 1;
+					boolean transom = front && y == 4 && dz <= 1;
+					boolean window = front && y >= 2 && y <= 4 && (dz == 3 || dz == 4);
+					// The shop front: white columns either side of the door and at the corners.
+					boolean column = front && (dz == 2 || z == z1 || z == z2);
+					HubPark.set(level, x, FLOOR + y, z, !edge || door ? Blocks.AIR.defaultBlockState() : window || transom ? Blocks.GLASS_PANE.defaultBlockState()
+							: column ? Blocks.QUARTZ_PILLAR.defaultBlockState() : wall);
 				}
 				HubPark.set(level, x, FLOOR + 6, z, edge ? trim : Blocks.SMOOTH_QUARTZ.defaultBlockState());
+				// A low wall round the roof.
+				if (edge) {
+					HubPark.set(level, x, FLOOR + 7, z, trim);
+				}
 			}
 		}
 		for (int x = x1 + 2; x < x2; x += 4) {
@@ -110,9 +120,35 @@ final class MainStreet {
 				HubPark.set(level, x, FLOOR + 5, z, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
 			}
 		}
-		// A striped awning over the door.
+		// Panes join up to the frames.
+		for (int z = z1; z <= z2; z++) {
+			for (int y = 1; y <= 5; y++) {
+				BlockPos p = new BlockPos(x2, FLOOR + y, z);
+				BlockState st = level.getBlockState(p);
+				if (st.is(Blocks.GLASS_PANE)) {
+					level.setBlock(p, net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, p), 2);
+				}
+			}
+		}
+		// A moulding along the top of the front, a sign board over the door, a sloping striped awning, and planters.
+		for (int z = z1; z <= z2; z++) {
+			HubPark.set(level, x2 + 1, FLOOR + 6, z, Blocks.SMOOTH_QUARTZ_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST)
+					.setValue(StairBlock.HALF, net.minecraft.world.level.block.state.properties.Half.TOP));
+		}
 		for (int z = doorZ - 4; z <= doorZ + 4; z++) {
-			HubPark.set(level, x2 + 1, FLOOR + 4, z, Blocks.WOOL.pick(Math.floorMod(z, 2) == 0 ? DyeColor.WHITE : colourOf(trim)).defaultBlockState());
+			for (int y = 7; y <= 9; y++) {
+				boolean rim = y == 9 || Math.abs(z - doorZ) == 4;
+				HubPark.set(level, x2, FLOOR + y, z, rim ? trim : Blocks.DARK_OAK_PLANKS.defaultBlockState());
+			}
+		}
+		for (int z = doorZ - 4; z <= doorZ + 4; z++) {
+			HubPark.set(level, x2 + 1, FLOOR + 5, z, Blocks.WOOL_STAIRS.pick(Math.floorMod(z, 2) == 0 ? DyeColor.WHITE : colourOf(trim)).defaultBlockState()
+					.setValue(StairBlock.FACING, Direction.WEST));
+		}
+		for (int z = doorZ - 4; z <= doorZ + 4; z++) {
+			if (Math.abs(z - doorZ) >= 3) {
+				HubPark.ifAir(level, x2 + 1, FLOOR + 1, z, Math.floorMod(z, 2) == 0 ? Blocks.FLOWERING_AZALEA.defaultBlockState() : Blocks.AZALEA.defaultBlockState());
+			}
 		}
 	}
 
@@ -151,7 +187,7 @@ final class MainStreet {
 			HubPark.set(level, t[0] + 1, FLOOR + 1, t[1], Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
 			HubPark.set(level, t[0] - 1, FLOOR + 1, t[1], Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
 		}
-		HubPark.label(level, x2 + 1.2, FLOOR + 7.3, -78.5, "SCOOPS' ICE CREAM", ChatFormatting.LIGHT_PURPLE, 1.5F).setYRot(-90);
+		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -78.5, "SCOOPS' ICE CREAM", ChatFormatting.LIGHT_PURPLE, 1.5F).setYRot(-90);
 		HubHosts.add(level, new Vec3(-77.5, FLOOR + 1, -78.5), -90, VillagerProfession.BUTCHER, VillagerType.SNOW,
 				new HubHosts.Host("icecream", "Scoops", "Ice Cream", 0xFF8FB8, "minecraft:snowball",
 						"Make your own ice cream! Right-click the tubs on the counter: each one adds a scoop to your cone, up to three. "
@@ -273,7 +309,7 @@ final class MainStreet {
 			HubPark.set(level, t[0] + 1, FLOOR + 1, t[1], Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
 			HubPark.set(level, t[0] - 1, FLOOR + 1, t[1], Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
 		}
-		HubPark.label(level, x2 + 1.2, FLOOR + 7.3, -92.5, "HAZEL'S CAFE", ChatFormatting.GREEN, 1.6F).setYRot(-90);
+		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -92.5, "HAZEL'S CAFE", ChatFormatting.GREEN, 1.6F).setYRot(-90);
 		HubHosts.add(level, new Vec3(-77.5, FLOOR + 1, -92.5), -90, VillagerProfession.FARMER, VillagerType.PLAINS,
 				new HubHosts.Host("cafe", "Hazel", "Café", 0x60C060, "minecraft:cookie",
 						"Welcome to my café! What would you like? Everything's free. Right-click to eat or drink it, then sit down at a table for a rest.",
@@ -360,7 +396,7 @@ final class MainStreet {
 			HubPark.set(level, -76, FLOOR + 2, z, Blocks.WOOL.pick(DyeColor.WHITE).defaultBlockState());
 			HubPark.model(level, new Vec3(-75.5, FLOOR + 3.0, z + 0.5), -90, shown[k], 0.8F, 0.0F);
 		}
-		HubPark.label(level, x2 + 1.2, FLOOR + 7.3, -106.5, "DOT'S COSTUMES", ChatFormatting.YELLOW, 1.5F).setYRot(-90);
+		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -106.5, "DOT'S COSTUMES", ChatFormatting.YELLOW, 1.5F).setYRot(-90);
 		HubHosts.add(level, new Vec3(-72.5, FLOOR + 1, -110.5), -90, VillagerProfession.LIBRARIAN, VillagerType.SWAMP,
 				new HubHosts.Host("costumes", "Dot", "Costume Shop", 0xFFD040, "minecraft:carved_pumpkin",
 						"Dress up! Try on hats and masks, and outfits in every colour (even a knight's armour). Press the buttons again for the next one. "

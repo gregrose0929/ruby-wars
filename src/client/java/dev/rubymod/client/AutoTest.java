@@ -4559,6 +4559,8 @@ public final class AutoTest {
 			case "homecheck" -> homeCheckScript();
 			case "traincheck" -> trainCheckScript();
 			case "finalcheck" -> finalCheckScript();
+			case "trainlook" -> trainLookScript();
+			case "streetlook" -> streetLookScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5483,6 +5485,98 @@ public final class AutoTest {
 			tpHub(mc, "60 135 -60 facing 60 105 -10");
 		});
 		then(100, mc -> shot(mc, "new-night-coaster"));
+	}
+
+	/** How the streets look: shop fronts, houses, the museum, the beach, the bus. */
+	private static void streetLookScript() {
+		then(0, mc -> command(mc, "time set noon"));
+		String[][] views = {{"-61 104 -68 facing -72 102 -92", "sl-main"}, {"-61 102 -79 facing -68 103 -79", "sl-icecream"},
+			{"-61 102 -93 facing -68 103 -93", "sl-cafe"}, {"-65 104 -107 facing -56 106 -107", "sl-museum"},
+			{"-68 104 -51 facing -80 103 -62", "sl-houses"}, {"-61 102 -79 facing -56 103 -79", "sl-fern"}, {"86 108 -118 facing 100 101 -130", "sl-beach"},
+			{"-62 115 -30 facing -62 101 -60", "sl-street-air"}};
+		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(200, mc -> command(mc, "gamemode creative @a"));
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			mc.player.onUpdateAbilities();
+			tpHub(mc, views[0][0]);
+		});
+		for (int k = 0; k < views.length; k++) {
+			int n = k;
+			then(100, mc -> {
+				mc.player.getAbilities().flying = true;
+				shot(mc, views[n][1]);
+				if (n + 1 < views.length) {
+					tpHub(mc, views[n + 1][0]);
+				}
+			});
+		}
+		then(5, mc -> tpHub(mc, "-60.5 101 -43.5 facing -60.5 102 -45.5"));
+		then(20, mc -> command(mc, "gamemode adventure @a"));
+		then(40, mc -> talk(mc, -60.5, 101, -45.5));
+		then(20, mc -> press(mc, "play"));
+		then(140, mc -> {
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+			log("streetlook: bus riding {}", mc.player.isPassenger());
+		});
+		then(10, mc -> shot(mc, "sl-bus"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+	}
+
+	/** How the railway looks: stations, bends and trestles from outside, then a ride. */
+	private static void trainLookScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode spectator @a");
+		});
+		String[][] views = {{"-18 124 -6 facing -28 120 2", "tl-plaza"}, {"-40 126 48 facing -40 120 60", "tl-golf"},
+			{"18 126 60 facing 6 120 46", "tl-toyland"}, {"-96 140 -10 facing -116 120 -28", "tl-uturn"}, {"64 118 -16 facing 48 112 -24", "tl-trestle"},
+			{"64 124 -54 facing 54 120 -60", "tl-splash"}, {"-56 126 -24 facing -60 120 -34", "tl-home"}};
+		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(200, mc -> command(mc, "gamemode creative @a"));
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			mc.player.onUpdateAbilities();
+			tpHub(mc, views[0][0]);
+		});
+		for (int k = 0; k < views.length; k++) {
+			int n = k;
+			then(100, mc -> {
+				mc.player.getAbilities().flying = true;
+				shot(mc, views[n][1]);
+				if (n + 1 < views.length) {
+					tpHub(mc, views[n + 1][0]);
+				}
+			});
+		}
+		then(5, mc -> tpHub(mc, "-18.5 101 1.5"));
+		then(20, mc -> command(mc, "gamemode adventure @a"));
+		then(200, mc -> {
+			var vs = mc.level.getEntitiesOfClass(net.minecraft.world.entity.npc.villager.Villager.class, mc.player.getBoundingBox().inflate(20),
+					v -> v.getCustomName() != null && v.getCustomName().getString().contains("Conductor"));
+			log("trainlook: conductors near {}", vs.size());
+			if (!vs.isEmpty()) {
+				var v = vs.get(0);
+				lookAt(mc, v.getEyePosition());
+				mc.gameMode.interact(mc.player, v, new net.minecraft.world.phys.EntityHitResult(v), InteractionHand.MAIN_HAND);
+			}
+		});
+		then(20, mc -> press(mc, "play"));
+		then(40, mc -> {
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_FRONT);
+			mc.player.setYRot(mc.player.getYRot() + 30);
+		});
+		then(10, mc -> shot(mc, "tl-ride-wait"));
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK));
+		for (int k = 0; k < 4; k++) {
+			int n = k;
+			then(120, mc -> {
+				log("trainlook: riding {} at {}", mc.player.isPassenger(), mc.player.position());
+				shot(mc, "tl-ride-" + n);
+			});
+		}
+		then(5, mc -> mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+		then(10, mc -> shot(mc, "tl-ride-first"));
 	}
 
 	/** The fixes: ice cream with something in your hand, a hat seen from the front, a Sky Tour, off the train at Mini Golf, Pie Mystery's lobby. */
