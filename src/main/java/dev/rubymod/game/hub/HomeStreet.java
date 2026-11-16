@@ -596,10 +596,10 @@ public final class HomeStreet {
 			}
 		}
 		Home home = home(h.index());
-		double z = h.north() ? h.z0() + 9.1 : h.z0() - 0.1;
+		double z = h.north() ? h.z0() + 10.3 : h.z0() - 1.3;
 		Display.TextDisplay d = home.owner == null
-				? HubPark.label(level, h.x0() + 4.5, FLOOR + 3.6, z, "FOR SALE\nright-click the red mailbox!", ChatFormatting.GREEN, 0.8F)
-				: HubPark.label(level, h.x0() + 4.5, FLOOR + 3.6, z, home.owner + "'s House", ChatFormatting.GOLD, 1.0F);
+				? HubPark.label(level, h.x0() + 4.5, FLOOR + 5.7, z, "FOR SALE\nright-click the red mailbox!", ChatFormatting.GREEN, 0.8F)
+				: HubPark.label(level, h.x0() + 4.5, FLOOR + 5.7, z, home.owner + "'s House", ChatFormatting.GOLD, 1.0F);
 		LABELS[h.index()] = d == null ? null : d.getUUID();
 	}
 

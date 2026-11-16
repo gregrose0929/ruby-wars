@@ -714,6 +714,7 @@ public final class HubPark {
 		// (the green arrows on the ground are gone: they looked messy)
 		plazaLights(level);
 		Dressing.build(level);
+
 	}
 
 	static Vec3 stand(double x, int y, double z) {

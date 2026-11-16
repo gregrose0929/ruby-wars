@@ -38,8 +38,10 @@ public final class Props {
 		((DisplayAccessor) d).rubymod$setBillboard(Display.BillboardConstraints.VERTICAL);
 		((DisplayAccessor) d).rubymod$setViewRange(4.0F);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(scale, scale, scale), new Quaternionf()));
-		d.addTag(tag);
+		// Tagged after it's in the world: the clean-up of leftovers (things with the tag that weren't marked to keep) runs as
+		// an entity is added, and would otherwise take a brand-new label straight away.
 		level.addFreshEntity(d);
+		d.addTag(tag);
 		return d;
 	}
 
@@ -61,8 +63,8 @@ public final class Props {
 		((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(3);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(0, up, ahead), new Quaternionf().rotateY((float) Math.PI * MODEL_TURNS),
 				new Vector3f(size, size, size), new Quaternionf()));
-		d.addTag(tag);
 		level.addFreshEntity(d);
+		d.addTag(tag);
 		return d;
 	}
 
@@ -82,8 +84,8 @@ public final class Props {
 		((DisplayAccessor) d).rubymod$setBillboard(Display.BillboardConstraints.CENTER);
 		((DisplayAccessor) d).rubymod$setViewRange(scale >= 1.4F ? 4.0F : scale >= 0.9F ? 1.2F : 0.6F);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(scale, scale, scale), new Quaternionf()));
-		d.addTag(tag);
 		level.addFreshEntity(d);
+		d.addTag(tag);
 		return d;
 	}
 
@@ -98,8 +100,8 @@ public final class Props {
 		((DisplayAccessor) d).rubymod$setViewRange(8.0F);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(-sx / 2, -sy / 2, -sz / 2), new Quaternionf(), new Vector3f(sx, sy, sz),
 				new Quaternionf()));
-		d.addTag(tag);
 		level.addFreshEntity(d);
+		d.addTag(tag);
 		return d;
 	}
 }

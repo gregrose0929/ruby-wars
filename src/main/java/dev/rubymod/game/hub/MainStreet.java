@@ -152,6 +152,16 @@ final class MainStreet {
 		}
 	}
 
+	/** A shop's name, painted flat on its sign board (facing the street), not turning to follow you. */
+	private static void signBoard(ServerLevel level, double x, double y, double z, String text, ChatFormatting color, float scale) {
+		net.minecraft.world.entity.Display.TextDisplay d = HubPark.label(level, x, y, z, text, color, scale);
+		if (d != null) {
+			((dev.rubymod.mixin.DisplayAccessor) d).rubymod$setBillboard(net.minecraft.world.entity.Display.BillboardConstraints.FIXED);
+			((dev.rubymod.mixin.TextDisplayAccessor) d).rubymod$setBackground(0);
+			d.setYRot(-90);
+		}
+	}
+
 	private static DyeColor colourOf(BlockState trim) {
 		for (DyeColor c : DyeColor.values()) {
 			if (trim.is(Blocks.CONCRETE.pick(c))) {
@@ -187,7 +197,17 @@ final class MainStreet {
 			HubPark.set(level, t[0] + 1, FLOOR + 1, t[1], Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
 			HubPark.set(level, t[0] - 1, FLOOR + 1, t[1], Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
 		}
-		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -78.5, "SCOOPS' ICE CREAM", ChatFormatting.LIGHT_PURPLE, 1.5F).setYRot(-90);
+		signBoard(level, x2 + 1.05, FLOOR + 7.75, -78.5, "SCOOPS' ICE CREAM", ChatFormatting.LIGHT_PURPLE, 2.1F);
+		// Pink bands round the inside walls (a skirting and a frieze).
+		for (int y : new int[] {FLOOR + 1, FLOOR + 4}) {
+			for (int z = z1 + 1; z < z2; z++) {
+				HubPark.set(level, x1, y, z, Blocks.CONCRETE.pick(DyeColor.PINK).defaultBlockState());
+			}
+			for (int x = x1; x < x2; x++) {
+				HubPark.set(level, x, y, z1, Blocks.CONCRETE.pick(DyeColor.PINK).defaultBlockState());
+				HubPark.set(level, x, y, z2, Blocks.CONCRETE.pick(DyeColor.PINK).defaultBlockState());
+			}
+		}
 		// A giant cone on the roof, and the menu on the back wall.
 		net.minecraft.world.entity.Display.ItemDisplay big = HubPark.model(level, new Vec3(-71.5, FLOOR + 9.5, -78.5), 90, "cone_3", 4.0F, 0);
 		if (big != null) {
@@ -323,7 +343,7 @@ final class MainStreet {
 			HubPark.set(level, t[0] + 1, FLOOR + 1, t[1], Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
 			HubPark.set(level, t[0] - 1, FLOOR + 1, t[1], Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
 		}
-		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -92.5, "HAZEL'S CAFE", ChatFormatting.GREEN, 1.6F).setYRot(-90);
+		signBoard(level, x2 + 1.05, FLOOR + 7.75, -92.5, "HAZEL'S CAFE", ChatFormatting.GREEN, 2.6F);
 		// Cakes on the counter, a dresser of plates (bookshelves), plants, and the menu.
 		for (int z = z1 + 6; z <= z2 - 2; z += 2) {
 			HubPark.set(level, -75, FLOOR + 2, z, z % 4 == 0 ? Blocks.CAKE.defaultBlockState() : Blocks.POTTED_AZURE_BLUET.defaultBlockState());
@@ -417,19 +437,31 @@ final class MainStreet {
 			int z = z1 + 2 + k * 2;
 			HubPark.set(level, -76, FLOOR + 1, z, Blocks.OAK_FENCE.defaultBlockState());
 			HubPark.set(level, -76, FLOOR + 2, z, Blocks.WOOL.pick(DyeColor.WHITE).defaultBlockState());
-			HubPark.model(level, new Vec3(-75.5, FLOOR + 3.0, z + 0.5), -90, shown[k], 0.8F, 0.0F);
+			HubPark.model(level, new Vec3(-75.5, FLOOR + 3.42, z + 0.5), -90, shown[k], 0.8F, 0.0F);
 		}
-		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -106.5, "DOT'S COSTUMES", ChatFormatting.YELLOW, 1.5F).setYRot(-90);
+		signBoard(level, x2 + 1.05, FLOOR + 7.75, -106.5, "DOT'S COSTUMES", ChatFormatting.YELLOW, 2.2F);
 		// A changing room with a red curtain, and a rail of outfits (banners in every colour).
 		HubPark.box(level, x1 + 1, FLOOR + 1, z2 - 3, x1 + 3, FLOOR + 1, z2 - 3, Blocks.CONCRETE.pick(DyeColor.PURPLE).defaultBlockState());
 		HubPark.box(level, x1 + 3, FLOOR + 1, z2 - 2, x1 + 3, FLOOR + 3, z2 - 1, Blocks.WOOL.pick(DyeColor.RED).defaultBlockState());
 		HubPark.set(level, x1 + 3, FLOOR + 1, z2 - 2, Blocks.AIR.defaultBlockState());
 		HubPark.set(level, x1 + 3, FLOOR + 2, z2 - 2, Blocks.AIR.defaultBlockState());
-		DyeColor[] rail = {DyeColor.RED, DyeColor.BLUE, DyeColor.PINK, DyeColor.LIME, DyeColor.YELLOW, DyeColor.PURPLE};
-		HubPark.box(level, -71, FLOOR + 4, z1 + 2, -71, FLOOR + 4, z1 + 7, Blocks.IRON_BARS.defaultBlockState());
-		for (int k = 0; k < rail.length; k++) {
-			HubPark.set(level, -71, FLOOR + 3, z1 + 2 + k, Blocks.WALL_BANNER.pick(rail[k]).defaultBlockState()
-					.setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, Direction.EAST));
+		// A clothes rail: a bar on two posts, with outfits hanging from it.
+		HubPark.beam(level, new Vec3(-71.5, FLOOR + 1, z1 + 1.6), new Vec3(-71.5, FLOOR + 3.1, z1 + 1.6), 0.1F, 0.1F, Blocks.IRON_BLOCK.defaultBlockState());
+		HubPark.beam(level, new Vec3(-71.5, FLOOR + 1, z1 + 8.4), new Vec3(-71.5, FLOOR + 3.1, z1 + 8.4), 0.1F, 0.1F, Blocks.IRON_BLOCK.defaultBlockState());
+		HubPark.beam(level, new Vec3(-71.5, FLOOR + 3.1, z1 + 1.6), new Vec3(-71.5, FLOOR + 3.1, z1 + 8.4), 0.08F, 0.08F, Blocks.IRON_BLOCK.defaultBlockState());
+		for (int k = 0; k < OUTFIT_RGB.length; k++) {
+			net.minecraft.world.entity.Display.ItemDisplay d = net.minecraft.world.entity.EntityTypes.ITEM_DISPLAY.create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT);
+			if (d == null) {
+				continue;
+			}
+			d.snapTo(-71.5, FLOOR + 2.45, z1 + 2.2 + k * 0.85, 90, 0);
+			ItemStack top = new ItemStack(Items.LEATHER_CHESTPLATE);
+			top.set(DataComponents.DYED_COLOR, new DyedItemColor(OUTFIT_RGB[k]));
+			((dev.rubymod.mixin.ItemDisplayAccessor) d).rubymod$setItemStack(top);
+			((dev.rubymod.mixin.DisplayAccessor) d).rubymod$setTransformation(new com.mojang.math.Transformation(new org.joml.Vector3f(), new org.joml.Quaternionf(),
+					new org.joml.Vector3f(1.1F, 1.1F, 1.1F), new org.joml.Quaternionf()));
+			level.addFreshEntity(d);
+			HubPark.keep(d);
 		}
 		HubHosts.add(level, new Vec3(-72.5, FLOOR + 1, -110.5), -90, VillagerProfession.LIBRARIAN, VillagerType.SWAMP,
 				new HubHosts.Host("costumes", "Dot", "Costume Shop", 0xFFD040, "minecraft:carved_pumpkin",

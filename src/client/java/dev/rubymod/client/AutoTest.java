@@ -4562,6 +4562,9 @@ public final class AutoTest {
 			case "trainlook" -> trainLookScript();
 			case "streetlook" -> streetLookScript();
 			case "parklook" -> parkLookScript();
+			case "audit" -> auditScript();
+			case "labelcheck" -> labelCheckScript();
+			case "recheck" -> recheckScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5486,6 +5489,105 @@ public final class AutoTest {
 			tpHub(mc, "60 135 -60 facing 60 105 -10");
 		});
 		then(100, mc -> shot(mc, "new-night-coaster"));
+	}
+
+	/** Another look at the spots that were fixed. */
+	private static void recheckScript() {
+		then(0, mc -> command(mc, "time set noon"));
+		String[][] views = {{"-61 104 -70 facing -68 107 -86", "r1-signs"}, {"-61 104 -100 facing -68 107 -106", "r2-signs2"},
+			{"-69 102 -106 facing -78 102 -106", "r3-costume"}, {"-70 102 -79 facing -79 102 -79", "r4-icecream"}, {"-54 102 -107 facing -42 102 -107", "r5-museum"},
+			{"112 112 -146 facing 100 101 -130", "r6-beach"}, {"96 103 -140 facing 100 102 -128", "r7-beach2"}, {"-81 103 -55 facing -81 103 -59", "r8-forsale"}};
+		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(200, mc -> command(mc, "gamemode creative @a"));
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			mc.player.onUpdateAbilities();
+			tpHub(mc, views[0][0]);
+		});
+		for (int k = 0; k < views.length; k++) {
+			int n = k;
+			then(80, mc -> {
+				mc.player.getAbilities().flying = true;
+				shot(mc, views[n][1]);
+				var eye = net.minecraft.core.BlockPos.containing(mc.player.getEyePosition());
+				log("recheck {}: at {} block {} loaded {} dim {}", views[n][1], mc.player.position(), mc.level.getBlockState(eye), mc.level.isLoaded(eye),
+						mc.level.dimension());
+				if (n + 1 < views.length) {
+					tpHub(mc, views[n + 1][0]);
+				}
+			});
+		}
+	}
+
+	/** Are the park's labels there, and drawn? */
+	private static void labelCheckScript() {
+		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(200, mc -> command(mc, "gamemode creative @a"));
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			mc.player.onUpdateAbilities();
+			tpHub(mc, "-62 103 -78 facing -68 107 -78");
+		});
+		then(100, mc -> {
+			var ds = mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.TextDisplay.class, mc.player.getBoundingBox().inflate(30));
+			log("labels near: {}", ds.size());
+			for (var d : ds) {
+				log("label at {} text '{}' render {}", d.position(), d.getText().getString().replace('\n', '/'),
+						d.isInvisible());
+			}
+			shot(mc, "lc-main");
+		});
+	}
+
+	/** A close look round everything: each area at eye level and from above, inside buildings, under islands, and at night. */
+	private static void auditScript() {
+		then(0, mc -> command(mc, "time set noon"));
+		String[][] views = {
+			{"0.5 102.6 14 facing 0.5 103 0", "a01-spawn"}, {"-12 103 4 facing 4 102 6", "a02-plaza-w"}, {"14 103 -6 facing 0 102 8", "a03-plaza-e"},
+			{"0 125 30 facing 0 100 0", "a04-plaza-air"},
+			{"40 104 6 facing 56 103 2", "a05-funpark"}, {"70 104 30 facing 84 104 40", "a06-thrill"}, {"56 125 40 facing 70 100 10", "a07-funpark-air"},
+			{"44 104 -60 facing 54 104 -80", "a08-splash"}, {"30 125 -60 facing 40 100 -110", "a09-splash-air"}, {"0 104 -130 facing 8 103 -145", "a10-village"},
+			{"86 112 -112 facing 100 101 -130", "a11-beach"},
+			{"6 104 38 facing 6 104 60", "a12-toyland"}, {"-6 104 76 facing -9 105 87", "a13-helter"}, {"24 104 36 facing 40 106 44", "a14-haunted"},
+			{"-30 104 46 facing -44 102 50", "a15-golf"}, {"-90 106 -30 facing -110 102 -10", "a16-speedway"}, {"-22 104 -30 facing -22 106 -50", "a17-parkour"},
+			{"-62 103 -44 facing -62 103 -60", "a18-homest"}, {"-80 104 -50 facing -80 104 -60", "a19-house"}, {"-81 102 -63 facing -81 102 -60", "a20-inside"},
+			{"-62 103 -70 facing -62 103 -110", "a21-mainst"}, {"-70 102 -78 facing -78 102 -78", "a22-icecream-in"}, {"-70 102 -92 facing -78 102 -92", "a23-cafe-in"},
+			{"-70 102 -106 facing -78 102 -106", "a24-costume-in"}, {"-48 102 -84 facing -48 102 -76", "a25-fern-in"}, {"-50 102 -107 facing -48 102 -116", "a26-museum-in"},
+			{"-48 102 -103 facing -48 102 -97", "a27-museum-tank"}, {"-62 104 -22 facing -62 103 -32", "a28-square"},
+			{"60 80 -20 facing 56 99 0", "a29-under"}, {"-62 80 -60 facing -62 99 -75", "a30-under2"}, {"-30 120 1 facing -28 120 10", "a31-station"},
+			{"20 140 -20 facing -40 100 -60", "a32-overview"}};
+		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(200, mc -> command(mc, "gamemode creative @a"));
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			mc.player.onUpdateAbilities();
+			tpHub(mc, views[0][0]);
+		});
+		for (int k = 0; k < views.length; k++) {
+			int n = k;
+			then(80, mc -> {
+				mc.player.getAbilities().flying = true;
+				shot(mc, views[n][1]);
+				if (n + 1 < views.length) {
+					tpHub(mc, views[n + 1][0]);
+				}
+			});
+		}
+		then(5, mc -> {
+			command(mc, "time set midnight");
+			tpHub(mc, "0.5 104 16 facing 0.5 103 0");
+		});
+		String[][] night = {{"0.5 104 16 facing 0.5 103 0", "a40-night-plaza"}, {"-62 106 -20 facing -62 103 -60", "a41-night-home"},
+			{"-62 104 -70 facing -62 103 -110", "a42-night-main"}, {"40 115 20 facing 70 100 20", "a43-night-funpark"}, {"0 140 60 facing 0 100 -40", "a44-night-air"}};
+		for (int k = 0; k < night.length; k++) {
+			int n = k;
+			then(k == 0 ? 200 : 80, mc -> {
+				shot(mc, night[n][1]);
+				if (n + 1 < night.length) {
+					tpHub(mc, night[n + 1][0]);
+				}
+			});
+		}
 	}
 
 	/** The whole park dressed up: waterfalls, undersides, the ruby, the square, the dome, houses, the sky, and at night. */

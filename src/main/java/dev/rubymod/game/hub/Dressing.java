@@ -442,7 +442,7 @@ final class Dressing {
 		if (d == null) {
 			return;
 		}
-		d.snapTo(0.5, FLOOR + 5.2, 0.5, 0, 0);
+		d.snapTo(0.5, FLOOR + 8.6, 0.5, 0, 0);
 		((dev.rubymod.mixin.ItemDisplayAccessor) d).rubymod$setItemStack(new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.RUBY));
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(3.2F), new Quaternionf()));
 		((DisplayAccessor) d).rubymod$setBrightness(new Brightness(15, 15));
@@ -504,7 +504,7 @@ final class Dressing {
 			if (e != null) {
 				e.setYRot(e.getYRot() + 9);
 				if (tick % 40 == 0) {
-					level.sendParticles(ParticleTypes.END_ROD, 0.5, FLOOR + 5.2, 0.5, 3, 0.8, 0.8, 0.8, 0.01);
+					level.sendParticles(ParticleTypes.END_ROD, 0.5, FLOOR + 8.6, 0.5, 3, 0.8, 0.8, 0.8, 0.01);
 				}
 			}
 		}

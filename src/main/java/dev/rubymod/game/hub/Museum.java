@@ -239,6 +239,23 @@ final class Museum {
 		for (int x = X1 + 3; x < X2; x += 5) {
 			HubPark.set(level, x, FLOOR + 7, -107, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
 		}
+		// The entrance hall: a red carpet from the door, plants in the corners, banners, a welcome sign.
+		for (int x = X1 + 1; x <= -42; x++) {
+			for (int z = -108; z <= -106; z++) {
+				HubPark.set(level, x, FLOOR + 1, z, Blocks.CARPET.pick(z == -107 ? net.minecraft.world.item.DyeColor.RED : net.minecraft.world.item.DyeColor.YELLOW)
+						.defaultBlockState());
+			}
+		}
+		for (int[] c : new int[][] {{X1 + 1, -110}, {X1 + 1, -104}, {X2 - 1, -110}, {X2 - 1, -104}}) {
+			HubPark.set(level, c[0], FLOOR + 1, c[1], Blocks.FLOWERING_AZALEA.defaultBlockState());
+		}
+		for (int x : new int[] {-54, -52, -44, -42}) {
+			HubPark.set(level, x, FLOOR + 5, -110, Blocks.WALL_BANNER.pick(x % 4 == 0 ? net.minecraft.world.item.DyeColor.RED : net.minecraft.world.item.DyeColor.BLUE)
+					.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, net.minecraft.core.Direction.SOUTH));
+			HubPark.set(level, x, FLOOR + 5, -104, Blocks.WALL_BANNER.pick(x % 4 == 0 ? net.minecraft.world.item.DyeColor.BLUE : net.minecraft.world.item.DyeColor.RED)
+					.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, net.minecraft.core.Direction.NORTH));
+		}
+		HubPark.label(level, -48.5, FLOOR + 6.2, -107.5, "WELCOME TO THE PARK MUSEUM\nFossils this way (north)  -  Fish and butterflies (south)", ChatFormatting.GOLD, 0.7F);
 		HubHosts.add(level, new Vec3(-51.5, FLOOR + 1, -107.5), 90, VillagerProfession.LIBRARIAN, VillagerType.TAIGA,
 				new HubHosts.Host("museum", "Professor Pebble", "Park Museum", 0xE0C080, "minecraft:bone",
 						"Welcome to the Park Museum! Bring me what you find and I'll put it on show with your name on it. "

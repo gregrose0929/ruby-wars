@@ -66,6 +66,8 @@ final class ParkTrain {
 	private static final Vec3[] HOST = new Vec3[STATIONS.length];
 	private static TrackRide train;
 	private static int height;
+	/** Stone piers under the stations: off (they stood in front of things). */
+	private static final boolean PIERS = false;
 
 	static void reset() {
 		if (train != null) {
@@ -311,12 +313,24 @@ final class ParkTrain {
 		for (int y = height - 3; y >= FLOOR - 4; y--) {
 			BlockState s = level.getBlockState(new BlockPos(x, y, z));
 			if (!s.isAir()) {
-				g = s.isSolidRender() && s.getFluidState().isEmpty() ? y : Integer.MIN_VALUE;
+				boolean plain = s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT) || s.is(Blocks.STONE) || s.is(Blocks.SAND) || s.is(Blocks.DEEPSLATE);
+				g = plain ? y : Integer.MIN_VALUE;
 				break;
 			}
 		}
-		if (g == Integer.MIN_VALUE) {
+		if (g == Integer.MIN_VALUE || g < FLOOR - 2) {
 			return false;
+		}
+		// Not right beside anything built (a door, a stall): only out in the open.
+		for (int ox = -3; ox <= 3; ox++) {
+			for (int oz = -3; oz <= 3; oz++) {
+				for (int y = g + 1; y <= g + 4; y++) {
+					BlockState b = level.getBlockState(new BlockPos(x + ox, y, z + oz));
+					if (!b.isAir() && !b.canBeReplaced() && !b.is(Blocks.FLOWERING_AZALEA_LEAVES) && !(b.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock)) {
+						return false;
+					}
+				}
+			}
 		}
 		double len = Math.hypot(dx, dz);
 		Vec3 side = new Vec3(-dz / len, 0, dx / len);
@@ -403,7 +417,7 @@ final class ParkTrain {
 				break;
 			}
 		}
-		if (g != Integer.MIN_VALUE) {
+		if (g != Integer.MIN_VALUE && PIERS) {
 			for (int u : new int[] {-4, 4}) {
 				Vec3 c = at(st, cx, cz, u, 2.9, (g + 1 + y0 - 1.35) / 2);
 				boolean clear = true;
