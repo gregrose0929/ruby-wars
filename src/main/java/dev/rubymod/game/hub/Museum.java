@@ -205,6 +205,37 @@ final class Museum {
 			HubPark.set(level, p.getX(), FLOOR + 1, p.getZ(), Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
 		}
 		dino(level);
+		// Glass cases over the fossil plinths.
+		for (int k = 0; k < FOSSILS.length; k++) {
+			BlockPos p = plinth(k);
+			HubPark.set(level, p.getX(), FLOOR + 2, p.getZ(), Blocks.GLASS.defaultBlockState());
+		}
+		// A glass dome on the roof, with white ribs and a gold top.
+		int dx0 = -48;
+		int dz0 = -107;
+		for (int dx = -7; dx <= 7; dx++) {
+			for (int dz = -7; dz <= 7; dz++) {
+				double flat = Math.hypot(dx, dz);
+				if (flat <= 6.6 && flat > 5.4) {
+					HubPark.set(level, dx0 + dx, FLOOR + 9, dz0 + dz, Blocks.CUT_SANDSTONE.defaultBlockState());
+				}
+				for (int dy = 0; dy <= 7; dy++) {
+					double d = Math.sqrt(dx * dx + dy * dy * 1.1 + dz * dz);
+					if (d <= 6.4 && d > 5.4) {
+						boolean rib = dx == 0 || dz == 0;
+						HubPark.set(level, dx0 + dx, FLOOR + 10 + dy, dz0 + dz, rib ? Blocks.SMOOTH_QUARTZ.defaultBlockState()
+								: Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.LIGHT_BLUE).defaultBlockState());
+					}
+				}
+			}
+		}
+		HubPark.set(level, dx0, FLOOR + 17, dz0, Blocks.GOLD_BLOCK.defaultBlockState());
+		HubPark.set(level, dx0, FLOOR + 18, dz0, Blocks.END_ROD.defaultBlockState());
+		// Banners down the front.
+		for (int z : new int[] {-117, -114, -100, -97}) {
+			HubPark.set(level, X1 - 1, FLOOR + 6, z, Blocks.WALL_BANNER.pick(z % 2 == 0 ? net.minecraft.world.item.DyeColor.RED : net.minecraft.world.item.DyeColor.BLUE)
+					.defaultBlockState().setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, net.minecraft.core.Direction.WEST));
+		}
 		for (int x = X1 + 3; x < X2; x += 5) {
 			HubPark.set(level, x, FLOOR + 7, -107, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true));
 		}

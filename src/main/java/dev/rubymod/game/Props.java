@@ -77,9 +77,10 @@ public final class Props {
 		}
 		d.snapTo(at.x, at.y, at.z, 0, 0);
 		((TextDisplayAccessor) d).rubymod$setText(text);
-		((TextDisplayAccessor) d).rubymod$setBackground(0x70000000);
+		// A painted wooden board behind the words (not a grey box), and small signs only show when you're near: less clutter.
+		((TextDisplayAccessor) d).rubymod$setBackground(0xD8553620);
 		((DisplayAccessor) d).rubymod$setBillboard(Display.BillboardConstraints.CENTER);
-		((DisplayAccessor) d).rubymod$setViewRange(4.0F);
+		((DisplayAccessor) d).rubymod$setViewRange(scale >= 1.4F ? 4.0F : scale >= 0.9F ? 1.2F : 0.6F);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(scale, scale, scale), new Quaternionf()));
 		d.addTag(tag);
 		level.addFreshEntity(d);

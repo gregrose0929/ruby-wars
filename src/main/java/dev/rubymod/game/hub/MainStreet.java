@@ -188,6 +188,20 @@ final class MainStreet {
 			HubPark.set(level, t[0] - 1, FLOOR + 1, t[1], Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
 		}
 		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -78.5, "SCOOPS' ICE CREAM", ChatFormatting.LIGHT_PURPLE, 1.5F).setYRot(-90);
+		// A giant cone on the roof, and the menu on the back wall.
+		net.minecraft.world.entity.Display.ItemDisplay big = HubPark.model(level, new Vec3(-71.5, FLOOR + 9.5, -78.5), 90, "cone_3", 4.0F, 0);
+		if (big != null) {
+			ItemStack cone = new ItemStack(Items.STICK);
+			cone.set(DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_cone_3"));
+			cone.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(List.of(), List.of(), List.of(), List.of(FLAVOUR_RGB[0], FLAVOUR_RGB[2], FLAVOUR_RGB[1])));
+			((dev.rubymod.mixin.ItemDisplayAccessor) big).rubymod$setItemStack(cone);
+		}
+		HubPark.label(level, x1 + 1.1, FLOOR + 3.4, -78.5, "MENU\nStrawberry - Chocolate - Mint\nVanilla - Blueberry - Lemon\nOne, two or three scoops!",
+				ChatFormatting.WHITE, 0.6F);
+		for (int z = z1 + 2; z <= z2 - 2; z += 2) {
+			HubPark.set(level, x1 + 1, FLOOR + 1, z, Blocks.QUARTZ_BLOCK.defaultBlockState());
+			HubPark.set(level, x1 + 1, FLOOR + 2, z, z % 4 == 0 ? Blocks.POTTED_PINK_TULIP.defaultBlockState() : Blocks.CANDLE_CAKE.defaultBlockState());
+		}
 		HubHosts.add(level, new Vec3(-77.5, FLOOR + 1, -78.5), -90, VillagerProfession.BUTCHER, VillagerType.SNOW,
 				new HubHosts.Host("icecream", "Scoops", "Ice Cream", 0xFF8FB8, "minecraft:snowball",
 						"Make your own ice cream! Right-click the tubs on the counter: each one adds a scoop to your cone, up to three. "
@@ -310,6 +324,15 @@ final class MainStreet {
 			HubPark.set(level, t[0] - 1, FLOOR + 1, t[1], Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.WEST));
 		}
 		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -92.5, "HAZEL'S CAFE", ChatFormatting.GREEN, 1.6F).setYRot(-90);
+		// Cakes on the counter, a dresser of plates (bookshelves), plants, and the menu.
+		for (int z = z1 + 6; z <= z2 - 2; z += 2) {
+			HubPark.set(level, -75, FLOOR + 2, z, z % 4 == 0 ? Blocks.CAKE.defaultBlockState() : Blocks.POTTED_AZURE_BLUET.defaultBlockState());
+		}
+		for (int z = z1 + 1; z <= z2 - 1; z++) {
+			HubPark.set(level, x1 + 1, FLOOR + 1, z, Blocks.CHISELED_BOOKSHELF.defaultBlockState());
+			HubPark.set(level, x1 + 1, FLOOR + 2, z, z % 3 == 0 ? Blocks.DECORATED_POT.defaultBlockState() : Blocks.AIR.defaultBlockState());
+		}
+		HubPark.label(level, x1 + 1.1, FLOOR + 3.6, -92.5, "TODAY'S TREATS\nHot chocolate - Cookies\nCake - Pumpkin pie - Lemonade", ChatFormatting.WHITE, 0.6F);
 		HubHosts.add(level, new Vec3(-77.5, FLOOR + 1, -92.5), -90, VillagerProfession.FARMER, VillagerType.PLAINS,
 				new HubHosts.Host("cafe", "Hazel", "Café", 0x60C060, "minecraft:cookie",
 						"Welcome to my café! What would you like? Everything's free. Right-click to eat or drink it, then sit down at a table for a rest.",
@@ -397,6 +420,17 @@ final class MainStreet {
 			HubPark.model(level, new Vec3(-75.5, FLOOR + 3.0, z + 0.5), -90, shown[k], 0.8F, 0.0F);
 		}
 		HubPark.label(level, x2 + 0.7, FLOOR + 7.7, -106.5, "DOT'S COSTUMES", ChatFormatting.YELLOW, 1.5F).setYRot(-90);
+		// A changing room with a red curtain, and a rail of outfits (banners in every colour).
+		HubPark.box(level, x1 + 1, FLOOR + 1, z2 - 3, x1 + 3, FLOOR + 1, z2 - 3, Blocks.CONCRETE.pick(DyeColor.PURPLE).defaultBlockState());
+		HubPark.box(level, x1 + 3, FLOOR + 1, z2 - 2, x1 + 3, FLOOR + 3, z2 - 1, Blocks.WOOL.pick(DyeColor.RED).defaultBlockState());
+		HubPark.set(level, x1 + 3, FLOOR + 1, z2 - 2, Blocks.AIR.defaultBlockState());
+		HubPark.set(level, x1 + 3, FLOOR + 2, z2 - 2, Blocks.AIR.defaultBlockState());
+		DyeColor[] rail = {DyeColor.RED, DyeColor.BLUE, DyeColor.PINK, DyeColor.LIME, DyeColor.YELLOW, DyeColor.PURPLE};
+		HubPark.box(level, -71, FLOOR + 4, z1 + 2, -71, FLOOR + 4, z1 + 7, Blocks.IRON_BARS.defaultBlockState());
+		for (int k = 0; k < rail.length; k++) {
+			HubPark.set(level, -71, FLOOR + 3, z1 + 2 + k, Blocks.WALL_BANNER.pick(rail[k]).defaultBlockState()
+					.setValue(net.minecraft.world.level.block.WallBannerBlock.FACING, Direction.EAST));
+		}
 		HubHosts.add(level, new Vec3(-72.5, FLOOR + 1, -110.5), -90, VillagerProfession.LIBRARIAN, VillagerType.SWAMP,
 				new HubHosts.Host("costumes", "Dot", "Costume Shop", 0xFFD040, "minecraft:carved_pumpkin",
 						"Dress up! Try on hats and masks, and outfits in every colour (even a knight's armour). Press the buttons again for the next one. "

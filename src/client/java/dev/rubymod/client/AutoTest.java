@@ -4561,6 +4561,7 @@ public final class AutoTest {
 			case "finalcheck" -> finalCheckScript();
 			case "trainlook" -> trainLookScript();
 			case "streetlook" -> streetLookScript();
+			case "parklook" -> parkLookScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5485,6 +5486,42 @@ public final class AutoTest {
 			tpHub(mc, "60 135 -60 facing 60 105 -10");
 		});
 		then(100, mc -> shot(mc, "new-night-coaster"));
+	}
+
+	/** The whole park dressed up: waterfalls, undersides, the ruby, the square, the dome, houses, the sky, and at night. */
+	private static void parkLookScript() {
+		then(0, mc -> command(mc, "time set noon"));
+		String[][] views = {{"-87 104 -124 facing -87 96 -109", "pl-fall"}, {"30 102 -7 facing 37 98 -7", "pl-fall2"}, {"70 72 20 facing 56 96 2", "pl-under"},
+			{"7 104 7 facing 0.5 105 0.5", "pl-ruby"}, {"-62 108 -17 facing -62 101 -31", "pl-square"}, {"-74 104 -38 facing -69 108 -25", "pl-clock"},
+			{"-28 116 -107 facing -48 110 -107", "pl-dome"}, {"-80 104 -48 facing -80 104 -62", "pl-house"}, 
+			{"0 135 0 facing 150 125 30", "pl-sky"}, {"20 118 30 facing 40 100 -10", "pl-park"},
+			{"-62 106 -62 facing -62 104 -100", "pl-mainst"}, {"56 112 24 facing 70 100 36", "pl-rides"}, {"64 108 -2 facing 76 100 10", "pl-rides2"}};
+		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(200, mc -> command(mc, "gamemode creative @a"));
+		then(20, mc -> {
+			mc.player.getAbilities().flying = true;
+			mc.player.onUpdateAbilities();
+			tpHub(mc, views[0][0]);
+		});
+		for (int k = 0; k < views.length; k++) {
+			int n = k;
+			then(100, mc -> {
+				mc.player.getAbilities().flying = true;
+				shot(mc, views[n][1]);
+				if (n + 1 < views.length) {
+					tpHub(mc, views[n + 1][0]);
+				}
+			});
+		}
+		then(5, mc -> {
+			command(mc, "time set midnight");
+			tpHub(mc, "0 128 50 facing 0 108 -20");
+		});
+		then(300, mc -> shot(mc, "pl-night"));
+		then(5, mc -> tpHub(mc, "-62 108 -17 facing -62 101 -40"));
+		then(100, mc -> shot(mc, "pl-night-street"));
+		then(5, mc -> tpHub(mc, "40 110 40 facing 0 120 0"));
+		then(100, mc -> shot(mc, "pl-night-rail"));
 	}
 
 	/** How the streets look: shop fronts, houses, the museum, the beach, the bus. */

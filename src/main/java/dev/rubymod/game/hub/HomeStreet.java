@@ -195,7 +195,12 @@ public final class HomeStreet {
 		}
 
 		BlockPos mailbox() {
-			return new BlockPos(x0 + 7, FLOOR + 2, outZ());
+			return new BlockPos(x0 + 8, FLOOR + 2, outZ());
+		}
+
+		/** Some houses have an upstairs (just to look at: the rooms you decorate are downstairs). */
+		int upstairs() {
+			return index == 1 || index == 4 || index == 6 ? 4 : 0;
 		}
 
 		boolean inside(BlockPos p) {
@@ -234,6 +239,8 @@ public final class HomeStreet {
 		load(level);
 		HubPark.blob(level, CIRCLES, FLOOR);
 		street(level);
+		square(level);
+		bunting(level);
 		for (House h : HOUSES) {
 			house(level, h);
 		}
@@ -287,6 +294,143 @@ public final class HomeStreet {
 		HubPark.set(level, -59, FLOOR + 1, -39, Blocks.OAK_STAIRS.defaultBlockState().setValue(StairBlock.FACING, Direction.EAST));
 	}
 
+	/** The town square, south of the green: a fountain, a clock tower, benches, trees in planters, flower beds. */
+	private static void square(ServerLevel level) {
+		int x1 = -71;
+		int x2 = -53;
+		int z1 = -36;
+		int z2 = -24;
+		int cx = -62;
+		int cz = -30;
+		for (int x = x1; x <= x2; x++) {
+			for (int z = z1; z <= z2; z++) {
+				boolean border = x == x1 || x == x2 || z == z1 || z == z2;
+				double d = Math.hypot(x - cx, z - cz);
+				BlockState pave = border ? Blocks.POLISHED_ANDESITE.defaultBlockState() : d < 5.5 && d > 4.4 ? Blocks.BRICKS.defaultBlockState()
+						: (x + z) % 2 == 0 ? Blocks.STONE_BRICKS.defaultBlockState() : Blocks.SMOOTH_STONE.defaultBlockState();
+				HubPark.set(level, x, FLOOR, z, pave);
+				for (int y = 1; y <= 12; y++) {
+					HubPark.set(level, x, FLOOR + y, z, Blocks.AIR.defaultBlockState());
+				}
+			}
+		}
+		// The fountain: a round basin, a pillar, a bowl at the top that spills over into the basin.
+		for (int x = cx - 3; x <= cx + 3; x++) {
+			for (int z = cz - 3; z <= cz + 3; z++) {
+				double d = Math.hypot(x - cx, z - cz);
+				if (d > 3.4) {
+					continue;
+				}
+				boolean rim = d > 2.5;
+				HubPark.set(level, x, FLOOR, z, Blocks.SMOOTH_QUARTZ.defaultBlockState());
+				HubPark.set(level, x, FLOOR + 1, z, rim ? Blocks.SMOOTH_QUARTZ.defaultBlockState() : Blocks.WATER.defaultBlockState());
+			}
+		}
+		HubPark.box(level, cx, FLOOR + 1, cz, cx, FLOOR + 3, cz, Blocks.QUARTZ_PILLAR.defaultBlockState());
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				HubPark.set(level, cx + dx, FLOOR + 4, cz + dz, dx == 0 && dz == 0 ? Blocks.QUARTZ_BLOCK.defaultBlockState() : Blocks.SMOOTH_QUARTZ.defaultBlockState());
+			}
+		}
+		HubPark.set(level, cx, FLOOR + 5, cz, Blocks.WATER.defaultBlockState());
+		// The clock tower, in the north-west corner: brick, a clock face on each side, a pointed roof and a bell.
+		int tx = x1 + 2;
+		int tz = z2 - 2;
+		for (int y = 1; y <= 13; y++) {
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					boolean corner = Math.abs(dx) == 1 && Math.abs(dz) == 1;
+					BlockState b = corner ? Blocks.STONE_BRICKS.defaultBlockState() : y == 10 ? Blocks.QUARTZ_BLOCK.defaultBlockState() : Blocks.BRICKS.defaultBlockState();
+					HubPark.set(level, tx + dx, FLOOR + y, tz + dz, b);
+				}
+			}
+		}
+		HubPark.set(level, tx, FLOOR + 14, tz, Blocks.BELL.defaultBlockState());
+		for (int k = 0; k <= 2; k++) {
+			int r = 2 - k;
+			for (int dx = -r; dx <= r; dx++) {
+				for (int dz = -r; dz <= r; dz++) {
+					if (Math.max(Math.abs(dx), Math.abs(dz)) == r) {
+						HubPark.set(level, tx + dx, FLOOR + 15 + k, tz + dz, Blocks.DEEPSLATE_TILES.defaultBlockState());
+					}
+				}
+			}
+		}
+		HubPark.set(level, tx, FLOOR + 18, tz, Blocks.GOLD_BLOCK.defaultBlockState());
+		for (Direction d : new Direction[] {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+			BlockPos face = new BlockPos(tx + d.getStepX() * 2, FLOOR + 10, tz + d.getStepZ() * 2);
+			net.minecraft.world.entity.decoration.GlowItemFrame f = new net.minecraft.world.entity.decoration.GlowItemFrame(level, face, d);
+			f.setItem(new net.minecraft.world.item.ItemStack(Items.CLOCK), false);
+			f.setInvisible(true);
+			((dev.rubymod.mixin.ItemFrameAccessor) f).rubymod$setFixed(true);
+			f.setPermanentlyInvulnerable(true);
+			HubPark.keep(f);
+			level.addFreshEntity(f);
+		}
+		// Benches facing the fountain, trees in brick planters, flower beds, lamps at the corners.
+		int[][] benches = {{cx - 6, cz, 0}, {cx + 6, cz, 1}, {cx, cz - 5, 2}, {cx, cz + 5, 3}};
+		Direction[] face = {Direction.WEST, Direction.EAST, Direction.NORTH, Direction.SOUTH};
+		for (int[] b : benches) {
+			for (int k = -1; k <= 1; k++) {
+				boolean alongZ = b[2] < 2;
+				HubPark.set(level, b[0] + (alongZ ? 0 : k), FLOOR + 1, b[1] + (alongZ ? k : 0), Blocks.SPRUCE_STAIRS.defaultBlockState().setValue(StairBlock.FACING, face[b[2]]));
+			}
+		}
+		for (int[] t : new int[][] {{x2 - 2, z1 + 2}, {x2 - 2, z2 - 2}, {x1 + 2, z1 + 2}}) {
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					HubPark.set(level, t[0] + dx, FLOOR + 1, t[1] + dz, dx == 0 && dz == 0 ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.BRICK_SLAB.defaultBlockState());
+				}
+			}
+			Dressing.tree(level, t[0], FLOOR + 2, t[1], t[0] < cx ? 2 : 0);
+		}
+		for (int x = x1 + 5; x <= x2 - 5; x++) {
+			for (int z : new int[] {z1 + 1, z2 - 1}) {
+				if (Math.abs(x - cx) > 1) {
+					HubPark.set(level, x, FLOOR, z, Blocks.GRASS_BLOCK.defaultBlockState());
+					HubPark.set(level, x, FLOOR + 1, z, (x % 3 == 0 ? Blocks.RED_TULIP : x % 3 == 1 ? Blocks.ALLIUM : Blocks.OXEYE_DAISY).defaultBlockState());
+				}
+			}
+		}
+		for (int[] l : new int[][] {{x1 + 1, z1 + 1}, {x2 - 1, z2 - 1}, {x1 + 5, z2 - 1}}) {
+			lamp(level, l[0], l[1]);
+		}
+		HubPark.label(level, cx + 0.5, FLOOR + 7.2, cz + 0.5, "TOWN SQUARE", ChatFormatting.GOLD, 1.4F);
+	}
+
+	/** Strings of little flags across the streets, from lamp post to lamp post. */
+	private static void bunting(ServerLevel level) {
+		List<Vec3[]> strings = new ArrayList<>();
+		for (int z = -116; z <= -64; z += 9) {
+			strings.add(new Vec3[] {new Vec3(-66.5, FLOOR + 4.7, z + 0.5), new Vec3(-56.5, FLOOR + 4.7, z + 0.5)});
+		}
+		for (int x = -86; x <= -38; x += 8) {
+			if (x < -67 || x > -57) {
+				strings.add(new Vec3[] {new Vec3(x + 0.5, FLOOR + 4.7, -56.5), new Vec3(x + 0.5, FLOOR + 4.7, -46.5)});
+			}
+		}
+		DyeColor[] flags = {DyeColor.RED, DyeColor.YELLOW, DyeColor.LIGHT_BLUE, DyeColor.LIME, DyeColor.PINK, DyeColor.ORANGE};
+		int n = 0;
+		for (Vec3[] s : strings) {
+			Vec3 a = s[0];
+			Vec3 b = s[1];
+			int steps = 12;
+			Vec3 last = a;
+			boolean alongX = Math.abs(b.x - a.x) > Math.abs(b.z - a.z);
+			for (int i = 1; i <= steps; i++) {
+				double t = i / (double) steps;
+				Vec3 p = a.lerp(b, t).add(0, -Math.sin(t * Math.PI) * 1.1, 0);
+				HubPark.beam(level, last, p, 0.04F, 0.04F, Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState());
+				if (i < steps) {
+					org.joml.Quaternionf rot = alongX ? new org.joml.Quaternionf().rotateZ((float) Math.PI / 4) : new org.joml.Quaternionf().rotateX((float) Math.PI / 4);
+					org.joml.Vector3f size = alongX ? new org.joml.Vector3f(0.36F, 0.36F, 0.03F) : new org.joml.Vector3f(0.03F, 0.36F, 0.36F);
+					HubPark.piece(level, p.add(0, -0.26, 0), Blocks.WOOL.pick(flags[n++ % flags.length]).defaultBlockState(), size, rot);
+				}
+				last = p;
+			}
+		}
+	}
+
 	/** A street lamp: a dark post with a little arm and a lantern hanging from it. */
 	private static void lamp(ServerLevel level, int x, int z) {
 		HubPark.box(level, x, FLOOR + 1, z, x, FLOOR + 3, z, Blocks.DARK_OAK_FENCE.defaultBlockState());
@@ -314,34 +458,55 @@ public final class HomeStreet {
 		Home home = home(h.index());
 		int x0 = h.x0();
 		int z0 = h.z0();
-		HubPark.box(level, x0 - 1, FLOOR + 1, z0 - 1, x0 + 9, FLOOR + 12, z0 + 9, Blocks.AIR.defaultBlockState());
+		int top = h.upstairs();
+		HubPark.box(level, x0 - 1, FLOOR + 1, z0 - 1, x0 + 9, FLOOR + 17, z0 + 9, Blocks.AIR.defaultBlockState());
 		HubPark.box(level, x0, FLOOR, z0, x0 + 8, FLOOR, z0 + 8, Blocks.STONE_BRICKS.defaultBlockState());
 		walls(level, h, home);
 		floor(level, h, home);
 		// The ceiling, and a gable roof over it.
 		HubPark.box(level, x0, FLOOR + 5, z0, x0 + 8, FLOOR + 5, z0 + 8, Blocks.SPRUCE_PLANKS.defaultBlockState());
+		// A warm light in the middle of the ceiling: windows glow at night.
+		HubPark.set(level, x0 + 4, FLOOR + 5, z0 + 4, Blocks.OCHRE_FROGLIGHT.defaultBlockState());
+		if (top > 0) {
+			HubPark.box(level, x0, FLOOR + 5 + top, z0, x0 + 8, FLOOR + 5 + top, z0 + 8, Blocks.SPRUCE_PLANKS.defaultBlockState());
+			HubPark.set(level, x0 + 4, FLOOR + 6, z0 + 4, Blocks.OCHRE_FROGLIGHT.defaultBlockState());
+		}
 		BlockState stair = ROOFS[h.index() % ROOFS.length];
 		for (int k = 0; k <= 4; k++) {
 			for (int x = x0 - 1; x <= x0 + 9; x++) {
 				if (k == 4) {
-					HubPark.set(level, x, FLOOR + 6 + k - 1, z0 + 4, RIDGES[h.index() % RIDGES.length]);
+					HubPark.set(level, x, FLOOR + 6 + top + k - 1, z0 + 4, RIDGES[h.index() % RIDGES.length]);
 					continue;
 				}
-				HubPark.set(level, x, FLOOR + 5 + k, z0 - 1 + k, stair.setValue(StairBlock.FACING, Direction.SOUTH));
-				HubPark.set(level, x, FLOOR + 5 + k, z0 + 9 - k, stair.setValue(StairBlock.FACING, Direction.NORTH));
+				HubPark.set(level, x, FLOOR + 5 + top + k, z0 - 1 + k, stair.setValue(StairBlock.FACING, Direction.SOUTH));
+				HubPark.set(level, x, FLOOR + 5 + top + k, z0 + 9 - k, stair.setValue(StairBlock.FACING, Direction.NORTH));
 			}
 			// The gable ends, filled in.
 			if (k > 0 && k < 4) {
 				for (int z = z0 + k; z <= z0 + 8 - k; z++) {
-					HubPark.set(level, x0, FLOOR + 5 + k, z, RIDGES[h.index() % RIDGES.length]);
-					HubPark.set(level, x0 + 8, FLOOR + 5 + k, z, RIDGES[h.index() % RIDGES.length]);
+					HubPark.set(level, x0, FLOOR + 5 + top + k, z, RIDGES[h.index() % RIDGES.length]);
+					HubPark.set(level, x0 + 8, FLOOR + 5 + top + k, z, RIDGES[h.index() % RIDGES.length]);
 				}
 			}
 		}
 		// A brick chimney, with a wisp of smoke.
 		int cz = h.north() ? z0 + 2 : z0 + 6;
-		HubPark.box(level, x0 + 6, FLOOR + 6, cz, x0 + 6, FLOOR + 11, cz, Blocks.BRICKS.defaultBlockState());
-		HubPark.set(level, x0 + 6, FLOOR + 12, cz, Blocks.CAMPFIRE.defaultBlockState());
+		HubPark.box(level, x0 + 6, FLOOR + 6 + top, cz, x0 + 6, FLOOR + 11 + top, cz, Blocks.BRICKS.defaultBlockState());
+		HubPark.set(level, x0 + 6, FLOOR + 12 + top, cz, Blocks.CAMPFIRE.defaultBlockState());
+		// Shutters either side of the front windows.
+		Direction outward = h.north() ? Direction.SOUTH : Direction.NORTH;
+		BlockState shutter = Blocks.SPRUCE_TRAPDOOR.defaultBlockState().setValue(net.minecraft.world.level.block.TrapDoorBlock.OPEN, true)
+				.setValue(net.minecraft.world.level.block.TrapDoorBlock.FACING, outward);
+		for (int sx : new int[] {x0 + 1, x0 + 3, x0 + 5, x0 + 7}) {
+			for (int y = FLOOR + 2; y <= FLOOR + 3; y++) {
+				HubPark.set(level, sx, y, h.outZ(), shutter);
+			}
+			if (top > 0) {
+				for (int y = FLOOR + 6; y <= FLOOR + 7; y++) {
+					HubPark.set(level, sx, y, h.outZ(), shutter);
+				}
+			}
+		}
 		// The front door.
 		Direction out = h.north() ? Direction.SOUTH : Direction.NORTH;
 		BlockState door = Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.FACING, out.getOpposite());
@@ -359,7 +524,7 @@ public final class HomeStreet {
 			int z = h.doorZ() + dz * k;
 			HubPark.set(level, x0 + 4, FLOOR, z, Blocks.GRAVEL.defaultBlockState());
 			for (int x = x0; x <= x0 + 8 && k == 1; x++) {
-				if (Math.abs(x - x0 - 4) > 1 && x != x0 + 7) {
+				if (Math.abs(x - x0 - 4) > 1) {
 					HubPark.set(level, x, FLOOR + 1, z, Math.floorMod(x, 2) == 0 ? Blocks.POPPY.defaultBlockState() : Blocks.AZURE_BLUET.defaultBlockState());
 				}
 			}
@@ -385,13 +550,14 @@ public final class HomeStreet {
 				if (!edgeX && !edgeZ) {
 					continue;
 				}
-				for (int y = FLOOR + 1; y <= FLOOR + 4; y++) {
+				for (int y = FLOOR + 1; y <= FLOOR + 4 + h.upstairs(); y++) {
 					if (x == x0 + 4 && z == h.doorZ() && y <= FLOOR + 2) {
 						continue;
 					}
 					boolean corner = edgeX && edgeZ;
 					int along = edgeZ ? x - x0 : z - z0;
-					boolean window = !corner && (y == FLOOR + 2 || y == FLOOR + 3) && (along == 2 || along == 6);
+					boolean window = !corner && (y == FLOOR + 2 || y == FLOOR + 3 || h.upstairs() > 0 && (y == FLOOR + 6 || y == FLOOR + 7))
+							&& (along == 2 || along == 6 || y > FLOOR + 5 && along == 4);
 					HubPark.set(level, x, y, z, corner ? trim : window ? Blocks.GLASS_PANE.defaultBlockState() : wall);
 				}
 			}
@@ -399,7 +565,7 @@ public final class HomeStreet {
 		// Panes join up to whatever's beside them.
 		for (int x = x0; x <= x0 + 8; x++) {
 			for (int z = z0; z <= z0 + 8; z++) {
-				for (int y = FLOOR + 2; y <= FLOOR + 3; y++) {
+				for (int y = FLOOR + 2; y <= FLOOR + 7; y++) {
 					BlockPos p = new BlockPos(x, y, z);
 					BlockState s = level.getBlockState(p);
 					if (s.is(Blocks.GLASS_PANE)) {

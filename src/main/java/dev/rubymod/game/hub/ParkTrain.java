@@ -263,6 +263,7 @@ final class ParkTrain {
 		double next = 0;
 		double along = 0;
 		double nextLeg = 6;
+		int pieces = 0;
 		for (int i = 1; i < path.size(); i++) {
 			Vec3 a = path.get(i - 1);
 			Vec3 b = path.get(i);
@@ -279,6 +280,18 @@ final class ParkTrain {
 			Display.ItemDisplay d = HubPark.model(level, b, yaw, "track", 2.0F, 0.5625F);
 			if (d != null) {
 				((DisplayAccessor) d).rubymod$setViewRange(1.6F);
+			}
+			// Every so often, a little lamp at the side of the line (alternating sides): it twinkles along the track at night.
+			if (++pieces % 9 == 0) {
+				double len = Math.hypot(dx, dz);
+				double side = pieces % 18 == 0 ? 1.05 : -1.05;
+				Vec3 foot = b.add(-dz / len * side, -0.1, dx / len * side);
+				HubPark.beam(level, foot, foot.add(0, 1.3, 0), 0.08F, 0.08F, Blocks.DARK_OAK_PLANKS.defaultBlockState());
+				Display.BlockDisplay lamp = HubPark.piece(level, foot.add(0, 1.5, 0), Blocks.LANTERN.defaultBlockState(), new Vector3f(0.45F, 0.45F, 0.45F),
+						new Quaternionf());
+				if (lamp != null) {
+					((DisplayAccessor) lamp).rubymod$setBrightness(new net.minecraft.util.Brightness(15, 15));
+				}
 			}
 			if (along >= nextLeg) {
 				if (trestle(level, b, dx, dz)) {

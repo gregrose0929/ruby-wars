@@ -322,17 +322,28 @@ MALLET = [
     b([4, 11, 5], [12, 16, 11], RED),                                   # head
 ]
 
+def puff(cx, cy, cz, r, colour=WHITE):
+    """A round-ish puff: three crossed boxes."""
+    return [b([cx - r, cy - r * 0.6, cz - r * 0.6], [cx + r, cy + r * 0.6, cz + r * 0.6], colour),
+            b([cx - r * 0.6, cy - r * 0.6, cz - r], [cx + r * 0.6, cy + r * 0.6, cz + r], colour),
+            b([cx - r * 0.7, cy - r * 0.85, cz - r * 0.7], [cx + r * 0.7, cy + r, cz + r * 0.7], colour)]
+
+
 def cloud(seed):
     import random
     r = random.Random(seed)
-    boxes = [b([-8, 0, -2], [24, 6, 18], WHITE)]
+    boxes = [b([-8, 0, 0], [24, 3, 16], WHITE)]
     for _ in range(7):
-        x = r.uniform(-10, 14)
-        z = r.uniform(-4, 10)
-        w = r.uniform(6, 12)
-        d = r.uniform(6, 10)
-        h = r.uniform(4, 10)
-        boxes.append(b([x, 2, z], [min(26, x + w), min(16, 2 + h), min(20, z + d)], WHITE))
+        x = r.uniform(-4, 20)
+        z = r.uniform(3, 13)
+        rad = r.uniform(3.5, 7)
+        boxes += puff(x, 3 + rad * 0.5, z, rad)
+    # Clip anything outside what a model may hold.
+    for e in boxes:
+        for i in range(3):
+            lo, hi = (-16, 32)
+            e["from"][i] = max(lo, min(hi, e["from"][i]))
+            e["to"][i] = max(lo, min(hi, e["to"][i]))
     return boxes
 
 
@@ -564,6 +575,125 @@ TRAIN = [
     b([3, 13.6, 2.6], [13, 13.9, 15.4], MAROON),
 ]
 
+def balloon(bands):
+    """A hot-air balloon: a round envelope in coloured bands, ropes, and a wicker basket."""
+    els = []
+    layers = [(4.6, 1.0), (5.6, 2.2), (6.6, 3.3), (7.6, 4.2), (8.6, 4.9), (9.6, 5.4), (10.6, 5.6), (11.6, 5.5), (12.6, 5.1), (13.6, 4.4), (14.6, 3.3),
+              (15.4, 1.8)]
+    for i, (y, hw) in enumerate(layers):
+        c = bands[i % len(bands)]
+        els.append(b([8 - hw, y - 1, 8 - hw * 0.72], [8 + hw, y, 8 + hw * 0.72], c))
+        els.append(b([8 - hw * 0.72, y - 1, 8 - hw], [8 + hw * 0.72, y, 8 + hw], c))
+    els.append(b([7.2, 15.4, 7.2], [8.8, 15.9, 8.8], bands[0]))
+    for x, z in ((6.8, 6.8), (8.8, 6.8), (6.8, 8.8), (8.8, 8.8)):
+        els.append(b([x, 1.4, z], [x + 0.4, 3.8, z + 0.4], DKWOOD))
+    els.append(b([6.5, 0, 6.5], [9.5, 1.5, 9.5], LTWOOD))
+    els.append(b([6.4, 1.2, 6.4], [9.6, 1.6, 9.6], WOOD))
+    els.append(b([7.6, 3.4, 7.6], [8.4, 4.0, 8.4], ORANGE))
+    return els
+
+
+def bird(up):
+    ang = 22.5 if up else -22.5
+    return [
+        b([7.2, 7, 5], [8.8, 8.4, 11], WHITE), b([7.4, 7.6, 3.8], [8.6, 8.8, 5.2], WHITE), b([7.75, 7.9, 3.1], [8.25, 8.3, 3.8], GOLD),
+        b([7.4, 7.4, 11], [8.6, 7.9, 12.6], GRAY),
+        b([1.5, 7.9, 6.2], [7.2, 8.3, 9], WHITE, {"angle": ang, "axis": "z", "origin": [7.2, 8, 7.5]}),
+        b([1.5, 7.85, 6.2], [3, 8.35, 9], GRAY, {"angle": ang, "axis": "z", "origin": [7.2, 8, 7.5]}),
+        b([8.8, 7.9, 6.2], [14.5, 8.3, 9], WHITE, {"angle": -ang, "axis": "z", "origin": [8.8, 8, 7.5]}),
+        b([13, 7.85, 6.2], [14.5, 8.35, 9], GRAY, {"angle": -ang, "axis": "z", "origin": [8.8, 8, 7.5]}),
+    ]
+
+
+DARKER = {RED: RED_DARK, BLUE: NAVY, GREEN: DKGREEN, YELLOW: GOLD, PINK: MAROON, PURPLE: NAVY, ORANGE: RUST, WHITE: STONE, SKY: BLUE, LIME: GREEN,
+          GOLD: RUST}
+
+
+def coaster_car(body, trim):
+    """A coaster car: rounded nose, two-tone sides with a chrome line, padded seats with headrests, lap bars."""
+    dark = DARKER.get(body, body)
+    return [
+        b([3, 0, 1], [13, 1.6, 15], SOOT),                                  # chassis
+        *[e for z in (3.5, 12.5) for x in (1.6, 13.6) for e in wheel(x, z, 2.6, IRON)],
+        b([2, 1.6, 1], [14, 3.6, 15], dark),                                # lower body
+        b([2, 3.6, 1], [14, 4.2, 15], body),
+        b([2, 4.2, 1], [3, 8, 15], body), b([13, 4.2, 1], [14, 8, 15], body),   # sides
+        b([1.9, 5.6, 1.5], [2.1, 6.0, 14.5], STEEL), b([13.9, 5.6, 1.5], [14.1, 6.0, 14.5], STEEL),   # chrome lines
+        b([2, 3.6, 15], [14, 9, 16], body),                                 # back
+        b([2.5, 8.6, 15], [13.5, 9.4, 16], trim),
+        b([2.5, 1.8, -1.2], [13.5, 6.8, 1], body), b([3.2, 2.4, -1.6], [12.8, 6.2, -1.2], body),   # rounded nose
+        b([3, 6.6, -1], [13, 7.6, 1], trim),
+        b([4, 3.6, -1.8], [6, 5, -1.6], BUTTER), b([10, 3.6, -1.8], [12, 5, -1.6], BUTTER),   # headlights
+        b([3, 3.6, 3], [13, 5.4, 7], SOOT), b([3.2, 5.4, 3.2], [12.8, 5.8, 6.8], MAROON),     # front seat, cushion
+        b([3, 5.4, 6.2], [13, 10, 7.4], SOOT), b([5.5, 10, 6.4], [10.5, 11.2, 7.2], SOOT),    # back and headrest
+        b([3, 3.6, 9.5], [13, 5.4, 13.5], SOOT), b([3.2, 5.4, 9.7], [12.8, 5.8, 13.3], MAROON),
+        b([3, 5.4, 12.6], [13, 11, 13.8], SOOT), b([5.5, 11, 12.8], [10.5, 12.2, 13.6], SOOT),
+        b([3, 8.4, 2.4], [13, 9.1, 3.1], YELLOW), b([3, 8.4, 8.9], [13, 9.1, 9.6], YELLOW),   # lap bars
+        *[b([x, 6, 2.6], [x + 0.5, 8.4, 3], STEEL) for x in (3.2, 12.3)],
+        *[b([x, 6, 9.1], [x + 0.5, 8.4, 9.5], STEEL) for x in (3.2, 12.3)],
+    ]
+
+
+def bumper_car(color):
+    """A bumper car: a fat two-tone rubber bumper, a rounded shiny body, a padded seat, a big wheel, a sparking pole."""
+    dark = DARKER.get(color, color)
+    return [
+        b([0, 0, 0], [16, 1.4, 16], SOOT), b([-0.3, 1.4, -0.3], [16.3, 2.6, 16.3], IRON),   # bumper
+        b([0.6, 2.6, 0.6], [15.4, 3.2, 15.4], SOOT),
+        b([1, 3.2, 1], [15, 6, 15], color), b([0.6, 3.6, 1.6], [15.4, 5.6, 14.4], color),  # body, rounded
+        b([1.6, 3.2, 0.6], [14.4, 5.6, 15.4], dark),
+        b([1.5, 6, 0.5], [14.5, 7.2, 4], color), b([3, 7.2, 1], [13, 7.6, 3.6], dark),     # bonnet
+        b([3, 6, 6], [13, 7.2, 10.5], SOOT), b([3.3, 7.2, 6.3], [12.7, 7.6, 10.2], MAROON),  # seat, cushion
+        b([3, 6, 10.5], [13, 11, 12.5], SOOT), b([3.5, 7.6, 10.4], [12.5, 10.6, 10.6], MAROON),
+        b([1, 6, 12.5], [15, 8.4, 15], color),                              # rear
+        b([2, 8.4, 13], [14, 8.8, 14.6], STEEL),
+        b([7.5, 6, 3.5], [8.5, 10, 4.5], STEEL),                            # steering column
+        b([5.5, 9.6, 2.8], [10.5, 10.4, 5.2], SOOT), b([7.4, 9.7, 3.6], [8.6, 10.5, 4.4], BRASS),   # wheel
+        b([7.7, 8, 13.5], [8.3, 26, 14.1], STEEL),                          # trolley pole
+        b([7.2, 26, 13], [8.8, 27, 14.6], YELLOW),
+        b([3, 3.8, -0.2], [5, 5.2, 0.8], BUTTER), b([11, 3.8, -0.2], [13, 5.2, 0.8], BUTTER),   # headlights
+        b([0.5, 4.4, 4], [0.7, 5.2, 12], WHITE), b([15.3, 4.4, 4], [15.5, 5.2, 12], WHITE),       # stripes
+        b([6, 3.6, -0.3], [10, 5, 0.6], STEEL),                             # grille
+    ]
+
+
+def go_kart(color):
+    """A go-kart: fat tyres with hubs, a pointed nose, side pods, a bucket seat, a spoiler, a number."""
+    dark = DARKER.get(color, color)
+    return [
+        b([2, 0.4, 0], [14, 1.6, 16], SOOT),                                # chassis
+        *[e for z in (2.4, 13.6) for x in (-0.4, 14.4) for e in wheel(x, z, 3.8, SOOT)],
+        b([4, 1.6, -1.6], [12, 3.4, 4], color), b([5, 3.4, -1.2], [11, 4.4, 3], color),     # nose
+        b([3, 1.6, -2], [13, 2.4, -1], dark),                               # front wing
+        b([2.6, 1.6, 4], [5, 4.2, 12], dark), b([11, 1.6, 4], [13.4, 4.2, 12], dark),   # side pods
+        b([5, 1.6, 4], [11, 4.6, 9], color),                                # body
+        b([3, 1.6, 12], [13, 3.4, 16], color),                              # back
+        b([5, 3, 8.6], [11, 4.2, 13], SOOT), b([5.3, 4.2, 8.9], [10.7, 4.5, 12.7], MAROON),   # seat
+        b([5, 4.2, 12], [11, 9, 13.4], SOOT),
+        b([7.5, 4, 4], [8.5, 7, 5], STEEL), b([5.5, 6.6, 3.8], [10.5, 7.4, 4.6], SOOT), b([7.4, 6.6, 3.6], [8.6, 7.6, 4.8], BRASS),
+        b([2, 6.4, 15], [14, 7.2, 17], color), b([2, 7.2, 15.2], [14, 7.5, 16.8], dark),   # spoiler
+        b([3, 3, 15], [4, 6.4, 16], STEEL), b([12, 3, 15], [13, 6.4, 16], STEEL),
+        b([6, 4.2, -1.3], [10, 5.6, -1], WHITE), b([7.4, 4.5, -1.4], [8.6, 5.3, -1.3], SOOT),   # number plate
+        b([12, 2, 16], [13, 3, 16.6], IRON),                                # exhaust
+    ]
+
+
+def teacup(color, trim):
+    """A teacup: rounded (a wider middle band), a saucer underneath, a gold rim, a handle, polka dots, a wheel in the middle."""
+    return [
+        b([-0.5, 0, -0.5], [16.5, 1, 16.5], trim), b([1, 1, 1], [15, 1.6, 15], trim),       # saucer
+        b([1.5, 1.6, 1.5], [14.5, 3, 14.5], color),                         # cup, rounded at the bottom
+        b([0, 3, 0], [16, 8.4, 16], color), b([-0.4, 4, 1.5], [16.4, 7.6, 14.5], color), b([1.5, 4, -0.4], [14.5, 7.6, 16.4], color),
+        b([-0.2, 8.4, -0.2], [16.2, 9.6, 16.2], BRASS),                     # gold rim
+        b([1.2, 3, 1.2], [14.8, 9.4, 14.8], CREAM),                         # inside
+        b([2, 3, 2], [14, 5, 14], MAROON),                                  # padded seat all round
+        b([16.4, 3.6, 6], [19, 8, 10], color), b([17.2, 4.6, 7], [18.2, 7, 9], CREAM),   # handle
+        *[b([x, y, -0.6], [x + 1.6, y + 1.6, -0.4], trim) for x, y in ((3, 4.5), (7.2, 6), (11.4, 4.5))],
+        *[b([x, y, 16.4], [x + 1.6, y + 1.6, 16.6], trim) for x, y in ((3, 4.5), (7.2, 6), (11.4, 4.5))],
+        b([7, 3, 7], [9, 6.4, 9], STEEL), b([5.6, 6.4, 5.6], [10.4, 7, 10.4], BRASS),   # the wheel in the middle
+    ]
+
+
 CAFE = {
     "cone_0": cone(0), "cone_1": cone(1), "cone_2": cone(2), "cone_3": cone(3),
     "cup_cocoa": cup(WOOD), "cup_lemonade": cup(PINK),
@@ -619,6 +749,9 @@ MODELS = {
     "bus": BUS,
     "train": TRAIN,
     "track": TRACK,
+    "balloon_red": balloon([RED, WHITE]), "balloon_blue": balloon([NAVY, SKY, BUTTER]),
+    "balloon_rainbow": balloon([RED, ORANGE, YELLOW, LIME, BLUE, PURPLE]),
+    "bird_up": bird(True), "bird_down": bird(False),
     "empty": [],
     **{f"butterfly_{n}": butterfly(c, d) for n, c, d in (("red", RED, BLACK), ("orange", ORANGE, WHITE), ("yellow", YELLOW, ORANGE), ("lime", LIME, GREEN),
                                                         ("sky", SKY, WHITE), ("blue", BLUE, SKY), ("purple", PURPLE, PINK), ("pink", PINK, WHITE),

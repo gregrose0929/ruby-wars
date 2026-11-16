@@ -673,6 +673,7 @@ public final class HubPark {
 		Museum.reset();
 		ParkTrain.reset();
 		SkyTours.reset();
+		Dressing.reset();
 		plaza(level);
 		FunPark.build(level);
 		BumperBoats.build(level);
@@ -712,6 +713,7 @@ public final class HubPark {
 		Coaster.clearHeadroom(level);
 		// (the green arrows on the ground are gone: they looked messy)
 		plazaLights(level);
+		Dressing.build(level);
 	}
 
 	static Vec3 stand(double x, int y, double z) {
@@ -1132,6 +1134,7 @@ public final class HubPark {
 		MainStreet.tick(level, tick);
 		ParkTrain.tick(level);
 		SkyTours.tick(level);
+		Dressing.tick(level, tick);
 		if (Museum.near(level)) {
 			Museum.tick(level, tick);
 		}
