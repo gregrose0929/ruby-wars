@@ -89,12 +89,6 @@ final class Plunge {
 		}
 		trough(level, path);
 		pool(level);
-		// A real waterfall beside the drop.
-		BlockPos spring = new BlockPos(112, f, -133);
-		if (level.getBlockState(spring).isAir()) {
-			level.setBlock(spring, Blocks.WATER.defaultBlockState(), 3);
-		}
-		Dressing.basin(level, 112, -133);
 		HubPark.label(level, 103.5, f + 4.2, -128.5, "WATERFALL PLUNGE", ChatFormatting.AQUA, 1.3F);
 		HubHosts.add(level, new Vec3(102.5, f + 1, -128.5), -90, VillagerProfession.FISHERMAN, VillagerType.SWAMP,
 				new HubHosts.Host("plunge", "Splashy Sam", "Waterfall Plunge", 0x40C0FF, "minecraft:water_bucket",

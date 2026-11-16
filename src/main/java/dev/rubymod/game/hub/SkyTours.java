@@ -78,7 +78,7 @@ final class SkyTours {
 		tour.events.put(path.size() * 2 / 6, (lv, car) -> tour.tell(lv, car, "Splash Island and Fossil Beach, down there!"));
 		tour.events.put(path.size() * 3 / 6, (lv, car) -> tour.tell(lv, car, "Home Street and Main Street: can you spot your house?"));
 		tour.events.put(path.size() * 4 / 6, (lv, car) -> tour.tell(lv, car, "The Speedway, and Mini Golf over there!"));
-		tour.events.put(path.size() * 5 / 6, (lv, car) -> tour.tell(lv, car, "Toyland and the Haunted Mansion! Nearly home now."));
+		tour.events.put(path.size() * 5 / 6, (lv, car) -> tour.tell(lv, car, "The plaza's just ahead! Nearly home now."));
 		HubPark.label(level, -2.5, FLOOR + 3.4, 15.5, "SKY TOURS\nfly on a happy ghast!", ChatFormatting.AQUA, 0.9F);
 		HubHosts.add(level, new Vec3(-2.5, FLOOR + 1, 15.5), 180, VillagerProfession.CARTOGRAPHER, VillagerType.SNOW,
 				new HubHosts.Host("skytour", "Captain Cloud", "Sky Tours", 0x80D0FF, "minecraft:ghast_tear",

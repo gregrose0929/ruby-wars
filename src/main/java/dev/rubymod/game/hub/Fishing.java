@@ -72,9 +72,9 @@ final class Fishing {
 		new Fish("Ancient Coelacanth", Items.COD, EntityTypes.COD, 4, 120, 200), new Fish("Golden Ruby Fish", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 4, 50, 99),
 		new Fish("Rocky Roach", Items.COD, EntityTypes.COD, 1, 10, 25, RIVER), new Fish("River Trout", Items.SALMON, EntityTypes.SALMON, 2, 25, 55, RIVER),
 		new Fish("Rapids Racer", Items.SALMON, EntityTypes.SALMON, 3, 40, 80, RIVER), new Fish("Toy Fish", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 1, 5, 12,
-			TOYLAND),
-		new Fish("Bubble Fish", Items.PUFFERFISH, EntityTypes.PUFFERFISH, 2, 8, 20, TOYLAND), new Fish("Rainbow Jelly", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH,
-			3, 10, 30, TOYLAND)};
+			POND),
+		new Fish("Bubble Fish", Items.PUFFERFISH, EntityTypes.PUFFERFISH, 2, 8, 20, POND), new Fish("Rainbow Jelly", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH,
+			3, 10, 30, POND)};
 	private static final String[] RARITY = {"", "Common", "Uncommon", "Rare", "LEGENDARY"};
 	private static final ChatFormatting[] RARITY_COLOR = {ChatFormatting.WHITE, ChatFormatting.WHITE, ChatFormatting.GREEN, ChatFormatting.AQUA, ChatFormatting.GOLD};
 

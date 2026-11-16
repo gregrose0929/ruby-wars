@@ -76,7 +76,6 @@ final class Dressing {
 		reset();
 		Set<Long> keepOut = rideColumns();
 		underneath(level);
-		waterfalls(level, keepOut);
 		ground(level, keepOut);
 		plazaRuby(level);
 		sky(level);
@@ -89,6 +88,14 @@ final class Dressing {
 	/** Every column a ride passes through or near (nothing gets planted in a ride's way). */
 	private static Set<Long> rideColumns() {
 		Set<Long> out = new HashSet<>();
+		// The Ruby Rocket coaster too.
+		for (Vec3 p : Coaster.pathPoints()) {
+			for (int dx = -4; dx <= 4; dx++) {
+				for (int dz = -4; dz <= 4; dz++) {
+					out.add(key((int) Math.floor(p.x) + dx, (int) Math.floor(p.z) + dz));
+				}
+			}
+		}
 		for (TrackRide r : TrackRide.ALL) {
 			for (int i = 0; i < r.path.size(); i += 2) {
 				Vec3 p = r.path.get(i);

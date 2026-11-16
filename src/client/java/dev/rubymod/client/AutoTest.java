@@ -3731,7 +3731,10 @@ public final class AutoTest {
 		if (mode.equals("botswitch")) {
 			// Party bots: off by default with 2+ players, a switch in the game picker.
 			then(120, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect("")));
-			then(20, mc -> mc.gui.setScreen(new ModeScreen()));
+			then(20, mc -> {
+			ModeScreen.info = new dev.rubymod.net.MorePayloads.ModeInfo("HUB", dev.rubymod.game.Hub.modeLines(mc.getSingleplayerServer()));
+			mc.gui.setScreen(new ModeScreen());
+		});
 			then(30, mc -> {
 				log("picker lines: {}", ModeScreen.info.modes().stream().filter(l -> l.startsWith("game:")).map(l -> l.substring(l.lastIndexOf('|'))).toList());
 				shot(mc, "bots-picker");
@@ -4567,6 +4570,7 @@ public final class AutoTest {
 			case "recheck" -> recheckScript();
 			case "newlook" -> newLookScript();
 			case "ridetest" -> rideTestScript();
+			case "pickercheck" -> pickerCheckScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5491,6 +5495,32 @@ public final class AutoTest {
 			tpHub(mc, "60 135 -60 facing 60 105 -10");
 		});
 		then(100, mc -> shot(mc, "new-night-coaster"));
+	}
+
+	/** The game picker on a small screen: every party game there, scrolling if need be. */
+	private static void pickerCheckScript() {
+		then(40, mc -> tpHub(mc, "0.5 101 12.5 facing 0.5 103 16"));
+		then(200, mc -> {
+			mc.options.guiScale().set(4);
+			mc.resizeGui();
+		});
+		then(20, mc -> mc.gui.setScreen(new ModeScreen()));
+		then(40, mc -> shot(mc, "pk-1"));
+		then(5, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().mouseScrolled(mc.getWindow().getGuiScaledWidth() * 0.75, mc.getWindow().getGuiScaledHeight() / 2.0, 0, -1);
+				mc.gui.screen().mouseScrolled(mc.getWindow().getGuiScaledWidth() * 0.75, mc.getWindow().getGuiScaledHeight() / 2.0, 0, -1);
+				mc.gui.screen().mouseScrolled(mc.getWindow().getGuiScaledWidth() * 0.75, mc.getWindow().getGuiScaledHeight() / 2.0, 0, -1);
+				mc.gui.screen().mouseScrolled(mc.getWindow().getGuiScaledWidth() * 0.75, mc.getWindow().getGuiScaledHeight() / 2.0, 0, -1);
+				mc.gui.screen().mouseScrolled(mc.getWindow().getGuiScaledWidth() * 0.75, mc.getWindow().getGuiScaledHeight() / 2.0, 0, -1);
+			}
+			log("picker: screen {}", mc.gui.screen() == null ? "none" : mc.gui.screen().getClass().getSimpleName());
+		});
+		then(10, mc -> shot(mc, "pk-2"));
+		then(5, mc -> {
+			mc.options.guiScale().set(0);
+			mc.resizeGui();
+		});
 	}
 
 	/** The plunge and the cable car, closely: where the rider is, every few ticks. */

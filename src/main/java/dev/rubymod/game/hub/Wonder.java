@@ -61,7 +61,10 @@ final class Wonder {
 				rainbow = d.getUUID();
 			}
 		}
-		// Rubi.
+		// (Rubi the dragon's gone.)
+		if (rubiAngle >= 0) {
+			return;
+		}
 		rubiAngle = 0;
 		Vec3 at = rubiSpot(rubiAngle);
 		Display.ItemDisplay m = HubPark.model(level, at, 0, "mascot", 2.4F, 1.2F);

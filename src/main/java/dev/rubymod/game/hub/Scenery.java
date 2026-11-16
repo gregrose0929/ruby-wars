@@ -48,7 +48,6 @@ final class Scenery {
 		funPark(level);
 		thrillZone(level);
 		golf(level);
-		spooky(level);
 		glow(level);
 	}
 
@@ -207,10 +206,8 @@ final class Scenery {
 			"The Stage (DJ Remy)", "Games, plushie prizes, bouncy castle"},
 		{"Splash Island", "54.5", "-76.5", "Splash Tower slides (Lulu)", "The Drop Capsule (top of the tower)", "Flume Falls (Flo)", "River Rapids (Rocky)",
 			"Wave pool and lazy river", "Fishing (Captain Finn) and the aquarium", "Swan boats", "Fossil Beach is next door!"},
-		{"Toyland", "6.5", "44.5", "Toy Blaster (Sparky)", "Petting Zoo (Zara)", "Helter Skelter", "Butterfly Garden (Bea)"},
 		{"Mini Golf", "-39.5", "57.5", "Four crazy holes (Gus)", "The Windmill, the Castle,", "the Volcano, Pirate Cove"},
 		{"Sky Parkour", "-21.5", "-36.5", "Jump across the sky (Pip)", "Gold blocks are checkpoints"},
-		{"the Haunted Mansion", "29.5", "44.5", "Ride a doom buggy (Mortimer)", "...if you dare!"},
 		{"the Speedway", "-108.5", "-39.5", "Kart racing on ice (Rex)", "Blue strips = BOOST!", "Tonight's records"},
 		{"Home Street", "-64.5", "-41.5", "Pick a house with a red mailbox!", "Furniture is free at Fern's shop", "The little bus (Benny)",
 			"Up Main Street: Scoops' Ice Cream,", "Hazel's Caf\u00e9, Dot's Costumes,", "and the Park Museum (Professor Pebble)"},

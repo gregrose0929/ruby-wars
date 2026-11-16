@@ -181,12 +181,23 @@ public class ModeScreen extends Screen {
 		Ui.emblem(g, "party", rightX + 7, top + 6, 16);
 		Ui.heading(g, "Party games", rightX + 28, top + 10, Ui.TEXT, 1.0F, false);
 		int rowsTop = top + 26;
-		int rowH = party.isEmpty() ? 20 : Math.max(16, Math.min(22, (listH - 32) / party.size()));
-		Ui.inset(g, rightX + 5, rowsTop - 2, colW - 10, Math.min(listH - 30, party.size() * rowH + 4));
-		for (int i = 0; i < party.size(); i++) {
+		// Rows squeeze up to fit every game; if there still isn't room (a small screen), the list scrolls.
+		int rowH = party.isEmpty() ? 20 : Math.max(13, Math.min(22, (listH - 32) / party.size()));
+		int fits = Math.max(1, (listH - 32) / rowH);
+		int maxScroll = Math.max(0, party.size() - fits);
+		scroll = Math.max(0, Math.min(scroll, maxScroll));
+		scrollMax = maxScroll;
+		Ui.inset(g, rightX + 5, rowsTop - 2, colW - 10, Math.min(listH - 30, Math.min(fits, party.size()) * rowH + 4));
+		if (scroll > 0) {
+			Ui.text(g, "\u25B2 more", rightX + colW - 52, top + 10, 46, Ui.MUTED);
+		}
+		if (scroll < maxScroll) {
+			Ui.text(g, "\u25BC more games: scroll down", rightX + 12, top + listH - 12, colW - 24, Ui.GOLD);
+		}
+		for (int i = scroll; i < party.size(); i++) {
 			String[] f = party.get(i);
-			int y = rowsTop + i * rowH;
-			if (y + rowH > top + listH - 4) {
+			int y = rowsTop + (i - scroll) * rowH;
+			if (y + rowH > top + listH - (scroll < maxScroll ? 14 : 4)) {
 				break;
 			}
 			boolean here = here(f[0]);
@@ -254,6 +265,18 @@ public class ModeScreen extends Screen {
 		if (tooltip != null) {
 			Ui.tooltip(g, tooltip, mouseX, mouseY, width, height);
 		}
+	}
+
+	private int scroll;
+	private int scrollMax;
+
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+		if (scrollMax > 0) {
+			scroll = Math.max(0, Math.min(scrollMax, scroll - (int) Math.signum(scrollY)));
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
 	}
 
 	private void go(String mode) {

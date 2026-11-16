@@ -462,7 +462,7 @@ final class ParkTrain {
 	private static final int TZ = -38;
 
 	/** Last time's mountain goes before the line's height is worked out (else the line would climb over it). */
-	private static void clearTunnel(ServerLevel level) {
+	static void clearTunnel(ServerLevel level) {
 		for (int x = TX - 12; x <= TX + 12; x++) {
 			for (int z = TZ - 12; z <= TZ + 12; z++) {
 				for (int y = FLOOR + 10; y <= FLOOR + 56; y++) {

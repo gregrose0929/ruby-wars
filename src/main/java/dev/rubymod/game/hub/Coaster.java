@@ -740,9 +740,33 @@ public final class Coaster {
 			Vec3[] f = frame(i * STEP);
 			n += HubRides.clearAround(level, path.get(i).add(f[1].scale(0.55)), 1.0, 0.9, 3.0);
 		}
+		// Bushes and hedges the cars would pass through (at the launch, mostly): gone.
+		for (int i = 0; i < path.size(); i += 2) {
+			Vec3 p = path.get(i);
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dz = -2; dz <= 2; dz++) {
+					for (int dy = -2; dy <= 3; dy++) {
+						net.minecraft.core.BlockPos b = net.minecraft.core.BlockPos.containing(p.x + dx, p.y + dy, p.z + dz);
+						if (Math.hypot(b.getX() + 0.5 - p.x, b.getZ() + 0.5 - p.z) > 2.2) {
+							continue;
+						}
+						var s = level.getBlockState(b);
+						if (s.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock || s.is(net.minecraft.world.level.block.Blocks.AZALEA)
+								|| s.is(net.minecraft.world.level.block.Blocks.FLOWERING_AZALEA) || s.is(net.minecraft.world.level.block.Blocks.SHROOMLIGHT)) {
+							level.setBlock(b, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+							n++;
+						}
+					}
+				}
+			}
+		}
 		if (n > 0) {
 			dev.rubymod.RubyMod.LOGGER.info("Headroom: cleared {} blocks over the coaster", n);
 		}
+	}
+
+	static List<Vec3> pathPoints() {
+		return path;
 	}
 
 	static void reset() {

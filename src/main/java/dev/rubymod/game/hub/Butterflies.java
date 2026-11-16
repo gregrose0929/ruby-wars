@@ -54,7 +54,7 @@ final class Butterflies {
 		new Kind("Snow White", "butterfly_white", 2), new Kind("Golden Glory", "butterfly_gold", 3), new Kind("Ruby Wing", "butterfly_ruby", 3)};
 	private static final String NET = "Butterfly Net";
 	/** Where butterflies live: x, z, radius (the plaza garden, Toyland's meadow, Splash Island's pond, the Fun Park's flower beds). */
-	private static final int[][] GARDENS = {{0, 0, 16}, {6, 72, 14}, {8, -134, 10}, {60, 10, 10}, {-44, 44, 12}};
+	private static final int[][] GARDENS = {{0, 0, 16}, {8, -134, 10}, {60, 10, 10}, {-44, 44, 12}, {-62, -32, 8}};
 	/** The Butterfly Garden (a glass house in Toyland): inside. */
 	private static final int GX1 = 8;
 	private static final int GX2 = 14;

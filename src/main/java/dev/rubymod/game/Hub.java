@@ -1166,7 +1166,7 @@ public final class Hub {
 			case "war" -> warBoard(server);
 			case "board_party" -> partyBoard();
 			case "board_records" -> recordsBoard(server);
-			case "party_info" -> Component.literal("9 quick games to play together\n").withStyle(ChatFormatting.WHITE)
+			case "party_info" -> Component.literal(dev.rubymod.game.party.PartyGames.ALL.size() + " quick games to play together\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(partyPlaying() + " playing now").withStyle(ChatFormatting.GOLD));
 			case "horde_info" -> Component.literal("Survive the waves together!\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(Horde.status().replace("  \u2022  ", "\n")).withStyle(ChatFormatting.GOLD));

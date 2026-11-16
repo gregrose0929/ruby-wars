@@ -245,7 +245,6 @@ public final class HomeStreet {
 		HubPark.blob(level, CIRCLES, FLOOR);
 		street(level);
 		square(level);
-		bunting(level);
 		for (House h : HOUSES) {
 			house(level, h);
 		}
