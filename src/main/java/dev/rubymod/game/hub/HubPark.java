@@ -465,7 +465,8 @@ public final class HubPark {
 		((BlockDisplayAccessor) d).rubymod$setBlockState(state);
 		Vector3f half = rot.transform(new Vector3f(size).mul(0.5F));
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f().sub(half), rot, size, new Quaternionf()));
-		((DisplayAccessor) d).rubymod$setViewRange(Math.max(size.x, Math.max(size.y, size.z)) >= 0.9F ? 4.0F : 2.0F);
+		float big = Math.max(size.x, Math.max(size.y, size.z));
+		((DisplayAccessor) d).rubymod$setViewRange(big >= 4F ? 3.0F : big >= 0.9F ? 1.8F : 0.9F);
 		level.addFreshEntity(d);
 		keep(d);
 		return d;
@@ -486,7 +487,7 @@ public final class HubPark {
 		d.snapTo(a.x, a.y, a.z, 0, 0);
 		((BlockDisplayAccessor) d).rubymod$setBlockState(state);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(off, rot, new Vector3f(w, h, len), new Quaternionf()));
-		((DisplayAccessor) d).rubymod$setViewRange(Math.max(w, h) >= 0.3F ? 5.0F : len > 6 ? 3.0F : 2.0F);
+		((DisplayAccessor) d).rubymod$setViewRange(Math.max(w, h) >= 0.3F ? 2.5F : len > 6 ? 1.6F : 0.9F);
 		level.addFreshEntity(d);
 		keep(d);
 		return d;
@@ -516,7 +517,7 @@ public final class HubPark {
 		ItemStack stack = new ItemStack(net.minecraft.world.item.Items.STICK);
 		stack.set(net.minecraft.core.component.DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_" + id));
 		((dev.rubymod.mixin.ItemDisplayAccessor) d).rubymod$setItemStack(stack);
-		((DisplayAccessor) d).rubymod$setViewRange(size >= 2 ? 8.0F : size >= 1 ? 5.0F : 3.0F);
+		((DisplayAccessor) d).rubymod$setViewRange(size >= 2 ? 6.0F : size >= 1 ? 2.5F : 1.2F);
 		((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(temp ? 2 : 3);
 		((DisplayAccessor) d).rubymod$setTransformation(new Transformation(new Vector3f(0, up, 0), new Quaternionf().rotateY((float) Math.PI),
 				new Vector3f(size, size, size), new Quaternionf()));

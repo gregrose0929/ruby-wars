@@ -5802,7 +5802,7 @@ public final class AutoTest {
 	/** The whole park dressed up: waterfalls, undersides, the ruby, the square, the dome, houses, the sky, and at night. */
 	private static void parkLookScript() {
 		then(0, mc -> command(mc, "time set noon"));
-		String[][] views = {{"-87 104 -124 facing -87 96 -109", "pl-fall"}, {"30 102 -7 facing 37 98 -7", "pl-fall2"}, {"70 72 20 facing 56 96 2", "pl-under"},
+		String[][] views = {{"-144 82 9 facing -155 70 3", "pl-fall"}, {"-108 82 -50 facing -116 70 -44", "pl-fall2"}, {"-40 125 -10 facing -28 120 2", "pl-track"}, {"-80 128 -25 facing -95 120 -44", "pl-track2"}, {"70 72 20 facing 56 96 2", "pl-under"},
 			{"7 104 7 facing 0.5 105 0.5", "pl-ruby"}, {"-62 108 -17 facing -62 101 -31", "pl-square"}, {"-74 104 -38 facing -69 108 -25", "pl-clock"},
 			{"-28 116 -107 facing -48 110 -107", "pl-dome"}, {"-80 104 -48 facing -80 104 -62", "pl-house"}, 
 			{"0 135 0 facing 150 125 30", "pl-sky"}, {"20 118 30 facing 40 100 -10", "pl-park"},

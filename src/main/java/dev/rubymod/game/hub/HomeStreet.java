@@ -444,11 +444,15 @@ public final class HomeStreet {
 			Vec3 b = s[1];
 			int steps = 12;
 			Vec3 last = a;
+			Vec3 ropeFrom = a;
 			boolean alongX = Math.abs(b.x - a.x) > Math.abs(b.z - a.z);
 			for (int i = 1; i <= steps; i++) {
 				double t = i / (double) steps;
 				Vec3 p = a.lerp(b, t).add(0, -Math.sin(t * Math.PI) * 0.6, 0);
-				HubPark.beam(level, last, p, 0.04F, 0.04F, Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState());
+				if (i % 2 == 0) {
+					HubPark.beam(level, ropeFrom, p, 0.04F, 0.04F, Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState());
+					ropeFrom = p;
+				}
 				if (i < steps) {
 					org.joml.Quaternionf rot = alongX ? new org.joml.Quaternionf().rotateZ((float) Math.PI / 4) : new org.joml.Quaternionf().rotateX((float) Math.PI / 4);
 					org.joml.Vector3f size = alongX ? new org.joml.Vector3f(0.36F, 0.36F, 0.03F) : new org.joml.Vector3f(0.03F, 0.36F, 0.36F);

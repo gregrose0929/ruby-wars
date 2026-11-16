@@ -266,7 +266,7 @@ final class ParkTrain {
 
 	/** Track pieces all the way round, and wooden trestles down to the islands wherever there's ground under the line. */
 	private static void track(ServerLevel level, List<Vec3> path) {
-		double every = 1.8;
+		double every = 3.7;
 		double next = 0;
 		double along = 0;
 		double nextLeg = 6;
@@ -286,12 +286,12 @@ final class ParkTrain {
 			float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
 			Display.ItemDisplay d = HubPark.model(level, b, yaw, "track", 2.0F, 0.5625F);
 			if (d != null) {
-				((DisplayAccessor) d).rubymod$setViewRange(1.6F);
+				((DisplayAccessor) d).rubymod$setViewRange(1.3F);
 			}
 			// Every so often, a little lamp at the side of the line (alternating sides): it twinkles along the track at night.
-			if (++pieces % 9 == 0) {
+			if (++pieces % 5 == 0) {
 				double len = Math.hypot(dx, dz);
-				double side = pieces % 18 == 0 ? 1.05 : -1.05;
+				double side = pieces % 10 == 0 ? 1.05 : -1.05;
 				Vec3 foot = b.add(-dz / len * side, -0.1, dx / len * side);
 				HubPark.beam(level, foot, foot.add(0, 1.3, 0), 0.08F, 0.08F, Blocks.DARK_OAK_PLANKS.defaultBlockState());
 				Display.BlockDisplay lamp = HubPark.piece(level, foot.add(0, 1.5, 0), Blocks.LANTERN.defaultBlockState(), new Vector3f(0.45F, 0.45F, 0.45F),
@@ -302,7 +302,7 @@ final class ParkTrain {
 			}
 			if (along >= nextLeg) {
 				if (trestle(level, b, dx, dz)) {
-					nextLeg = along + 14;
+					nextLeg = along + 22;
 				} else {
 					nextLeg = along + 3;
 				}

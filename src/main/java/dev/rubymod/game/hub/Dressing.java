@@ -277,7 +277,46 @@ final class Dressing {
 			FALLS.add(new Vec3(x + d.getStepX() + 0.5, FLOOR, z + d.getStepZ() + 0.5));
 			dev.rubymod.RubyMod.LOGGER.info("Dressing: waterfall at {} {} going {}", x + d.getStepX(), z + d.getStepZ(), d);
 		}
+		// Each waterfall lands in a little mossy rock basin thirty blocks down (rather than pouring all the way into the void).
+		for (Vec3 f : FALLS) {
+			basin(level, (int) Math.floor(f.x), (int) Math.floor(f.z));
+		}
 		dev.rubymod.RubyMod.LOGGER.info("Dressing: {} waterfalls ({} from before)", FALLS.size(), had);
+	}
+
+	static final int BASIN_DROP = 30;
+
+	/** A small floating rock with a pool in its top, under a waterfall at x, z: the water lands in it and stops. */
+	static void basin(ServerLevel level, int x, int z) {
+		int b = FLOOR - BASIN_DROP;
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dz = -2; dz <= 2; dz++) {
+				boolean ring = Math.abs(dx) == 2 || Math.abs(dz) == 2;
+				boolean corner = Math.abs(dx) == 2 && Math.abs(dz) == 2;
+				level.setBlock(new BlockPos(x + dx, b, z + dz), (dx + dz) % 2 == 0 ? Blocks.MOSSY_COBBLESTONE.defaultBlockState() : Blocks.STONE.defaultBlockState(), 2);
+				if (ring && !corner) {
+					level.setBlock(new BlockPos(x + dx, b + 1, z + dz), Blocks.MOSSY_COBBLESTONE.defaultBlockState(), 2);
+				} else if (corner) {
+					level.setBlock(new BlockPos(x + dx, b + 1, z + dz), Blocks.MOSS_BLOCK.defaultBlockState(), 2);
+				}
+				// A rocky underside, tapering.
+				for (int k = 1; k <= 3; k++) {
+					if (Math.abs(dx) + Math.abs(dz) <= 4 - k) {
+						level.setBlock(new BlockPos(x + dx, b - k, z + dz), k == 1 ? Blocks.STONE.defaultBlockState() : Blocks.DEEPSLATE.defaultBlockState(), 2);
+					}
+				}
+			}
+		}
+		// Ferns round the rim, and glow-berry vines hanging below.
+		for (int[] c : new int[][] {{-2, -2}, {2, 2}}) {
+			level.setBlock(new BlockPos(x + c[0], b + 2, z + c[1]), Blocks.FERN.defaultBlockState(), 2);
+		}
+		for (int[] c : new int[][] {{1, 0}, {-1, 1}, {0, -1}}) {
+			BlockPos top = new BlockPos(x + c[0], b - 4 + (Math.abs(c[0]) + Math.abs(c[1]) <= 1 ? 0 : 1), z + c[1]);
+			if (level.getBlockState(top).isAir() && !level.getBlockState(top.above()).isAir()) {
+				level.setBlock(top, Blocks.CAVE_VINES.defaultBlockState().setValue(CaveVines.BERRIES, true), 18);
+			}
+		}
 	}
 
 	// ----- On the ground -----
@@ -543,6 +582,8 @@ final class Dressing {
 			// Mist where the waterfalls go over.
 			for (Vec3 f : FALLS) {
 				level.sendParticles(ParticleTypes.CLOUD, f.x, f.y - 2, f.z, 2, 0.4, 0.6, 0.4, 0.01);
+				level.sendParticles(ParticleTypes.SPLASH, f.x, f.y - BASIN_DROP + 1.2, f.z, 12, 0.6, 0.2, 0.6, 0.1);
+				level.sendParticles(ParticleTypes.CLOUD, f.x, f.y - BASIN_DROP + 1.6, f.z, 2, 0.6, 0.3, 0.6, 0.01);
 			}
 		}
 		lanterns(level, tick);

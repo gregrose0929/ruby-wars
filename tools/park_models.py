@@ -482,12 +482,12 @@ def cup(drink):
 
 
 TRACK = [
-    b([4.5, -2.5, 0], [11.5, 0.8, 16], IRON),                              # the girder underneath
-    b([4, -2.8, 0], [12, -2.2, 16], SOOT),
-    b([1.5, 0.8, 0], [14.5, 1.2, 16], STONE),                              # ballast
-    *[b([1, 1.2, z], [15, 2.2, z + 2.2], DKWOOD) for z in (0.4, 4.4, 8.4, 12.4)],  # sleepers
-    *[b([x, 2.2, 0], [x + 1.2, 3.2, 16], IRON) for x in (2.9, 11.9)],      # rails
-    *[b([x, 3.2, 0], [x + 1.2, 3.5, 16], STEEL) for x in (2.9, 11.9)],
+    b([4.5, -2.5, -8], [11.5, 0.8, 24], IRON),                             # the girder underneath
+    b([4, -2.8, -8], [12, -2.2, 24], SOOT),
+    b([1.5, 0.8, -8], [14.5, 1.2, 24], STONE),                             # ballast
+    *[b([1, 1.2, z], [15, 2.2, z + 2.2], DKWOOD) for z in (-7.6, -3.6, 0.4, 4.4, 8.4, 12.4, 16.4, 20.4)],  # sleepers
+    *[b([x, 2.2, -8], [x + 1.2, 3.2, 24], IRON) for x in (2.9, 11.9)],     # rails
+    *[b([x, 3.2, -8], [x + 1.2, 3.5, 24], STEEL) for x in (2.9, 11.9)],
 ]
 
 TRAIN_OLD = [
