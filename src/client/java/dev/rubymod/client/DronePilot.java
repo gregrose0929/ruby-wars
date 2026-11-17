@@ -29,6 +29,9 @@ public final class DronePilot {
 	static Input keys = Input.EMPTY;
 	private static boolean recall;
 	private static CameraType cameraBefore;
+	/** Watching a base's security cameras (not flying a drone). */
+	private static boolean camera;
+	private static boolean exitSent;
 	/** Entity id -> when its glow ends (client ms). */
 	private static final Map<Integer, Long> GLOWING = new HashMap<>();
 
@@ -41,7 +44,7 @@ public final class DronePilot {
 	}
 
 	public static void register() {
-		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.DroneView.TYPE, (payload, context) -> view(context.client(), payload.entityId()));
+		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.DroneView.TYPE, (payload, context) -> view(context.client(), payload.entityId(), payload.camera()));
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.DroneGlow.TYPE, (payload, context) -> {
 			long until = System.currentTimeMillis() + payload.seconds() * 1000L;
 			for (int id : payload.ids()) {
@@ -50,11 +53,13 @@ public final class DronePilot {
 		});
 	}
 
-	private static void view(Minecraft mc, int id) {
+	private static void view(Minecraft mc, int id, boolean cam) {
 		if (id < 0) {
 			stop(mc);
 			return;
 		}
+		camera = cam;
+		exitSent = false;
 		droneId = id;
 		waiting = 0;
 		recall = false;
@@ -90,7 +95,7 @@ public final class DronePilot {
 			return;
 		}
 		Entity drone = mc.level.getEntity(droneId);
-		if (!(drone instanceof ScoutDroneEntity)) {
+		if (drone == null || !camera && !(drone instanceof ScoutDroneEntity)) {
 			// Not here yet (just launched), or gone without a word: give up after a couple of seconds.
 			if (++waiting > 40) {
 				stop(mc);
@@ -101,6 +106,17 @@ public final class DronePilot {
 			cameraBefore = mc.options.getCameraType();
 			mc.options.setCameraType(CameraType.FIRST_PERSON);
 			mc.setCameraEntity(drone);
+		}
+		if (camera) {
+			// Watching cameras: right-click for the next one, crouch to step away.
+			if (keys.shift() && !exitSent) {
+				exitSent = true;
+				ClientPlayNetworking.send(new MorePayloads.CameraInput(false, true));
+			} else if (recall) {
+				ClientPlayNetworking.send(new MorePayloads.CameraInput(true, false));
+			}
+			recall = false;
+			return;
 		}
 		float forward = (keys.forward() ? 1 : 0) - (keys.backward() ? 1 : 0);
 		float strafe = (keys.right() ? 1 : 0) - (keys.left() ? 1 : 0);

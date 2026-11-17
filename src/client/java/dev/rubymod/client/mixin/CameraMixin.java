@@ -21,7 +21,7 @@ public abstract class CameraMixin {
 	@Inject(method = "alignWithEntity", at = @At("TAIL"))
 	private void rubymod$droneLook(float partialTicks, CallbackInfo ci) {
 		var mc = net.minecraft.client.Minecraft.getInstance();
-		if (dev.rubymod.client.DronePilot.flying() && mc.player != null && mc.getCameraEntity() instanceof dev.rubymod.entity.ScoutDroneEntity) {
+		if (dev.rubymod.client.DronePilot.flying() && mc.player != null && mc.getCameraEntity() != null && mc.getCameraEntity() != mc.player) {
 			setRotation(mc.player.getViewYRot(partialTicks), mc.player.getViewXRot(partialTicks));
 		}
 	}

@@ -11,6 +11,7 @@ import dev.rubymod.block.BarbedWireBlock;
 import dev.rubymod.block.BlastDoorBlock;
 import dev.rubymod.block.ClaymoreBlock;
 import dev.rubymod.block.DefenseBlock;
+import dev.rubymod.block.LaserTripwireBlock;
 import dev.rubymod.block.LandmineBlock;
 import dev.rubymod.block.LauncherBlock;
 import dev.rubymod.block.RubyHeartBlock;
@@ -76,6 +77,17 @@ public class ModBlocks {
 	public static final Block ALARM_BLOCK = register("alarm_block",
 			p -> new DefenseBlock(DefenseBlock.Kind.ALARM, Shapes.block(), p),
 			props().mapColor(MapColor.COLOR_RED).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
+	public static final Block SECURITY_CAMERA = register("security_camera",
+			p -> new DefenseBlock(DefenseBlock.Kind.CAMERA, Block.box(4, 4, 4, 12, 12, 12), p),
+			props().mapColor(MapColor.COLOR_BLACK).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
+	public static final Block MONITOR = register("monitor",
+			p -> new DefenseBlock(DefenseBlock.Kind.MONITOR, Shapes.block(), p),
+			props().mapColor(MapColor.COLOR_BLACK).strength(2.0F, 6.0F).sound(SoundType.METAL).lightLevel(s -> 6));
+	public static final Block LASER_TRIPWIRE = register("laser_tripwire", LaserTripwireBlock::new,
+			props().mapColor(MapColor.STONE).strength(2.0F, 6.0F).sound(SoundType.METAL));
+	public static final Block KEYCARD_DOOR = register("keycard_door", BlastDoorBlock::new,
+			props().mapColor(MapColor.METAL).strength(6.0F, 6.0F).requiresCorrectToolForDrops().noOcclusion().pushReaction(PushReaction.IMMOVEABLE),
+			DoubleHighBlockItem::new);
 	public static final Block SEISMIC_SENSOR = register("seismic_sensor",
 			p -> new DefenseBlock(DefenseBlock.Kind.SEISMIC, Block.box(0, 0, 0, 16, 8, 16), p),
 			props().mapColor(MapColor.COLOR_CYAN).strength(2.0F, 6.0F).sound(SoundType.SCULK_SENSOR).noOcclusion());

@@ -58,8 +58,12 @@ public final class Rules {
 		if (claim == null || claim.canUse(player.getUUID())) {
 			return true;
 		}
-		// Blast Doors and turrets stay locked to outsiders even on Battle Day.
-		if (state.is(ModBlocks.BLAST_DOOR) || state.is(ModBlocks.SENTRY_TURRET) || state.is(ModBlocks.MISSILE_SILO)
+		// Keycard Doors open for whoever carries that base's Keycard (any day), and nobody else outside it.
+		if (state.is(ModBlocks.KEYCARD_DOOR)) {
+			return BaseSecurity.hasCard(player, claim);
+		}
+		// Blast Doors, turrets and Monitors stay locked to outsiders even on Battle Day.
+		if (state.is(ModBlocks.BLAST_DOOR) || state.is(ModBlocks.MONITOR) || state.is(ModBlocks.SENTRY_TURRET) || state.is(ModBlocks.MISSILE_SILO)
 				|| state.is(ModBlocks.MORTAR) || state.is(ModBlocks.RADAR_STATION) || state.is(ModBlocks.MISSILE_INTERCEPTOR)) {
 			return false;
 		}

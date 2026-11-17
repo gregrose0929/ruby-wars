@@ -48,6 +48,14 @@ public class DefenseBlockEntity extends BlockEntity {
 	public int ammo;
 	public int charges = MAX_CHARGES;
 	private int cooldown;
+	/** A tripped laser woke the turret up: it reaches further until this game time. */
+	private long alertUntil;
+	/** Told BaseSecurity where it is yet (straight away, then every second). */
+	private boolean listed;
+
+	public void alert(long until) {
+		alertUntil = Math.max(alertUntil, until);
+	}
 	/** Client: where the sentry last fired (degrees, Minecraft yaw) and when (game time). */
 	public float aimYaw;
 	public long lastShot = -1000;
@@ -99,6 +107,10 @@ public class DefenseBlockEntity extends BlockEntity {
 		}
 		// Spread work across ticks: each block only thinks every few ticks.
 		long t = serverLevel.getGameTime() + (pos.asLong() & 7);
+		if (t % 20 == 0 || !be.listed) {
+			be.listed = true;
+			dev.rubymod.game.BaseSecurity.here(serverLevel, pos, block.kind());
+		}
 		SeasonData.Claim claim;
 		switch (block.kind()) {
 			case SENTRY_TURRET -> {
@@ -126,6 +138,13 @@ public class DefenseBlockEntity extends BlockEntity {
 			case SEISMIC -> {
 				if (t % 20 == 0 && (claim = claimHere(serverLevel, pos)) != null) {
 					be.tickSeismic(serverLevel, pos, claim);
+				}
+			}
+			case CAMERA, MONITOR -> {
+			}
+			case LASER -> {
+				if (t % 4 == 0 && (claim = claimHere(serverLevel, pos)) != null) {
+					be.tickLaser(serverLevel, pos, state, claim, t);
 				}
 			}
 			case CLAYMORE -> {
@@ -208,11 +227,12 @@ public class DefenseBlockEntity extends BlockEntity {
 			return;
 		}
 		Vec3 gun = Vec3.atCenterOf(pos).add(0, 0.7, 0);
+		double range = level.getGameTime() < alertUntil ? TURRET_RANGE * 1.5 : TURRET_RANGE;
 		List<net.minecraft.world.entity.LivingEntity> candidates = new java.util.ArrayList<>();
 		if (Rules.phase().pvp()) {
-			candidates.addAll(enemiesNear(level, gun, TURRET_RANGE, claim));
+			candidates.addAll(enemiesNear(level, gun, range, claim));
 		}
-		candidates.addAll(level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, new AABB(gun, gun).inflate(TURRET_RANGE),
+		candidates.addAll(level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, new AABB(gun, gun).inflate(range),
 				s -> s.isAlive() && s.isEnemyOfClaim(claim)));
 		Optional<net.minecraft.world.entity.LivingEntity> target = candidates.stream()
 				.filter(p -> canSee(level, gun, p.getEyePosition()) || canSee(level, gun, p.position().add(0, 1, 0)))
@@ -300,6 +320,61 @@ public class DefenseBlockEntity extends BlockEntity {
 		level.playSound(null, pos, SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 2.0F, 1.0F);
 		level.sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 3, 0.3, 0.2, 0.3, 0);
 		Alerts.intruder(level, claim, intruders.get(0), pos);
+	}
+
+	// ----- Laser Tripwire -----
+
+	private static final int LASER_REACH = 10;
+
+	/** Where the beam ends (the first solid block in its way, or LASER_REACH blocks out). */
+	public static Vec3 laserEnd(ServerLevel level, BlockPos pos, Direction dir) {
+		BlockPos p = pos;
+		int n = 0;
+		while (n < LASER_REACH) {
+			BlockPos next = p.relative(dir);
+			if (!level.getBlockState(next).getCollisionShape(level, next).isEmpty()) {
+				break;
+			}
+			p = next;
+			n++;
+		}
+		return Vec3.atCenterOf(pos).add(Vec3.atLowerCornerOf(dir.getUnitVec3i()).scale(n + 0.5));
+	}
+
+	/** For the self-test: does the laser at pos trip right now? */
+	public static boolean testLaser(ServerLevel level, BlockPos pos) {
+		SeasonData.Claim claim = claimHere(level, pos);
+		if (claim == null || !(level.getBlockEntity(pos) instanceof DefenseBlockEntity be)) {
+			return false;
+		}
+		be.cooldown = 0;
+		be.tickLaser(level, pos, level.getBlockState(pos), claim, 1);
+		return be.cooldown > 0;
+	}
+
+	public boolean alerted(ServerLevel level) {
+		return level.getGameTime() < alertUntil;
+	}
+
+	private void tickLaser(ServerLevel level, BlockPos pos, BlockState state, SeasonData.Claim claim, long t) {
+		Direction dir = state.getValue(LaserTripwireBlock.FACING);
+		Vec3 from = Vec3.atCenterOf(pos).add(Vec3.atLowerCornerOf(dir.getUnitVec3i()).scale(0.5));
+		Vec3 to = laserEnd(level, pos, dir);
+		if (t % 12 == 0) {
+			double len = from.distanceTo(to);
+			Vec3 step = to.subtract(from).normalize();
+			for (double d = 0.25; d < len; d += 0.5) {
+				Vec3 q = from.add(step.scale(d));
+				level.sendParticles(new net.minecraft.core.particles.DustParticleOptions(0xFFFF2020, 0.5F), q.x, q.y, q.z, 1, 0, 0, 0, 0);
+			}
+		}
+		AABB beam = new AABB(from, to).inflate(0.1);
+		for (Player p : level.getEntitiesOfClass(Player.class, beam, p -> p.isAlive() && Rules.isEnemyOf(claim, p))) {
+			cooldown = 100;
+			level.playSound(null, pos, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.BLOCKS, 2.0F, 2.0F);
+			dev.rubymod.game.BaseSecurity.tripped(level, claim, p, pos);
+			return;
+		}
 	}
 
 	// ----- Seismic Sensor -----

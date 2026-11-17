@@ -242,6 +242,7 @@ public final class GameEvents {
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			dev.rubymod.entity.DronePilots.interrupt(handler.getPlayer());
+			BaseSecurity.stop(handler.getPlayer());
 			Duels.onLeave(server, handler.getPlayer());
 			Horde.onLeave(server, handler.getPlayer());
 			dev.rubymod.game.rift.Rift.onDisconnect(handler.getPlayer());
@@ -255,6 +256,8 @@ public final class GameEvents {
 
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.JetpackThrust.TYPE, (payload, context) ->
 				Jetpacks.setThrusting(context.player(), payload.on()));
+		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.CameraInput.TYPE, (payload, context) ->
+				BaseSecurity.input(context.player(), payload.next(), payload.exit()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.DroneInput.TYPE, (payload, context) ->
 				dev.rubymod.entity.DronePilots.input(context.player(), payload));
 		ServerPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.Hello.TYPE, (payload, context) ->
@@ -396,6 +399,7 @@ public final class GameEvents {
 			// Hurt while flying a Scout Drone: it comes home, and you're looking out of your own eyes again.
 			if (entity instanceof ServerPlayer pilot && damageTaken > 0) {
 				dev.rubymod.entity.DronePilots.interrupt(pilot);
+				BaseSecurity.stop(pilot);
 			}
 			if (entity instanceof ServerPlayer victim && damageTaken > 0 && source.getEntity() instanceof ServerPlayer attacker) {
 				CombatTag.tag(attacker, victim);

@@ -144,6 +144,12 @@ public final class Shop {
 			item(0, ModBlocks.COMBUSTION_GENERATOR, 1, 12);
 			item(1, ModBlocks.SOLAR_PANEL, 1, 10);
 			item(2, ModBlocks.BATTERY, 1, 15);
+			// Row 1 (right): security
+			item(4, ModBlocks.SECURITY_CAMERA, 1, 5);
+			item(5, ModBlocks.MONITOR, 1, 8);
+			item(6, ModBlocks.LASER_TRIPWIRE, 1, 6);
+			item(7, ModBlocks.KEYCARD_DOOR, 1, 6);
+			item(8, ModItems.KEYCARD, 1, 2);
 			// Row 2: production
 			item(9, ModBlocks.RUBY_DRILL, 1, 25);
 			item(10, ModBlocks.ORE_REFINERY, 1, 20);

@@ -32,6 +32,10 @@
 		"rubymod:constructor",
 		"rubymod:reinforced_glass",
 		"rubymod:floodlight",
-		"rubymod:seismic_sensor"
+		"rubymod:seismic_sensor",
+		"rubymod:security_camera",
+		"rubymod:monitor",
+		"rubymod:laser_tripwire",
+		"rubymod:keycard_door"
 	]
 }

@@ -189,6 +189,48 @@ public final class SelfTest {
 			borer.discard();
 			level.setBlockAndUpdate(sensor, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 		}
+
+		// ----- Keycard Doors and Laser Tripwires -----
+		{
+			BlockPos door = base.offset(-6, 1, -6);
+			level.setBlockAndUpdate(door, dev.rubymod.registry.ModBlocks.KEYCARD_DOOR.defaultBlockState());
+			var doorState = level.getBlockState(door);
+			check("keycard door: locked to outsiders", !Rules.canInteract(bravo, level, door, doorState));
+			check("keycard door: opens for its own base", Rules.canInteract(alpha, level, door, doorState));
+			var card = new ItemStack(dev.rubymod.registry.ModItems.KEYCARD);
+			var alphaAt = alpha.position();
+			alpha.setPos(base.getX() + 2.5, base.getY() + 1, base.getZ() + 2.5);
+			dev.rubymod.game.BaseSecurity.bind(alpha, card);
+			alpha.setPos(alphaAt);
+			bravo.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, card);
+			check("keycard door: opens for an outsider with that base's Keycard", Rules.canInteract(bravo, level, door, doorState));
+			bravo.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(dev.rubymod.registry.ModItems.KEYCARD));
+			check("keycard door: a blank Keycard doesn't open it", !Rules.canInteract(bravo, level, door, doorState));
+			bravo.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+			level.setBlockAndUpdate(door, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(door.above(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+
+			BlockPos laser = base.offset(-6, 10, 6);
+			level.setBlockAndUpdate(laser, dev.rubymod.registry.ModBlocks.LASER_TRIPWIRE.defaultBlockState()
+					.setValue(dev.rubymod.block.LaserTripwireBlock.FACING, net.minecraft.core.Direction.EAST));
+			for (int i = 1; i <= 6; i++) {
+				level.setBlockAndUpdate(laser.east(i), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			BlockPos turret = base.offset(-4, 12, 6);
+			level.setBlockAndUpdate(turret, dev.rubymod.registry.ModBlocks.SENTRY_TURRET.defaultBlockState());
+			dev.rubymod.game.BaseSecurity.here(level, turret, dev.rubymod.block.DefenseBlock.Kind.SENTRY_TURRET);
+			level.setBlockAndUpdate(laser.east(7), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+			double reach = DefenseBlockEntity.laserEnd(level, laser, net.minecraft.core.Direction.EAST).x - (laser.getX() + 0.5);
+			check("laser tripwire: the beam reaches the wall six blocks away (" + reach + ")", Math.abs(reach - 6.5) < 0.01);
+			check("laser tripwire: quiet with nobody in the beam", !DefenseBlockEntity.testLaser(level, laser));
+			// (The test's stand-in players aren't really in the world, so the beam can't see them: what a trip does instead.)
+			dev.rubymod.game.BaseSecurity.tripped(level, claim, bravo, laser);
+			check("laser tripwire: a trip puts the base's turrets on alert",
+					level.getBlockEntity(turret) instanceof DefenseBlockEntity t && t.alerted(level));
+			level.setBlockAndUpdate(laser.east(7), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(laser, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(turret, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		}
 		data.phase = Phase.WAR;
 		check("protection: claims open on Battle Day", Rules.canBuild(bravo, level, inside));
 		var alphaWas = alpha.position();

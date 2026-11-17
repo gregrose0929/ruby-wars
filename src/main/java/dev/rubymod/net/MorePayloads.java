@@ -410,9 +410,10 @@ public final class MorePayloads {
 	}
 
 	/** Server to client: you're flying this Scout Drone (its entity id): look through it. -1: back to your own eyes. */
-	public record DroneView(int entityId) implements CustomPacketPayload {
+	public record DroneView(int entityId, boolean camera) implements CustomPacketPayload {
 		public static final Type<DroneView> TYPE = new Type<>(RubyMod.id("drone_view"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, DroneView> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, DroneView::entityId, DroneView::new);
+		public static final StreamCodec<RegistryFriendlyByteBuf, DroneView> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, DroneView::entityId,
+				ByteBufCodecs.BOOL, DroneView::camera, DroneView::new);
 
 		@Override
 		public Type<DroneView> type() {
@@ -429,6 +430,18 @@ public final class MorePayloads {
 
 		@Override
 		public Type<DroneInput> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client to server, watching a base's cameras: next camera, or step away. */
+	public record CameraInput(boolean next, boolean exit) implements CustomPacketPayload {
+		public static final Type<CameraInput> TYPE = new Type<>(RubyMod.id("camera_input"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, CameraInput> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, CameraInput::next,
+				ByteBufCodecs.BOOL, CameraInput::exit, CameraInput::new);
+
+		@Override
+		public Type<CameraInput> type() {
 			return TYPE;
 		}
 	}
@@ -658,6 +671,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(DroneView.TYPE, DroneView.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(DroneInput.TYPE, DroneInput.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DroneGlow.TYPE, DroneGlow.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(CameraInput.TYPE, CameraInput.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DeathInfo.TYPE, DeathInfo.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Autopilot.TYPE, Autopilot.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaidStatus.TYPE, RaidStatus.CODEC);

@@ -14,7 +14,7 @@ public class ModBlockEntities {
 			BuiltInRegistries.BLOCK_ENTITY_TYPE,
 			RubyMod.id("defense"),
 			new BlockEntityType<>(DefenseBlockEntity::new, Set.of(
-					ModBlocks.SENTRY_TURRET, ModBlocks.MISSILE_INTERCEPTOR, ModBlocks.RADAR_STATION, ModBlocks.ALARM_BLOCK, ModBlocks.SEISMIC_SENSOR, ModBlocks.CLAYMORE,
+					ModBlocks.SENTRY_TURRET, ModBlocks.MISSILE_INTERCEPTOR, ModBlocks.RADAR_STATION, ModBlocks.ALARM_BLOCK, ModBlocks.SEISMIC_SENSOR, ModBlocks.SECURITY_CAMERA, ModBlocks.MONITOR, ModBlocks.LASER_TRIPWIRE, ModBlocks.CLAYMORE,
 					ModBlocks.FLAK_CANNON, ModBlocks.SAM_SITE, ModBlocks.AIRFIELD_PAD)));
 
 	public static final BlockEntityType<dev.rubymod.industry.MachineBlockEntity> MACHINE = Registry.register(

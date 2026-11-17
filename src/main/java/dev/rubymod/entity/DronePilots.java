@@ -39,7 +39,7 @@ public final class DronePilots {
 			return false;
 		}
 		FLYING.put(p.getUUID(), drone);
-		Net.send(p, new MorePayloads.DroneView(drone.getId()));
+		Net.send(p, new MorePayloads.DroneView(drone.getId(), false));
 		level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.BEEHIVE_EXIT, SoundSource.PLAYERS, 1.0F, 1.8F);
 		p.sendSystemMessage(Component.literal("Scout Drone up! W A S D to fly, Space up, Shift down. Enemies it sees glow for your squad. Right-click to bring it home.")
 				.withStyle(ChatFormatting.AQUA));
@@ -50,7 +50,7 @@ public final class DronePilots {
 	public static void input(ServerPlayer p, MorePayloads.DroneInput in) {
 		ScoutDroneEntity d = FLYING.get(p.getUUID());
 		if (d == null || d.isRemoved()) {
-			Net.send(p, new MorePayloads.DroneView(-1));
+			Net.send(p, new MorePayloads.DroneView(-1, false));
 			return;
 		}
 		if (in.recall()) {
@@ -63,7 +63,7 @@ public final class DronePilots {
 	/** Back to the pilot's pocket (not lost: it can fly again). */
 	public static void recall(ServerPlayer p) {
 		ScoutDroneEntity d = FLYING.remove(p.getUUID());
-		Net.send(p, new MorePayloads.DroneView(-1));
+		Net.send(p, new MorePayloads.DroneView(-1, false));
 		if (d == null || d.isRemoved() || d.downed()) {
 			return;
 		}
@@ -80,7 +80,7 @@ public final class DronePilots {
 	static void lost(ServerPlayer p, ScoutDroneEntity d) {
 		if (FLYING.get(p.getUUID()) == d) {
 			FLYING.remove(p.getUUID());
-			Net.send(p, new MorePayloads.DroneView(-1));
+			Net.send(p, new MorePayloads.DroneView(-1, false));
 			dev.rubymod.game.Alerts.title(p, "", "Your drone was shot down!", ChatFormatting.RED);
 		}
 	}
@@ -89,7 +89,7 @@ public final class DronePilots {
 	static void gone(ServerPlayer p, ScoutDroneEntity d) {
 		if (FLYING.get(p.getUUID()) == d) {
 			FLYING.remove(p.getUUID());
-			Net.send(p, new MorePayloads.DroneView(-1));
+			Net.send(p, new MorePayloads.DroneView(-1, false));
 		}
 	}
 

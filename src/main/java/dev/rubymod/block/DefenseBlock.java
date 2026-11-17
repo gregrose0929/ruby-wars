@@ -40,6 +40,9 @@ public class DefenseBlock extends BaseEntityBlock {
 		RADAR,
 		ALARM,
 		SEISMIC,
+		CAMERA,
+		MONITOR,
+		LASER,
 		CLAYMORE,
 		FLAK,
 		SAM,
@@ -131,12 +134,21 @@ public class DefenseBlock extends BaseEntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		if (kind == Kind.MONITOR) {
+			if (level instanceof net.minecraft.server.level.ServerLevel server && player instanceof ServerPlayer sp) {
+				dev.rubymod.game.BaseSecurity.watch(sp, server, pos);
+			}
+			return InteractionResult.SUCCESS;
+		}
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof DefenseBlockEntity be) {
 			String status = switch (kind) {
 				case SENTRY_TURRET -> "Sentry Turret: " + be.ammo + " rounds. Load it with Heavy Ammo.";
 				case INTERCEPTOR -> "Missile Interceptor: " + be.charges + "/" + DefenseBlockEntity.MAX_CHARGES + " charges. Recharge with rubies.";
 				case RADAR -> "Radar Station: online. Contacts within 96 blocks show on your HUD.";
 				case ALARM -> "Alarm Block: armed. Alerts you when enemies come within 12 blocks.";
+				case CAMERA -> "Security Camera: watch it from a Monitor in this base.";
+				case MONITOR -> "Monitor";
+				case LASER -> "Laser Tripwire: armed. Enemies who cross the beam set off this base's alarms and turrets.";
 				case SEISMIC -> "Seismic Sensor: listening. Warns your squad when an enemy Tunnel Borer digs within 48 blocks.";
 				case CLAYMORE -> "Claymore: armed on Battle Day. Fires at enemies in front of it.";
 				case FLAK -> "Flak Cannon: " + be.ammo + " shells. Fires bursting shells at enemy aircraft within 80 blocks. Load with Heavy Ammo.";

@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "securitycheck" -> securityCheckScript();
 			case "grapplecheck" -> grappleCheckScript();
 			case "borercheck" -> borerCheckScript();
 			case "coasterspace" -> coasterSpaceScript();
@@ -5820,6 +5821,60 @@ public final class AutoTest {
 		then(2, mc -> shot(mc, "grapple-1-flying"));
 		then(100, mc -> log("grapple: highest {}, landed at {}, health {}, hook damage {}", best[0], mc.player.blockPosition(), mc.player.getHealth(),
 				mc.player.getMainHandItem().getDamageValue()));
+	}
+
+		/** Base security: two cameras and a Monitor (watch, next camera, step away), a laser, a keycard door. */
+	private static void securityCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "execute as @p at @s run tp @s ~300 ~ ~300 0 0");
+		});
+		then(200, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = p.level();
+			var base = p.blockPosition();
+			var heart = base.offset(0, 0, 8);
+			level.setBlockAndUpdate(heart, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heart);
+			log("security: claim {}", dev.rubymod.game.SeasonData.get().claimOf(p.getUUID()) != null);
+			level.setBlockAndUpdate(base.offset(2, 0, 2), dev.rubymod.registry.ModBlocks.MONITOR.defaultBlockState());
+			level.setBlockAndUpdate(base.offset(-6, 4, 10), dev.rubymod.registry.ModBlocks.SECURITY_CAMERA.defaultBlockState());
+			level.setBlockAndUpdate(base.offset(8, 3, -6), dev.rubymod.registry.ModBlocks.SECURITY_CAMERA.defaultBlockState());
+			level.setBlockAndUpdate(base.offset(-3, 1, 4), dev.rubymod.registry.ModBlocks.LASER_TRIPWIRE.defaultBlockState()
+					.setValue(dev.rubymod.block.LaserTripwireBlock.FACING, net.minecraft.core.Direction.EAST));
+			var door = dev.rubymod.registry.ModBlocks.KEYCARD_DOOR.defaultBlockState();
+			level.setBlockAndUpdate(base.offset(-2, 0, 2), door);
+			level.setBlockAndUpdate(base.offset(-2, 1, 2), door.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+					net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+		}));
+		then(60, mc -> {
+			mc.player.setXRot(15);
+			shot(mc, "security-1-blocks");
+		});
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var claim = dev.rubymod.game.SeasonData.get().claimAt(dev.rubymod.game.Rules.dim(p.level()), p.getBlockX() + 2, p.getBlockZ() + 2);
+			log("security: monitor's claim {}, cameras {}, block {}", claim == null ? "none" : claim.ownerName,
+					claim == null ? -1 : dev.rubymod.game.BaseSecurity.inClaim(p.level(), claim, dev.rubymod.block.DefenseBlock.Kind.CAMERA, p.blockPosition()).size(),
+					p.level().getBlockState(p.blockPosition().offset(2, 0, 2)).getBlock());
+			dev.rubymod.game.BaseSecurity.watch(p, p.level(), p.blockPosition().offset(2, 0, 2));
+		}));
+		then(30, mc -> {
+			log("security: watching {} camera {}", DronePilot.flying(), mc.getCameraEntity() == null ? "none" : mc.getCameraEntity().blockPosition());
+			mc.player.setYRot(160);
+			mc.player.setXRot(25);
+		});
+		then(10, mc -> shot(mc, "security-2-camera1"));
+		then(5, mc -> DronePilot.useKey());
+		then(20, mc -> {
+			log("security: next camera {}", mc.getCameraEntity() == null ? "none" : mc.getCameraEntity().blockPosition());
+			mc.player.setYRot(-40);
+		});
+		then(10, mc -> shot(mc, "security-3-camera2"));
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		then(20, mc -> log("security: stepped away: watching {}, camera is the player {}", DronePilot.flying(), mc.getCameraEntity() == mc.player));
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
