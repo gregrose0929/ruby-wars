@@ -54,7 +54,7 @@ public class VehicleHud implements HudElement {
 		int y0 = h - 22;
 		dev.rubymod.client.ui.Ui.panel(g, x0 - 6, y0 - 16, barW + 12, 28);
 		int col = health < 0.25F ? dev.rubymod.client.ui.Ui.RED : health < 0.5F ? dev.rubymod.client.ui.Ui.AMBER : dev.rubymod.client.ui.Ui.GREEN;
-		dev.rubymod.client.ui.Ui.text(g, (vehicle.isTank() ? "Tank" : "Jeep") + " armor", x0, y0 - 11, dev.rubymod.client.ui.Ui.TEXT);
+		dev.rubymod.client.ui.Ui.text(g, vehicle.vehicleName() + " armor", x0, y0 - 11, dev.rubymod.client.ui.Ui.TEXT);
 		dev.rubymod.client.ui.Ui.bar(g, x0, y0, barW, 7, health, col);
 
 		if (!vehicle.isTank() || !driver) {

@@ -31,6 +31,7 @@
 		"rubymod:point_defense",
 		"rubymod:constructor",
 		"rubymod:reinforced_glass",
-		"rubymod:floodlight"
+		"rubymod:floodlight",
+		"rubymod:seismic_sensor"
 	]
 }

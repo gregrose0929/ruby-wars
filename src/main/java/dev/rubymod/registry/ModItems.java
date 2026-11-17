@@ -126,6 +126,8 @@ public class ModItems {
 	// --- Vehicles ---
 	public static final Item JEEP = register("jeep", p -> new VehicleItem(() -> ModEntities.JEEP, p), new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	public static final Item TANK = register("tank", p -> new VehicleItem(() -> ModEntities.TANK, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
+	public static final Item TUNNEL_BORER = register("tunnel_borer", p -> new VehicleItem(() -> ModEntities.TUNNEL_BORER, p),
+			new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	public static final Item FIGHTER_JET = register("fighter_jet", p -> new VehicleItem(() -> ModEntities.FIGHTER_JET, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item ATTACK_JET = register("attack_jet", p -> new VehicleItem(() -> ModEntities.ATTACK_JET, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item ATTACK_HELI = register("attack_heli", p -> new VehicleItem(() -> ModEntities.ATTACK_HELI, p), new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));

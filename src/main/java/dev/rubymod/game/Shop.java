@@ -98,6 +98,7 @@ public final class Shop {
 			item(29, ModBlocks.REINFORCED_CONCRETE, 2, 1);
 			item(30, ModBlocks.BLAST_DOOR, 1, 4);
 			item(31, ModBlocks.LANDMINE, 1, 2);
+			item(34, ModBlocks.SEISMIC_SENSOR, 1, 6);
 			item(32, ModBlocks.CLAYMORE, 1, 2);
 			item(33, ModBlocks.BARBED_WIRE, 8, 1);
 			// Row 5: tools and upgrades
@@ -119,6 +120,7 @@ public final class Shop {
 			// Row 1: vehicles and aircraft
 			item(0, ModItems.JEEP, 1, 40);
 			item(1, ModItems.TANK, 1, 100);
+			item(2, ModItems.TUNNEL_BORER, 1, 60);
 			item(3, ModItems.FIGHTER_JET, 1, 150);
 			item(4, ModItems.ATTACK_JET, 1, 170);
 			item(5, ModItems.BOMBER, 1, 220);

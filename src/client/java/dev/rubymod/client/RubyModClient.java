@@ -345,6 +345,7 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.SOLDIER, SoldierRenderer::new);
 		EntityRendererRegistry.register(ModEntities.RECON_DRONE, DroneRenderer::new);
 		EntityRendererRegistry.register(ModEntities.SCOUT_DRONE, ctx -> new DroneRenderer(ctx, 0.6F));
+		EntityRendererRegistry.register(ModEntities.TUNNEL_BORER, BorerRenderer::new);
 		DronePilot.register();
 		HeavyAAGunRenderer.registerLayer();
 		EntityRendererRegistry.register(ModEntities.HEAVY_AA_GUN, HeavyAAGunRenderer::new);

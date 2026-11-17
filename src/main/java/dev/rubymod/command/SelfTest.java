@@ -155,6 +155,40 @@ public final class SelfTest {
 		claim.trusted.add(bravo.getUUID().toString());
 		check("protection: trusted player can build", Rules.canBuild(bravo, level, inside));
 		claim.trusted.clear();
+
+		// ----- Tunnel Borer and Seismic Sensor -----
+		{
+			var borer = dev.rubymod.registry.ModEntities.TUNNEL_BORER.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			BlockPos near = base.offset(-9, 1, 0);
+			borer.snapTo(near.getX() + 0.5, near.getY(), near.getZ() + 0.5, -90, 0);
+			level.addFreshEntity(borer);
+			java.util.function.Consumer<BlockPos> rock = at -> {
+				for (int x = 1; x <= 3; x++) {
+					for (int y = -1; y <= 3; y++) {
+						for (int z = -2; z <= 2; z++) {
+							level.setBlockAndUpdate(at.offset(x, y, z), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+						}
+					}
+				}
+			};
+			rock.accept(near);
+			check("borer: can't dig into an enemy claim near its Heart (build phase)", borer.testDrill(bravo, 0) == 0);
+			BlockPos deep = base.below(SeasonData.CLAIM_DEPTH + 5);
+			rock.accept(deep);
+			borer.teleportTo(deep.getX() + 0.5, deep.getY(), deep.getZ() + 0.5);
+			int cut = borer.testDrill(bravo, 0);
+			check("borer: digs deep under an enemy claim (" + cut + " blocks)", cut == 9);
+			int down = borer.testDrill(bravo, 60);
+			check("borer: looking down digs lower (" + down + " more)", down > 0);
+			BlockPos sensor = base.offset(3, 1, 3);
+			level.setBlockAndUpdate(sensor, dev.rubymod.registry.ModBlocks.SEISMIC_SENSOR.defaultBlockState());
+			borer.testDriver = bravo;
+			borer.testDrill(bravo, 0);
+			check("seismic sensor: hears an enemy borer under the base [drilling " + borer.drilling() + ", driver " + borer.driver()
+					+ ", enemy " + Rules.isEnemyOf(claim, bravo) + ", sensor " + level.getBlockState(sensor).getBlock() + "]", DefenseBlockEntity.testSeismic(level, sensor));
+			borer.discard();
+			level.setBlockAndUpdate(sensor, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		}
 		data.phase = Phase.WAR;
 		check("protection: claims open on Battle Day", Rules.canBuild(bravo, level, inside));
 		var alphaWas = alpha.position();

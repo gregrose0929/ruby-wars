@@ -39,6 +39,7 @@ public class DefenseBlock extends BaseEntityBlock {
 		INTERCEPTOR,
 		RADAR,
 		ALARM,
+		SEISMIC,
 		CLAYMORE,
 		FLAK,
 		SAM,
@@ -136,6 +137,7 @@ public class DefenseBlock extends BaseEntityBlock {
 				case INTERCEPTOR -> "Missile Interceptor: " + be.charges + "/" + DefenseBlockEntity.MAX_CHARGES + " charges. Recharge with rubies.";
 				case RADAR -> "Radar Station: online. Contacts within 96 blocks show on your HUD.";
 				case ALARM -> "Alarm Block: armed. Alerts you when enemies come within 12 blocks.";
+				case SEISMIC -> "Seismic Sensor: listening. Warns your squad when an enemy Tunnel Borer digs within 48 blocks.";
 				case CLAYMORE -> "Claymore: armed on Battle Day. Fires at enemies in front of it.";
 				case FLAK -> "Flak Cannon: " + be.ammo + " shells. Fires bursting shells at enemy aircraft within 80 blocks. Load with Heavy Ammo.";
 				case SAM -> "SAM Site: " + be.charges + "/" + DefenseBlockEntity.MAX_CHARGES + " missiles. Shoots down enemy aircraft within 180 blocks. Reload with rubies.";

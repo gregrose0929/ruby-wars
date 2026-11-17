@@ -159,6 +159,11 @@ public class VehicleEntity extends Mob {
 		return getType() == ModEntities.TANK;
 	}
 
+	/** What it's called on the HUD and in messages. */
+	public String vehicleName() {
+		return isTank() ? "Tank" : "Jeep";
+	}
+
 	public static AttributeSupplier.Builder jeepAttributes() {
 		return Mob.createMobAttributes()
 				.add(Attributes.MAX_HEALTH, 60.0)
@@ -279,7 +284,7 @@ public class VehicleEntity extends Mob {
 		}
 		boolean hurt = super.hurtServer(level, source, amount);
 		if (hurt && getControllingPassenger() instanceof ServerPlayer driver) {
-			driver.sendOverlayMessage(Component.literal((isTank() ? "Tank" : "Jeep") + " armor: " + (int) getHealth() + " / " + (int) getMaxHealth()));
+			driver.sendOverlayMessage(Component.literal(vehicleName() + " armor: " + (int) getHealth() + " / " + (int) getMaxHealth()));
 		}
 		return hurt;
 	}

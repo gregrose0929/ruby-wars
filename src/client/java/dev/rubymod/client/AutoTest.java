@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "borercheck" -> borerCheckScript();
 			case "coasterspace" -> coasterSpaceScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
@@ -5718,6 +5719,71 @@ public final class AutoTest {
 		coasterInfo("30 hills up");
 		then(5, mc -> command(mc, "execute as @p at @s run tp @s ~-20 ~45 ~ -90 30"));
 		then(40, mc -> shot(mc, "coaster-space-above"));
+	}
+
+		/** The Tunnel Borer: ride it into a stone wall, then down; and a Seismic Sensor to look at. */
+	private static void borerCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+		});
+		then(200, mc -> {
+			command(mc, "execute as @p at @s run fill ~-3 ~ ~6 ~3 ~4 ~14 minecraft:stone");
+			command(mc, "execute as @p at @s run setblock ~3 ~ ~2 rubymod:seismic_sensor");
+		});
+		then(20, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var b = dev.rubymod.registry.ModEntities.TUNNEL_BORER.create(p.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			b.snapTo(p.getX(), p.getY(), p.getZ() + 2, 0, 0);
+			p.level().addFreshEntity(b);
+		}));
+		then(20, mc -> {
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			shot(mc, "borer-1-parked");
+		});
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			for (var b : p.level().getEntitiesOfClass(dev.rubymod.entity.TunnelBorerEntity.class, p.getBoundingBox().inflate(10))) {
+				log("borer: rode it: {}", p.startRiding(b));
+			}
+		}));
+		then(5, mc -> {
+			mc.player.setYRot(0);
+			mc.player.setXRot(0);
+			mc.options.keyUp.setDown(true);
+		});
+		then(100, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("borer: after driving 5 s: at {}", mc.player.getVehicle() == null ? "not riding" : mc.player.getVehicle().blockPosition());
+			shot(mc, "borer-2-tunnel");
+		});
+		then(5, mc -> {
+			mc.player.setXRot(50);
+			mc.options.keyUp.setDown(true);
+		});
+		then(60, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("borer: after looking down 3 s: at {}", mc.player.getVehicle() == null ? "not riding" : mc.player.getVehicle().blockPosition());
+		});
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			int air = 0;
+			for (int z = 6; z <= 14; z++) {
+				for (int x = -1; x <= 1; x++) {
+					if (p.level().getBlockState(p.blockPosition().offset(0, 0, 0).atY(-60).offset(x, 0, 0).relative(net.minecraft.core.Direction.SOUTH, 0).offset(0, 0, z - (p.getBlockZ() - 0))).isAir()) {
+						air++;
+					}
+				}
+			}
+			log("borer: (rough) air in the wall's first row: {}", air);
+		}));
+		then(5, mc -> {
+			mc.player.stopRiding();
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			mc.player.setXRot(10);
+		});
+		then(20, mc -> shot(mc, "borer-3-out"));
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */

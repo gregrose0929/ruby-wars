@@ -76,6 +76,9 @@ public class ModBlocks {
 	public static final Block ALARM_BLOCK = register("alarm_block",
 			p -> new DefenseBlock(DefenseBlock.Kind.ALARM, Shapes.block(), p),
 			props().mapColor(MapColor.COLOR_RED).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
+	public static final Block SEISMIC_SENSOR = register("seismic_sensor",
+			p -> new DefenseBlock(DefenseBlock.Kind.SEISMIC, Block.box(0, 0, 0, 16, 8, 16), p),
+			props().mapColor(MapColor.COLOR_CYAN).strength(2.0F, 6.0F).sound(SoundType.SCULK_SENSOR).noOcclusion());
 	public static final Block FLAK_CANNON = register("flak_cannon",
 			p -> new DefenseBlock(DefenseBlock.Kind.FLAK, Shapes.block(), p),
 			props().mapColor(MapColor.METAL).strength(4.0F, 6.0F).sound(SoundType.METAL).noOcclusion());

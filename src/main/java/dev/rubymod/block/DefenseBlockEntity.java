@@ -123,6 +123,11 @@ public class DefenseBlockEntity extends BlockEntity {
 					be.tickAlarm(serverLevel, pos, claim);
 				}
 			}
+			case SEISMIC -> {
+				if (t % 20 == 0 && (claim = claimHere(serverLevel, pos)) != null) {
+					be.tickSeismic(serverLevel, pos, claim);
+				}
+			}
 			case CLAYMORE -> {
 				if (t % 4 == 0 && Rules.phase().pvp() && (claim = claimHere(serverLevel, pos)) != null) {
 					tickClaymore(serverLevel, pos, state, claim);
@@ -295,6 +300,59 @@ public class DefenseBlockEntity extends BlockEntity {
 		level.playSound(null, pos, SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 2.0F, 1.0F);
 		level.sendParticles(ParticleTypes.ANGRY_VILLAGER, pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, 3, 0.3, 0.2, 0.3, 0);
 		Alerts.intruder(level, claim, intruders.get(0), pos);
+	}
+
+	// ----- Seismic Sensor -----
+
+	private static final double SEISMIC_RANGE = 48;
+
+	/** An enemy Tunnel Borer digging nearby: the sensor rumbles, and the base's squad hears where it is. */
+	/** For the self-test: does the sensor at pos hear anything right now? */
+	public static boolean testSeismic(ServerLevel level, BlockPos pos) {
+		SeasonData.Claim claim = claimHere(level, pos);
+		return claim != null && level.getBlockEntity(pos) instanceof DefenseBlockEntity be && be.tickSeismic(level, pos, claim);
+	}
+
+	private boolean tickSeismic(ServerLevel level, BlockPos pos, SeasonData.Claim claim) {
+		Vec3 at = Vec3.atCenterOf(pos);
+		dev.rubymod.entity.TunnelBorerEntity borer = null;
+		for (dev.rubymod.entity.TunnelBorerEntity b : level.getEntitiesOfClass(dev.rubymod.entity.TunnelBorerEntity.class,
+				new AABB(at, at).inflate(SEISMIC_RANGE))) {
+			if (b.drilling() && b.driver() != null && Rules.isEnemyOf(claim, b.driver())
+					&& (borer == null || b.distanceToSqr(at) < borer.distanceToSqr(at))) {
+				borer = b;
+			}
+		}
+		if (borer == null) {
+			return false;
+		}
+		cooldown = 80;
+		level.playSound(null, pos, SoundEvents.SCULK_CLICKING, SoundSource.BLOCKS, 2.0F, 0.6F);
+		level.playSound(null, pos, SoundEvents.WARDEN_HEARTBEAT, SoundSource.BLOCKS, 3.0F, 0.7F);
+		level.sendParticles(ParticleTypes.SCULK_CHARGE_POP, at.x, at.y + 0.4, at.z, 8, 0.4, 0.1, 0.4, 0.02);
+		Vec3 d = borer.position().subtract(at);
+		int far = (int) Math.round(Math.hypot(d.x, d.z));
+		int down = (int) Math.round(-d.y);
+		String way = compass(d.x, d.z);
+		String depth = down > 2 ? ", " + down + " blocks down" : down < -2 ? ", " + -down + " blocks up" : ", about level with it";
+		java.util.UUID owner = java.util.UUID.fromString(claim.owner);
+		java.util.List<java.util.UUID> side = new java.util.ArrayList<>(dev.rubymod.game.Squads.mates(owner));
+		side.add(owner);
+		for (java.util.UUID id : side) {
+			ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
+			if (p != null) {
+				p.sendSystemMessage(net.minecraft.network.chat.Component.literal("SEISMIC SENSOR: something's digging " + far + " blocks " + way + " of it" + depth + "!")
+						.withStyle(net.minecraft.ChatFormatting.DARK_AQUA, net.minecraft.ChatFormatting.BOLD), true);
+				p.level().playSound(null, p.blockPosition(), SoundEvents.SCULK_CLICKING, SoundSource.PLAYERS, 0.8F, 0.6F);
+			}
+		}
+		return true;
+	}
+
+	private static String compass(double dx, double dz) {
+		String[] names = {"south", "south-west", "west", "north-west", "north", "north-east", "east", "south-east"};
+		double deg = Math.toDegrees(Math.atan2(-dx, dz));
+		return names[Math.floorMod((int) Math.round(deg / 45.0), 8)];
 	}
 
 	// ----- Anti-aircraft: Flak Cannon and SAM Site -----
