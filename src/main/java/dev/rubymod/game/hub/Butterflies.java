@@ -341,7 +341,7 @@ final class Butterflies {
 		}
 		try {
 			Files.createDirectories(file(level).getParent());
-			Files.writeString(file(level), b.toString());
+			dev.rubymod.game.SafeFiles.write(file(level), b.toString());
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the butterfly book", e);
 		}
@@ -349,5 +349,15 @@ final class Butterflies {
 
 	static void reset() {
 		FLIES.clear();
+	}
+
+	/** Someone's changed their name: their book comes with them. */
+	static void rename(ServerLevel level, String before, String now) {
+		load(level);
+		Set<String> mine = BOOK.remove(before);
+		if (mine != null) {
+			BOOK.computeIfAbsent(now, k -> new LinkedHashSet<>()).addAll(mine);
+			save(level);
+		}
 	}
 }

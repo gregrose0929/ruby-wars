@@ -951,7 +951,7 @@ public final class RelicEffects {
 		RiftPing.tick(level);
 		RiftExtras.tick(level);
 		RiftSecrets.tick(level);
-		for (Iterator<Map.Entry<UUID, Frozen>> it = FROZEN.entrySet().iterator(); it.hasNext();) {
+		for (Iterator<Map.Entry<UUID, Frozen>> it = new java.util.ArrayList<>(FROZEN.entrySet()).iterator(); it.hasNext();) {
 			var e = it.next();
 			if (t >= e.getValue().until() || !(level.getEntity(e.getKey()) instanceof LivingEntity mob) || !mob.isAlive()) {
 				unfreeze(level, e.getKey(), e.getValue());
@@ -959,13 +959,13 @@ public final class RelicEffects {
 					thawed.igniteForSeconds(6);
 					level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, thawed.getX(), thawed.getY() + 1, thawed.getZ(), 30, 0.4, 0.6, 0.4, 0.05);
 				}
-				it.remove();
+				FROZEN.remove(e.getKey());
 			}
 		}
-		for (Iterator<Patch> it = PATCHES.iterator(); it.hasNext();) {
+		for (Iterator<Patch> it = new java.util.ArrayList<>(PATCHES).iterator(); it.hasNext();) {
 			Patch p = it.next();
 			if (t >= p.until()) {
-				it.remove();
+				PATCHES.remove(p);
 				continue;
 			}
 			if (t % 3 == 0) {
@@ -978,7 +978,7 @@ public final class RelicEffects {
 				}
 			}
 		}
-		for (Iterator<Hole> it = HOLES.iterator(); it.hasNext();) {
+		for (Iterator<Hole> it = new java.util.ArrayList<>(HOLES).iterator(); it.hasNext();) {
 			Hole h = it.next();
 			Entity core = level.getEntity(h.core());
 			if (t >= h.until()) {
@@ -987,7 +987,7 @@ public final class RelicEffects {
 				}
 				level.sendParticles(ParticleTypes.REVERSE_PORTAL, h.at().x, h.at().y, h.at().z, 80, 0.2, 0.2, 0.2, 1.2);
 				level.playSound(null, BlockPos.containing(h.at()), SoundEvents.RESPAWN_ANCHOR_DEPLETE.value(), SoundSource.PLAYERS, 1.0F, 0.6F);
-				it.remove();
+				HOLES.remove(h);
 				continue;
 			}
 			if (core != null) {
@@ -1015,7 +1015,7 @@ public final class RelicEffects {
 				}
 			}
 		}
-		for (Iterator<Strike> it = STRIKES.iterator(); it.hasNext();) {
+		for (Iterator<Strike> it = new java.util.ArrayList<>(STRIKES).iterator(); it.hasNext();) {
 			Strike s = it.next();
 			long left = s.when() - t;
 			if (left > 0) {
@@ -1023,7 +1023,7 @@ public final class RelicEffects {
 				RiftFx.ring(level, s.at(), 3.0 * left / 25.0, RiftFx.dust(0xFFC0C0, 1.0F), 16);
 				continue;
 			}
-			it.remove();
+			STRIKES.remove(s);
 			ServerPlayer owner = server.getPlayerList().getPlayer(s.owner());
 			RiftFx.beam(level, s.at(), 30, ParticleTypes.END_ROD, 0xFFFFE0F0);
 			for (double y = 0; y < 30; y += 0.6) {
@@ -1041,7 +1041,7 @@ public final class RelicEffects {
 				}
 			}
 		}
-		for (Iterator<Map.Entry<UUID, Ally>> it = ALLIES.entrySet().iterator(); it.hasNext();) {
+		for (Iterator<Map.Entry<UUID, Ally>> it = new java.util.ArrayList<>(ALLIES.entrySet()).iterator(); it.hasNext();) {
 			var e = it.next();
 			Entity ent = level.getEntity(e.getKey());
 			Ally a = e.getValue();
@@ -1052,7 +1052,7 @@ public final class RelicEffects {
 					ent.discard();
 				}
 				RelicCombos.SHADOWS.remove(e.getKey());
-				it.remove();
+				ALLIES.remove(e.getKey());
 				continue;
 			}
 			if (a.isClone()) {
@@ -1066,12 +1066,12 @@ public final class RelicEffects {
 				mob.setTarget(null);
 			}
 		}
-		for (Iterator<Statue> it = STATUES.iterator(); it.hasNext();) {
+		for (Iterator<Statue> it = new java.util.ArrayList<>(STATUES).iterator(); it.hasNext();) {
 			Statue s = it.next();
 			if (t < s.when()) {
 				continue;
 			}
-			it.remove();
+			STATUES.remove(s);
 			Entity d = level.getEntity(s.display());
 			if (d != null) {
 				level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, ModBlocks.RUBY_BLOCK.defaultBlockState()), d.getX(), d.getY() + 1, d.getZ(),
@@ -1088,12 +1088,12 @@ public final class RelicEffects {
 				}
 			}
 		}
-		for (Iterator<Map.Entry<UUID, Bomblet>> it = GRENADES.entrySet().iterator(); it.hasNext();) {
+		for (Iterator<Map.Entry<UUID, Bomblet>> it = new java.util.ArrayList<>(GRENADES.entrySet()).iterator(); it.hasNext();) {
 			var e = it.next();
 			if (level.getEntity(e.getKey()) instanceof GrenadeEntity g && g.isAlive()) {
 				continue;
 			}
-			it.remove();
+			GRENADES.remove(e.getKey());
 			ServerPlayer thrower = server.getPlayerList().getPlayer(e.getValue().owner());
 			int n = thrower == null ? 4 : 2 + 2 * Math.max(1, lv(thrower, Relic.CLUSTER_GRENADES));
 			for (int k = 0; k < n; k++) {
@@ -1102,10 +1102,10 @@ public final class RelicEffects {
 				BOMBLETS.add(new Bomblet(e.getValue().at().add(Math.cos(a) * reach, 0, Math.sin(a) * reach), t + 6 + k * 3, e.getValue().owner()));
 			}
 		}
-		for (Iterator<Bomblet> it = BOMBLETS.iterator(); it.hasNext();) {
+		for (Iterator<Bomblet> it = new java.util.ArrayList<>(BOMBLETS).iterator(); it.hasNext();) {
 			Bomblet b = it.next();
 			if (t >= b.when()) {
-				it.remove();
+				BOMBLETS.remove(b);
 				ServerPlayer owner = server.getPlayerList().getPlayer(b.owner());
 				if (owner != null) {
 					blast(level, owner, b.at(), 2.6, 8, 0xFFFFD040, false);
@@ -1146,7 +1146,7 @@ public final class RelicEffects {
 			}
 			run.fx.dragon = null;
 		}
-		for (var e : FROZEN.entrySet()) {
+		for (var e : new java.util.ArrayList<>(FROZEN.entrySet())) {
 			unfreeze(level, e.getKey(), e.getValue());
 		}
 		FROZEN.clear();
@@ -1845,12 +1845,12 @@ public final class RelicEffects {
 
 	private static void tickSecondWaveWorld(ServerLevel level, long t) {
 		var server = level.getServer();
-		for (Iterator<Echo> it = ECHOES.iterator(); it.hasNext();) {
+		for (Iterator<Echo> it = new java.util.ArrayList<>(ECHOES).iterator(); it.hasNext();) {
 			Echo e = it.next();
 			if (t < e.when()) {
 				continue;
 			}
-			it.remove();
+			ECHOES.remove(e);
 			ServerPlayer p = server.getPlayerList().getPlayer(e.owner());
 			if (p != null && !p.isSpectator()) {
 				// A ghost of the gun fires again.
@@ -1866,7 +1866,7 @@ public final class RelicEffects {
 				level.playSound(null, p.blockPosition(), SoundEvents.SCULK_SHRIEKER_SHRIEK, SoundSource.PLAYERS, 0.15F, 2.0F);
 			}
 		}
-		for (Iterator<Meteor> it = METEORS.iterator(); it.hasNext();) {
+		for (Iterator<Meteor> it = new java.util.ArrayList<>(METEORS).iterator(); it.hasNext();) {
 			Meteor m = it.next();
 			long left = m.when() - t;
 			if (left > 0) {
@@ -1880,7 +1880,7 @@ public final class RelicEffects {
 				}
 				continue;
 			}
-			it.remove();
+			METEORS.remove(m);
 			ServerPlayer p = server.getPlayerList().getPlayer(m.owner());
 			if (p != null) {
 				blast(level, p, m.at().add(0, 0.5, 0), 3.2, 14, 0xFFFF7A2E, false);

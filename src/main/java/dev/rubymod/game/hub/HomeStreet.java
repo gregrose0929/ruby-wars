@@ -773,7 +773,7 @@ public final class HomeStreet {
 		}
 		try {
 			Files.createDirectories(mailFile(level).getParent());
-			Files.writeString(mailFile(level), b.toString());
+			dev.rubymod.game.SafeFiles.write(mailFile(level), b.toString());
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the post", e);
 		}
@@ -1428,7 +1428,7 @@ public final class HomeStreet {
 		}
 		try {
 			Files.createDirectories(file(level).getParent());
-			Files.writeString(file(level), b.toString());
+			dev.rubymod.game.SafeFiles.write(file(level), b.toString());
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save Home Street", e);
 		}
@@ -1443,5 +1443,60 @@ public final class HomeStreet {
 			}
 		}
 		return n;
+	}
+
+	/** Someone's changed their name: their house, garden and post come with them. */
+	static void rename(ServerLevel level, String before, String now) {
+		load(level);
+		loadMail(level);
+		for (House h : HOUSES) {
+			Home home = home(h.index());
+			if (before.equals(home.owner)) {
+				home.owner = now;
+				nameLabel(level, h);
+			}
+		}
+		List<String[]> post = MAIL.remove(before);
+		if (post != null) {
+			MAIL.computeIfAbsent(now, k -> new ArrayList<>()).addAll(post);
+		}
+		for (List<String[]> box : MAIL.values()) {
+			for (String[] m : box) {
+				if (before.equals(m[0])) {
+					m[0] = now;
+				}
+			}
+		}
+		save(level);
+		saveMail(level);
+		for (House h : HOUSES) {
+			mailFlag(level, h);
+		}
+	}
+
+	/** For autotests: every garden's crops are ready now. */
+	public static void testGrow(ServerLevel level) {
+		for (House h : HOUSES) {
+			Home home = home(h.index());
+			for (String[] g : home.garden.values()) {
+				g[1] = String.valueOf(level.getGameTime() - GROW - 1);
+			}
+			garden(level, h, home);
+		}
+	}
+
+	/** For autotests: someone (a stand-in) lives in house {@code i}. */
+	public static void testClaim(ServerLevel level, int i, String name) {
+		home(i).owner = name;
+		nameLabel(level, HOUSES.get(i));
+	}
+
+	/** For autotests: what's waiting in someone's mailbox. */
+	public static List<String> testMail(ServerLevel level, String name) {
+		List<String> out = new ArrayList<>();
+		for (String[] m : MAIL.getOrDefault(name, List.of())) {
+			out.add(unpack(level, m[1]).getHoverName().getString() + " from " + m[0]);
+		}
+		return out;
 	}
 }

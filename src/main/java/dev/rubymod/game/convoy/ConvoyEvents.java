@@ -524,7 +524,7 @@ final class ConvoyEvents {
 	}
 
 	private static void tickPending(ServerLevel level, int stage, int players) {
-		for (Iterator<Pending> it = PENDING.iterator(); it.hasNext();) {
+		for (Iterator<Pending> it = new java.util.ArrayList<>(PENDING).iterator(); it.hasNext();) {
 			Pending p = it.next();
 			int left = --p.left()[0];
 			Vec3 at = Vec3.atBottomCenterOf(p.at());
@@ -533,7 +533,7 @@ final class ConvoyEvents {
 				level.sendParticles(RiftFx.dust(0xFF3020, 1.4F), at.x, at.y + 0.2 + (30 - Math.min(30, left)) * 0.05, at.z, 3, 0.3, 0.1, 0.3, 0);
 			}
 			if (left <= 0) {
-				it.remove();
+				PENDING.remove(p);
 				Mob mob = ConvoyEnemies.spawn(level, p.kind(), p.at(), stage, players);
 				if (mob != null) {
 					level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y + 1, at.z, 10, 0.3, 0.6, 0.3, 0.02);
@@ -629,7 +629,7 @@ final class ConvoyEvents {
 			b.warn = 40;
 			BOULDERS.add(b);
 		}
-		for (Iterator<Boulder> it = BOULDERS.iterator(); it.hasNext();) {
+		for (Iterator<Boulder> it = new java.util.ArrayList<>(BOULDERS).iterator(); it.hasNext();) {
 			Boulder b = it.next();
 			if (b.warn > 0) {
 				b.warn--;
@@ -679,7 +679,7 @@ final class ConvoyEvents {
 					RiftFx.shake(p, 0.6F, 8);
 				}
 			}
-			it.remove();
+			BOULDERS.remove(b);
 		}
 	}
 

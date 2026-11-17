@@ -404,9 +404,19 @@ final class Pets {
 		}
 		try {
 			Files.createDirectories(file(level).getParent());
-			Files.writeString(file(level), b.toString());
+			dev.rubymod.game.SafeFiles.write(file(level), b.toString());
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the pets", e);
 		}
+	}
+
+	/** Someone's changed their name: their pet comes with them. */
+	static void rename(ServerLevel level, String before, String now) {
+		load(level);
+		Pet pet = PETS.remove(before);
+		if (pet != null && !PETS.containsKey(now)) {
+			PETS.put(now, pet);
+		}
+		save(level);
 	}
 }

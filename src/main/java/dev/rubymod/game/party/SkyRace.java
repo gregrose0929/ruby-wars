@@ -618,7 +618,7 @@ public class SkyRace extends PartyGame {
 			for (Vec3 v : ghost) {
 				b.append(String.format(java.util.Locale.ROOT, "%.2f %.2f %.2f\n", v.x, v.y, v.z));
 			}
-			Files.writeString(bestFile(), b.toString());
+			dev.rubymod.game.SafeFiles.write(bestFile(), b.toString());
 		} catch (IOException e) {
 			RubyMod.LOGGER.warn("Couldn't save the Sky Race record", e);
 		}

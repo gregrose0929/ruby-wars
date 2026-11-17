@@ -275,7 +275,10 @@ public class PieMystery extends PartyGame {
 			p.sendOverlayMessage(Component.literal("Baking a new pie... " + ((pieReady - roundTicks) / 20 + 1) + "s").withStyle(ChatFormatting.LIGHT_PURPLE));
 			return;
 		}
-		ServerPlayer target = aimedAt(p, 3.5);
+		pieAt(p, aimedAt(p, 3.5));
+	}
+
+	private void pieAt(ServerPlayer p, ServerPlayer target) {
 		if (target == null || pied.contains(target.getUUID())) {
 			p.sendOverlayMessage(Component.literal(target == null ? "Get closer and point right at someone!" : "They're already covered in cream!")
 					.withStyle(ChatFormatting.LIGHT_PURPLE));
@@ -310,7 +313,10 @@ public class PieMystery extends PartyGame {
 			d.sendOverlayMessage(Component.literal("Gather some clues first! You can guess in " + ((guessReady - roundTicks) / 20 + 1) + "s").withStyle(ChatFormatting.AQUA));
 			return;
 		}
-		ServerPlayer target = aimedAt(d, 6);
+		guessAt(d, aimedAt(d, 6));
+	}
+
+	private void guessAt(ServerPlayer d, ServerPlayer target) {
 		if (target == null) {
 			d.sendOverlayMessage(Component.literal("Point the glass right at someone close by!").withStyle(ChatFormatting.AQUA));
 			return;
@@ -370,16 +376,23 @@ public class PieMystery extends PartyGame {
 		}
 		cluesFound++;
 		players.get(player.getUUID()).score++;
-		clue(player, makeClue());
+		clue(player, makeClue(player.getUUID()));
 		return true;
 	}
 
 	/** Something true about the Prankster. */
-	private String makeClue() {
+	private String makeClue(UUID finder) {
 		var random = lvl().getRandom();
 		ServerPlayer p = prankster == null ? null : PartyGames.player(server, prankster);
 		List<UUID> innocents = new ArrayList<>(players.keySet());
 		innocents.remove(prankster);
+		// Not about the Detective (everyone knows it isn't them) or whoever found it (they know it isn't them).
+		if (innocents.size() > 2) {
+			innocents.remove(detective);
+		}
+		if (innocents.size() > 1) {
+			innocents.remove(finder);
+		}
 		if (p == null || innocents.isEmpty()) {
 			return "Crumbs everywhere... but no clue who.";
 		}
@@ -465,5 +478,35 @@ public class PieMystery extends PartyGame {
 				.max(java.util.Comparator.comparingInt(e -> e.getValue().score))
 				.ifPresent(e -> lines.add(award("Best clue finder", e.getValue().name + " (" + e.getValue().score + ")", ChatFormatting.YELLOW)));
 		return lines;
+	}
+
+	/** For autotests: a whole round, without the aiming: a pie, a clue, a wrong guess, then the right one. What happened. */
+	public List<String> testRound() {
+		List<String> out = new ArrayList<>();
+		ServerPlayer pr = prankster == null ? null : PartyGames.player(server, prankster);
+		ServerPlayer det = detective == null ? null : PartyGames.player(server, detective);
+		ServerPlayer town = null;
+		for (UUID id : players.keySet()) {
+			if (!id.equals(prankster) && !id.equals(detective)) {
+				town = PartyGames.player(server, id);
+			}
+		}
+		out.add("phase " + phase + ", prankster " + (pr != null) + ", detective " + (det != null) + ", townsfolk " + (town != null) + ", clues out " + pickups.size());
+		if (pr == null || det == null || town == null) {
+			return out;
+		}
+		pieReady = 0;
+		pieAt(pr, town);
+		out.add("pie: " + town.getName().getString() + " pied " + pied.contains(town.getUUID()) + ", wears cake " + town.getItemBySlot(EquipmentSlot.HEAD).is(Items.CAKE));
+		Pickup clue = pickups.isEmpty() ? null : pickups.get(0);
+		boolean took = clue != null && onPickup(det, clue);
+		out.add("clue: taken " + took + ", detective's notes " + notes.getOrDefault(det.getUUID(), List.of()));
+		guessReady = 0;
+		guessAt(det, town);
+		out.add("wrong guess: wrong guesses " + wrongGuesses + ", phase " + phase);
+		guessReady = 0;
+		guessAt(det, pr);
+		out.add("right guess: phase " + phase);
+		return out;
 	}
 }

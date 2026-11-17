@@ -721,9 +721,27 @@ final class Museum {
 		}
 		try {
 			Files.createDirectories(file(level).getParent());
-			Files.writeString(file(level), b.toString());
+			dev.rubymod.game.SafeFiles.write(file(level), b.toString());
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the museum", e);
+		}
+	}
+
+	/** Someone's changed their name: the museum's labels say their new one. */
+	static void rename(ServerLevel level, String before, String now) {
+		load(level);
+		boolean changed = false;
+		for (var e : GIVEN.entrySet()) {
+			if (before.equals(e.getValue())) {
+				e.setValue(now);
+				changed = true;
+			}
+		}
+		if (changed) {
+			save(level);
+			if (!BOARDS.isEmpty() || !PLINTH.isEmpty()) {
+				refresh(level);
+			}
 		}
 	}
 }

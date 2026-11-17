@@ -4571,6 +4571,7 @@ public final class AutoTest {
 			case "newlook" -> newLookScript();
 			case "ridetest" -> rideTestScript();
 			case "pickercheck" -> pickerCheckScript();
+			case "familycheck" -> familyCheckScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5497,6 +5498,79 @@ public final class AutoTest {
 		then(100, mc -> shot(mc, "new-night-coaster"));
 	}
 
+	private static net.fabricmc.fabric.api.entity.FakePlayer pieBuddy(net.minecraft.server.MinecraftServer server, int n) {
+		return net.fabricmc.fabric.api.entity.FakePlayer.get(server.getLevel(dev.rubymod.game.Duels.ARENA),
+				new com.mojang.authlib.GameProfile(java.util.UUID.fromString("00000000-0000-0000-0000-00000000p1e" .replace("p", "0") + n), "PieBuddy" + n));
+	}
+
+	/** Pie Mystery with two stand-ins; then a house, a garden harvest, and posting it to a neighbour. */
+	private static void familyCheckScript() {
+		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
+		then(200, mc -> command(mc, "execute as @p run play pie"));
+		then(20, mc -> onServer(mc, server -> {
+			dev.rubymod.game.party.PartyGames.addTestPlayer(pg("pie"), pieBuddy(server, 1));
+			dev.rubymod.game.party.PartyGames.addTestPlayer(pg("pie"), pieBuddy(server, 2));
+		}));
+		for (int i = 0; i < 20; i++) {
+			then(i == 0 ? 10 : 40, mc -> onServer(mc, server -> pg("pie").skipLobby()));
+		}
+		then(60, mc -> {
+			log("family: pie started {}", pg("pie").debugState());
+			shot(mc, "fam-pie");
+		});
+		then(20, mc -> onServer(mc, server -> {
+			for (String line : ((dev.rubymod.game.party.PieMystery) pg("pie")).testRound()) {
+				log("family: pie {}", line);
+			}
+		}));
+		then(60, mc -> {
+			log("family: pie after {}", pg("pie").debugState());
+			onServer(mc, server -> {
+				for (int n = 1; n <= 2; n++) {
+					if (pg("pie").contains(pieBuddy(server, n))) {
+						pg("pie").leave(pieBuddy(server, n));
+					}
+				}
+			});
+			command(mc, "execute as @p run hub");
+		});
+		// A house, seeds, planting, harvest.
+		then(200, mc -> tpHub(mc, "-77.5 101 -56.5 facing -76.5 102 -58"));
+		then(60, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-77, 102, -58)));
+		then(20, mc -> tpHub(mc, "-63.5 101 -44.5 facing -65.5 102 -44.5"));
+		then(40, mc -> talk(mc, -65.5, 101, -44.5));
+		then(20, mc -> press(mc, "carrots"));
+		then(20, mc -> {
+			if (mc.gui.screen() != null) {
+				mc.gui.screen().onClose();
+			}
+			int slot = slotOf(mc, "Carrot Seeds");
+			log("family: seeds in slot {}", slot);
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			tpHub(mc, "-84.5 101 -56.5 facing -85 100.5 -58");
+		});
+		then(40, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-85, 100, -58)));
+		then(20, mc -> log("family: planted {}", mc.level.getBlockState(new net.minecraft.core.BlockPos(-85, 101, -58))));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.hub.HomeStreet.testGrow(server.getLevel(dev.rubymod.game.Hub.HUB))));
+		then(20, mc -> {
+			log("family: grown {}", mc.level.getBlockState(new net.minecraft.core.BlockPos(-85, 101, -58)));
+			mc.player.getInventory().setSelectedSlot(8);
+			clickBlock(mc, new net.minecraft.core.BlockPos(-85, 101, -58));
+		});
+		then(20, mc -> log("family: harvested, holding {}", mc.player.getMainHandItem().getHoverName().getString()));
+		// Post it to a neighbour (a stand-in in house 1).
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.hub.HomeStreet.testClaim(server.getLevel(dev.rubymod.game.Hub.HUB), 1, "Neighbour")));
+		then(10, mc -> tpHub(mc, "-67.5 101 -56.5 facing -66.5 102 -58"));
+		then(40, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-67, 102, -58)));
+		then(20, mc -> {
+			log("family: posted, now holding {}", mc.player.getMainHandItem().getHoverName().getString());
+			onServer(mc, server -> log("family: Neighbour's mailbox {}", dev.rubymod.game.hub.HomeStreet.testMail(server.getLevel(dev.rubymod.game.Hub.HUB), "Neighbour")));
+			shot(mc, "fam-post");
+		});
+	}
+
 	/** The game picker on a small screen: every party game there, scrolling if need be. */
 	private static void pickerCheckScript() {
 		then(40, mc -> tpHub(mc, "0.5 101 12.5 facing 0.5 103 16"));
@@ -5521,6 +5595,21 @@ public final class AutoTest {
 			mc.options.guiScale().set(0);
 			mc.resizeGui();
 		});
+		then(20, mc -> shot(mc, "pk-3"));
+		// The Fun Park gate's new hosts, and the park with Lighter park on, then off.
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			tpHub(mc, "45.5 101 2.5 facing 52.5 102 2.5");
+		});
+		then(80, mc -> shot(mc, "pk-gate"));
+		then(5, mc -> tpHub(mc, "0.5 115 0.5 facing 60 101 10"));
+		then(60, mc -> shot(mc, "pk-full"));
+		then(5, mc -> LighterPark.toggle());
+		then(20, mc -> {
+			log("picker: lighter park {}", LighterPark.on());
+			shot(mc, "pk-light");
+		});
+		then(5, mc -> LighterPark.toggle());
 	}
 
 	/** The plunge and the cable car, closely: where the rider is, every few ticks. */

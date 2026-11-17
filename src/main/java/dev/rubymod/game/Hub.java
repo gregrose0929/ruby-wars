@@ -981,7 +981,7 @@ public final class Hub {
 		galleryText = builder + "|" + theme;
 		try {
 			java.nio.file.Files.createDirectories(galleryFile(server).getParent());
-			java.nio.file.Files.writeString(galleryFile(server), galleryText);
+			dev.rubymod.game.SafeFiles.write(galleryFile(server), galleryText);
 		} catch (java.io.IOException e) {
 			RubyMod.LOGGER.warn("Couldn't save the gallery sign", e);
 		}

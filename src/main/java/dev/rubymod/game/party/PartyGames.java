@@ -329,7 +329,7 @@ public final class PartyGames {
 		}
 		try {
 			java.nio.file.Files.createDirectories(pickupsFile.getParent());
-			java.nio.file.Files.write(pickupsFile, on);
+			dev.rubymod.game.SafeFiles.write(pickupsFile, String.join(System.lineSeparator(), on) + System.lineSeparator());
 		} catch (java.io.IOException e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the party pick-up settings", e);
 		}
@@ -358,7 +358,7 @@ public final class PartyGames {
 		}
 		try {
 			java.nio.file.Files.createDirectories(botsFile.getParent());
-			java.nio.file.Files.write(botsFile, on);
+			dev.rubymod.game.SafeFiles.write(botsFile, String.join(System.lineSeparator(), on) + System.lineSeparator());
 		} catch (java.io.IOException e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the party bot settings", e);
 		}

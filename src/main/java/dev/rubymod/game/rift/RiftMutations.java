@@ -149,7 +149,7 @@ final class RiftMutations {
 			ServerPlayer p = targets.get(random.nextInt(targets.size()));
 			STRIKES.add(new Strike(new Vec3(p.getX() + random.nextInt(3) - 1, Math.floor(p.getY()) + 0.1, p.getZ() + random.nextInt(3) - 1), now + 24, false));
 		}
-		for (Iterator<Strike> it = STRIKES.iterator(); it.hasNext();) {
+		for (Iterator<Strike> it = new java.util.ArrayList<>(STRIKES).iterator(); it.hasNext();) {
 			Strike s = it.next();
 			long left = s.when() - now;
 			int color = s.meteor() ? 0xFF7A2E : 0x66E0FF;
@@ -166,7 +166,7 @@ final class RiftMutations {
 				}
 				continue;
 			}
-			it.remove();
+			STRIKES.remove(s);
 			if (s.meteor()) {
 				level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, s.at().x, s.at().y + 0.5, s.at().z, 1, 0, 0, 0, 0);
 				level.sendParticles(ParticleTypes.LAVA, s.at().x, s.at().y + 0.5, s.at().z, 20, 1, 0.5, 1, 0);

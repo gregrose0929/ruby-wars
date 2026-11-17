@@ -51,7 +51,7 @@ final class Fishing {
 	static final int POND = 1;
 	static final int RIVER = 2;
 	static final int TOYLAND = 3;
-	private static final String[] SPOT_NAMES = {"", "the pond", "the river", "Toyland's pond"};
+	private static final String[] SPOT_NAMES = {"", "the pond", "the river", "the pond"};
 
 	private static final Fish[] FISH = {
 		new Fish("Minnow", Items.COD, EntityTypes.COD, 1, 3, 8), new Fish("Goldfish", Items.TROPICAL_FISH, EntityTypes.TROPICAL_FISH, 1, 5, 15),
@@ -355,7 +355,7 @@ final class Fishing {
 		}
 		try {
 			Files.createDirectories(file(level).getParent());
-			Files.writeString(file(level), b.toString());
+			dev.rubymod.game.SafeFiles.write(file(level), b.toString());
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the fish book", e);
 		}
@@ -372,5 +372,15 @@ final class Fishing {
 
 	static Entity unused() {
 		return null;
+	}
+
+	/** Someone's changed their name: their book comes with them. */
+	static void rename(ServerLevel level, String before, String now) {
+		load(level);
+		Set<String> mine = BOOK.remove(before);
+		if (mine != null) {
+			BOOK.computeIfAbsent(now, k -> new LinkedHashSet<>()).addAll(mine);
+			save(level);
+		}
 	}
 }

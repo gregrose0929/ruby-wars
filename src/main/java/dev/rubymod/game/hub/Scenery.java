@@ -60,7 +60,7 @@ final class Scenery {
 		islands.add(new int[] {0, 0, 23, 11});
 		islands.add(new int[] {-44, 44, 16, 12});
 		islands.add(new int[] {44, 40, 16, 6});
-		for (int[][] group : new int[][][] {FunPark.CIRCLES, SplashIsland.CIRCLES, Speedway.CIRCLES, Toyland.CIRCLES}) {
+		for (int[][] group : new int[][][] {FunPark.CIRCLES, SplashIsland.CIRCLES, Speedway.CIRCLES}) {
 			for (int[] c : group) {
 				islands.add(new int[] {c[0], c[1], c[2] - 1, 12});
 			}
@@ -335,17 +335,4 @@ final class Scenery {
 		}
 	}
 
-	private static void spooky(ServerLevel level) {
-		// Soul lanterns on the fence posts round the edge, for a ghostly glow at night.
-		int n = 0;
-		for (int i = 0; i < 24; i++) {
-			double a = i * Math.PI * 2 / 24;
-			int x = Spooky.CX + (int) Math.round(Math.cos(a) * 15.6);
-			int z = Spooky.CZ + (int) Math.round(Math.sin(a) * 15.6);
-			BlockPos bars = new BlockPos(x, FLOOR + 1, z);
-			if (level.getBlockState(bars).is(Blocks.IRON_BARS) && level.getBlockState(bars.above()).isAir() && n++ % 2 == 0) {
-				level.setBlock(bars.above(), Blocks.SOUL_LANTERN.defaultBlockState(), 2);
-			}
-		}
-	}
 }

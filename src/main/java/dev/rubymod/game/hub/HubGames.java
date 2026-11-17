@@ -403,7 +403,7 @@ public final class HubGames {
 	public static boolean fished(ItemEntity item, ServerLevel level) {
 		int spot = HubPark.POND.contains(item.position()) ? Fishing.POND
 				: Math.hypot(item.getX() - Rapids.CX, item.getZ() - Rapids.CZ) < 20 && item.getY() < HubPark.FLOOR + 3 ? Fishing.RIVER
-						: Toyland.POND.contains(item.position()) ? Fishing.TOYLAND : 0;
+						: 0;
 		if (spot == 0) {
 			return false;
 		}

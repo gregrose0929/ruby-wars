@@ -72,6 +72,7 @@ final class FunPark {
 			HubPark.set(level, x, FLOOR, 2, Blocks.CUT_SANDSTONE.defaultBlockState());
 		}
 		arch(level);
+		gameHosts(level);
 		bunting(level);
 		galleryBooth(level);
 		wheel(level);
@@ -98,6 +99,25 @@ final class FunPark {
 			HubPark.set(level, 47, FLOOR + 6, z, z % 2 == 0 ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.CONCRETE.pick(DyeColor.ORANGE).defaultBlockState());
 		}
 		HubPark.label(level, 48.5, FLOOR + 8.4, 2.5, "★ FUN PARK ★", ChatFormatting.GOLD, 2.6F);
+	}
+
+	/** By the gate: hosts for the two party games that aren't battles (they take you straight there). */
+	private static void gameHosts(ServerLevel level) {
+		HubHosts.add(level, new Vec3(52.5, FLOOR + 1, -0.5), 0, VillagerProfession.MASON, VillagerType.PLAINS,
+				new HubHosts.Host("workshop", "Wren", "Coaster Workshop", 0xFFB040, "minecraft:rail",
+						"Build your very own roller coaster, piece by piece, then ride it! Friends can ride yours too.",
+						"Coaster Workshop: right-click Wren to build a coaster!", HubHosts.play("Build a coaster!"), (p, key) -> goPlay(p, "coasters")));
+		HubHosts.add(level, new Vec3(52.5, FLOOR + 1, 4.5), 180, VillagerProfession.LIBRARIAN, VillagerType.SAVANNA,
+				new HubHosts.Host("partyboard", "Pip", "Party Board", 0x60D0FF, "minecraft:slime_ball",
+						"A board game for everyone: roll the dice, collect coins and stars, and play a quick minigame after every round!",
+						"Party Board: right-click Pip to play!", HubHosts.play("Play Party Board!"), (p, key) -> goPlay(p, "board")));
+	}
+
+	private static void goPlay(ServerPlayer p, String game) {
+		String error = dev.rubymod.game.Hub.go(p, "game:" + game);
+		if (error != null) {
+			p.sendOverlayMessage(Component.literal(error).withStyle(ChatFormatting.RED));
+		}
 	}
 
 	/** Strings of little flags along both sides of the midway. */

@@ -57,6 +57,10 @@ public final class HubHosts {
 		NEAR.clear();
 	}
 
+	static int count() {
+		return HOSTS.size();
+	}
+
 	/** One Play button. */
 	static Function<ServerPlayer, List<String>> play(String label) {
 		return p -> List.of("play|" + label);

@@ -129,7 +129,7 @@ public class HowToCard implements HudElement {
 		int y = 44 - Math.round((1 - shown) * (h + 48));
 		shownBottom = y + h;
 		Ui.panel(g, x, y, w, h);
-		Ui.heading(g, "How to play: " + title, g.guiWidth() / 2, y + 7, Ui.GOLD, 1.0F, true);
+		Ui.heading(g, title.equals("What's new") ? title : "How to play: " + title, g.guiWidth() / 2, y + 7, Ui.GOLD, 1.0F, true);
 		for (int i = 0; i < lines.size(); i++) {
 			String[] f = lines.get(i).split("[|]", 2);
 			int ry = y + 20 + i * rowH;

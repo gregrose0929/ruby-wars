@@ -175,6 +175,7 @@ public class ModeScreen extends Screen {
 				}
 			}
 		}
+		party = grouped(party);
 		float fade = Ui.ease(opened + 120, 300);
 		int listH = bottom - top;
 		Ui.panel(g, rightX, top, colW, listH, fade);
@@ -199,6 +200,12 @@ public class ModeScreen extends Screen {
 			int y = rowsTop + (i - scroll) * rowH;
 			if (y + rowH > top + listH - (scroll < maxScroll ? 14 : 4)) {
 				break;
+			}
+			if (f[0].equals("#")) {
+				// A group's heading.
+				Ui.text(g, f[1], rightX + 10, y + rowH - 10, colW - 20, Ui.GOLD);
+				g.fill(rightX + 12 + Ui.font().width(f[1]), y + rowH - 6, rightX + colW - 10, y + rowH - 5, 0x40FFFFFF);
+				continue;
 			}
 			boolean here = here(f[0]);
 			boolean hasBots = f.length >= 6 && !f[5].equals("-");
@@ -262,12 +269,48 @@ public class ModeScreen extends Screen {
 		if (!inHub) {
 			click(bx, by, bw, 18, "hub");
 		}
+		// Lighter park (for slower computers): far-off park decorations aren't drawn.
+		int lw = 112;
+		int lx = Math.min(width - lw - 6, bx + bw + 8);
+		boolean light = LighterPark.on();
+		if (Ui.button(g, light ? "Lighter park: ON" : "Lighter park: off", lx, by, lw, 18, mouseX, mouseY, light ? Ui.GREEN : 0xFF5A606C, true)) {
+			tooltip = List.of("Lighter park", "For slower computers: park decorations more than 40 blocks away aren't drawn.", "Click to switch it " + (light ? "off." : "on."));
+		}
+		click(lx, by, lw, 18, "lighter");
 		if (tooltip != null) {
 			Ui.tooltip(g, tooltip, mouseX, mouseY, width, height);
 		}
 	}
 
 	private int scroll;
+
+	/** The party games' groups, in order: a heading, then its games (anything else goes under "More"). */
+	private static final String[][] GROUPS = {{"Battle", "gungame", "ctf", "koth", "tanks", "air", "infection", "rush"},
+		{"Party", "board", "pie", "hideseek", "skyrace"}, {"Build", "build", "coasters"}, {"Explore", "freeroam"}};
+
+	private static List<String[]> grouped(List<String[]> games) {
+		List<String[]> out = new ArrayList<>();
+		List<String[]> left = new ArrayList<>(games);
+		for (String[] group : GROUPS) {
+			boolean headed = false;
+			for (int k = 1; k < group.length; k++) {
+				for (String[] f : games) {
+					if (f[0].equals("game:" + group[k]) && left.remove(f)) {
+						if (!headed) {
+							out.add(new String[] {"#", group[0]});
+							headed = true;
+						}
+						out.add(f);
+					}
+				}
+			}
+		}
+		if (!left.isEmpty()) {
+			out.add(new String[] {"#", "More"});
+			out.addAll(left);
+		}
+		return out;
+	}
 	private int scrollMax;
 
 	@Override
@@ -299,6 +342,10 @@ public class ModeScreen extends Screen {
 		}
 		if (hit >= 0) {
 			String action = actions.get(hit);
+			if (action.equals("lighter")) {
+				LighterPark.toggle();
+				return true;
+			}
 			if (action.startsWith("bots:") || action.startsWith("pickups:")) {
 				// Stays open: the server sends the picker back with the new setting.
 				ClientPlayNetworking.send(new MorePayloads.ModeSelect(action));

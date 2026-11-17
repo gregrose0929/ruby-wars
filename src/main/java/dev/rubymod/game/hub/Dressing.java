@@ -72,13 +72,29 @@ final class Dressing {
 	}
 
 	/** After everything else is built (so it only fills in what's left open). */
+	/** The islands get dressed a strip at a time over the first second or so (so the server isn't stuck at start-up). */
+	private static Set<Long> keepOut = Set.of();
+	private static int nextX = Integer.MAX_VALUE;
+	private static int trees;
+	private static final int STRIP = 24;
+
 	static void build(ServerLevel level) {
 		reset();
-		Set<Long> keepOut = rideColumns();
-		underneath(level);
-		ground(level, keepOut);
+		keepOut = rideColumns();
+		nextX = -R;
+		trees = 0;
+		TREES.clear();
 		plazaRuby(level);
 		sky(level);
+	}
+
+	/** One strip of the islands (x from {@code x1} to {@code x2}): under them, and on them. */
+	private static void dressStrip(ServerLevel level, int x1, int x2) {
+		underneath(level, x1, x2);
+		ground(level, keepOut, x1, x2);
+		if (x2 >= R) {
+			dev.rubymod.RubyMod.LOGGER.info("Dressing: {} trees", trees);
+		}
 	}
 
 	private static long key(int x, int z) {
@@ -127,8 +143,8 @@ final class Dressing {
 	// ----- Under the islands -----
 
 	/** Glow-berry vines, roots, spore blossoms and the odd lantern on a chain, hanging from every island's underside. */
-	private static void underneath(ServerLevel level) {
-		for (int x = -R; x <= R; x++) {
+	private static void underneath(ServerLevel level, int x1, int x2) {
+		for (int x = x1; x <= x2; x++) {
 			for (int z = -R; z <= R; z++) {
 				// The underside: the lowest of a run of rock with open sky beneath it.
 				int bottom = Integer.MIN_VALUE;
@@ -333,10 +349,8 @@ final class Dressing {
 		Blocks.WHITE_TULIP.defaultBlockState(), Blocks.RED_TULIP.defaultBlockState(), Blocks.LILY_OF_THE_VALLEY.defaultBlockState()};
 
 	/** Flower patches, grass tufts, rocks, bushes and trees, on open grass away from rides and buildings. */
-	private static void ground(ServerLevel level, Set<Long> keepOut) {
-		int trees = 0;
-		TREES.clear();
-		for (int x = -R; x <= R; x++) {
+	private static void ground(ServerLevel level, Set<Long> keepOut, int x1, int x2) {
+		for (int x = x1; x <= x2; x++) {
 			for (int z = -R; z <= R; z++) {
 				BlockPos g = new BlockPos(x, FLOOR, z);
 				if (keepOut.contains(key(x, z)) || !level.getBlockState(g).is(Blocks.GRASS_BLOCK)) {
@@ -374,7 +388,6 @@ final class Dressing {
 				}
 			}
 		}
-		dev.rubymod.RubyMod.LOGGER.info("Dressing: {} trees", trees);
 	}
 
 	private static final List<int[]> TREES = new ArrayList<>();
@@ -549,6 +562,11 @@ final class Dressing {
 	}
 
 	static void tick(ServerLevel level, int tick) {
+		if (nextX <= R) {
+			int x2 = Math.min(R, nextX + STRIP - 1);
+			dressStrip(level, nextX, x2);
+			nextX = x2 + 1;
+		}
 		// The ruby turns slowly and glints.
 		if (ruby != null && tick % 10 == 0) {
 			Entity e = level.getEntity(ruby);

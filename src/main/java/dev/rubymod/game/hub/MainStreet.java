@@ -618,7 +618,7 @@ final class MainStreet {
 			}
 			HubPark.keep(m);
 			level.addFreshEntity(m);
-			Toyland.ANIMALS.add(m.getUUID());
+			ParkAnimals.ANIMALS.add(m.getUUID());
 			BABIES.add(new Baby(m.getUUID(), Vec3.atBottomCenterOf(at)));
 		}
 	}

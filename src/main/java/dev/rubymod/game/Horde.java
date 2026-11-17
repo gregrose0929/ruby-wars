@@ -1936,7 +1936,7 @@ public final class Horde {
 		try {
 			Path file = bestFile(server);
 			Files.createDirectories(file.getParent());
-			Files.writeString(file, bestWave + "\n" + bestTeam + "\n");
+			dev.rubymod.game.SafeFiles.write(file, bestWave + "\n" + bestTeam + "\n");
 		} catch (IOException e) {
 			RubyMod.LOGGER.warn("Couldn't save the Horde record", e);
 		}

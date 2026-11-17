@@ -304,6 +304,17 @@ if [[ -n "$NEW_MAP" && -z "$TEST_DIR" ]]; then
 	fi
 fi
 
+# Entities are sent to players from 70% of the usual distance: fewer arrive at once when you land somewhere new (less stutter).
+if [[ -f "$SERVER/server.properties" ]]; then
+	if grep -q '^entity-broadcast-range-percentage=' "$SERVER/server.properties"; then
+		sed -i 's/^entity-broadcast-range-percentage=.*/entity-broadcast-range-percentage=70/' "$SERVER/server.properties"
+	else
+		echo 'entity-broadcast-range-percentage=70' >> "$SERVER/server.properties"
+	fi
+fi
+# Old server logs (over three weeks) go: they only fill the disk.
+find "$SERVER/logs" -name '*.log.gz' -mtime +21 -delete 2>/dev/null || true
+
 systemctl daemon-reload
 systemctl enable -q rubywars rubywars-restart.timer
 systemctl start rubywars-restart.timer

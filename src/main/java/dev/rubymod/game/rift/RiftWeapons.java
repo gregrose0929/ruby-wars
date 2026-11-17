@@ -1130,11 +1130,11 @@ public final class RiftWeapons {
 	/** Every tick (in the Rift). */
 	static void tick(ServerLevel level) {
 		long now = level.getGameTime();
-		for (Iterator<Charge> it = CHARGES.iterator(); it.hasNext();) {
+		for (Iterator<Charge> it = new java.util.ArrayList<>(CHARGES).iterator(); it.hasNext();) {
 			Charge c = it.next();
 			ServerPlayer p = level.getServer().getPlayerList().getPlayer(c.shooter());
 			if (p == null) {
-				it.remove();
+				CHARGES.remove(c);
 				continue;
 			}
 			long left = c.when() - now;
@@ -1148,15 +1148,15 @@ public final class RiftWeapons {
 				}
 				continue;
 			}
-			it.remove();
+			CHARGES.remove(c);
 			railFire(level, p, c.damage(), c.range());
 		}
-		for (Iterator<Volley> it = VOLLEYS.iterator(); it.hasNext();) {
+		for (Iterator<Volley> it = new java.util.ArrayList<>(VOLLEYS).iterator(); it.hasNext();) {
 			Volley v = it.next();
 			if (now < v.when()) {
 				continue;
 			}
-			it.remove();
+			VOLLEYS.remove(v);
 			ServerPlayer p = level.getServer().getPlayerList().getPlayer(v.shooter());
 			if (p != null) {
 				swarmMissile(level, p, v.index());

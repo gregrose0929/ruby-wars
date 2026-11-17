@@ -18,6 +18,9 @@ public final class RideView {
 	}
 
 	public static boolean hide(Entity e) {
+		if (LighterPark.hide(e)) {
+			return true;
+		}
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.player == null || !mc.options.getCameraType().isFirstPerson()) {
 			return false;

@@ -31,7 +31,7 @@ final class Removals {
 			return;
 		}
 		islands(level);
-		ParkTrain.clearTunnel(level);
+		clearTunnel(level);
 		towers(level);
 		bandstand(level);
 		bridges(level);
@@ -43,6 +43,23 @@ final class Removals {
 			Files.writeString(mark, "done");
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't mark the removals done", e);
+		}
+	}
+
+	/** The Park Train's tunnel mountain. */
+	private static void clearTunnel(ServerLevel level) {
+		for (int x = -84 - 12; x <= -84 + 12; x++) {
+			for (int z = -38 - 12; z <= -38 + 12; z++) {
+				for (int y = FLOOR + 10; y <= FLOOR + 56; y++) {
+					BlockPos p = new BlockPos(x, y, z);
+					BlockState s = level.getBlockState(p);
+					if (s.is(Blocks.STONE) || s.is(Blocks.ANDESITE) || s.is(Blocks.MOSSY_COBBLESTONE) || s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT)
+							|| s.is(Blocks.STONE_BRICKS) || s.is(Blocks.LIGHT) || s.is(Blocks.AZALEA) || s.is(Blocks.FLOWERING_AZALEA) || s.is(Blocks.MOSS_BLOCK)
+							|| s.is(Blocks.SHORT_GRASS) || s.is(Blocks.LANTERN)) {
+						level.setBlock(p, Blocks.AIR.defaultBlockState(), 18);
+					}
+				}
+			}
 		}
 	}
 

@@ -864,7 +864,7 @@ public class CoasterWorkshop extends PartyGame {
 		}
 		try {
 			Files.createDirectories(file().getParent());
-			Files.writeString(file(), b.toString());
+			dev.rubymod.game.SafeFiles.write(file(), b.toString());
 		} catch (Exception e) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the coasters", e);
 		}

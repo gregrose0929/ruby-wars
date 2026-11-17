@@ -84,6 +84,18 @@ public final class SelfTest {
 		return test.failures == 0 ? 1 : 0;
 	}
 
+	/** The park in the hub: its signs, hosts, rides and houses are all there. */
+	private void parkChecks(net.minecraft.server.MinecraftServer server) {
+		ServerLevel hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+		if (hub == null) {
+			fail("park: the hub exists");
+			return;
+		}
+		for (var e : dev.rubymod.game.hub.HubPark.selfChecks(hub).entrySet()) {
+			check("park: " + e.getKey(), e.getValue());
+		}
+	}
+
 	private void check(String name, boolean ok) {
 		if (ok) {
 			results.add("PASS " + name);
@@ -108,6 +120,13 @@ public final class SelfTest {
 		data.player(bravo.getUUID(), "TestBravo");
 
 		BlockPos spawn = level.getRespawnData().pos();
+		// The test area's chunks, loaded now (the server can still be busy building the park when the test starts).
+		for (int cx = (spawn.getX() + 280) >> 4; cx <= (spawn.getX() + 470) >> 4; cx++) {
+			for (int cz = (spawn.getZ() + 280) >> 4; cz <= (spawn.getZ() + 360) >> 4; cz++) {
+				level.getChunk(cx, cz);
+			}
+		}
+		parkChecks(level.getServer());
 		double borderBefore = level.getWorldBorder().getSize();
 		level.getWorldBorder().setSize(dev.rubymod.game.GameConfig.get().borderStartSize);
 		BlockPos base = surface(level, spawn.offset(300, 0, 300));
@@ -504,7 +523,7 @@ public final class SelfTest {
 			for (int i = 0; i < 100; i++) {
 				dev.rubymod.game.Duels.tick(level.getServer());
 			}
-			check("duels: afterwards both go back where they were", dev.rubymod.game.Duels.score(alpha) == null && alpha.level() == level
+			check("duels: afterwards both go back where they were [score " + dev.rubymod.game.Duels.score(alpha) + ", alpha at " + alpha.blockPosition().toShortString() + " in " + alpha.level().dimension().identifier() + ", home " + home.toShortString() + ", bravo in " + bravo.level().dimension().identifier() + "]", dev.rubymod.game.Duels.score(alpha) == null && alpha.level() == level
 					&& alpha.blockPosition().closerThan(home, 2) && bravo.level() == level);
 			check("duels: and get their own inventory back", alpha.getInventory().countItem(ModItems.RUBY) == 5
 					&& alpha.getInventory().countItem(ModItems.ARR_RIFLE) == 0 && bravo.getInventory().countItem(net.minecraft.world.item.Items.BREAD) == 3);

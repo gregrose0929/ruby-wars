@@ -230,7 +230,7 @@ public final class HubPark {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
 			}
-			if (HubHosts.clicked(sp, entity) || Pets.clicked(sp, entity) || Toyland.pet(sp, entity) || Wonder.clicked(sp, entity)) {
+			if (HubHosts.clicked(sp, entity) || Pets.clicked(sp, entity) || ParkAnimals.pet(sp, entity)) {
 				return InteractionResult.SUCCESS;
 			}
 			if (HubRides.mountSwing(sp, entity)) {
@@ -239,6 +239,28 @@ public final class HubPark {
 			}
 			return InteractionResult.PASS;
 		});
+	}
+
+	/** For the self-test: is the park all there? (Each check's name, and whether it passed.) */
+	public static java.util.Map<String, Boolean> selfChecks(ServerLevel level) {
+		java.util.Map<String, Boolean> out = new java.util.LinkedHashMap<>();
+		int signs = level.getEntities(EntityTypes.TEXT_DISPLAY, WHOLE_HUB, e -> e.entityTags().contains(TAG) && !e.isRemoved()).size();
+		out.put("signs are up (" + signs + ")", signs > 120);
+		out.put("hosts are there (" + HubHosts.count() + ")", HubHosts.count() > 25);
+		out.put("rides are built (" + TrackRide.ALL.size() + ")", TrackRide.ALL.size() >= 6);
+		out.put("the Ruby Rocket has its track", !Coaster.pathPoints().isEmpty());
+		out.put("travel places (" + PLACES.size() + ")", PLACES.size() >= 6);
+		int boxes = 0;
+		for (int x : new int[] {-77, -67, -49, -39}) {
+			for (int z : new int[] {-58, -46}) {
+				boxes += level.getBlockState(new BlockPos(x, FLOOR + 2, z)).is(Blocks.CONCRETE.pick(DyeColor.RED)) ? 1 : 0;
+			}
+		}
+		out.put("Home Street's mailboxes (" + boxes + " of 8)", boxes == 8);
+		int models = level.getEntities(EntityTypes.BLOCK_DISPLAY, WHOLE_HUB, e -> true).size() + level.getEntities(EntityTypes.ITEM_DISPLAY, WHOLE_HUB, e -> true).size();
+		dev.rubymod.RubyMod.LOGGER.info("[park] {} signs, {} models, {} hosts, {} rides", signs, models, HubHosts.count(), TrackRide.ALL.size());
+		out.put("not too many models (" + models + ")", models < 6000);
+		return out;
 	}
 
 	/** Right-clicking a block in the hub. Null: not one of ours. */
@@ -551,6 +573,7 @@ public final class HubPark {
 			e.discard();
 		}
 		HubRides.LIVE.remove(id);
+		KEEP.remove(id);
 	}
 
 	/** Clear a box of blocks to air (before rebuilding an area that's changed shape). */
@@ -654,7 +677,6 @@ public final class HubPark {
 		FunRides.reset();
 		MiniGolf.reset();
 		Coaster.reset();
-		Spooky.reset();
 		Village.reset();
 		Speedway.reset();
 		Thrill.reset();
@@ -662,7 +684,7 @@ public final class HubPark {
 		SkyZip.reset();
 		SkyRings.reset();
 		HubToys.reset();
-		Toyland.reset();
+		ParkAnimals.reset();
 		NightShow.reset();
 		Rapids.reset();
 		Fishing.reset();
@@ -671,12 +693,8 @@ public final class HubPark {
 		SpinCoaster.reset();
 		MainStreet.reset();
 		Museum.reset();
-		ParkTrain.reset();
 		SkyTours.reset();
 		Dressing.reset();
-		Bridges.reset();
-		Music.reset();
-		Parade.reset();
 		Eggs.reset();
 		Wonder.reset();
 		Plunge.reset();
