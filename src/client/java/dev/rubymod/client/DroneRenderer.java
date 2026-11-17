@@ -25,10 +25,17 @@ public class DroneRenderer extends EntityRenderer<ReconDroneEntity, AircraftRend
 	private static final Identifier TEXTURE = RubyMod.id("textures/entity/aircraft/recon_drone.png");
 	private static final Identifier GLOW = RubyMod.id("textures/entity/aircraft/recon_drone_glow.png");
 	private final AircraftModel model;
+	private final float scale;
 
 	public DroneRenderer(EntityRendererProvider.Context context) {
+		this(context, 1.5F);
+	}
+
+	/** At this size (the Scout Drone is a little one). */
+	public DroneRenderer(EntityRendererProvider.Context context, float scale) {
 		super(context);
-		this.shadowRadius = 0.5F;
+		this.scale = scale;
+		this.shadowRadius = 0.5F * scale / 1.5F;
 		this.model = new AircraftModel(context.bakeLayer(LAYER));
 	}
 
@@ -53,7 +60,7 @@ public class DroneRenderer extends EntityRenderer<ReconDroneEntity, AircraftRend
 	public void submit(AircraftRenderer.State state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
 		poseStack.pushPose();
 		poseStack.rotateDegrees(Axis.YP, -state.yaw);
-		poseStack.scale(-1.5F, -1.5F, 1.5F);
+		poseStack.scale(-scale, -scale, scale);
 		collector.submitModel(model, state, poseStack, TEXTURE, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
 		if ((state.ageInTicks % 20) < 14) {
 			collector.submitModel(model, state, poseStack, RenderTypes.eyes(GLOW), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);

@@ -10,12 +10,12 @@ import dev.rubymod.client.Vehicles;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 
-/** In a vehicle the view is truly first person: no hands, no held item. */
+/** In a vehicle (or flying a drone) the view is truly first person: no hands, no held item. */
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
 	@Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
 	private void rubymod$noHandsInVehicles(CallbackInfo ci) {
-		if (Vehicles.inVehicle(Minecraft.getInstance())) {
+		if (Vehicles.inVehicle(Minecraft.getInstance()) || dev.rubymod.client.DronePilot.flying()) {
 			ci.cancel();
 		}
 	}

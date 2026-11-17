@@ -16,7 +16,8 @@
 		"FirstPersonHandsMixin",
 		"DeathScreenMixin",
 		"ToastMixin",
-		"RideViewMixin"
+		"RideViewMixin",
+		"KeyboardInputMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

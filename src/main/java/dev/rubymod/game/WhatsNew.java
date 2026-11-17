@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-16";
+	private static final String VERSION = "2026-11-17";
 	private static final List<String> LINES = List.of(
+			"rubymod:scout_drone|New at the Armory: the Scout Drone. Fly it yourself; enemies it sees glow for your squad.",
 			"minecraft:spyglass|Park feeling slow? Press H and switch on Lighter park.",
-			"minecraft:rail|Coaster Workshop and Party Board have hosts by the Fun Park gate.",
-			"minecraft:compass|The game list (H) is grouped now: Battle, Party, Build, Explore.");
+			"minecraft:rail|Coaster Workshop and Party Board have hosts by the Fun Park gate.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

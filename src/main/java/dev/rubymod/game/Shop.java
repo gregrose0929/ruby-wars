@@ -175,6 +175,7 @@ public final class Shop {
 			item(10, ModItems.AT_GUARD_CONTRACT, 1, 40);
 			item(11, ModItems.RECON_DRONE, 1, 12);
 			item(12, ModItems.AIR_STRIKE_FLARE, 1, 60);
+			item(13, ModItems.SCOUT_DRONE, 1, 20);
 			// Row 3: cosmetics
 			item(18, ModItems.PAINT_KIT, 1, 3);
 			page = 0;

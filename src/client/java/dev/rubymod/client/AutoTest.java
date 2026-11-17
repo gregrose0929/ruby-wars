@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
 			case "parknew2" -> parkNew2Script();
@@ -5590,7 +5591,87 @@ public final class AutoTest {
 		}
 	}
 
-	/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
+	private static String droneLine(Minecraft mc) {
+		var cam = mc.getCameraEntity();
+		return "camera " + (cam == null ? "none" : cam.getClass().getSimpleName()) + (cam != null && cam != mc.player ? " at " + cam.blockPosition() : "")
+				+ ", player at " + mc.player.blockPosition() + ", flying " + DronePilot.flying() + ", drones in pocket "
+				+ mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.SCOUT_DRONE);
+	}
+
+	/** The Scout Drone: launch, fly with the keys, spot an enemy (glow), bring it home, then get it shot down. */
+	private static void droneCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+		});
+		then(200, mc -> onServer(mc, server -> {
+			var player = me(server);
+			var level = player.level();
+			var r = dev.rubymod.entity.SoldierEntity.raider(level, player.blockPosition().offset(0, 0, 30), player.blockPosition(), 0, -1);
+			r.setNoAi(true);
+			level.addFreshEntity(r);
+			player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.SCOUT_DRONE));
+		}));
+		then(20, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(30, mc -> log("drone: launched: {}", droneLine(mc)));
+		then(2, mc -> shot(mc, "drone-1-launch"));
+		then(2, mc -> mc.options.keyUp.setDown(true));
+		then(40, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("drone: after W for 2s: {}", droneLine(mc));
+		});
+		then(2, mc -> mc.options.keyJump.setDown(true));
+		then(20, mc -> {
+			mc.options.keyJump.setDown(false);
+			log("drone: after Space for 1s: {}", droneLine(mc));
+		});
+		then(2, mc -> mc.player.setXRot(20));
+		then(20, mc -> {
+			int glowing = 0;
+			for (var e : mc.level.entitiesForRendering()) {
+				if (e instanceof dev.rubymod.entity.SoldierEntity && DronePilot.glows(e)) {
+					glowing++;
+				}
+			}
+			log("drone: soldiers glowing for us: {}; spotted on the map: {}", glowing,
+					ClientState.map == null ? -1 : ClientState.map.markers().stream().filter(m -> m.kind() == 7).count());
+			shot(mc, "drone-2-view");
+		});
+		then(2, mc -> {
+			mc.player.setYRot(90);
+			mc.options.keyUp.setDown(true);
+		});
+		then(20, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("drone: turned and flew: {}", droneLine(mc));
+			shot(mc, "drone-3-turned");
+		});
+		then(2, mc -> DronePilot.useKey());
+		then(30, mc -> log("drone: brought home: {}", droneLine(mc)));
+		then(5, mc -> {
+			mc.player.setYRot(0);
+			mc.player.setXRot(0);
+			mc.player.getInventory().setSelectedSlot(mc.player.getInventory().findSlotMatchingItem(new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.SCOUT_DRONE)));
+		});
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(30, mc -> log("drone: launched again: {}", droneLine(mc)));
+		then(2, mc -> onServer(mc, server -> {
+			var player = me(server);
+			for (var d : player.level().getEntitiesOfClass(dev.rubymod.entity.ScoutDroneEntity.class, player.getBoundingBox().inflate(100))) {
+				d.hurtServer(player.level(), player.level().damageSources().generic(), 1.0F);
+			}
+		}));
+		then(10, mc -> log("drone: just hit: {}", droneLine(mc)));
+		then(80, mc -> onServer(mc, server -> {
+			var player = me(server);
+			log("drone: scout drones left in the world: {}", player.level().getEntitiesOfClass(dev.rubymod.entity.ScoutDroneEntity.class,
+					player.getBoundingBox().inflate(100)).size());
+		}));
+		then(5, mc -> log("drone: after the crash: {}", droneLine(mc)));
+	}
+
+		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
 	private static void hostSweepScript() {
 		then(0, mc -> {
 			command(mc, "time set noon");

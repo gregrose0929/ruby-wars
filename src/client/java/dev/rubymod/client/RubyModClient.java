@@ -75,6 +75,7 @@ public class RubyModClient implements ClientModInitializer {
 			}
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			DronePilot.tick(client);
 			dev.rubymod.client.rift.RiftClient.tick(client);
 			while (reloadKey.consumeClick()) {
 				if (Targeting.piloting(client) != null) {
@@ -343,6 +344,8 @@ public class RubyModClient implements ClientModInitializer {
 		DroneRenderer.registerLayer();
 		EntityRendererRegistry.register(ModEntities.SOLDIER, SoldierRenderer::new);
 		EntityRendererRegistry.register(ModEntities.RECON_DRONE, DroneRenderer::new);
+		EntityRendererRegistry.register(ModEntities.SCOUT_DRONE, ctx -> new DroneRenderer(ctx, 0.6F));
+		DronePilot.register();
 		HeavyAAGunRenderer.registerLayer();
 		EntityRendererRegistry.register(ModEntities.HEAVY_AA_GUN, HeavyAAGunRenderer::new);
 		EntityRendererRegistry.register(ModEntities.RAILGUN, HeavyAAGunRenderer::railgun);

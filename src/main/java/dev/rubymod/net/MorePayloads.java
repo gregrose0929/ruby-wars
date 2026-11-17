@@ -409,6 +409,42 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server to client: you're flying this Scout Drone (its entity id): look through it. -1: back to your own eyes. */
+	public record DroneView(int entityId) implements CustomPacketPayload {
+		public static final Type<DroneView> TYPE = new Type<>(RubyMod.id("drone_view"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DroneView> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, DroneView::entityId, DroneView::new);
+
+		@Override
+		public Type<DroneView> type() {
+			return TYPE;
+		}
+	}
+
+	/** Client to server, every tick while flying a Scout Drone: the keys (-1..1), where you're looking, and "bring it home". */
+	public record DroneInput(float forward, float strafe, float up, float yaw, float pitch, boolean recall) implements CustomPacketPayload {
+		public static final Type<DroneInput> TYPE = new Type<>(RubyMod.id("drone_input"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DroneInput> CODEC = StreamCodec.composite(ByteBufCodecs.FLOAT, DroneInput::forward,
+				ByteBufCodecs.FLOAT, DroneInput::strafe, ByteBufCodecs.FLOAT, DroneInput::up, ByteBufCodecs.FLOAT, DroneInput::yaw, ByteBufCodecs.FLOAT,
+				DroneInput::pitch, ByteBufCodecs.BOOL, DroneInput::recall, DroneInput::new);
+
+		@Override
+		public Type<DroneInput> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server to client: a drone spotted these (entity ids): they glow for you for this many seconds. */
+	public record DroneGlow(List<Integer> ids, int seconds) implements CustomPacketPayload {
+		public static final Type<DroneGlow> TYPE = new Type<>(RubyMod.id("drone_glow"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DroneGlow> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), DroneGlow::ids, ByteBufCodecs.VAR_INT, DroneGlow::seconds, DroneGlow::new);
+
+		@Override
+		public Type<DroneGlow> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client to server: the jetpack started or stopped firing. */
 	public record JetpackThrust(boolean on) implements CustomPacketPayload {
 		public static final Type<JetpackThrust> TYPE = new Type<>(RubyMod.id("jetpack_thrust"));
@@ -619,6 +655,9 @@ public final class MorePayloads {
 		PayloadTypeRegistry.serverboundPlay().register(ConvoyPick.TYPE, ConvoyPick.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Hello.TYPE, Hello.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(JetpackThrust.TYPE, JetpackThrust.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DroneView.TYPE, DroneView.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(DroneInput.TYPE, DroneInput.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DroneGlow.TYPE, DroneGlow.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DeathInfo.TYPE, DeathInfo.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Autopilot.TYPE, Autopilot.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaidStatus.TYPE, RaidStatus.CODEC);

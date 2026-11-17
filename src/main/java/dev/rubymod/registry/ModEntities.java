@@ -67,6 +67,9 @@ public class ModEntities {
 	public static final EntityType<dev.rubymod.entity.ReconDroneEntity> RECON_DRONE = register("recon_drone",
 			EntityType.Builder.<dev.rubymod.entity.ReconDroneEntity>of(dev.rubymod.entity.ReconDroneEntity::new, MobCategory.MISC).sized(1.8F, 0.9F)
 					.clientTrackingRange(16).updateInterval(2));
+	public static final EntityType<dev.rubymod.entity.ScoutDroneEntity> SCOUT_DRONE = register("scout_drone",
+			EntityType.Builder.<dev.rubymod.entity.ScoutDroneEntity>of(dev.rubymod.entity.ScoutDroneEntity::new, MobCategory.MISC).sized(0.8F, 0.4F)
+					.eyeHeight(0.2F).clientTrackingRange(10).updateInterval(1));
 
 	private static final java.util.Map<EntityType<?>, AircraftType> AIRCRAFT_TYPES = new java.util.HashMap<>();
 	public static final EntityType<AircraftEntity> FIGHTER_JET = aircraft(AircraftType.FIGHTER, 4.0F, 1.9F);
@@ -98,6 +101,7 @@ public class ModEntities {
 		FabricDefaultAttributeRegistry.register(RAILGUN, dev.rubymod.entity.HeavyAAGunEntity.attributes());
 		FabricDefaultAttributeRegistry.register(SOLDIER, dev.rubymod.entity.SoldierEntity.attributes());
 		FabricDefaultAttributeRegistry.register(RECON_DRONE, dev.rubymod.entity.ReconDroneEntity.attributes());
+		FabricDefaultAttributeRegistry.register(SCOUT_DRONE, dev.rubymod.entity.ScoutDroneEntity.attributes());
 		FabricDefaultAttributeRegistry.register(TARGET_DUMMY, net.minecraft.world.entity.decoration.ArmorStand.createAttributes());
 		FabricDefaultAttributeRegistry.register(FIGHTER_JET, AircraftEntity.attributes(AircraftType.FIGHTER));
 		FabricDefaultAttributeRegistry.register(ATTACK_JET, AircraftEntity.attributes(AircraftType.ATTACK));

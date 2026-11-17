@@ -57,7 +57,7 @@ public final class Research {
 		node("logistics", "Logistics", "Support", 2, null, "conveyor", "Conveyors, Constructor and Elevators", "conveyor", "constructor", "elevator");
 		node("guards", "Hired Guards", "Support", 3, null, "guard_contract", "Guard Contracts (riflemen and AT gunners)",
 				"guard_contract", "at_guard_contract");
-		node("recon", "Recon", "Support", 2, null, "recon_drone", "Recon Drone and Mortar", "recon_drone", "mortar", "mortar_shell");
+		node("recon", "Recon", "Support", 2, null, "recon_drone", "Recon and Scout Drones, and the Mortar", "recon_drone", "scout_drone", "mortar", "mortar_shell");
 		node("artillery", "Artillery", "Support", 4, "recon", "mortar_shell", "Air Strike Flares from the Armory", "air_strike_flare");
 	}
 

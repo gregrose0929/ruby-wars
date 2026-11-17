@@ -66,6 +66,9 @@ public class ReconDroneEntity extends Mob {
 		if (level().isClientSide()) {
 			return;
 		}
+		if (level() instanceof ServerLevel sl && steered(sl)) {
+			return;
+		}
 		// Climb to station, then orbit.
 		double t = age / 60.0;
 		Vec3 goal = center.add(Math.cos(t) * 12, Math.sin(t * 0.7) * 1.5, Math.sin(t) * 12);
@@ -102,7 +105,17 @@ public class ReconDroneEntity extends Mob {
 		}
 	}
 
+	/** Flown by hand instead (the Scout Drone): true when this tick's flying is done. */
+	protected boolean steered(ServerLevel level) {
+		return false;
+	}
+
 	private boolean isEnemy(Entity e) {
+		return enemyOf(owner, e);
+	}
+
+	/** Someone (or something) {@code owner}'s drones should spot. */
+	public static boolean enemyOf(UUID owner, Entity e) {
 		if (e instanceof Player p) {
 			return !p.isSpectator() && !p.isCreative() && !Squads.same(owner, p.getUUID()) && !Rules.isFriendly(owner, p.getUUID())
 					&& !Rules.isEliminated(p.getUUID());
@@ -111,7 +124,7 @@ public class ReconDroneEntity extends Mob {
 			return s.isRaider() || !Squads.same(owner, s.owner());
 		}
 		if (Armor.isArmored(e) && e.getFirstPassenger() instanceof Player crew) {
-			return isEnemy(crew);
+			return enemyOf(owner, crew);
 		}
 		return false;
 	}

@@ -15,7 +15,7 @@ import net.minecraft.client.Minecraft;
 public abstract class MinecraftMixin {
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
 	private void rubymod$noAttackWithGun(CallbackInfoReturnable<Boolean> cir) {
-		if (Trigger.capturesAttack((Minecraft) (Object) this)) {
+		if (dev.rubymod.client.DronePilot.flying() || Trigger.capturesAttack((Minecraft) (Object) this)) {
 			cir.setReturnValue(false);
 		}
 	}
@@ -32,11 +32,19 @@ public abstract class MinecraftMixin {
 		}
 	}
 
-	/** In a vehicle right-click is the vehicle's (tank gunner sight), not the held item's. */
+	/** In a vehicle right-click is the vehicle's (tank gunner sight), not the held item's. Flying a drone: it brings it home. */
 	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
 	private void rubymod$noItemsInVehicles(CallbackInfo ci) {
-		if (dev.rubymod.client.Vehicles.inVehicle((Minecraft) (Object) this)) {
+		if (dev.rubymod.client.DronePilot.useKey() || dev.rubymod.client.Vehicles.inVehicle((Minecraft) (Object) this)) {
 			ci.cancel();
+		}
+	}
+
+	/** Enemies a squad drone spotted glow (for this player only). */
+	@Inject(method = "shouldEntityAppearGlowing", at = @At("HEAD"), cancellable = true)
+	private void rubymod$droneGlow(net.minecraft.world.entity.Entity entity, CallbackInfoReturnable<Boolean> cir) {
+		if (dev.rubymod.client.DronePilot.glows(entity)) {
+			cir.setReturnValue(true);
 		}
 	}
 
@@ -51,7 +59,7 @@ public abstract class MinecraftMixin {
 
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void rubymod$noMiningWithGun(boolean down, CallbackInfo ci) {
-		if (Trigger.capturesAttack((Minecraft) (Object) this)) {
+		if (dev.rubymod.client.DronePilot.flying() || Trigger.capturesAttack((Minecraft) (Object) this)) {
 			ci.cancel();
 		}
 	}
