@@ -26,6 +26,7 @@ final class Removals {
 	private static final int[][] GONE = {{4, 66, 22}, {22, 66, 14}, {-9, 87, 11}, {23, 86, 7}, {44, 40, 16}};
 
 	static void run(ServerLevel level) {
+		second(level);
 		Path mark = level.getServer().getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve("removed_v1");
 		if (Files.exists(mark)) {
 			return;
@@ -63,6 +64,43 @@ final class Removals {
 		}
 	}
 
+	/** Home Street, Main Street and the museum's island. */
+	private static final int[][] HOMES = {{-62, -52, 28}, {-62, -95, 28}, {-46, -108, 16}};
+
+	/** The second lot (Home Street, Main Street, the museum, the aquarium, the butterfly house), once. */
+	private static void second(ServerLevel level) {
+		Path mark = level.getServer().getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve("removed_v2");
+		if (Files.exists(mark)) {
+			return;
+		}
+		BlockState air = Blocks.AIR.defaultBlockState();
+		clearCircles(level, HOMES);
+		// The aquarium (on Splash Island): its glass and water.
+		for (int x = -2; x <= 4; x++) {
+			for (int z = -153; z <= -149; z++) {
+				for (int y = FLOOR + 1; y <= FLOOR + 4; y++) {
+					level.setBlock(new BlockPos(x, y, z), air, 18);
+				}
+				level.setBlock(new BlockPos(x, FLOOR, z), Blocks.GRASS_BLOCK.defaultBlockState(), 18);
+			}
+		}
+		// The butterfly house (it was in Toyland, so it's out over the sky now).
+		for (int x = 7; x <= 15; x++) {
+			for (int z = 80; z <= 87; z++) {
+				for (int y = FLOOR; y <= FLOOR + 6; y++) {
+					level.setBlock(new BlockPos(x, y, z), air, 18);
+				}
+			}
+		}
+		dev.rubymod.RubyMod.LOGGER.info("Removals: Home Street, Main Street, the museum, the aquarium and the butterfly house tidied away");
+		try {
+			Files.createDirectories(mark.getParent());
+			Files.writeString(mark, "done");
+		} catch (Exception e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't mark the removals done", e);
+		}
+	}
+
 	/** Whether a column belongs to an island that's staying (so it's never touched). */
 	private static boolean kept(int x, int z) {
 		if (Math.hypot(x, z) < 27) {
@@ -71,7 +109,7 @@ final class Removals {
 		if (Math.hypot(x + 44, z - 44) < 19) {
 			return true; // Mini Golf
 		}
-		for (int[][] group : new int[][][] {FunPark.CIRCLES, SplashIsland.CIRCLES, Speedway.CIRCLES, HomeStreet.CIRCLES, Museum.BEACH}) {
+		for (int[][] group : new int[][][] {FunPark.CIRCLES, SplashIsland.CIRCLES, Speedway.CIRCLES, Plunge.BEACH}) {
 			for (int[] c : group) {
 				if (Math.hypot(x - c[0], z - c[1]) < c[2] + 2) {
 					return true;
@@ -82,8 +120,13 @@ final class Removals {
 	}
 
 	private static void islands(ServerLevel level) {
+		clearCircles(level, GONE);
+	}
+
+	/** Everything on (and under) these islands, apart from any island that's staying. */
+	private static void clearCircles(ServerLevel level, int[][] circles) {
 		BlockState air = Blocks.AIR.defaultBlockState();
-		for (int[] c : GONE) {
+		for (int[] c : circles) {
 			int r = c[2] + 3;
 			for (int x = c[0] - r; x <= c[0] + r; x++) {
 				for (int z = c[1] - r; z <= c[1] + r; z++) {

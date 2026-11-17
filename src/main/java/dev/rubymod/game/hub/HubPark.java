@@ -54,7 +54,7 @@ import net.minecraft.world.phys.Vec3;
  * <ul>
  * <li>Fun Park (east): the rollercoaster station, trampolines, a bumper-car ice rink, the shooting gallery, a snow fort.</li>
  * <li>The Tower (north-east): a tower to climb, a water slide spiralling down it, a diving board, a zipline home.</li>
- * <li>The Pond (south): fishing, swings, and the splash pool the plaza's cannon fires you into.</li>
+ * <li>The Pond (south): swan boats, swings, and the splash pool the plaza's cannon fires you into.</li>
  * <li>Mini Golf (south-west): three holes.</li>
  * <li>The Stage (north-west): a DJ booth, a dance floor that lights up to the music, a photo spot.</li>
  * <li>Sky parkour (north-west): a jumping course in the sky, with checkpoints.</li>
@@ -118,7 +118,6 @@ public final class HubPark {
 	// The plaza's things you click.
 	private static final BlockPos TOY_CHEST = new BlockPos(3, FLOOR + 1, 10);
 	private static final BlockPos FIREWORKS = new BlockPos(-6, FLOOR + 2, -4);
-	private static final BlockPos ROD_BARREL = new BlockPos(-2 + POND_DX, FLOOR + 1, 45 + POND_DZ);
 	private static final BlockPos SNOW_PILE = new BlockPos(68, FLOOR + 1, 5);
 	private static final BlockPos JUKEBOX = new BlockPos(-46 + STAGE_DX, FLOOR + 2, -40 + STAGE_DZ);
 
@@ -136,11 +135,10 @@ public final class HubPark {
 	private static final List<Place> PLACES = List.of(
 			new Place("plaza", "The Plaza", "Toys, Sky Rings", "minecraft:bell", stand(-1, FLOOR, 6), "Parkour, pets, photo wall"),
 			new Place("funpark", "Fun Park", "Coaster, bumpers, more", "minecraft:minecart", stand(46, FLOOR, 5), "Mouse, swings, drop tower"),
-			new Place("splash", "Splash Island", "Slides, flume, fishing", "minecraft:water_bucket", stand(54, FLOOR, -76), "Rapids, capsule, aquarium"),
+			new Place("splash", "Splash Island", "Slides, flume, rapids", "minecraft:water_bucket", stand(54, FLOOR, -76), "Capsule, wave pool, swans"),
 			new Place("golf", "Mini Golf", "Four crazy holes", "minecraft:slime_ball", stand(-40, FLOOR, 57), "Windmill, volcano, cove"),
 			new Place("speedway", "Speedway", "Kart racing on ice", "minecraft:snowball", stand(-109, FLOOR, -40), "Race the computer karts"),
-			new Place("home", "Home Street", "Your own little house", "minecraft:oak_door", stand(-62, FLOOR, -40), "Main Street shops, museum"),
-			new Place("beach", "Fossil Beach", "Dig up fossils", "minecraft:wooden_shovel", stand(97, FLOOR, -125), "Shovels at the museum"));
+			new Place("beach", "Waterfall Plunge", "A log boat over the edge", "minecraft:oak_boat", stand(97, FLOOR, -125), "Next to Splash Island"));
 
 	private static final String MAP = "Park Map";
 
@@ -230,7 +228,7 @@ public final class HubPark {
 			if (level.isClientSide() || level.dimension() != Hub.HUB || !(player instanceof ServerPlayer sp)) {
 				return InteractionResult.PASS;
 			}
-			if (HubHosts.clicked(sp, entity) || Pets.clicked(sp, entity) || ParkAnimals.pet(sp, entity)) {
+			if (HubHosts.clicked(sp, entity) || Pets.clicked(sp, entity)) {
 				return InteractionResult.SUCCESS;
 			}
 			if (HubRides.mountSwing(sp, entity)) {
@@ -250,13 +248,6 @@ public final class HubPark {
 		out.put("rides are built (" + TrackRide.ALL.size() + ")", TrackRide.ALL.size() >= 6);
 		out.put("the Ruby Rocket has its track", !Coaster.pathPoints().isEmpty());
 		out.put("travel places (" + PLACES.size() + ")", PLACES.size() >= 6);
-		int boxes = 0;
-		for (int x : new int[] {-77, -67, -49, -39}) {
-			for (int z : new int[] {-58, -46}) {
-				boxes += level.getBlockState(new BlockPos(x, FLOOR + 2, z)).is(Blocks.CONCRETE.pick(DyeColor.RED)) ? 1 : 0;
-			}
-		}
-		out.put("Home Street's mailboxes (" + boxes + " of 8)", boxes == 8);
 		int models = level.getEntities(EntityTypes.BLOCK_DISPLAY, WHOLE_HUB, e -> true).size() + level.getEntities(EntityTypes.ITEM_DISPLAY, WHOLE_HUB, e -> true).size();
 		dev.rubymod.RubyMod.LOGGER.info("[park] {} signs, {} models, {} hosts, {} rides", signs, models, HubHosts.count(), TrackRide.ALL.size());
 		out.put("not too many models (" + models + ")", models < 6000);
@@ -265,20 +256,12 @@ public final class HubPark {
 
 	/** Right-clicking a block in the hub. Null: not one of ours. */
 	public static InteractionResult useBlock(ServerPlayer p, BlockPos pos, BlockState state) {
-		InteractionResult dig = Museum.useBlock(p, pos);
-		if (dig != null) {
-			return dig;
-		}
 		if (pos.equals(TOY_CHEST)) {
 			HubGames.toyChest(p);
 			return InteractionResult.SUCCESS;
 		}
 		if (pos.equals(FIREWORKS)) {
 			fireworksButton(p);
-			return InteractionResult.SUCCESS;
-		}
-		if (pos.equals(ROD_BARREL)) {
-			HubGames.fishingRods(p);
 			return InteractionResult.SUCCESS;
 		}
 		if (pos.equals(SNOW_PILE)) {
@@ -298,9 +281,6 @@ public final class HubPark {
 
 	/** Right-clicking with an item in the hub: the toys. */
 	public static boolean useItem(ServerPlayer p, ItemStack held) {
-		if (MainStreet.useItem(p, held)) {
-			return true;
-		}
 		if (MiniGolf.isPutter(held)) {
 			return MiniGolf.putt(p);
 		}
@@ -684,15 +664,10 @@ public final class HubPark {
 		SkyZip.reset();
 		SkyRings.reset();
 		HubToys.reset();
-		ParkAnimals.reset();
 		NightShow.reset();
 		Rapids.reset();
-		Fishing.reset();
-		Butterflies.reset();
 		Photos.reset();
 		SpinCoaster.reset();
-		MainStreet.reset();
-		Museum.reset();
 		SkyTours.reset();
 		Dressing.reset();
 		Eggs.reset();
@@ -703,8 +678,6 @@ public final class HubPark {
 		BumperBoats.build(level);
 		FunRides.build(level);
 		SplashIsland.build(level);
-		Butterflies.build(level);
-		HomeStreet.build(level);
 		SpinCoaster.build(level);
 		Photos.build(level);
 		WaterPark.build(level);
@@ -803,12 +776,11 @@ public final class HubPark {
 						.withStyle(ChatFormatting.WHITE))
 				.append(Component.literal("\n\u2192 Fun Park: the Ruby Rocket, the Twister Mouse,\n   bumper cars, swings, slingshot, drop tower,\n   pirate ship, teacups, Big Wheel, the Stage")
 						.withStyle(ChatFormatting.YELLOW))
-				.append(Component.literal("\n\u2193 Splash Island: slides, drop capsule, flume,\n   river rapids, fishing and the aquarium").withStyle(ChatFormatting.AQUA))
+				.append(Component.literal("\n\u2193 Splash Island: slides, drop capsule, flume,\n   river rapids, wave pool, swan boats").withStyle(ChatFormatting.AQUA))
 				.append(Component.literal("\n\u2199 Mini Golf: four crazy holes").withStyle(ChatFormatting.GREEN))
 				.append(Component.literal("\n\u2190 Speedway: kart racing on ice").withStyle(ChatFormatting.RED))
 				.append(Component.literal("\n\u2190 Sky Parkour, and Sky Rings with Wren").withStyle(ChatFormatting.YELLOW))
-				.append(Component.literal("\n\u2196 Home Street: your own house! And Main Street:\n   ice cream, caf\u00e9, costumes, furniture, museum").withStyle(ChatFormatting.GOLD))
-				.append(Component.literal("\n\u2192 Fossil Beach (by Splash Island): dig up fossils").withStyle(ChatFormatting.GOLD))
+				.append(Component.literal("\n\u2192 Waterfall Plunge (by Splash Island)").withStyle(ChatFormatting.GOLD))
 				.append(Component.literal("\n\nCaptain Cloud flies you on a happy ghast!").withStyle(ChatFormatting.AQUA))
 				.append(Component.literal("\n\nTilly has toys and gadgets (and a camera!).\nPhotos go on the Family Photo Wall.").withStyle(ChatFormatting.WHITE))
 				.append(Component.literal("\n\nYour Park Map (in your hotbar) flies you anywhere.\nCoach Kit runs Tag, Hide and Seek and more!")
@@ -962,7 +934,7 @@ public final class HubPark {
 	// ----- The Pond -----
 
 	private static void pond(ServerLevel level) {
-		label(level, 0.5, FLOOR + 9, 56.5, "FISHING VILLAGE", ChatFormatting.AQUA, 2.4F);
+		label(level, 0.5, FLOOR + 9, 56.5, "SWAN POND", ChatFormatting.AQUA, 2.4F);
 		// The fishing pond, with a dock.
 		box(level, -8, FLOOR - 4, 46, 5, FLOOR - 4, 57, Blocks.CLAY.defaultBlockState());
 		for (int x = -8; x <= 5; x++) {
@@ -1125,10 +1097,6 @@ public final class HubPark {
 		SkyRings.tick(level);
 		HubToys.tick(level);
 		NightShow.tick(level, tick, lampsLit);
-		Fishing.tick(level);
-		if (!level.players().isEmpty()) {
-			Butterflies.tick(level);
-		}
 		if (near(level, 50, 75, 45) || SpinCoaster.busy()) {
 			SpinCoaster.tick(level);
 		}
@@ -1145,16 +1113,11 @@ public final class HubPark {
 			Booths.tick(level);
 		}
 		Pets.tick(level, tick);
-		MainStreet.tick(level, tick);
 		SkyTours.tick(level);
 		Dressing.tick(level, tick);
 		Eggs.tick(level);
-		HomeStreet.tick(level, tick);
 		Wonder.tick(level);
 		Plunge.tick(level);
-		if (Museum.near(level)) {
-			Museum.tick(level, tick);
-		}
 		Seasons.tick(level, tick);
 		Scenery.tick(level, tick);
 		ambience(level);

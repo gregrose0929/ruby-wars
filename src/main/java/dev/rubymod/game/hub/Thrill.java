@@ -484,7 +484,7 @@ final class Thrill {
 								+ "Room for four. Lovely views, no scares!",
 						"Balloon Tours: right-click Barnaby for a ride!", HubHosts.rideButtons("Take the balloon tour!"),
 						(p, key) -> balloon.board(p, HubHosts.group(p, key))));
-		balloon.events.put(path.size() / 4, (lvl, car) -> balloon.tell(lvl, car, "Down there: Spooky Hollow and the Fishing Village"));
+		balloon.events.put(path.size() / 4, (lvl, car) -> balloon.tell(lvl, car, "Down there: the Fun Park, and the swan pond"));
 		balloon.events.put(path.size() / 2, (lvl, car) -> balloon.tell(lvl, car, "There's the Speedway, and the Stage over that way"));
 		balloon.events.put(path.size() * 3 / 4, (lvl, car) -> balloon.tell(lvl, car, "Flume Falls, the Splash Tower, and the Fun Park ahead"));
 	}

@@ -205,13 +205,10 @@ final class Scenery {
 			"The Slingshot (Zip)", "Big Wheel (Wally), Carousel (Cora)", "Drop Tower (Tess), Pirate Ship (Polly)", "Teacups (Mabel), Balloons (Barnaby)",
 			"The Stage (DJ Remy)", "Games, plushie prizes, bouncy castle"},
 		{"Splash Island", "54.5", "-76.5", "Splash Tower slides (Lulu)", "The Drop Capsule (top of the tower)", "Flume Falls (Flo)", "River Rapids (Rocky)",
-			"Wave pool and lazy river", "Fishing (Captain Finn) and the aquarium", "Swan boats", "Fossil Beach is next door!"},
+			"Wave pool and lazy river", "Swan boats", "The Waterfall Plunge is next door!"},
 		{"Mini Golf", "-39.5", "57.5", "Four crazy holes (Gus)", "The Windmill, the Castle,", "the Volcano, Pirate Cove"},
 		{"Sky Parkour", "-21.5", "-36.5", "Jump across the sky (Pip)", "Gold blocks are checkpoints"},
 		{"the Speedway", "-108.5", "-39.5", "Kart racing on ice (Rex)", "Blue strips = BOOST!", "Tonight's records"},
-		{"Home Street", "-64.5", "-41.5", "Pick a house with a red mailbox!", "Furniture is free at Fern's shop", "The little bus (Benny)",
-			"Up Main Street: Scoops' Ice Cream,", "Hazel's Caf\u00e9, Dot's Costumes,", "and the Park Museum (Professor Pebble)"},
-		{"Fossil Beach", "97.5", "-124.5", "Dig the speckled sand for fossils", "Shovels: Professor Pebble at the museum"},
 	};
 
 	private static void signs(ServerLevel level) {

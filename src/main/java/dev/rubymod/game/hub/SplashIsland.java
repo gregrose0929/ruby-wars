@@ -37,7 +37,6 @@ final class SplashIsland {
 		}
 		Flume.build(level);
 		Rapids.build(level);
-		Fishing.build(level);
 	}
 
 	private static void path(ServerLevel level, int x1, int z1, int x2, int z2) {

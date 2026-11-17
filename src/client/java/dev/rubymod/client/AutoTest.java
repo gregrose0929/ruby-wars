@@ -4572,6 +4572,7 @@ public final class AutoTest {
 			case "ridetest" -> rideTestScript();
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
+			case "homesgone" -> homesGoneScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
 			case "parkswan" -> parkSwanScript();
@@ -5503,7 +5504,7 @@ public final class AutoTest {
 				new com.mojang.authlib.GameProfile(java.util.UUID.fromString("00000000-0000-0000-0000-00000000p1e" .replace("p", "0") + n), "PieBuddy" + n));
 	}
 
-	/** Pie Mystery with two stand-ins; then a house, a garden harvest, and posting it to a neighbour. */
+	/** Pie Mystery with two stand-ins. */
 	private static void familyCheckScript() {
 		then(40, mc -> tpHub(mc, "0.5 101 8.5"));
 		then(200, mc -> command(mc, "execute as @p run play pie"));
@@ -5534,42 +5535,40 @@ public final class AutoTest {
 			});
 			command(mc, "execute as @p run hub");
 		});
-		// A house, seeds, planting, harvest.
-		then(200, mc -> tpHub(mc, "-77.5 101 -56.5 facing -76.5 102 -58"));
-		then(60, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-77, 102, -58)));
-		then(20, mc -> tpHub(mc, "-63.5 101 -44.5 facing -65.5 102 -44.5"));
-		then(40, mc -> talk(mc, -65.5, 101, -44.5));
-		then(20, mc -> press(mc, "carrots"));
-		then(20, mc -> {
-			if (mc.gui.screen() != null) {
-				mc.gui.screen().onClose();
-			}
-			int slot = slotOf(mc, "Carrot Seeds");
-			log("family: seeds in slot {}", slot);
-			if (slot >= 0 && slot < 9) {
-				mc.player.getInventory().setSelectedSlot(slot);
-			}
-			tpHub(mc, "-84.5 101 -56.5 facing -85 100.5 -58");
-		});
-		then(40, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-85, 100, -58)));
-		then(20, mc -> log("family: planted {}", mc.level.getBlockState(new net.minecraft.core.BlockPos(-85, 101, -58))));
-		then(5, mc -> onServer(mc, server -> dev.rubymod.game.hub.HomeStreet.testGrow(server.getLevel(dev.rubymod.game.Hub.HUB))));
-		then(20, mc -> {
-			log("family: grown {}", mc.level.getBlockState(new net.minecraft.core.BlockPos(-85, 101, -58)));
-			mc.player.getInventory().setSelectedSlot(8);
-			clickBlock(mc, new net.minecraft.core.BlockPos(-85, 101, -58));
-		});
-		then(20, mc -> log("family: harvested, holding {}", mc.player.getMainHandItem().getHoverName().getString()));
-		// Post it to a neighbour (a stand-in in house 1).
-		then(5, mc -> onServer(mc, server -> dev.rubymod.game.hub.HomeStreet.testClaim(server.getLevel(dev.rubymod.game.Hub.HUB), 1, "Neighbour")));
-		then(10, mc -> tpHub(mc, "-67.5 101 -56.5 facing -66.5 102 -58"));
-		then(40, mc -> clickBlock(mc, new net.minecraft.core.BlockPos(-67, 102, -58)));
-		then(20, mc -> {
-			log("family: posted, now holding {}", mc.player.getMainHandItem().getHoverName().getString());
-			onServer(mc, server -> log("family: Neighbour's mailbox {}", dev.rubymod.game.hub.HomeStreet.testMail(server.getLevel(dev.rubymod.game.Hub.HUB), "Neighbour")));
-			shot(mc, "fam-post");
-		});
 	}
+
+	/** Where Home Street, the museum, the aquarium and the butterfly house were; and the Plunge's beach. */
+	private static void homesGoneScript() {
+		then(300, mc -> onServer(mc, server -> {
+			var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+			int f = dev.rubymod.game.hub.HubPark.FLOOR;
+			int[][] homes = {{-62, -52, 28}, {-62, -95, 28}, {-46, -108, 16}};
+			int solid = 0;
+			for (int[] c : homes) {
+				for (int x = c[0] - c[2]; x <= c[0] + c[2]; x += 2) {
+					for (int z = c[1] - c[2]; z <= c[1] + c[2]; z += 2) {
+						if (Math.hypot(x - c[0], z - c[1]) <= c[2]) {
+							for (int y = f - 10; y <= f + 20; y++) {
+								if (!hub.getBlockState(new net.minecraft.core.BlockPos(x, y, z)).isAir()) {
+									solid++;
+								}
+							}
+						}
+					}
+				}
+			}
+			log("homesgone: solid blocks left where the housing island was (every 2nd column): {}", solid);
+			log("homesgone: plunge beach ground {} at {}", hub.getBlockState(new net.minecraft.core.BlockPos(100, f, -130)), new net.minecraft.core.BlockPos(100, f, -130));
+			log("homesgone: aquarium spot {} / {}", hub.getBlockState(new net.minecraft.core.BlockPos(0, f + 1, -151)), hub.getBlockState(new net.minecraft.core.BlockPos(-2, f + 2, -151)));
+			log("homesgone: butterfly house spot {}", hub.getBlockState(new net.minecraft.core.BlockPos(7, f + 3, 83)));
+			log("homesgone: catch board spot {}", hub.getBlockState(new net.minecraft.core.BlockPos(12, f + 2, -144)));
+		}));
+		then(5, mc -> tpHub(mc, "-62.5 160 -20.5 facing -62 100 -70"));
+		then(140, mc -> shot(mc, "hg-homes"));
+		then(5, mc -> tpHub(mc, "100.5 140 -100.5 facing 100 100 -130"));
+		then(140, mc -> shot(mc, "hg-plunge"));
+	}
+
 
 	/** The game picker on a small screen: every party game there, scrolling if need be. */
 	private static void pickerCheckScript() {
@@ -6470,7 +6469,7 @@ public final class AutoTest {
 		then(10, mc -> tpHub(mc, "5.5 101 -140.5 180 0"));
 		then(60, mc -> talk(mc, 5.5, 101, -142.5));
 		then(30, mc -> press(mc, "rod"));
-		then(10, mc -> onServer(mc, server -> dev.rubymod.game.hub.HubGames.testBite(me(server))));
+		// (fishing is gone)
 		then(15, mc -> shot(mc, "c2-fishbar"));
 		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
 		then(20, mc -> log("fish: holding {}", mc.player.getMainHandItem().getHoverName().getString()));

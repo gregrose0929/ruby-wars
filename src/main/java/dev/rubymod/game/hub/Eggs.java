@@ -184,16 +184,13 @@ final class Eggs {
 		level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, p.getX(), p.getY() + 1, p.getZ(), 30, 0.4, 0.6, 0.4, 0.3);
 		if (count >= EGGS.size()) {
 			dev.rubymod.game.Alerts.title(p, "EGG-CELLENT!", "You found every golden egg! Here's your golden crown.", ChatFormatting.GOLD);
-			MainStreet.hold(p, MainStreet.hat(1));
+			HubGames.hand(p, HubGames.toy(Items.GOLDEN_HELMET, 1, "Golden Crown", ChatFormatting.GOLD));
+			p.inventoryMenu.broadcastChanges();
 			HubPark.burst(level, p.position().add(0, 4, 0));
 			return;
 		}
-		// A treat inside: a chocolate egg, or a plushie.
-		if (random.nextInt(3) == 0) {
-			Prizes.plushie(level, p);
-		} else {
-			MainStreet.hold(p, MainStreet.snack(Items.COCOA_BEANS, null, "Chocolate Egg", 2));
-		}
+		// A plushie inside!
+		Prizes.plushie(level, p);
 		p.sendSystemMessage(Component.literal("You found a golden egg! (" + count + " of " + EGGS.size() + ")").withStyle(ChatFormatting.GOLD));
 		dev.rubymod.game.Alerts.title(p, "", "Golden egg! " + count + " of " + EGGS.size(), ChatFormatting.GOLD);
 	}

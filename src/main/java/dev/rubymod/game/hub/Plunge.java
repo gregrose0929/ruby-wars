@@ -18,7 +18,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The Waterfall Plunge, on Fossil Beach: a log boat floats along a wooden trough to the island's edge, tips over and
+ * The Waterfall Plunge, on its little beach by Splash Island: a log boat floats along a wooden trough to the island's edge, tips over and
  * plunges down beside a waterfall into a pool on a little island far below (SPLASH!), then a chain winches it back up.
  */
 final class Plunge {
@@ -34,6 +34,7 @@ final class Plunge {
 	}
 
 	static void build(ServerLevel level) {
+		beach(level);
 		int f = FLOOR;
 		// x, y, z: along the beach, over the edge, down, through the pool, round, up the chain lift, back to the beach.
 		double[][] c = {{103, f + 1, -131}, {106, f + 1, -131}, {109, f + 1, -131}, {111.5, f + 0.6, -131}, {113.5, f - 4, -131}, {115.5, f - 13, -131},
@@ -156,5 +157,82 @@ final class Plunge {
 
 	static boolean busy() {
 		return ride != null && !ride.cars.isEmpty();
+	}
+
+	/** The little beach the Plunge starts from (it was Fossil Beach). */
+	static final int[][] BEACH = {{100, -130, 11}};
+
+	private static void beach(ServerLevel level) {
+		HubPark.blob(level, BEACH, FLOOR);
+		int[] c = BEACH[0];
+		var random = new java.util.Random(31);
+		for (int x = c[0] - c[2] - 1; x <= c[0] + c[2] + 1; x++) {
+			for (int z = c[1] - c[2] - 1; z <= c[1] + c[2] + 1; z++) {
+				double d = Math.hypot(x - c[0], z - c[1]);
+				if (d > c[2] - 0.4) {
+					continue;
+				}
+				HubPark.set(level, x, FLOOR, z, Blocks.SAND.defaultBlockState());
+				HubPark.set(level, x, FLOOR - 1, z, Blocks.SANDSTONE.defaultBlockState());
+				BlockPos top = new BlockPos(x, FLOOR + 1, z);
+				if (!level.getBlockState(top).isAir()) {
+					level.setBlock(top, Blocks.AIR.defaultBlockState(), 2);
+				}
+				if (d >= c[2] - 1.5 && random.nextInt(4) == 0) {
+					HubPark.set(level, x, FLOOR + 1, z, random.nextBoolean() ? Blocks.DEAD_BUSH.defaultBlockState() : Blocks.SHORT_DRY_GRASS.defaultBlockState());
+				}
+			}
+		}
+		// A path across to Splash Island.
+		for (double t = 0; t <= 1.0; t += 0.05) {
+			int x = (int) Math.round(92 + (85 - 92) * t);
+			int z = (int) Math.round(-122 + (-114 - (-122)) * t);
+			for (int w = -1; w <= 1; w++) {
+				BlockPos p = new BlockPos(x + w, FLOOR, z);
+				if (level.getBlockState(p).isAir() || level.getBlockState(p).is(Blocks.GRASS_BLOCK)) {
+					level.setBlock(p, Blocks.SMOOTH_SANDSTONE.defaultBlockState(), 2);
+				}
+				BlockPos up = p.above();
+				if (level.getBlockState(up).is(Blocks.FLOWERING_AZALEA_LEAVES)) {
+					level.setBlock(up, Blocks.AIR.defaultBlockState(), 2);
+				}
+			}
+		}
+		// Palm-ish trees.
+		for (int[] t : new int[][] {{c[0] - 6, c[1] - 4}, {c[0] + 5, c[1] + 6}}) {
+			HubPark.box(level, t[0], FLOOR + 1, t[1], t[0], FLOOR + 5, t[1], Blocks.JUNGLE_LOG.defaultBlockState());
+			for (int[] l : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {2, 0}, {-2, 0}, {0, 2}, {0, -2}}) {
+				HubPark.set(level, t[0] + l[0], FLOOR + 6 - (Math.abs(l[0] + l[1]) == 2 ? 1 : 0), t[1] + l[1],
+						Blocks.JUNGLE_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+			}
+			HubPark.set(level, t[0], FLOOR + 6, t[1], Blocks.JUNGLE_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true));
+		}
+		// Beach umbrellas with towels, and a sandcastle.
+		net.minecraft.world.item.DyeColor[][] stripes = {{net.minecraft.world.item.DyeColor.RED, net.minecraft.world.item.DyeColor.WHITE},
+			{net.minecraft.world.item.DyeColor.LIGHT_BLUE, net.minecraft.world.item.DyeColor.YELLOW}};
+		int[][] brollies = {{c[0] + 4, c[1] - 5}, {c[0] - 5, c[1] + 4}};
+		for (int u = 0; u < brollies.length; u++) {
+			int bx = brollies[u][0];
+			int bz = brollies[u][1];
+			HubPark.box(level, bx, FLOOR + 1, bz, bx, FLOOR + 3, bz, Blocks.BIRCH_FENCE.defaultBlockState());
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					boolean mid = dx == 0 && dz == 0;
+					HubPark.set(level, bx + dx, FLOOR + 4, bz + dz, mid ? Blocks.WOOL.pick(stripes[u][0]).defaultBlockState()
+							: Blocks.WOOL_SLAB.pick(stripes[u][Math.floorMod(dx + dz, 2)]).defaultBlockState());
+				}
+			}
+			HubPark.set(level, bx, FLOOR + 5, bz, Blocks.CARPET.pick(stripes[u][1]).defaultBlockState());
+			HubPark.set(level, bx + 1, FLOOR + 1, bz + 1, Blocks.CARPET.pick(stripes[u][1]).defaultBlockState());
+			HubPark.set(level, bx + 1, FLOOR + 1, bz + 2, Blocks.CARPET.pick(stripes[u][1]).defaultBlockState());
+		}
+		int sx = c[0] - 2;
+		int sz = c[1] + 6;
+		HubPark.box(level, sx, FLOOR + 1, sz, sx + 2, FLOOR + 1, sz + 2, Blocks.SANDSTONE.defaultBlockState());
+		for (int[] t : new int[][] {{0, 0}, {2, 0}, {0, 2}, {2, 2}}) {
+			HubPark.set(level, sx + t[0], FLOOR + 2, sz + t[1], Blocks.SANDSTONE_WALL.defaultBlockState());
+		}
+		HubPark.set(level, sx + 1, FLOOR + 2, sz + 1, Blocks.CHISELED_SANDSTONE.defaultBlockState());
+		HubPark.set(level, sx + 1, FLOOR + 3, sz + 1, Blocks.BANNER.pick(net.minecraft.world.item.DyeColor.RED).defaultBlockState());
 	}
 }

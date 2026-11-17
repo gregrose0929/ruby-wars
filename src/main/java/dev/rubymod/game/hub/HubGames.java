@@ -127,7 +127,6 @@ public final class HubGames {
 	/** Where each game's things belong (x, z, radius): leave and they're put back. Prizes left over from before go too. */
 	private static final java.util.Map<String, double[]> HOME = java.util.Map.of(
 			"Putter", new double[] {-44, 44, 22},
-			"Pond Rod", new double[] {HubPark.POND_DX, 56 + HubPark.POND_DZ, 20},
 			"Gallery Snowball", new double[] {56, 2, 22},
 			"Mallet", new double[] {84, 40, 26},
 			"Basketball", new double[] {84, 40, 26},
@@ -186,9 +185,6 @@ public final class HubGames {
 	/** Right-clicking with a toy. True when it was one (and handled). */
 	static boolean useToy(ServerPlayer p, ItemStack held) {
 		ServerLevel level = (ServerLevel) p.level();
-		if (named(held, "Pond Rod") && Fishing.reel(p)) {
-			return true;
-		}
 		if (named(held, "Confetti Cannon")) {
 			if (p.getCooldowns().isOnCooldown(held)) {
 				return true;
@@ -386,92 +382,6 @@ public final class HubGames {
 		hand(p, toy(Items.SNOWBALL, 16, null, ChatFormatting.WHITE));
 		p.inventoryMenu.broadcastChanges();
 		p.level().playSound(null, p.blockPosition(), SoundEvents.SNOW_BREAK, SoundSource.PLAYERS, 0.8F, 1.0F);
-	}
-
-	// ----- Fishing -----
-
-	private static final Object[][] CATCHES = {
-		{Items.COD, null}, {Items.SALMON, null}, {Items.TROPICAL_FISH, null}, {Items.PUFFERFISH, null}, {Items.COD, null},
-		{Items.LEATHER_BOOTS, "Soggy Boot"}, {Items.GLASS_BOTTLE, "Message in a Bottle"}, {Items.STICK, "Very Wet Stick"},
-		{Items.CHICKEN, "Rubber Chicken"}, {Items.GOLD_NUGGET, "Lucky Coin"}, {dev.rubymod.registry.ModItems.RUBY, "Pond Ruby"},
-		{Items.NAUTILUS_SHELL, "Fancy Shell"}, {Items.LILY_PAD, null}, {Items.KELP, null}};
-
-	/** The latest catches, newest first, for the Pond's catch board. */
-	static final java.util.ArrayDeque<String> CATCH_LOG = new java.util.ArrayDeque<>();
-
-	/** A catch from the hub's pond (anything a fishing line pulls out there is a toy). True if it was one. */
-	public static boolean fished(ItemEntity item, ServerLevel level) {
-		int spot = HubPark.POND.contains(item.position()) ? Fishing.POND
-				: Math.hypot(item.getX() - Rapids.CX, item.getZ() - Rapids.CZ) < 20 && item.getY() < HubPark.FLOOR + 3 ? Fishing.RIVER
-						: 0;
-		if (spot == 0) {
-			return false;
-		}
-		// Only a catch if someone's actually fishing there (not just anything that falls in the water).
-		boolean fishing = false;
-		for (ServerPlayer p : level.players()) {
-			if (p.distanceToSqr(item) < 24 * 24 && p.getMainHandItem().is(Items.FISHING_ROD)) {
-				fishing = true;
-			}
-		}
-		if (!fishing) {
-			return false;
-		}
-		var random = level.getRandom();
-		ServerPlayer near = null;
-		for (ServerPlayer p : level.players()) {
-			if (near == null || p.distanceToSqr(item) < near.distanceToSqr(item)) {
-				near = p;
-			}
-		}
-		// Mostly a fish (which fights!); now and then something silly.
-		if (near != null && random.nextInt(5) != 0) {
-			item.discard();
-			Fishing.bite(near, level, spot);
-			return true;
-		}
-		Object[] c = CATCHES[5 + random.nextInt(CATCHES.length - 5)];
-		String name = (String) c[1];
-		ItemStack stack = toy((net.minecraft.world.item.Item) c[0], 1, name, name != null && name.contains("Ruby") ? ChatFormatting.RED : ChatFormatting.AQUA);
-		item.setItem(stack);
-		ServerPlayer fisher = null;
-		for (ServerPlayer p : level.players()) {
-			if (fisher == null || p.distanceToSqr(item) < fisher.distanceToSqr(item)) {
-				fisher = p;
-			}
-		}
-		if (fisher != null) {
-			fisher.sendOverlayMessage(Component.literal("You caught: " + stack.getHoverName().getString() + "!").withStyle(ChatFormatting.AQUA));
-			CATCH_LOG.addFirst(fisher.getName().getString() + ": " + stack.getHoverName().getString());
-			while (CATCH_LOG.size() > 6) {
-				CATCH_LOG.removeLast();
-			}
-			Village.catchBoard(level);
-			if ("Pond Ruby".equals(name)) {
-				HubPark.burst(level, item.position().add(0, 3, 0));
-			}
-		}
-		return true;
-	}
-
-	/** For autotests: a fish bites right now. */
-	public static void testBite(ServerPlayer p) {
-		Fishing.bite(p, (ServerLevel) p.level());
-	}
-
-	/** Onto the catch board. */
-	static void logCatch(ServerLevel level, String line) {
-		CATCH_LOG.addFirst(line);
-		while (CATCH_LOG.size() > 6) {
-			CATCH_LOG.removeLast();
-		}
-		Village.catchBoard(level);
-	}
-
-	static void fishingRods(ServerPlayer p) {
-		hand(p, toy(Items.FISHING_ROD, 1, "Pond Rod", ChatFormatting.AQUA));
-		p.inventoryMenu.broadcastChanges();
-		p.sendOverlayMessage(Component.literal("Cast into the pond (right-click), and reel in when the bobber dips!").withStyle(ChatFormatting.AQUA));
 	}
 
 	// ----- The stage -----

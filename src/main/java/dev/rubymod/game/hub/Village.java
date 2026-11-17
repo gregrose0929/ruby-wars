@@ -24,14 +24,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The Pond, as a little fishing village: a longer dock with lanterns, a boathouse, Captain Finn who hands out rods,
- * a board of the latest catches, and a picnic spot by the swings.
+ * The Pond: a longer dock with lanterns, a boathouse, swan boats, and a picnic spot by the swings.
  */
 final class Village {
 	private Village() {
 	}
-
-	private static UUID board;
 
 	/** The swan boats: a real boat you steer, wearing a swan. */
 	private record Swan(Vec3 home, UUID[] ids) {
@@ -75,13 +72,8 @@ final class Village {
 		HubPark.set(level, 10, FLOOR + 1, 55, Blocks.BARREL.defaultBlockState());
 		HubPark.set(level, 6, FLOOR + 1, 53, Blocks.BARREL.defaultBlockState());
 		HubPark.label(level, 9.5, FLOOR + 8.6, 54.5, "BOATHOUSE", ChatFormatting.GOLD, 1.0F);
-		// The catch board.
-		HubPark.box(level, 3, FLOOR + 1, 43, 6, FLOOR + 3, 43, Blocks.DARK_OAK_PLANKS.defaultBlockState());
-		HubPark.box(level, 3, FLOOR + 4, 43, 6, FLOOR + 4, 43, Blocks.DARK_OAK_SLAB.defaultBlockState());
-		Display.TextDisplay t = Props.text(level, HubPark.shift(new Vec3(5.0, FLOOR + 1.3, 44.0)), Component.literal("BIG CATCH BOARD"), 0.6F, HubPark.TAG);
-		HubPark.keep(t);
-		board = t == null ? null : t.getUUID();
-		catchBoard(level);
+		// (The catch board's gone, with the fishing.)
+		HubPark.box(level, 3, FLOOR + 1, 43, 6, FLOOR + 4, 43, Blocks.AIR.defaultBlockState());
 		// A picnic by the swings.
 		for (int x = 1; x <= 3; x++) {
 			for (int z = 58; z <= 60; z++) {
@@ -94,18 +86,6 @@ final class Village {
 			SWANS.add(new Swan(HubPark.shift(home), new UUID[2]));
 		}
 		HubPark.label(level, -9.5, FLOOR + 2.6, 50.5, "SWAN BOATS\nright-click a swan, steer with W A S D", ChatFormatting.WHITE, 0.7F);
-		HubHosts.add(level, new Vec3(-3.5, FLOOR + 1, 44.5), 180, VillagerProfession.FISHERMAN, VillagerType.SWAMP,
-				new HubHosts.Host("fishing", "Captain Finn", "Fishing", 0x40C8FF, "minecraft:fishing_rod",
-						"Grab a rod and cast into the pond. When the bobber dips, reel in... then the fish FIGHTS: right-click when the needle's in "
-								+ "the green to land it! Lots of kinds to find (some only live in the river, or Toyland's pond). Every new kind goes in the aquarium.",
-						"Fishing: right-click Captain Finn for a rod!", p -> java.util.List.of("rod|Give me a rod!", "book|My fish book"), (p, key) -> {
-							if ("book".equals(key)) {
-								Fishing.book(p);
-								return;
-							}
-							HubGames.fishingRods(p);
-							HubGames.hold(p, "Pond Rod");
-						}));
 	}
 
 	/** Swans follow their boats; a missing boat comes back, and an empty one that's drifted off goes home. */
@@ -162,18 +142,4 @@ final class Village {
 		SWANS.clear();
 	}
 
-	/** Write the latest catches on the board. */
-	static void catchBoard(ServerLevel level) {
-		if (board == null || !(level.getEntity(board) instanceof Display.TextDisplay t)) {
-			return;
-		}
-		MutableComponent text = Component.literal("BIG CATCH BOARD").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
-		if (HubGames.CATCH_LOG.isEmpty()) {
-			text.append(Component.literal("\nNothing caught yet.\nTalk to Captain Finn!").withStyle(ChatFormatting.WHITE));
-		}
-		for (String c : HubGames.CATCH_LOG) {
-			text.append(Component.literal("\n" + c).withStyle(ChatFormatting.WHITE));
-		}
-		((TextDisplayAccessor) t).rubymod$setText(text);
-	}
 }

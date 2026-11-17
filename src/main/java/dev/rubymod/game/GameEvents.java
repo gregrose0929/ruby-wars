@@ -71,10 +71,6 @@ public final class GameEvents {
 			// like flowers): nobody dropped those, so they don't stay. Things players throw have an owner and aren't touched.
 			if (entity instanceof net.minecraft.world.entity.item.ItemEntity loose && loose.getOwner() == null) {
 				boolean hub = world.dimension() == Hub.HUB;
-				// A catch from the hub's pond (it's a toy).
-				if (hub && dev.rubymod.game.hub.HubGames.fished(loose, world)) {
-					return;
-				}
 				boolean gameMap = world.dimension() == Duels.ARENA || world.dimension() == dev.rubymod.game.party.RubyRush.RUSH;
 				boolean lantern = loose.getItem().getItem() instanceof net.minecraft.world.item.BlockItem b && b.getBlock() instanceof net.minecraft.world.level.block.LanternBlock;
 				if (hub || gameMap && lantern) {
@@ -531,10 +527,6 @@ public final class GameEvents {
 			BlockPos pos = hit.getBlockPos();
 			BlockState state = level.getBlockState(pos);
 			if (player instanceof ServerPlayer hubber && level.dimension() == Hub.HUB) {
-				InteractionResult home = dev.rubymod.game.hub.HomeStreet.useBlock(hubber, hand, hit);
-				if (home != null) {
-					return home;
-				}
 				InteractionResult park = dev.rubymod.game.hub.HubPark.useBlock(hubber, pos, state);
 				if (park != null) {
 					return park;

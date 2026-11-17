@@ -327,31 +327,8 @@ final class Pets {
 				spawn(level, owner);
 			} else if (pet != null && pet.distanceTo(owner) > 40) {
 				pet.teleportTo(owner.getX(), owner.getY(), owner.getZ());
-			} else if (pet != null && HomeStreet.petBed(owner) != null) {
-				// Home with a pet bed: the pet curls up on it.
-				Vec3 bed = HomeStreet.petBed(owner);
-				if (pet.position().distanceTo(bed) > 0.8) {
-					pet.teleportTo(bed.x, bed.y, bed.z);
-				}
-				if (pet instanceof Mob m) {
-					m.getNavigation().stop();
-				}
-				if (pet instanceof TamableAnimal t && !t.isOrderedToSit()) {
-					t.setOrderedToSit(true);
-					t.setInSittingPose(true);
-					ON_BED.add(pet.getUUID());
-				}
-				if (tick % 60 == 0) {
-					level.sendParticles(net.minecraft.core.particles.ParticleTypes.HEART, bed.x, bed.y + 0.8, bed.z, 1, 0.2, 0.1, 0.2, 0);
-				}
 			} else if (pet instanceof Mob m && !(pet instanceof TamableAnimal) && !m.isVehicle() && m.distanceTo(owner) > 5) {
 				m.getNavigation().moveTo(owner, 1.4);
-			}
-			// Off the bed again when you go out.
-			if (pet instanceof TamableAnimal t && ON_BED.contains(pet.getUUID()) && HomeStreet.petBed(owner) == null) {
-				t.setOrderedToSit(false);
-				t.setInSittingPose(false);
-				ON_BED.remove(pet.getUUID());
 			}
 			// Little ones stay little until they've grown (and forever, with the golden flower).
 			if (pet instanceof AgeableMob a && state != null && !grown(state) && tick % 600 == 0) {

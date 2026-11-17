@@ -34,12 +34,8 @@ public final class Renames {
 		if (before != null && !before.equals(now)) {
 			ServerLevel hub = server.getLevel(dev.rubymod.game.Hub.HUB);
 			if (hub != null) {
-				dev.rubymod.RubyMod.LOGGER.info("Renames: {} is now {}: moving their house, pet, post and books", before, now);
+				dev.rubymod.RubyMod.LOGGER.info("Renames: {} is now {}: moving their pet", before, now);
 				Pets.rename(hub, before, now);
-				HomeStreet.rename(hub, before, now);
-				Fishing.rename(hub, before, now);
-				Butterflies.rename(hub, before, now);
-				Museum.rename(hub, before, now);
 			}
 		}
 		if (!now.equals(before)) {

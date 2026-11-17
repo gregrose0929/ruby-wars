@@ -132,7 +132,7 @@ final class HubToys {
 
 	/** Right-click with one of these toys. True if it was one. */
 	static boolean use(ServerPlayer p, ItemStack held) {
-		if (Butterflies.swish(p, held) || Photos.snap(p, held)) {
+		if (Photos.snap(p, held)) {
 			return true;
 		}
 		ServerLevel level = (ServerLevel) p.level();
