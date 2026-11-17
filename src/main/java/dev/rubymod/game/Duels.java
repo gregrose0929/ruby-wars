@@ -805,7 +805,7 @@ public final class Duels {
 		Path file = snapshotFile(server, player.getUUID());
 		try {
 			Files.createDirectories(file.getParent());
-			NbtIo.writeCompressed(out.buildResult(), file);
+			SafeFiles.writeNbt(file, out.buildResult());
 		} catch (IOException e) {
 			RubyMod.LOGGER.error("Couldn't save {}'s pre-duel inventory", player.getName().getString(), e);
 		}

@@ -401,9 +401,7 @@ public final class RiftMeta {
 		}
 		try {
 			Files.createDirectories(dailyFile.getParent());
-			try (Writer w = Files.newBufferedWriter(dailyFile)) {
-				new Gson().toJson(dailyScores, w);
-			}
+			dev.rubymod.game.SafeFiles.write(dailyFile, new Gson().toJson(dailyScores));
 		} catch (IOException e) {
 			RubyMod.LOGGER.warn("Couldn't save the Daily Rift scores", e);
 		}

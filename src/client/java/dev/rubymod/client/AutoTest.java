@@ -4572,6 +4572,7 @@ public final class AutoTest {
 			case "ridetest" -> rideTestScript();
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
+			case "hostsweep" -> hostSweepScript();
 			case "homesgone" -> homesGoneScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
@@ -5569,6 +5570,47 @@ public final class AutoTest {
 		then(140, mc -> shot(mc, "hg-plunge"));
 	}
 
+
+	/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
+	private static void hostSweepScript() {
+		then(0, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode adventure @a");
+		});
+		then(300, mc -> log("hostsweep: start"));
+		for (int i = 0; i < 45; i++) {
+			int n = i;
+			then(10, mc -> onServer(mc, server -> {
+				String h = dev.rubymod.game.hub.HubHosts.testHost(n);
+				if (h == null) {
+					return;
+				}
+				String[] f = h.split("[|]");
+				var p = me(server);
+				p.teleportTo(server.getLevel(dev.rubymod.game.Hub.HUB), Double.parseDouble(f[2]) + 1.5, Double.parseDouble(f[3]), Double.parseDouble(f[4]),
+						java.util.Set.of(), 0, 0, true);
+			}));
+			then(40, mc -> onServer(mc, server -> {
+				String h = dev.rubymod.game.hub.HubHosts.testHost(n);
+				if (h == null) {
+					return;
+				}
+				var p = me(server);
+				log("hostsweep: {} {} -> {}", n, h.split("[|]")[1], dev.rubymod.game.hub.HubHosts.testPress(n, p));
+			}));
+			then(60, mc -> {
+				if (mc.gui.screen() != null) {
+					mc.gui.screen().onClose();
+				}
+				if (mc.level != null && !mc.level.dimension().identifier().getPath().equals("hub")) {
+					log("hostsweep: back from {}", mc.level.dimension().identifier());
+					command(mc, "execute as @p run hub");
+				}
+				onServer(mc, server -> me(server).stopRiding());
+			});
+		}
+		then(200, mc -> log("hostsweep: done"));
+	}
 
 	/** The game picker on a small screen: every party game there, scrolling if need be. */
 	private static void pickerCheckScript() {

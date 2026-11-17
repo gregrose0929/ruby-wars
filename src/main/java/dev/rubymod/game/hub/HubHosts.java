@@ -61,6 +61,43 @@ public final class HubHosts {
 		return HOSTS.size();
 	}
 
+	/** For autotests: host {@code i}'s name and where it stands (null past the end). */
+	public static String testHost(int i) {
+		if (i >= HOSTS.size()) {
+			return null;
+		}
+		Placed h = HOSTS.get(i);
+		return h.host().id() + "|" + h.host().name() + "|" + h.at().x + "|" + h.at().y + "|" + h.at().z;
+	}
+
+	/** For autotests: press host {@code i}'s every button in turn (as {@code p}, standing next to it). What happened. */
+	public static List<String> testPress(int i, ServerPlayer p) {
+		List<String> out = new ArrayList<>();
+		Placed h = HOSTS.get(i);
+		List<String> buttons;
+		try {
+			buttons = h.host().buttons().apply(p);
+		} catch (Exception e) {
+			dev.rubymod.RubyMod.LOGGER.error("[hostsweep] {}: buttons failed", h.host().name(), e);
+			out.add("BUTTONS FAILED: " + e);
+			return out;
+		}
+		for (String b : buttons) {
+			String key = b.split("[|]", 2)[0];
+			try {
+				h.host().pick().accept(p, key);
+				out.add(key + " ok");
+			} catch (Exception e) {
+				dev.rubymod.RubyMod.LOGGER.error("[hostsweep] {}: {} failed", h.host().name(), key, e);
+				out.add(key + " FAILED: " + e);
+			}
+			// Off whatever it was, and back next to the host, for the next button.
+			p.stopRiding();
+			p.teleportTo(h.at().x + 1.5, h.at().y, h.at().z);
+		}
+		return out;
+	}
+
 	/** One Play button. */
 	static Function<ServerPlayer, List<String>> play(String label) {
 		return p -> List.of("play|" + label);

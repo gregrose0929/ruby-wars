@@ -124,9 +124,7 @@ public class GameConfig {
 	public static void save() {
 		try {
 			Files.createDirectories(PATH.getParent());
-			try (Writer writer = Files.newBufferedWriter(PATH)) {
-				GSON.toJson(current, writer);
-			}
+			SafeFiles.write(PATH, GSON.toJson(current));
 		} catch (IOException e) {
 			RubyMod.LOGGER.error("Couldn't write {}", PATH, e);
 		}

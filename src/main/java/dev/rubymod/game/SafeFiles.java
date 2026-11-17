@@ -19,6 +19,13 @@ public final class SafeFiles {
 		write(file, text.getBytes(StandardCharsets.UTF_8));
 	}
 
+	/** A compressed NBT file (like a player's saved inventory), the same safe way. */
+	public static void writeNbt(Path file, net.minecraft.nbt.CompoundTag tag) throws IOException {
+		java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+		net.minecraft.nbt.NbtIo.writeCompressed(tag, out);
+		write(file, out.toByteArray());
+	}
+
 	public static void write(Path file, byte[] bytes) throws IOException {
 		Path dir = file.toAbsolutePath().getParent();
 		if (dir != null) {

@@ -46,7 +46,7 @@ public final class Arenas {
 		if (BUILT.add(id) && file != null) {
 			try {
 				Files.createDirectories(file.getParent());
-				Files.write(file, BUILT);
+				SafeFiles.write(file, String.join(System.lineSeparator(), BUILT) + System.lineSeparator());
 			} catch (IOException e) {
 				RubyMod.LOGGER.warn("Couldn't save the arena list", e);
 			}

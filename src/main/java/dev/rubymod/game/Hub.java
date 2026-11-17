@@ -429,7 +429,7 @@ public final class Hub {
 				// Never overwrite a save that wasn't given back (keep it beside the new one).
 				Files.move(file, file.resolveSibling(player.getUUID() + "-" + System.currentTimeMillis() + ".dat.bak"));
 			}
-			NbtIo.writeCompressed(out.buildResult(), file);
+			SafeFiles.writeNbt(file, out.buildResult());
 		} catch (IOException e) {
 			RubyMod.LOGGER.error("Couldn't save {}'s Ruby Wars things", player.getName().getString(), e);
 			return false;
