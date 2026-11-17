@@ -76,6 +76,8 @@ public class ModItems {
 	public static final Item RECON_DRONE = register("recon_drone", dev.rubymod.item.ReconDroneItem::new, new Item.Properties().stacksTo(4));
 	public static final Item SCOUT_DRONE = register("scout_drone", dev.rubymod.item.ScoutDroneItem::new, new Item.Properties().stacksTo(1));
 	public static final Item PAINT_KIT = register("paint_kit", dev.rubymod.item.PaintKitItem::new, new Item.Properties().stacksTo(1));
+	public static final Item GRAPPLING_HOOK = register("grappling_hook", dev.rubymod.item.GrapplingHookItem::new,
+			new Item.Properties().durability(120));
 	public static final Item FIELD_RADIO = register("field_radio", dev.rubymod.item.FieldRadioItem::new, new Item.Properties().stacksTo(1));
 	/** Worn in the chest slot: hold Space in the air to fly. */
 	public static final Item JETPACK = register("jetpack", dev.rubymod.item.JetpackItem::new, new Item.Properties().stacksTo(1)

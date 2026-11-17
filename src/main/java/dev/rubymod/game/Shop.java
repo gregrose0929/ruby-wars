@@ -172,6 +172,7 @@ public final class Shop {
 			item(1, ModItems.HEAVY_RUCKSACK, 1, 20);
 			item(2, ModItems.FIELD_RADIO, 1, 4);
 			item(3, ModItems.JETPACK, 1, 30);
+			item(4, ModItems.GRAPPLING_HOOK, 1, 15);
 			// Row 2: support
 			item(9, ModItems.GUARD_CONTRACT, 1, 25);
 			item(10, ModItems.AT_GUARD_CONTRACT, 1, 40);

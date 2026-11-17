@@ -200,6 +200,7 @@ public final class GameEvents {
 				dev.rubymod.RubyMod.LOGGER.error("Hub or cosmetics hit an error", e);
 			}
 			Jetpacks.tick(server);
+			dev.rubymod.item.GrapplingHookItem.tick(server);
 			VersionCheck.tick(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);

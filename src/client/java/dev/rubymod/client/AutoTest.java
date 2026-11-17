@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "grapplecheck" -> grappleCheckScript();
 			case "borercheck" -> borerCheckScript();
 			case "coasterspace" -> coasterSpaceScript();
 			case "dronecheck" -> droneCheckScript();
@@ -5784,6 +5785,41 @@ public final class AutoTest {
 			mc.player.setXRot(10);
 		});
 		then(20, mc -> shot(mc, "borer-3-out"));
+	}
+
+		/** The season Grappling Hook: hook the top of a tall pillar and get pulled up, without hurting yourself. */
+	private static void grappleCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "effect clear @a");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+		});
+		then(200, mc -> {
+			command(mc, "execute as @p at @s run fill ~-3 ~ ~14 ~3 ~20 ~20 minecraft:stone");
+			command(mc, "give @p rubymod:grappling_hook");
+		});
+		then(20, mc -> {
+			int hookSlot = mc.player.getInventory().findSlotMatchingItem(new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.GRAPPLING_HOOK));
+			log("grapple: hook in slot {}", hookSlot);
+			if (hookSlot >= 0 && hookSlot < 9) {
+				mc.player.getInventory().setSelectedSlot(hookSlot);
+			}
+			var top = new net.minecraft.world.phys.Vec3(mc.player.getX(), mc.player.getY() + 20.5, mc.player.getZ() + 14);
+			var d = top.subtract(mc.player.getEyePosition());
+			float pitch = (float) -Math.toDegrees(Math.atan2(d.y, Math.hypot(d.x, d.z)));
+			mc.player.setYRot(0);
+			mc.player.setXRot(pitch);
+			log("grapple: start at {} health {}, aiming {} up", mc.player.blockPosition(), mc.player.getHealth(), -pitch);
+		});
+		then(10, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		int[] best = {-999};
+		for (int i = 0; i < 30; i++) {
+			then(2, mc -> best[0] = Math.max(best[0], mc.player.getBlockY()));
+		}
+		then(2, mc -> shot(mc, "grapple-1-flying"));
+		then(100, mc -> log("grapple: highest {}, landed at {}, health {}, hook damage {}", best[0], mc.player.blockPosition(), mc.player.getHealth(),
+				mc.player.getMainHandItem().getDamageValue()));
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
