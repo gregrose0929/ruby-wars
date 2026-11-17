@@ -214,11 +214,6 @@ public final class GameEvents {
 				TrainingGround.tick();
 				Waypoints.sync(server);
 				Raids.tick(server);
-				if (server.getTickCount() % 100 == 0) {
-					for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-						Bounties.sync(player);
-					}
-				}
 				Goals.tickSecond(server);
 				Hub.tickSecond(server);
 				if (!GameConfig.get().hunger) {
@@ -471,11 +466,6 @@ public final class GameEvents {
 			}
 			confirmHit(entity, source, true);
 		});
-		ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register((level, killer, victim, source) -> {
-			if (killer instanceof ServerPlayer player) {
-				Bounties.onKill(player, victim);
-			}
-		});
 		ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
 			if (!Duels.onRespawn(newPlayer)) {
 				BattleDirector.onRespawn(newPlayer);
@@ -505,7 +495,6 @@ public final class GameEvents {
 		});
 		PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, blockEntity) -> {
 			if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-				Bounties.onBlockBroken(serverPlayer, state);
 				if (state.is(dev.rubymod.registry.ModBlocks.RUBY_ORE) || state.is(dev.rubymod.registry.ModBlocks.DEEPSLATE_RUBY_ORE)) {
 					Goals.add(serverPlayer.level().getServer(), serverPlayer.getUUID(), "ruby10", 1);
 					Goals.add(serverPlayer.level().getServer(), serverPlayer.getUUID(), "ruby50", 1);

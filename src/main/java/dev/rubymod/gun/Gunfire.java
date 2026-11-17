@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import dev.rubymod.game.Bounties;
 import dev.rubymod.game.Rules;
 import dev.rubymod.game.SpawnShield;
 import dev.rubymod.net.Net;
@@ -299,7 +298,6 @@ public final class Gunfire {
 			dev.rubymod.game.rift.RiftWeapons.traitHit(level, shooter, living, damage, CURRENT, headshot);
 			dev.rubymod.game.rift.RiftWeapons.legendHit(level, shooter, living, damage, headshot);
 		}
-		Bounties.onGunHit(shooter, target, headshot);
 		level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, hitPos.x, hitPos.y, hitPos.z, 1, 0.1, 0.1, 0.1, 0.0);
 		Net.send(shooter, new Payloads.HitMarker(headshot, killed));
 	}

@@ -208,7 +208,7 @@ public class GameHud implements HudElement {
 	}
 
 	/**
-	 * The guide's next step (see Guide) and today's bounties, in one panel under the Heart and
+	 * The guide's next step (see Guide), in a panel under the Heart and
 	 * bank panels, while building in the Ruby Wars world.
 	 */
 	private void drawGuide(GuiGraphicsExtractor g, Font font) {
@@ -220,8 +220,7 @@ public class GameHud implements HudElement {
 			return;
 		}
 		int step = ClientState.research == null ? -1 : Guide.current();
-		java.util.List<String> bounties = phase == Phase.BUILD ? ClientState.bounties : java.util.List.of();
-		if (step < 0 && bounties.isEmpty()) {
+		if (step < 0) {
 			return;
 		}
 		int y = ClientState.hud != null && phase != Phase.LOBBY ? 24 : 4;
@@ -234,7 +233,7 @@ public class GameHud implements HudElement {
 		var hint = s == null ? java.util.List.<net.minecraft.util.FormattedCharSequence>of() : font.split(Component.literal(s.hint()), 180);
 		int lines = Math.min(3, hint.size());
 		boolean bar = progress != null && progress[1] > 1;
-		int height = (s == null ? 0 : 26 + lines * 9 + (bar ? 5 : 0)) + (bounties.isEmpty() ? 0 : 13 + bounties.size() * 13) + (s == null ? 2 : 11);
+		int height = (s == null ? 0 : 26 + lines * 9 + (bar ? 5 : 0)) + (s == null ? 2 : 11);
 		panel(g, 4, y, 190, y + height + 2);
 		g.fill(6, y + 2, 8, y + height, GOLD);
 		int ly = y + 4;
@@ -253,31 +252,6 @@ public class GameHud implements HudElement {
 			if (bar) {
 				dev.rubymod.client.ui.Ui.bar(g, 12, ly + 1, 174, 4, Math.min(1.0F, progress[0] / (float) progress[1]), GOLD);
 				ly += 6;
-			}
-		}
-		// Today's bounties: small extra jobs for rubies.
-		if (!bounties.isEmpty()) {
-			if (s != null) {
-				g.fill(10, ly + 2, 186, ly + 3, 0x40FFFFFF);
-				ly += 5;
-			}
-			g.text(font, "Today's bounties", 12, ly, GOLD, false);
-			ly += 11;
-			for (String line : bounties) {
-				String[] p = line.split("[|]");
-				if (p.length < 5) {
-					continue;
-				}
-				boolean done = Boolean.parseBoolean(p[4]);
-				int got = Integer.parseInt(p[1]);
-				int target = Math.max(1, Integer.parseInt(p[2]));
-				String what = p[0].replace(" on monsters", "").replace(" of any kind", "").replace(" or deepslate", "");
-				String reward = "+" + p[3];
-				g.text(font, font.plainSubstrByWidth(what + "  " + got + "/" + target, 172 - font.width(reward)), 10, ly, done ? 0xFF5BE37D : WHITE, false);
-				g.text(font, reward, 186 - font.width(reward), ly, done ? 0xFF5BE37D : 0xFFFF5A82, false);
-				g.fill(10, ly + 9, 186, ly + 10, 0xFF2A2F35);
-				g.fill(10, ly + 9, 10 + Math.round(176 * Math.min(1.0F, got / (float) target)), ly + 10, done ? 0xFF5BE37D : GOLD);
-				ly += 13;
 			}
 		}
 		if (s != null) {

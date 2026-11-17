@@ -38,7 +38,7 @@ import net.minecraft.world.level.storage.LevelResource;
  * What carries over between Rift runs. Rift Shards (earned every run: deeper, elites,
  * bosses, more Heat = more) unlock new starting loadouts and new relics at the Altar of
  * Echoes in the Threshold. Heat 1-5 makes runs harder for more shards (win at a Heat to
- * unlock the next). The Daily Rift: the same run for everyone today, with a leaderboard.
+ * unlock the next).
  */
 public final class RiftMeta {
 	public enum Loadout {
@@ -79,11 +79,8 @@ public final class RiftMeta {
 	public static final String[] HEAT_ABOUT = {"The Rift as it is.", "Monsters have 30% more health.", "Every fight ends with an elite.",
 			"No healing after rooms (the Arsenal revives at half health).", "Monsters hit 40% harder and move faster.", "Bosses have 50% more health."};
 
-	/** The team's Heat for the next run, and whether it's the Daily Rift. */
+	/** The team's Heat for the next run. */
 	static int heat;
-	static boolean daily;
-	private static Map<String, Map<String, Integer>> dailyScores;
-	private static Path dailyFile;
 
 	private RiftMeta() {
 	}
@@ -128,7 +125,6 @@ public final class RiftMeta {
 		List<String> lines = new ArrayList<>();
 		lines.add("shards|" + r.riftShards);
 		lines.add("heat|" + heat + "|" + maxHeat(p.level().getServer()));
-		lines.add("daily|" + (daily ? "on" : "off") + "|" + String.join(";", dailyTop(p.level().getServer(), 3)));
 		for (Loadout l : Loadout.values()) {
 			String state = !owns(p, l) ? "locked" : Loadout.byId(r.riftLoadout) == l ? "selected" : "owned";
 			lines.add("loadout|" + l.name().toLowerCase() + "|" + l.title + "|" + l.icon + "|" + l.about + "|" + l.cost + "|" + state);
@@ -207,11 +203,6 @@ public final class RiftMeta {
 			}
 			case "mutator" -> RiftExtras.toggleMutator(p, id);
 			case "companion" -> RiftExtras.pickCompanion(p, id);
-			case "daily" -> {
-				daily = !daily;
-				Rift.tell(server, Component.literal(p.getName().getString() + (daily ? " turned the Daily Rift ON: today's run, the same for everyone."
-						: " turned the Daily Rift off.")).withStyle(ChatFormatting.LIGHT_PURPLE));
-			}
 			default -> {
 			}
 		}
@@ -356,60 +347,5 @@ public final class RiftMeta {
 					.withStyle(ChatFormatting.LIGHT_PURPLE));
 		}
 		Stats.markDirty();
-	}
-
-	// ----- The Daily Rift -----
-
-	static long dailySeed() {
-		return java.time.LocalDate.now().toEpochDay() * 0x9E3779B97F4A7C15L + 0x52494654L;
-	}
-
-	private static String today() {
-		return java.time.LocalDate.now().toString();
-	}
-
-	private static void loadDaily(MinecraftServer server) {
-		if (dailyScores != null) {
-			return;
-		}
-		dailyScores = new HashMap<>();
-		dailyFile = server.getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve("rift_daily.json");
-		try {
-			if (Files.exists(dailyFile)) {
-				try (Reader reader = Files.newBufferedReader(dailyFile)) {
-					Map<String, Map<String, Integer>> loaded = new Gson().fromJson(reader, new TypeToken<Map<String, Map<String, Integer>>>() { }.getType());
-					if (loaded != null) {
-						dailyScores = loaded;
-					}
-				}
-			}
-		} catch (IOException | RuntimeException e) {
-			RubyMod.LOGGER.warn("Couldn't read the Daily Rift scores", e);
-		}
-	}
-
-	static void recordDaily(MinecraftServer server, int score) {
-		loadDaily(server);
-		Map<String, Integer> day = dailyScores.computeIfAbsent(today(), k -> new HashMap<>());
-		for (ServerPlayer p : Rift.players(server)) {
-			String name = p.getName().getString();
-			if (score > day.getOrDefault(name, 0)) {
-				day.put(name, score);
-			}
-			p.sendSystemMessage(Component.literal("Daily Rift score: " + score + ". Today's best: " + String.join(", ", dailyTop(server, 3)))
-					.withStyle(ChatFormatting.LIGHT_PURPLE));
-		}
-		try {
-			Files.createDirectories(dailyFile.getParent());
-			dev.rubymod.game.SafeFiles.write(dailyFile, new Gson().toJson(dailyScores));
-		} catch (IOException e) {
-			RubyMod.LOGGER.warn("Couldn't save the Daily Rift scores", e);
-		}
-	}
-
-	public static List<String> dailyTop(MinecraftServer server, int n) {
-		loadDaily(server);
-		Map<String, Integer> day = dailyScores.getOrDefault(today(), Map.of());
-		return day.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue()).limit(n).map(e -> e.getKey() + " " + e.getValue()).toList();
 	}
 }

@@ -383,7 +383,6 @@ public final class Hub {
 			BattleDirector.giveHeartIfNeeded(player);
 		}
 		Research.sync(player);
-		Bounties.sync(player);
 		Alerts.title(player, "RUBY WARS", Rules.phase().title(), ChatFormatting.RED);
 	}
 
@@ -1251,10 +1250,6 @@ public final class Hub {
 		for (Stats.Record r : convoy) {
 			text.append(Component.literal("  " + (r.convoyWins > 0 ? r.convoyWins + " delivered" : "stage " + r.convoyBest) + "  " + r.name + "\n")
 					.withStyle(ChatFormatting.WHITE));
-		}
-		var daily = dev.rubymod.game.rift.RiftMeta.dailyTop(server, 1);
-		if (!daily.isEmpty()) {
-			text.append(Component.literal("Today's Daily Rift\n  " + daily.get(0) + "\n").withStyle(ChatFormatting.LIGHT_PURPLE));
 		}
 		var kills = Stats.top(java.util.Comparator.comparingInt((Stats.Record r) -> r.partyKills).reversed(), 1, r -> r.partyKills > 0);
 		text.append(Component.literal("Most party kills\n").withStyle(ChatFormatting.RED));

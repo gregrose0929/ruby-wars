@@ -72,7 +72,7 @@ import net.minecraft.world.phys.Vec3;
  *
  * Your inventory and position are saved to world/rubywars/duels/<uuid>.dat at the
  * start, so a crash or a disconnect mid-duel still gives everything back the next
- * time you join. Duel deaths don't count for season stats, bounties or graves.
+ * time you join. Duel deaths don't count for season stats or graves.
  */
 public final class Duels {
 	public static final ResourceKey<Level> ARENA = ResourceKey.create(Registries.DIMENSION, RubyMod.id("arena"));

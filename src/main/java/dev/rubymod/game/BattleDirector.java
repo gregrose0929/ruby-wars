@@ -217,9 +217,6 @@ public final class BattleDirector {
 		if (data.phase != Phase.LOBBY) {
 			giveHeartIfNeeded(player);
 		}
-		if (data.phase == Phase.BUILD) {
-			Bounties.today(player);
-		}
 		Research.sync(player);
 		player.sendSystemMessage(Component.literal("Ruby Wars: press Y for the Field Manual.").withStyle(ChatFormatting.GRAY));
 		if (Rules.isEliminated(player.getUUID()) && data.phase.isBattle()) {

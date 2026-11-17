@@ -45,7 +45,6 @@ public final class Goals {
 			new Goal("armory", "Buy from the Armory", 1, 1),
 			new Goal("defense", "Place a base defense", 1, 1),
 			new Goal("squad", "Join a squad", 1, 1),
-			new Goal("bounties", "Finish 3 bounties", 3, 1),
 			new Goal("raid", "Repel a raid", 1, 2),
 			new Goal("duel", "Win a duel (bot counts)", 1, 1),
 			new Goal("horde5", "Reach wave 5 in Co-op Horde", 1, 1),
@@ -162,7 +161,6 @@ public final class Goals {
 				double moved = Math.hypot(now.x - last.x, now.z - last.z);
 				if (moved < 200) { // not a teleport
 					add(server, id, flying ? "fly" : "drive", (int) Math.round(moved));
-					Bounties.onTravel(p, (int) Math.round(moved));
 				}
 			}
 		}

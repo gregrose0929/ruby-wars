@@ -3582,7 +3582,7 @@ public final class AutoTest {
 				log("starter base: {}", found);
 			}));
 			then(40, mc -> {
-				log("guide step {} | bounties {}", dev.rubymod.client.Guide.current(), ClientState.bounties.size());
+				log("guide step {}", dev.rubymod.client.Guide.current());
 				shot(mc, "starter-base");
 			});
 			for (int i = 0; i < 4; i++) {
@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
 			case "parknew2" -> parkNew2Script();
 			case "parkview2" -> parkViewScript(java.util.Set.of("flume", "swings", "mansion"));
@@ -5570,6 +5571,24 @@ public final class AutoTest {
 		then(140, mc -> shot(mc, "hg-plunge"));
 	}
 
+
+	/** The Altar of Echoes, every page. */
+	private static void altarCheckScript() {
+		then(300, mc -> command(mc, "execute as @p run play rift"));
+		then(260, mc -> onServer(mc, server -> dev.rubymod.game.rift.RiftMeta.sendTo(me(server))));
+		then(10, mc -> dev.rubymod.client.rift.RiftClient.reopen());
+		for (int i = 0; i < 4; i++) {
+			int n = i;
+			then(15, mc -> {
+				if (mc.gui.screen() instanceof dev.rubymod.client.rift.ThresholdScreen ts) {
+					ts.page(n);
+				} else {
+					log("altar: no screen ({})", mc.gui.screen());
+				}
+			});
+			then(10, mc -> shot(mc, "altar-" + n));
+		}
+	}
 
 	/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
 	private static void hostSweepScript() {

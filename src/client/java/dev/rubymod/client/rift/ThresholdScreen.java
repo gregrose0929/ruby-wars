@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * The Altar of Echoes (in the Threshold, between runs): spend Rift Shards on new
- * loadouts and new relics, pick your loadout, set the Heat, or turn on the Daily Rift.
+ * loadouts and new relics, pick your loadout, or set the Heat.
  */
 public class ThresholdScreen extends Screen {
 	private static final String[] HEAT = {"No Heat", "Hardened", "Elite Swarm", "No Respite", "Bloodthirst", "Apex"};
@@ -29,8 +29,6 @@ public class ThresholdScreen extends Screen {
 	private int shards;
 	private int heat;
 	private int maxHeat;
-	private boolean daily;
-	private List<String> dailyTop = List.of();
 	private List<String> deepest = List.of();
 	private final List<String[]> loadouts = new ArrayList<>();
 	private final List<String[]> abilities = new ArrayList<>();
@@ -62,10 +60,6 @@ public class ThresholdScreen extends Screen {
 					heat = Integer.parseInt(f[1]);
 					maxHeat = Integer.parseInt(f[2]);
 				}
-				case "daily" -> {
-					daily = f[1].equals("on");
-					dailyTop = f.length > 2 && !f[2].isEmpty() ? List.of(f[2].split(";")) : List.of();
-				}
 				case "loadout" -> loadouts.add(f);
 				case "ability" -> abilities.add(f);
 				case "relic" -> relics.add(f);
@@ -83,12 +77,17 @@ public class ThresholdScreen extends Screen {
 		page = page == 3 ? 0 : 3;
 	}
 
+	/** For autotests: show this page. */
+	public void page(int n) {
+		page = n;
+	}
+
 	@Override
 	public boolean isPauseScreen() {
 		return false;
 	}
 
-	private static final String[] TABS = {"Loadout", "Relics", "Heat & Daily", "Extras"};
+	private static final String[] TABS = {"Loadout", "Relics", "Heat", "Extras"};
 
 	private void button(GuiGraphicsExtractor g, int x, int y, int w, int h, String label, int color, boolean on, int mouseX, int mouseY, String kind, String id) {
 		Ui.button(g, label, x, y, w, h, mouseX, mouseY, on ? Ui.lighten(color, 0.1F) : Ui.darken(color, 0.6F), true);
@@ -221,7 +220,7 @@ public class ThresholdScreen extends Screen {
 				}
 			}
 			case 2 -> {
-				// Heat on the left, the Daily Rift and the Endless Descent on the right.
+				// Heat on the left, the Endless Descent on the right.
 				int hw = w0 / 2 - 5;
 				Ui.section(g, "Heat", x0, top, hw);
 				int y = top + 13;
@@ -242,21 +241,7 @@ public class ThresholdScreen extends Screen {
 				Ui.wrap(g, HEAT_ABOUT[heat] + (heat > 0 ? " Shards x" + String.format("%.2f", 1 + 0.25 * heat) + "." : ""), x0 + 6, y + 6, hw - 12, Ui.DIM,
 						bottom - 2);
 				int dx = x0 + hw + 10;
-				Ui.section(g, "Daily Rift", dx, top, hw);
-				y = top + 13;
-				button(g, dx, y, hw, 16, daily ? "On: today's run for all" : "Off: click to turn on", Ui.RIFT, daily, mouseX, mouseY, "daily", "toggle");
-				y += 22;
-				Ui.text(g, "Today's best", dx, y, Ui.DIM);
-				y += 11;
-				if (dailyTop.isEmpty()) {
-					Ui.text(g, "Nobody yet", dx + 6, y, Ui.MUTED);
-					y += 10;
-				}
-				for (String s : dailyTop) {
-					Ui.text(g, s, dx + 6, y, hw - 6, Ui.TEXT);
-					y += 10;
-				}
-				y += 8;
+				y = top;
 				Ui.section(g, "Endless Descent", dx, y, hw);
 				y += 13;
 				Ui.text(g, "Win a run, then keep going down!", dx, y, hw, Ui.DIM);

@@ -11,7 +11,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import dev.rubymod.game.Backups;
 import dev.rubymod.game.BattleDirector;
-import dev.rubymod.game.Bounties;
 import dev.rubymod.game.GameConfig;
 import dev.rubymod.game.Phase;
 import dev.rubymod.game.SeasonData;
@@ -50,7 +49,6 @@ public final class RubyWarsCommand {
 				.then(Commands.literal("heart").executes(RubyWarsCommand::heart))
 				.then(Commands.literal("champions").executes(RubyWarsCommand::champions))
 				.then(Commands.literal("leaderboard").executes(RubyWarsCommand::leaderboard))
-				.then(Commands.literal("bounties").executes(RubyWarsCommand::bounties))
 				.then(Commands.literal("raid").executes(c -> {
 					String error = dev.rubymod.game.Raids.request(c.getSource().getPlayerOrException());
 					if (error != null) {
@@ -193,19 +191,6 @@ public final class RubyWarsCommand {
 		return 1;
 	}
 
-	private static int bounties(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {
-		ServerPlayer player = c.getSource().getPlayerOrException();
-		if (SeasonData.get().phase != Phase.BUILD) {
-			c.getSource().sendSystemMessage(Component.literal("Bounties run during the build phase."));
-			return 0;
-		}
-		c.getSource().sendSystemMessage(Component.literal("Today's bounties (day " + SeasonTicker.currentDay() + "):").withStyle(ChatFormatting.AQUA));
-		for (Bounties.Bounty bounty : Bounties.today(player)) {
-			c.getSource().sendSystemMessage(Component.literal(" - " + bounty.describe())
-					.withStyle(bounty.done ? ChatFormatting.GREEN : ChatFormatting.WHITE));
-		}
-		return 1;
-	}
 
 	/** Admin testing kit: every gun loaded, ammo, raid gear, attachments, vehicles, and a full set of ruby armor. */
 	private static int kit(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {

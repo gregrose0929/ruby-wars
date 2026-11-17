@@ -157,7 +157,7 @@ public final class Rift {
 	static int act = 1;
 	/** The act's boss is down: the portal leads to the next act. */
 	private static boolean nextAct;
-	/** This run so far (for Rift Shards and the Daily Rift score). */
+	/** This run so far (for Rift Shards). */
 	private static int roomsCleared;
 	private static int elitesKilled;
 	private static int bossesKilled;
@@ -576,9 +576,6 @@ public final class Rift {
 		roomsCleared = 0;
 		elitesKilled = 0;
 		bossesKilled = 0;
-		if (RiftMeta.daily) {
-			seed = RiftMeta.dailySeed();
-		}
 		map = RiftMap.generate(RandomSource.create(seed), act);
 		RiftRooms.guardians = 0;
 		KEYS.clear();
@@ -596,7 +593,7 @@ public final class Rift {
 			ammo(p);
 			RelicEffects.apply(p, RUNNERS.get(p.getUUID()));
 			RiftCodex.startPerks(p, RUNNERS.get(p.getUUID()));
-			Alerts.title(p, "THE RIFT OPENS", (RiftMeta.daily ? "Today's Daily Rift" : "Choose your path")
+			Alerts.title(p, "THE RIFT OPENS", "Choose your path"
 					+ (RiftMeta.heat > 0 ? "  \u2022  Heat " + RiftMeta.heat : ""), ChatFormatting.LIGHT_PURPLE);
 			p.level().playSound(null, p.blockPosition(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 0.7F, 1.2F);
 		}
@@ -719,7 +716,7 @@ public final class Rift {
 					RiftMeta.kit(p, null);
 					ammo(p);
 					RiftMeta.send(p);
-					p.sendSystemMessage(Component.literal("The Threshold: press J for the Altar of Echoes (loadouts, unlocks, Heat, the Daily Rift). "
+					p.sendSystemMessage(Component.literal("The Threshold: press J for the Altar of Echoes (loadouts, unlocks, Heat). "
 							+ "Step into the portal when you're ready.").withStyle(ChatFormatting.LIGHT_PURPLE));
 				}
 			}
@@ -1862,7 +1859,7 @@ public final class Rift {
 		endRun(server, false);
 	}
 
-	/** Shards for everyone, and the Daily Rift score. */
+	/** Shards for everyone. */
 	/** The Endless Descent: how deep (0: not descending). */
 	static int endless;
 
@@ -1944,10 +1941,6 @@ public final class Rift {
 		sendSummary(server, won);
 		RiftPing.clear();
 		RiftMeta.award(server, roomsCleared, elitesKilled, bossesKilled, won);
-		if (RiftMeta.daily) {
-			int kills = RUNNERS.values().stream().mapToInt(r -> r.kills).sum();
-			RiftMeta.recordDaily(server, depth() * 100 + kills * 2 + gold + (won ? 1000 : 0));
-		}
 	}
 
 	private static void victory(MinecraftServer server) {
@@ -2044,8 +2037,7 @@ public final class Rift {
 	}
 
 	private static void syncHud(MinecraftServer server) {
-		String where = state == State.STAGING ? "THE THRESHOLD" + (RiftMeta.heat > 0 ? "  \u2022  HEAT " + RiftMeta.heat : "")
-				+ (RiftMeta.daily ? "  \u2022  DAILY" : "") : node == null ? "RUBY RIFT"
+		String where = state == State.STAGING ? "THE THRESHOLD" + (RiftMeta.heat > 0 ? "  \u2022  HEAT " + RiftMeta.heat : "") : node == null ? "RUBY RIFT"
 				: endless > 0 ? "ENDLESS DESCENT  \u2022  DEPTH " + endless + "  \u2022  FLOOR " + (node.floor + 1) + "/" + (RiftMap.FLOORS + 1)
 				: act >= 4 && map != null && map.boss == RiftBosses.Boss.SOVEREIGN ? "THE HEART OF THE RIFT" + (KEYS.isEmpty() ? "" : "  \u2022  KEYS " + KEYS.size() + "/3")
 						: "ACT " + act + "  \u2022  FLOOR " + (node.floor + 1) + "/" + (RiftMap.FLOORS + 1) + "  \u2022  " + node.theme.title.toUpperCase()
