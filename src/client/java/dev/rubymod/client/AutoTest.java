@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "coasterspace" -> coasterSpaceScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -5669,6 +5670,54 @@ public final class AutoTest {
 					player.getBoundingBox().inflate(100)).size());
 		}));
 		then(5, mc -> log("drone: after the crash: {}", droneLine(mc)));
+	}
+
+		private static void pressTool(String name, int times) {
+		for (int i = 0; i < times; i++) {
+			then(6, mc -> {
+				int slot = slotOf(mc, name);
+				if (slot >= 0 && slot < 9) {
+					mc.player.getInventory().setSelectedSlot(slot);
+				}
+			});
+			then(3, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		}
+	}
+
+	private static void coasterInfo(String what) {
+		then(10, mc -> onServer(mc, server -> log("coasterspace: {}: {}", what,
+				((dev.rubymod.game.party.CoasterWorkshop) pg("coasters")).testInfo(me(server)))));
+	}
+
+	/** Coaster Workshop's bigger plots: how far a coaster can go now. */
+	private static void coasterSpaceScript() {
+		then(40, mc -> command(mc, "execute as @p run play coasters"));
+		then(900, mc -> log("coasterspace: {} at {}", pg("coasters").debugState(), mc.player.position()));
+		// Start again.
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		pressTool("Undo (crouch: start again)", 1);
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		coasterInfo("fresh");
+		pressTool("Straight", 30);
+		coasterInfo("after 30 straights");
+		then(10, mc -> shot(mc, "coaster-space-long"));
+		// Start again: a turn, then straight out to the side.
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		pressTool("Undo (crouch: start again)", 1);
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		pressTool("Straight", 4);
+		pressTool("Turn Left", 1);
+		pressTool("Straight", 20);
+		coasterInfo("4 straights, a left turn, 20 straights");
+		then(10, mc -> shot(mc, "coaster-space-side"));
+		// Start again: climbing.
+		then(5, mc -> mc.options.keyShift.setDown(true));
+		pressTool("Undo (crouch: start again)", 1);
+		then(10, mc -> mc.options.keyShift.setDown(false));
+		pressTool("Hill Up", 30);
+		coasterInfo("30 hills up");
+		then(5, mc -> command(mc, "execute as @p at @s run tp @s ~-20 ~45 ~ -90 30"));
+		then(40, mc -> shot(mc, "coaster-space-above"));
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */

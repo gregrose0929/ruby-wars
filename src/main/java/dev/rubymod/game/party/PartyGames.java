@@ -182,7 +182,7 @@ public final class PartyGames {
 	public static void prebuild(MinecraftServer server) {
 		for (PartyGame game : ALL) {
 			game.attach(server);
-			if (dev.rubymod.game.Arenas.built(game.id)) {
+			if (dev.rubymod.game.Arenas.built(game.arenaKey())) {
 				continue; // built on an earlier run
 			}
 			try {

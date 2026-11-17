@@ -125,6 +125,11 @@ public abstract class PartyGame {
 		return 80;
 	}
 
+	/** The name its built arena is remembered by (a new name: it gets built again, once, at the next start). */
+	protected String arenaKey() {
+		return id;
+	}
+
 	protected String tag() {
 		return "rubymod_party_" + id;
 	}
@@ -565,7 +570,7 @@ public abstract class PartyGame {
 			work.poll().run();
 		}
 		if (work.isEmpty()) {
-			dev.rubymod.game.Arenas.markBuilt(id);
+			dev.rubymod.game.Arenas.markBuilt(arenaKey());
 		}
 	}
 

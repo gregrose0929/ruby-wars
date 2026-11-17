@@ -53,8 +53,16 @@ import net.minecraft.world.phys.Vec3;
  */
 public class CoasterWorkshop extends PartyGame {
 	private static final int PLOTS = 6;
-	private static final int SPACING = 46;
-	private static final int MAX_PIECES = 60;
+	/** Each plot: from {@link #BEHIND} behind the station to {@link #AHEAD} in front, {@link #SIDE} either side, {@link #HIGH} up. */
+	private static final int BEHIND = 35;
+	private static final int AHEAD = 100;
+	private static final int SIDE = 50;
+	private static final int HIGH = 70;
+	private static final int SPACING = SIDE * 2 + 10;
+	private static final int MAX_PIECES = 100;
+	/** The whole ground (half its size each way), plots and all. */
+	private static final int HALF_X = 72;
+	private static final int HALF_Z = PLOTS / 2 * SPACING + SIDE + 10;
 	private static final double STEP = 0.25;
 
 	private enum Piece {
@@ -137,7 +145,13 @@ public class CoasterWorkshop extends PartyGame {
 
 	@Override
 	protected int reach() {
-		return 200;
+		return HALF_Z + 10;
+	}
+
+	@Override
+	protected String arenaKey() {
+		// v2: the bigger plots.
+		return id + "-v2";
 	}
 
 	@Override
@@ -148,14 +162,34 @@ public class CoasterWorkshop extends PartyGame {
 
 	private BlockPos station(int plot) {
 		BlockPos c = center();
-		return new BlockPos(c.getX() - 30, c.getY(), c.getZ() + (plot - PLOTS / 2) * SPACING);
+		return new BlockPos(c.getX() - (AHEAD - BEHIND) / 2, c.getY(), c.getZ() + (plot - PLOTS / 2) * SPACING);
 	}
 
 	// ----- Building the ground -----
 
 	@Override
 	protected void build(ServerLevel level) {
-		flatArena(level, 70, PLOTS / 2 * SPACING + 24, 40, Blocks.GRASS_BLOCK.defaultBlockState(), true);
+		flatArena(level, HALF_X, HALF_Z, 8, Blocks.GRASS_BLOCK.defaultBlockState(), true);
+		// The old (smaller) ground's invisible walls stood 40 high, now inside the new ground: gone.
+		BlockPos mid = center();
+		BlockState air = Blocks.AIR.defaultBlockState();
+		for (int x = -72; x <= 72; x++) {
+			for (int z = -164; z <= 164; z++) {
+				if (Math.abs(x) <= 70 && Math.abs(z) <= 162) {
+					continue;
+				}
+				int fx = x;
+				int fz = z;
+				later(() -> {
+					for (int y = 9; y <= 42; y++) {
+						BlockPos p = new BlockPos(mid.getX() + fx, GROUND + y, mid.getZ() + fz);
+						if (level.getBlockState(p).is(Blocks.BARRIER)) {
+							setNow(level, p, air);
+						}
+					}
+				});
+			}
+		}
 		later(() -> {
 			for (int i = 0; i < PLOTS; i++) {
 				stationBlocks(level, i);
@@ -171,9 +205,9 @@ public class CoasterWorkshop extends PartyGame {
 		BlockPos s = station(plot);
 		DyeColor[] colors = {DyeColor.RED, DyeColor.BLUE, DyeColor.LIME, DyeColor.YELLOW, DyeColor.PURPLE, DyeColor.ORANGE};
 		// A plot border on the grass, and the station: a platform, posts and a striped roof.
-		for (int x = -16; x <= 62; x++) {
-			for (int z = -20; z <= 20; z++) {
-				if (x == -16 || x == 62 || Math.abs(z) == 20) {
+		for (int x = -BEHIND - 1; x <= AHEAD + 1; x++) {
+			for (int z = -SIDE; z <= SIDE; z++) {
+				if (x == -BEHIND - 1 || x == AHEAD + 1 || Math.abs(z) == SIDE) {
 					setNow(level, s.offset(x, -1, z), Blocks.WOOL.pick(colors[plot]).defaultBlockState());
 				}
 			}
@@ -446,7 +480,8 @@ public class CoasterWorkshop extends PartyGame {
 					Vec3 p2 = end.add(-len, 0, 0);
 					// Keep the curve's pulls inside the plot.
 					BlockPos st = station(c.plot);
-					p1 = new Vec3(Math.max(st.getX() - 13, Math.min(st.getX() + 59, p1.x)), p1.y, Math.max(st.getZ() - 17, Math.min(st.getZ() + 18, p1.z)));
+					p1 = new Vec3(Math.max(st.getX() - BEHIND + 2, Math.min(st.getX() + AHEAD - 2, p1.x)), p1.y,
+						Math.max(st.getZ() - SIDE + 3, Math.min(st.getZ() + SIDE - 2, p1.z)));
 					for (int i = 0; i < 30; i++) {
 						double t = i / 30.0;
 						double u = 1 - t;
@@ -551,7 +586,7 @@ public class CoasterWorkshop extends PartyGame {
 	private boolean fits(Coaster c) {
 		BlockPos s = station(c.plot);
 		for (Vec3 p : c.path) {
-			if (p.x < s.getX() - 15 || p.x > s.getX() + 61 || Math.abs(p.z - s.getZ() - 0.5) > 19 || p.y > s.getY() + 34) {
+			if (p.x < s.getX() - BEHIND || p.x > s.getX() + AHEAD || Math.abs(p.z - s.getZ() - 0.5) > SIDE - 1 || p.y > s.getY() + HIGH) {
 				return false;
 			}
 		}
@@ -904,5 +939,20 @@ public class CoasterWorkshop extends PartyGame {
 		loaded = false;
 		coasters.clear();
 		rides.clear();
+	}
+
+	/** For autotests: this player's coaster: pieces, and how far its track reaches from the station (ahead, side, up). */
+	public String testInfo(ServerPlayer p) {
+		Coaster c = mine(p);
+		BlockPos s = station(c.plot);
+		double ahead = 0;
+		double side = 0;
+		double up = 0;
+		for (Vec3 v : c.path) {
+			ahead = Math.max(ahead, v.x - s.getX());
+			side = Math.max(side, Math.abs(v.z - s.getZ() - 0.5));
+			up = Math.max(up, v.y - s.getY());
+		}
+		return c.pieces.size() + " pieces, reaches " + Math.round(ahead) + " ahead, " + Math.round(side) + " to the side, " + Math.round(up) + " up";
 	}
 }

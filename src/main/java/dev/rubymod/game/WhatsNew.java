@@ -28,7 +28,7 @@ public final class WhatsNew {
 	private static final List<String> LINES = List.of(
 			"rubymod:scout_drone|New at the Armory: the Scout Drone. Fly it yourself; enemies it sees glow for your squad.",
 			"minecraft:spyglass|Park feeling slow? Press H and switch on Lighter park.",
-			"minecraft:rail|Coaster Workshop and Party Board have hosts by the Fun Park gate.");
+			"minecraft:rail|Coaster Workshop plots are much bigger: wider, longer, and twice as high.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;
