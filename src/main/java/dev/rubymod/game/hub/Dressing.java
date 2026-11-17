@@ -31,7 +31,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Making the park look lovely, everywhere at once: waterfalls pouring off the island edges, glow-berry vines, roots and
+ * Making the park look lovely, everywhere at once: glow-berry vines, roots and
  * lanterns hanging under the islands, flower patches, rocks, bushes and trees on open grass, warm lights in the hedges,
  * a big turning ruby over the fountain, and life in the sky (hot-air balloons, gulls, paper lanterns at night).
  */
@@ -40,7 +40,6 @@ final class Dressing {
 	}
 
 	private static final int R = 175;
-	private static final List<Vec3> FALLS = new ArrayList<>();
 	private static final List<Mover> BALLOONS = new ArrayList<>();
 	private static final List<Mover> BIRDS = new ArrayList<>();
 	private static final List<Mover> LANTERNS = new ArrayList<>();
@@ -58,13 +57,7 @@ final class Dressing {
 		int phase;
 	}
 
-	/** The first waterfall (for the rainbow). */
-	static Vec3 firstFall() {
-		return FALLS.isEmpty() ? null : FALLS.get(0);
-	}
-
 	static void reset() {
-		FALLS.clear();
 		BALLOONS.clear();
 		BIRDS.clear();
 		LANTERNS.clear();
@@ -195,152 +188,8 @@ final class Dressing {
 		}
 	}
 
-	// ----- Waterfalls -----
-
-	/** Little streams running off the edges of the big islands and pouring down into the clouds. */
-	private static void waterfalls(ServerLevel level, Set<Long> keepOut) {
-		List<int[]> picks = new ArrayList<>();
-		Direction[] dirs = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
-		// Waterfalls from before (the water going over the edge, with open air under it) count: no piling up more each time.
-		int had = 0;
-		for (int x = -R; x <= R; x++) {
-			for (int z = -R; z <= R; z++) {
-				BlockPos p = new BlockPos(x, FLOOR, z);
-				if (level.getBlockState(p).is(Blocks.WATER) && level.getFluidState(p).isSource() && level.getBlockState(p.below()).is(Blocks.WATER)
-						&& !level.getFluidState(p.below()).isSource() && level.getBlockState(p.below(2)).is(Blocks.WATER)) {
-					boolean near = false;
-					for (int[] q : picks) {
-						near |= Math.hypot(q[0] - x, q[1] - z) < 6;
-					}
-					// Which way is the island (the stream comes from there): the waterfall goes the other way.
-					for (Direction n : dirs) {
-						BlockState in = level.getBlockState(p.relative(n));
-						if (!near && (in.is(Blocks.GRASS_BLOCK) || in.is(Blocks.WATER) || in.is(Blocks.DIRT))) {
-							Direction d = n.getOpposite();
-							picks.add(new int[] {x - d.getStepX(), z - d.getStepZ(), d.ordinal()});
-							had++;
-							break;
-						}
-					}
-				}
-			}
-		}
-		for (int x = -R; x <= R; x++) {
-			for (int z = -R; z <= R; z++) {
-				if (hash(x, z, 5) % 7 != 0 || keepOut.contains(key(x, z))) {
-					continue;
-				}
-				if (!level.getBlockState(new BlockPos(x, FLOOR, z)).is(Blocks.GRASS_BLOCK)) {
-					continue;
-				}
-				for (Direction d : dirs) {
-					// The edge: open air beyond, all the way down.
-					BlockPos out = new BlockPos(x + d.getStepX(), FLOOR, z + d.getStepZ());
-					boolean edge = true;
-					for (int y = FLOOR + 1; y >= FLOOR - 60 && edge; y--) {
-						edge = level.getBlockState(new BlockPos(out.getX(), y, out.getZ())).isAir();
-					}
-					if (!edge) {
-						continue;
-					}
-					// Three blocks of grass behind (the stream's bed), and nothing built nearby.
-					boolean ok = true;
-					for (int k = 1; k <= 3 && ok; k++) {
-						BlockPos b = new BlockPos(x - d.getStepX() * k, FLOOR, z - d.getStepZ() * k);
-						ok = level.getBlockState(b).is(Blocks.GRASS_BLOCK);
-					}
-					for (int dx = -3; dx <= 3 && ok; dx++) {
-						for (int dz = -3; dz <= 3 && ok; dz++) {
-							for (int y = 1; y <= 4 && ok; y++) {
-								BlockState s = level.getBlockState(new BlockPos(x + dx, FLOOR + y, z + dz));
-								ok = s.isAir() || s.is(Blocks.FLOWERING_AZALEA_LEAVES) || s.is(Blocks.SHORT_GRASS) || s.canBeReplaced();
-							}
-						}
-					}
-					if (!ok) {
-						continue;
-					}
-					boolean far = true;
-					for (int[] p : picks) {
-						far &= Math.hypot(p[0] - x, p[1] - z) > 50;
-					}
-					if (far) {
-						picks.add(new int[] {x, z, d.ordinal()});
-					}
-					break;
-				}
-			}
-		}
-		for (int[] p : picks.subList(0, Math.min(10, picks.size()))) {
-			Direction d = Direction.values()[p[2]];
-			int x = p[0];
-			int z = p[1];
-			// A stream bed: water a block deep, three long, mossy stones and ferns along the banks.
-			for (int k = 0; k <= 3; k++) {
-				int bx = x - d.getStepX() * k;
-				int bz = z - d.getStepZ() * k;
-				level.setBlock(new BlockPos(bx, FLOOR - 1, bz), Blocks.MOSSY_COBBLESTONE.defaultBlockState(), 2);
-				level.setBlock(new BlockPos(bx, FLOOR, bz), Blocks.WATER.defaultBlockState(), 3);
-				level.setBlock(new BlockPos(bx, FLOOR + 1, bz), Blocks.AIR.defaultBlockState(), 2);
-				for (int side = -1; side <= 1; side += 2) {
-					int sx = bx + d.getClockWise().getStepX() * side;
-					int sz = bz + d.getClockWise().getStepZ() * side;
-					BlockPos bank = new BlockPos(sx, FLOOR, sz);
-					if (level.getBlockState(bank).is(Blocks.GRASS_BLOCK)) {
-						level.setBlock(bank, (k + side) % 2 == 0 ? Blocks.MOSSY_COBBLESTONE.defaultBlockState() : Blocks.MOSS_BLOCK.defaultBlockState(), 2);
-					}
-					BlockPos top = bank.above();
-					if (level.getBlockState(top).isAir() || level.getBlockState(top).is(Blocks.FLOWERING_AZALEA_LEAVES)) {
-						level.setBlock(top, k % 2 == 0 ? Blocks.FERN.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
-					}
-				}
-			}
-			// Where it goes over the edge, and the lip under it.
-			level.setBlock(new BlockPos(x + d.getStepX(), FLOOR, z + d.getStepZ()), Blocks.WATER.defaultBlockState(), 3);
-			FALLS.add(new Vec3(x + d.getStepX() + 0.5, FLOOR, z + d.getStepZ() + 0.5));
-			dev.rubymod.RubyMod.LOGGER.info("Dressing: waterfall at {} {} going {}", x + d.getStepX(), z + d.getStepZ(), d);
-		}
-		// Each waterfall lands in a little mossy rock basin thirty blocks down (rather than pouring all the way into the void).
-		for (Vec3 f : FALLS) {
-			basin(level, (int) Math.floor(f.x), (int) Math.floor(f.z));
-		}
-		dev.rubymod.RubyMod.LOGGER.info("Dressing: {} waterfalls ({} from before)", FALLS.size(), had);
-	}
-
+	/** How far below the islands the old waterfalls' basins were (for tidying them away). */
 	static final int BASIN_DROP = 30;
-
-	/** A small floating rock with a pool in its top, under a waterfall at x, z: the water lands in it and stops. */
-	static void basin(ServerLevel level, int x, int z) {
-		int b = FLOOR - BASIN_DROP;
-		for (int dx = -2; dx <= 2; dx++) {
-			for (int dz = -2; dz <= 2; dz++) {
-				boolean ring = Math.abs(dx) == 2 || Math.abs(dz) == 2;
-				boolean corner = Math.abs(dx) == 2 && Math.abs(dz) == 2;
-				level.setBlock(new BlockPos(x + dx, b, z + dz), (dx + dz) % 2 == 0 ? Blocks.MOSSY_COBBLESTONE.defaultBlockState() : Blocks.STONE.defaultBlockState(), 2);
-				if (ring && !corner) {
-					level.setBlock(new BlockPos(x + dx, b + 1, z + dz), Blocks.MOSSY_COBBLESTONE.defaultBlockState(), 2);
-				} else if (corner) {
-					level.setBlock(new BlockPos(x + dx, b + 1, z + dz), Blocks.MOSS_BLOCK.defaultBlockState(), 2);
-				}
-				// A rocky underside, tapering.
-				for (int k = 1; k <= 3; k++) {
-					if (Math.abs(dx) + Math.abs(dz) <= 4 - k) {
-						level.setBlock(new BlockPos(x + dx, b - k, z + dz), k == 1 ? Blocks.STONE.defaultBlockState() : Blocks.DEEPSLATE.defaultBlockState(), 2);
-					}
-				}
-			}
-		}
-		// Ferns round the rim, and glow-berry vines hanging below.
-		for (int[] c : new int[][] {{-2, -2}, {2, 2}}) {
-			level.setBlock(new BlockPos(x + c[0], b + 2, z + c[1]), Blocks.FERN.defaultBlockState(), 2);
-		}
-		for (int[] c : new int[][] {{1, 0}, {-1, 1}, {0, -1}}) {
-			BlockPos top = new BlockPos(x + c[0], b - 4 + (Math.abs(c[0]) + Math.abs(c[1]) <= 1 ? 0 : 1), z + c[1]);
-			if (level.getBlockState(top).isAir() && !level.getBlockState(top.above()).isAir()) {
-				level.setBlock(top, Blocks.CAVE_VINES.defaultBlockState().setValue(CaveVines.BERRIES, true), 18);
-			}
-		}
-	}
 
 	// ----- On the ground -----
 
@@ -603,12 +452,6 @@ final class Dressing {
 				}
 				m.a += m.speed * 40;
 				e.teleportTo(Math.cos(m.a) * m.r, m.y + Math.sin(m.a * 5) * 3, Math.sin(m.a) * m.r);
-			}
-			// Mist where the waterfalls go over.
-			for (Vec3 f : FALLS) {
-				level.sendParticles(ParticleTypes.CLOUD, f.x, f.y - 2, f.z, 2, 0.4, 0.6, 0.4, 0.01);
-				level.sendParticles(ParticleTypes.SPLASH, f.x, f.y - BASIN_DROP + 1.2, f.z, 12, 0.6, 0.2, 0.6, 0.1);
-				level.sendParticles(ParticleTypes.CLOUD, f.x, f.y - BASIN_DROP + 1.6, f.z, 2, 0.6, 0.3, 0.6, 0.01);
 			}
 		}
 		lanterns(level, tick);

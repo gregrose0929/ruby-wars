@@ -12,9 +12,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
- * Houses, pets, post, the fish and butterfly books and the museum's labels are kept by player name. If someone changes
- * their Minecraft name, they'd lose them: so every account's last name is remembered, and when it changes, everything
- * moves over to the new name.
+ * Pets are kept by player name. If someone changes their Minecraft name, they'd lose theirs: so every account's last
+ * name is remembered, and when it changes, the pet moves over to the new name.
  */
 public final class Renames {
 	private Renames() {

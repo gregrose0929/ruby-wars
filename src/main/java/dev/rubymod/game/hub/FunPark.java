@@ -104,13 +104,13 @@ final class FunPark {
 	/** By the gate: hosts for the two party games that aren't battles (they take you straight there). */
 	private static void gameHosts(ServerLevel level) {
 		HubHosts.add(level, new Vec3(52.5, FLOOR + 1, -0.5), 0, VillagerProfession.MASON, VillagerType.PLAINS,
-				new HubHosts.Host("workshop", "Wren", "Coaster Workshop", 0xFFB040, "minecraft:rail",
+				new HubHosts.Host("workshop", "Bolt", "Coaster Workshop", 0xFFB040, "minecraft:rail",
 						"Build your very own roller coaster, piece by piece, then ride it! Friends can ride yours too.",
-						"Coaster Workshop: right-click Wren to build a coaster!", HubHosts.play("Build a coaster!"), (p, key) -> goPlay(p, "coasters")));
+						"Coaster Workshop: right-click Bolt to build a coaster!", HubHosts.play("Build a coaster!"), (p, key) -> goPlay(p, "coasters")));
 		HubHosts.add(level, new Vec3(52.5, FLOOR + 1, 4.5), 180, VillagerProfession.LIBRARIAN, VillagerType.SAVANNA,
-				new HubHosts.Host("partyboard", "Pip", "Party Board", 0x60D0FF, "minecraft:slime_ball",
+				new HubHosts.Host("partyboard", "Dizzy", "Party Board", 0x60D0FF, "minecraft:slime_ball",
 						"A board game for everyone: roll the dice, collect coins and stars, and play a quick minigame after every round!",
-						"Party Board: right-click Pip to play!", HubHosts.play("Play Party Board!"), (p, key) -> goPlay(p, "board")));
+						"Party Board: right-click Dizzy to play!", HubHosts.play("Play Party Board!"), (p, key) -> goPlay(p, "board")));
 	}
 
 	private static void goPlay(ServerPlayer p, String game) {

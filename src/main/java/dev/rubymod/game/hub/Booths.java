@@ -266,7 +266,7 @@ final class Booths {
 			}
 		}
 		HubHosts.add(level, new Vec3(90.5, FLOOR + 1, 51.5), 180, VillagerProfession.LIBRARIAN, VillagerType.SWAMP,
-				new HubHosts.Host("rings", "Rosie", "Ring Toss", 0x60FF80, "minecraft:lead",
+				new HubHosts.Host("ringtoss", "Rosie", "Ring Toss", 0x60FF80, "minecraft:lead",
 						"Toss the rings (right-click) onto the bottles! 30 seconds, 12 rings. Land 3 to win a teddy bear. Aim high and let them drop!",
 						"Ring Toss: right-click Rosie to play!", HubHosts.play("Play! (30 seconds)"), (p, key) -> {
 							start(level, RINGS, p, "Toss Ring", "park_toss_ring", 12, "Toss them onto the bottles!");

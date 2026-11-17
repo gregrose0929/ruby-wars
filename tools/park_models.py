@@ -893,22 +893,32 @@ def write(path, obj):
         f.write("\n")
 
 
+# Models of things taken out of the park (not written any more).
+RETIRED = {"blaster_car", "bumper_blue", "bumper_green", "bumper_pink", "bumper_purple", "bumper_red", "bumper_yellow", "bus", "butterfly_blue", "butterfly_gold", "butterfly_lime", "butterfly_orange", "butterfly_pink", "butterfly_purple", "butterfly_red", "butterfly_ruby", "butterfly_sky", "butterfly_white", "butterfly_yellow", "coaster_car", "coaster_car_blue", "cone_0", "cone_1", "cone_2", "cone_3", "cup_cocoa", "cup_lemonade", "doom_buggy", "float_cake", "float_dragon", "float_icecream", "float_ship", "ghost_car", "mascot", "mascot_wave", "skeleton", "spider", "target_gold", "target_green", "target_red", "track", "train"}
+
+
 def main():
     write_png(f"{ASSETS}/textures/item/park_parts.png", atlas())
     tex = {"parts": f"{NS}:item/park_parts", "particle": f"{NS}:item/park_parts"}
     for name, elements in MODELS.items():
+        if name in RETIRED:
+            continue
         model = {"textures": tex, "elements": elements}
         if name.startswith("hat_"):
             model["display"] = HAT_HEAD
         write(f"{ASSETS}/models/item/park_{name}.json", model)
         write(f"{ASSETS}/items/park_{name}.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/park_{name}"}})
     for name, elements in CAFE.items():
+        if name in RETIRED:
+            continue
         write(f"{ASSETS}/models/item/park_{name}.json", {"textures": tex, "elements": elements, "display": HELD_DISPLAY})
         model = {"type": "minecraft:model", "model": f"{NS}:item/park_{name}"}
         if name.startswith("cone_"):
             model["tints"] = [{"type": "minecraft:custom_model_data", "index": i, "default": 16777215} for i in range(3)]
         write(f"{ASSETS}/items/park_{name}.json", {"model": model})
     for name, elements in HANDHELD.items():
+        if name in RETIRED:
+            continue
         write(f"{ASSETS}/models/item/park_{name}.json", {"parent": "minecraft:item/handheld", "textures": tex, "elements": elements})
         write(f"{ASSETS}/items/park_{name}.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/park_{name}"}})
     print(f"park models written: {len(MODELS) + len(HANDHELD) + len(CAFE)}")

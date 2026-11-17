@@ -297,37 +297,5 @@
 				"attenuation_distance": 24
 			}
 		]
-	},
-	"park_spooky": {
-		"sounds": [
-			{
-				"name": "rubymod:park_spooky",
-				"attenuation_distance": 24
-			}
-		]
-	},
-	"park_ghost": {
-		"sounds": [
-			{
-				"name": "rubymod:park_ghost_0",
-				"attenuation_distance": 24
-			},
-			{
-				"name": "rubymod:park_ghost_1",
-				"attenuation_distance": 24
-			}
-		]
-	},
-	"park_boo": {
-		"sounds": [
-			{
-				"name": "rubymod:park_boo_0",
-				"attenuation_distance": 24
-			},
-			{
-				"name": "rubymod:park_boo_1",
-				"attenuation_distance": 24
-			}
-		]
 	}
 }
