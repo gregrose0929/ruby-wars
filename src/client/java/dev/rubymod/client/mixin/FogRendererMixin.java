@@ -18,6 +18,7 @@ import net.minecraft.client.renderer.fog.FogRenderer;
 public abstract class FogRendererMixin {
 	@Inject(method = "setupFog", at = @At("RETURN"))
 	private void rubymod$stormFog(Camera camera, int renderDistance, DeltaTracker delta, float darken, ClientLevel level, CallbackInfoReturnable<FogData> cir) {
+		dev.rubymod.client.BattleSky.fog(cir.getReturnValue());
 		StormClient.fog(cir.getReturnValue());
 	}
 }

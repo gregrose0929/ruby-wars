@@ -18,7 +18,8 @@
 		"ToastMixin",
 		"RideViewMixin",
 		"KeyboardInputMixin",
-		"FogRendererMixin"
+		"FogRendererMixin",
+		"SkyRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

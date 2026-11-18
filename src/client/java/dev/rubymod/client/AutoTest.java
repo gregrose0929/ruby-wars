@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "skycheck" -> skyCheckScript();
 			case "bikecheck" -> bikeCheckScript();
 			case "firecheck" -> fireCheckScript();
 			case "stormcheck" -> stormCheckScript();
@@ -6012,6 +6013,28 @@ public final class AutoTest {
 			then(15, mc -> shot(mc, "bike-" + kind));
 			then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 		}
+	}
+
+		/** The Battle Day sky: red, ash, flashes on the horizon; then back to normal. */
+	private static void skyCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode creative @a");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 30 -8");
+		});
+		then(200, mc -> shot(mc, "sky-0-normal"));
+		then(5, mc -> BattleSky.forced = true);
+		then(140, mc -> {
+			log("sky: Battle Day sky on: redness {}", BattleSky.redness());
+			shot(mc, "sky-1-battle-noon");
+		});
+		then(5, mc -> command(mc, "time set 12500"));
+		then(60, mc -> shot(mc, "sky-2-battle-dusk"));
+		then(5, mc -> {
+			BattleSky.forced = false;
+			command(mc, "time set noon");
+		});
+		then(120, mc -> log("sky: off again: redness {}", BattleSky.redness()));
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */

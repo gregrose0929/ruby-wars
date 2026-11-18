@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-17";
+	private static final String VERSION = "2026-11-17-night";
 	private static final List<String> LINES = List.of(
-			"rubymod:scout_drone|New at the Armory: the Scout Drone. Fly it yourself; enemies it sees glow for your squad.",
-			"minecraft:spyglass|Park feeling slow? Press H and switch on Lighter park.",
-			"minecraft:rail|Coaster Workshop plots are much bigger: wider, longer, and twice as high.");
+			"rubymod:tunnel_borer|New at the Armory: Tunnel Borer, Grappling Hook, Flamethrower, Fire Bombs, Dirt Bike and Quad.",
+			"rubymod:security_camera|Base security: cameras and a Monitor, Keycard Doors, Laser Tripwires, a Seismic Sensor.",
+			"minecraft:red_dye|Battle Day: a red sky, storms over the desert and snow, and rifles shoot through glass and wood.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;
