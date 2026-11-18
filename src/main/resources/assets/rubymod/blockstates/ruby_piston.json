@@ -1,0 +1,27 @@
+{
+	"variants": {
+		"facing=down": {
+			"model": "minecraft:block/piston",
+			"x": 90
+		},
+		"facing=up": {
+			"model": "minecraft:block/piston",
+			"x": 270
+		},
+		"facing=north": {
+			"model": "minecraft:block/piston"
+		},
+		"facing=east": {
+			"model": "minecraft:block/piston",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "minecraft:block/piston",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "minecraft:block/piston",
+			"y": 270
+		}
+	}
+}

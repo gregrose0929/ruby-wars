@@ -155,6 +155,7 @@ public final class GameEvents {
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			Collapse.clear();
+			Movers.finishAll();
 			SeasonData.save();
 			dev.rubymod.industry.Grid.saveIfDirty();
 			Stats.save();
@@ -204,6 +205,7 @@ public final class GameEvents {
 			dev.rubymod.item.GrapplingHookItem.tick(server);
 			Storms.tick(server);
 			Collapse.tick(server);
+			Movers.tick();
 			VersionCheck.tick(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);

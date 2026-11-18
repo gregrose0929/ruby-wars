@@ -36,6 +36,8 @@
 		"rubymod:security_camera",
 		"rubymod:monitor",
 		"rubymod:laser_tripwire",
-		"rubymod:keycard_door"
+		"rubymod:keycard_door",
+		"rubymod:ruby_bearing",
+		"rubymod:ruby_piston"
 	]
 }

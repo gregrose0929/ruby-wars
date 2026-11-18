@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-17-night";
+	private static final String VERSION = "2026-11-17-late";
 	private static final List<String> LINES = List.of(
-			"rubymod:tunnel_borer|New at the Armory: Tunnel Borer, Grappling Hook, Flamethrower, Fire Bombs, Dirt Bike and Quad.",
-			"rubymod:security_camera|Base security: cameras and a Monitor, Keycard Doors, Laser Tripwires, a Seismic Sensor.",
-			"minecraft:red_dye|Battle Day: a red sky, storms over the desert and snow, and rifles shoot through glass and wood.");
+			"rubymod:ruby_bearing|New: Ruby Bearing and Ruby Piston. Power one and the blocks on its front swing round or slide.",
+			"minecraft:tnt|Buildings come down: after shells, missiles and Breaching Charges, whatever's left hanging falls.",
+			"rubymod:tunnel_borer|Also new: Tunnel Borer, Grappling Hook, Flamethrower, bikes, base security, Battle Day storms and sky.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

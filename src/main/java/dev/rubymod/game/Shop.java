@@ -154,6 +154,9 @@ public final class Shop {
 			item(6, ModBlocks.LASER_TRIPWIRE, 1, 6);
 			item(7, ModBlocks.KEYCARD_DOOR, 1, 6);
 			item(8, ModItems.KEYCARD, 1, 2);
+			// Row 3 (right): moving parts
+			item(23, ModBlocks.RUBY_BEARING, 1, 12);
+			item(24, ModBlocks.RUBY_PISTON, 1, 10);
 			// Row 2: production
 			item(9, ModBlocks.RUBY_DRILL, 1, 25);
 			item(10, ModBlocks.ORE_REFINERY, 1, 20);

@@ -77,6 +77,10 @@ public class ModBlocks {
 	public static final Block ALARM_BLOCK = register("alarm_block",
 			p -> new DefenseBlock(DefenseBlock.Kind.ALARM, Shapes.block(), p),
 			props().mapColor(MapColor.COLOR_RED).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());
+	public static final Block RUBY_BEARING = register("ruby_bearing", p -> new dev.rubymod.block.RubyMoverBlock(true, p),
+			props().mapColor(MapColor.COLOR_RED).strength(3.0F, 6.0F).sound(SoundType.METAL));
+	public static final Block RUBY_PISTON = register("ruby_piston", p -> new dev.rubymod.block.RubyMoverBlock(false, p),
+			props().mapColor(MapColor.COLOR_RED).strength(3.0F, 6.0F).sound(SoundType.METAL));
 	public static final Block SECURITY_CAMERA = register("security_camera",
 			p -> new DefenseBlock(DefenseBlock.Kind.CAMERA, Block.box(4, 4, 4, 12, 12, 12), p),
 			props().mapColor(MapColor.COLOR_BLACK).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());

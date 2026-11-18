@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "bridgecheck" -> bridgeCheckScript();
 			case "collapsecheck" -> collapseCheckScript();
 			case "skycheck" -> skyCheckScript();
 			case "bikecheck" -> bikeCheckScript();
@@ -6099,6 +6100,93 @@ public final class AutoTest {
 			log("collapse: blocks still up in the air afterwards: {}", left);
 			shot(mc, "collapse-3-after");
 		});
+	}
+
+		private static net.minecraft.core.BlockPos bridgeAt;
+
+	private static String bridgeLine(net.minecraft.server.level.ServerLevel level) {
+		var b = bridgeAt;
+		int up = 0;
+		int down = 0;
+		for (int x = -1; x <= 1; x++) {
+			for (int k = 1; k <= 4; k++) {
+				if (level.getBlockState(b.offset(x, 1 + k, 4)).is(net.minecraft.world.level.block.Blocks.OAK_PLANKS)) {
+					up++;
+				}
+				if (level.getBlockState(b.offset(x, 1, 4 + k)).is(net.minecraft.world.level.block.Blocks.OAK_PLANKS)) {
+					down++;
+				}
+			}
+		}
+		return "standing " + up + " of 12, lying " + down + " of 12";
+	}
+
+	/** A lever drawbridge (Ruby Bearing) and a sliding gate (Ruby Piston). */
+	private static void bridgeCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode creative @a");
+			command(mc, "execute as @p at @s run tp @s ~60 ~ ~-60");
+		});
+		then(200, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = p.level();
+			var b = p.blockPosition().offset(0, 0, 6);
+			bridgeAt = b;
+			for (int x = -6; x <= 12; x++) {
+				for (int y = 1; y <= 7; y++) {
+					for (int z = 0; z <= 12; z++) {
+						level.setBlockAndUpdate(b.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+			// The bridge: three wide (x), five high, standing at z+4; the bearing at its west end, facing east along the hinge.
+			for (int x = -1; x <= 1; x++) {
+				for (int y = 1; y <= 5; y++) {
+					level.setBlockAndUpdate(b.offset(x, y, 4), net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
+				}
+			}
+			level.setBlockAndUpdate(b.offset(-2, 1, 4), dev.rubymod.registry.ModBlocks.RUBY_BEARING.defaultBlockState()
+					.setValue(dev.rubymod.block.RubyMoverBlock.FACING, net.minecraft.core.Direction.EAST));
+			level.setBlockAndUpdate(b.offset(-3, 1, 4), net.minecraft.world.level.block.Blocks.LEVER.defaultBlockState()
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACING, net.minecraft.core.Direction.WEST));
+			// The gate: a Ruby Piston facing east, a 1 x 3 column in front of it.
+			level.setBlockAndUpdate(b.offset(6, 1, 0), dev.rubymod.registry.ModBlocks.RUBY_PISTON.defaultBlockState()
+					.setValue(dev.rubymod.block.RubyMoverBlock.FACING, net.minecraft.core.Direction.EAST));
+			for (int y = 1; y <= 3; y++) {
+				level.setBlockAndUpdate(b.offset(7, y, 0), net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState());
+			}
+			level.setBlockAndUpdate(b.offset(5, 1, 0), net.minecraft.world.level.block.Blocks.LEVER.defaultBlockState()
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACING, net.minecraft.core.Direction.WEST));
+		}));
+		then(20, mc -> {
+			command(mc, "execute as @p at @s run tp @s ~-9 ~4 ~10 facing ~ ~2 ~10");
+			onServer(mc, server -> log("bridge: built: {}", bridgeLine(me(server).level())));
+		});
+		then(30, mc -> shot(mc, "bridge-1-up"));
+		java.util.function.Consumer<net.minecraft.core.BlockPos> pull = lever -> onServer(Minecraft.getInstance(), server -> {
+			var level = me(server).level();
+			var st = level.getBlockState(lever);
+			((net.minecraft.world.level.block.LeverBlock) net.minecraft.world.level.block.Blocks.LEVER).pull(st, level, lever, null);
+		});
+		then(5, mc -> pull.accept(bridgeAt.offset(-3, 1, 4)));
+		then(16, mc -> shot(mc, "bridge-2-swinging"));
+		then(110, mc -> onServer(mc, server -> log("bridge: lever on: {}", bridgeLine(me(server).level()))));
+		then(5, mc -> shot(mc, "bridge-3-down"));
+		then(5, mc -> pull.accept(bridgeAt.offset(-3, 1, 4)));
+		then(130, mc -> onServer(mc, server -> log("bridge: lever off: {}", bridgeLine(me(server).level()))));
+		then(5, mc -> pull.accept(bridgeAt.offset(5, 1, 0)));
+		then(130, mc -> onServer(mc, server -> {
+			var level = me(server).level();
+			log("gate: pushed: iron at x+7 {}, at x+10 {}", level.getBlockState(bridgeAt.offset(7, 2, 0)).getBlock(), level.getBlockState(bridgeAt.offset(10, 2, 0)).getBlock());
+		}));
+		then(5, mc -> pull.accept(bridgeAt.offset(5, 1, 0)));
+		then(130, mc -> onServer(mc, server -> {
+			var level = me(server).level();
+			log("gate: back: iron at x+7 {}, at x+10 {}", level.getBlockState(bridgeAt.offset(7, 2, 0)).getBlock(), level.getBlockState(bridgeAt.offset(10, 2, 0)).getBlock());
+		}));
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
