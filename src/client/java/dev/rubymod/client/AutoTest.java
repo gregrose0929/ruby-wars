@@ -4588,6 +4588,7 @@ public final class AutoTest {
 			case "coasterspace" -> coasterSpaceScript();
 			case "coasterride" -> coasterRideScript();
 			case "armorycheck" -> armoryCheckScript();
+			case "playthrough" -> playthroughScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9265,43 +9266,42 @@ public final class AutoTest {
 			IntegratedServer server = mc.getSingleplayerServer();
 			server.execute(() -> Shop.open(server.getPlayerList().getPlayers().get(0), 0));
 		});
-		int[][] picks = {{1, 40}, {0, 9}, {9, 0}, {0, 3}};
-		for (int page = 0; page < 4; page++) {
+		for (int page = 0; page < Shop.pageCount(); page++) {
 			int p = page;
-			then(15, mc -> {
+			then(p == 0 ? 15 : 5, mc -> {
+				if (p > 0 && mc.gui.screen() instanceof ArmoryScreen armory) {
+					lastScreen = mc.gui.screen();
+					mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 100 + p);
+				}
+			});
+			then(40, mc -> {
 				if (mc.gui.screen() instanceof ArmoryScreen armory) {
+					log("armorycheck: tab {} ({}) showing {}, same screen {}", p, Shop.pageName(p), armory.getMenu().page(), p == 0 || mc.gui.screen() == lastScreen);
 					if (p > 0) {
-						Object before = mc.gui.screen();
-						mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 100 + p);
-						lastScreen = before;
+						armory.selected = p == 1 ? 1 : 0;
 					}
 				}
 			});
-			then(50, mc -> {
-				if (mc.gui.screen() instanceof ArmoryScreen armory) {
-					log("armorycheck: page {} showing {}, same screen as before {}", p, armory.getMenu().page(), p == 0 || mc.gui.screen() == lastScreen);
-					armory.selected = picks[p][0];
-				}
-			});
-			then(5, mc -> shot(mc, "armory-" + p + "a"));
-			then(5, mc -> {
-				if (mc.gui.screen() instanceof ArmoryScreen armory) {
-					armory.selected = picks[p][1];
-				}
-			});
-			then(5, mc -> shot(mc, "armory-" + p + "b"));
+			then(5, mc -> shot(mc, "armory-tab-" + p));
 		}
+		// Buy a rifle, then its ammo, with the buttons.
 		then(5, mc -> {
 			if (mc.gui.screen() instanceof ArmoryScreen armory) {
-				mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 100);
+				mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 101);
 			}
 		});
-		then(15, mc -> {
+		then(40, mc -> {
 			if (mc.gui.screen() instanceof ArmoryScreen armory) {
-				armory.selected = 40;
+				mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 1000);
 			}
 		});
-		then(5, mc -> shot(mc, "armory-heart"));
+		then(20, mc -> {
+			if (mc.gui.screen() instanceof ArmoryScreen armory) {
+				mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 2000);
+			}
+		});
+		then(40, mc -> log("armorycheck: bought: pistols {}, light ammo {}", mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.SERVICE_PISTOL),
+				mc.player.getInventory().countItem(dev.rubymod.registry.ModItems.LIGHT_AMMO)));
 		then(2, mc -> mc.player.closeContainer());
 		// The Drill: one feeding a belt into a chest, one beside a Trade Depot (which shouldn't get anything).
 		then(10, mc -> onServer(mc, server -> {
@@ -9360,6 +9360,129 @@ public final class AutoTest {
 		}));
 		then(100, mc -> onServer(mc, server -> log("armorycheck: depot sold dirt and sticks: bank {} -> {} milli-rubies", bankBefore,
 				dev.rubymod.industry.Grid.milliRubies(me(server).getUUID()))));
+	}
+
+	private static net.minecraft.core.BlockPos heartAt;
+
+	private static int countIn(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos) {
+		int n = 0;
+		if (level.getBlockEntity(pos) instanceof net.minecraft.world.Container c) {
+			for (int i = 0; i < c.getContainerSize(); i++) {
+				n += c.getItem(i).getCount();
+			}
+		}
+		return n;
+	}
+
+	/** A quick season, start to finish: Heart, starter base, drill to chest, Armory buys, a raid, Battle Day, a winner. */
+	private static void playthroughScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "time set 1000");
+			command(mc, "execute in minecraft:overworld run tp @p 260 200 260");
+		});
+		then(80, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) p.level();
+			int x = p.getBlockX();
+			int z = p.getBlockZ();
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 8, y - 1, z - 8, x + 8, y - 1, z + 8)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+			}
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 8, y, z - 8, x + 8, y + 6, z + 8)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			p.teleportTo(x + 0.5, y, z - 4.5);
+			heartAt = new net.minecraft.core.BlockPos(x, y, z);
+			log("playthrough: phase {}, in {}", dev.rubymod.game.SeasonData.get().phase, level.dimension().identifier());
+			level.setBlockAndUpdate(heartAt, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heartAt);
+			var claim = dev.rubymod.game.SeasonData.get().claimOf(p.getUUID());
+			log("playthrough: heart placed: claim {}", claim == null ? "none" : "tier " + claim.tier + " radius " + claim.radius());
+		}));
+		then(40, mc -> {
+			mc.player.setYRot(0);
+			mc.player.setXRot(35);
+		});
+		then(20, mc -> shot(mc, "pt-starter-base"));
+		then(1600, mc -> onServer(mc, server -> {
+			var level = (net.minecraft.server.level.ServerLevel) me(server).level();
+			var drill = heartAt.offset(0, 0, 3);
+			log("playthrough: starter base: drill {}, belt {}, chest {}; drill holds {}, chest holds {}; bank {}",
+					level.getBlockState(drill).getBlock().getName().getString(), level.getBlockState(drill.east()).getBlock().getName().getString(),
+					level.getBlockState(drill.east(2)).getBlock().getName().getString(), countIn(level, drill), countIn(level, drill.east(2)),
+					dev.rubymod.industry.Grid.rubies(me(server).getUUID()));
+			Shop.open(me(server), 0);
+		}));
+		// The Armory: upgrade the Heart (first tab), then a Sentry Turret (Defenses).
+		then(40, mc -> {
+			if (mc.gui.screen() instanceof ArmoryScreen armory) {
+				mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 1000);
+			}
+		});
+		then(40, mc -> onServer(mc, server -> {
+			var claim = dev.rubymod.game.SeasonData.get().claimOf(me(server).getUUID());
+			log("playthrough: after the Heart upgrade: tier {}, bank {}", claim == null ? 0 : claim.tier, dev.rubymod.industry.Grid.rubies(me(server).getUUID()));
+		}));
+		then(5, mc -> {
+			if (mc.gui.screen() instanceof ArmoryScreen armory) {
+				mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 104);
+			}
+		});
+		then(40, mc -> {
+			if (mc.gui.screen() instanceof ArmoryScreen armory) {
+				for (int i = 0; i < 45; i++) {
+					if (armory.getMenu().display(i).is(dev.rubymod.registry.ModBlocks.SENTRY_TURRET.asItem())) {
+						armory.selected = i;
+						mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 1000 + i);
+					}
+				}
+			}
+		});
+		then(30, mc -> shot(mc, "pt-armory"));
+		then(10, mc -> {
+			log("playthrough: bought a sentry turret: {}", mc.player.getInventory().countItem(dev.rubymod.registry.ModBlocks.SENTRY_TURRET.asItem()));
+			mc.player.closeContainer();
+		});
+		// A practice raid.
+		then(10, mc -> onServer(mc, server -> {
+			String error = dev.rubymod.game.Raids.force(me(server));
+			log("playthrough: raid called: {}", error == null ? "yes" : error);
+		}));
+		then(900, mc -> onServer(mc, server -> {
+			var raiders = me(server).level().getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, me(server).getBoundingBox().inflate(120),
+					s -> s.isRaider());
+			log("playthrough: raiders around: {}", raiders.size());
+			for (var r : raiders) {
+				r.discard();
+			}
+		}));
+		// Battle Day, straight through.
+		then(40, mc -> command(mc, "rubywars battle 5"));
+		then(200, mc -> onServer(mc, server -> log("playthrough: battle: {}", dev.rubymod.game.SeasonData.get().phase)));
+		for (String phase : new String[] {"war", "sudden_death", "final_circle"}) {
+			then(60, mc -> command(mc, "rubywars phase " + phase));
+			then(60, mc -> onServer(mc, server -> log("playthrough: phase now {}, alive {}", dev.rubymod.game.SeasonData.get().phase,
+					dev.rubymod.game.BattleDirector.aliveCount())));
+		}
+		then(20, mc -> onServer(mc, server -> {
+			var p = me(server);
+			log("playthrough: before dying: party game {}, horde {}, rift {}, convoy {}, health {}, mode {}, in {}",
+					dev.rubymod.game.party.PartyGames.of(p), dev.rubymod.game.Horde.playing(p), dev.rubymod.game.rift.Rift.playing(p),
+					dev.rubymod.game.convoy.Convoy.playing(p), p.getHealth(), p.gameMode.getGameModeForPlayer(), p.level().dimension().identifier());
+		}));
+		then(5, mc -> command(mc, "kill @p"));
+		then(40, mc -> onServer(mc, server -> log("playthrough: after dying: alive {}, phase {}, health {}", dev.rubymod.game.BattleDirector.aliveCount(),
+				dev.rubymod.game.SeasonData.get().phase, me(server).getHealth())));
+		then(200, mc -> onServer(mc, server -> log("playthrough: end: phase {}, winner {}", dev.rubymod.game.SeasonData.get().phase,
+				dev.rubymod.game.SeasonData.get().winner)));
+		then(10, mc -> shot(mc, "pt-end"));
 	}
 
 	private static Object lastScreen;

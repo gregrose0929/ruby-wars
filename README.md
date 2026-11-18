@@ -76,8 +76,9 @@ saves your inventory and position, and coming back puts it all back.
 1. **The build phase.** Everyone gets a **Ruby Heart**. Place it to claim the land around
    it: nobody else can build, break or open things there, and nobody can be hurt inside a
    claim. Mine **Ruby Ore** (rarer than diamonds, deep underground) and spend rubies at an
-   **Armory** on weapons, defenses, vehicles and machines. Team up in a **squad** of up to
-   four.
+   **Armory**: its tabs sort everything by kind (Guns, Ammo, Defenses, Vehicles, Machines…),
+   each card shows its name and price, and the panel beside it says what it does. Team up in
+   a **squad** of up to four.
 2. **Battle Day** starts when the admin says so (or on a date they set). Everyone in the
    season is called back to Ruby Wars:
    - **Lockdown (15 minutes):** claims open and defenses switch on, but no fighting yet.
@@ -101,7 +102,9 @@ villages, rivers to the sea, and ruins to explore.
 - **Defenses:** sandbags, concrete walls, reinforced concrete and glass, blast doors,
   barbed wire, landmines, claymores, anti-tank mines, Sentry Turrets, Tesla Coils, Flak
   Cannons, SAM Sites, Missile Interceptors, Shield Generators, Point Defense Guns, Heavy AA
-  Guns and a Railgun, and Holo Camouflage that looks like any block.
+  Guns and a Railgun, and Holo Camouflage that looks like any block. All of them follow one
+  rule: they go for raiders whenever a raid is on, monsters any time, and enemy players once
+  PvP is on.
 - **Security:** keycard doors and readers, security cameras with monitors, laser
   tripwires, seismic sensors, alarms and floodlights.
 - **Moving parts:** the **Ruby Bearing** (swing a drawbridge or a gate) and the **Ruby
@@ -121,8 +124,8 @@ Banks, a **Ruby Drill** that mines by itself and keeps what it finds until you c
 run a conveyor belt from it to a chest), an **Ore Refinery** that doubles your ore, an Ammo
 Factory, a **Trade Depot** that buys anything you put in it, and a **Ruby Vault** that holds
 your bank (and pays a little interest). Every machine upgrades from Mk I to Mk V; conveyor
-belts carry things from one to the next. Upgrade your **Ruby Heart** at the Armory (first
-page) for a bigger claim, more health and room for more drills.
+belts carry things from one to the next. Upgrade your **Ruby Heart** at the Armory (the
+Your Heart tab) for a bigger claim, more health and room for more drills.
 `/rubywars leaderboard` shows the top tycoons.
 
 ### Weapons and vehicles

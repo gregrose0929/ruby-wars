@@ -131,6 +131,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		for (Button b : buttons) {
 			drawButton(g, b, mouseX - leftPos, mouseY - topPos);
 		}
+		depotPrices(g, mouseX - leftPos, mouseY - topPos);
 	}
 
 	private void drawStatus(GuiGraphicsExtractor g) {
@@ -169,6 +170,40 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		}
 		g.fill(26, 95, 30, 99, color);
 		g.text(font, text, 34, 93, color, false);
+		// What to do about it, in small letters beside it.
+		String hint = hint(status);
+		if (!hint.isEmpty()) {
+			int hx = 38 + font.width(text);
+			int room = (int) ((imageWidth - 8 - hx) / 0.75F);
+			g.pose().pushMatrix();
+			g.pose().translate(hx, 94);
+			g.pose().scale(0.75F, 0.75F);
+			g.text(font, dev.rubymod.client.ui.Ui.fit(hint, room), 0, 0, MUTED, false);
+			g.pose().popMatrix();
+		}
+	}
+
+	/** The next thing to do when a machine has stopped (or what it's doing). */
+	private String hint(int status) {
+		MachineKind kind = kind();
+		return switch (status) {
+			case MachineBlockEntity.NO_POWER -> "add solar panels or a generator";
+			case MachineBlockEntity.OUTPUT_FULL -> kind.generator() ? "add a Battery Bank to store more"
+					: kind == MachineKind.RUBY_DRILL ? "take it out, or run a conveyor belt to a chest" : "take it out, or run a belt onward";
+			case MachineBlockEntity.NO_INPUT -> switch (kind) {
+				case COMBUSTION_GENERATOR -> "coal, charcoal, wood or lava";
+				case ORE_REFINERY -> "raw ore, ruby ore or cobblestone";
+				case AMMO_FACTORY -> "metal and gunpowder (see above)";
+				default -> "";
+			};
+			case MachineBlockEntity.NIGHT -> "solar panels rest at night";
+			case MachineBlockEntity.WORKING -> switch (kind) {
+				case RUBY_DRILL -> "keeps what it digs until you collect it";
+				case TRADE_DEPOT -> "selling into your bank";
+				default -> "";
+			};
+			default -> kind == MachineKind.TRADE_DEPOT ? "put anything in to sell it" : "";
+		};
 	}
 
 	/** The grid gauge: one bar for all of this player's machines. */
@@ -229,6 +264,27 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		g.item(new ItemStack(ModItems.RUBY), 86, 52);
 		g.text(font, String.format(Locale.ROOT, "%,d earned", menu.get(15)), 106, 56, GREEN, false);
 		g.text(font, String.format(Locale.ROOT, "Bank: %,d", menu.wide(12, 13)), 86, 72, AMBER, false);
+		g.text(font, "Best prices (hover)", 86, 82, 0xFF5FC8E8, false);
+	}
+
+	/** The Trade Depot's best prices, while hovering its "best prices" line. */
+	private void depotPrices(GuiGraphicsExtractor g, int mx, int my) {
+		if (kind() != MachineKind.TRADE_DEPOT || mx < 86 || mx > 86 + font.width("Best prices (hover)") || my < 81 || my > 91) {
+			return;
+		}
+		List<Component> lines = new java.util.ArrayList<>();
+		lines.add(Component.literal("Paid per item, into your bank").withStyle(net.minecraft.ChatFormatting.YELLOW));
+		for (var item : new net.minecraft.world.item.Item[] {net.minecraft.world.item.Items.DIAMOND, net.minecraft.world.item.Items.EMERALD,
+				net.minecraft.world.item.Items.GOLD_INGOT, net.minecraft.world.item.Items.IRON_INGOT, net.minecraft.world.item.Items.RAW_GOLD,
+				net.minecraft.world.item.Items.RAW_IRON, net.minecraft.world.item.Items.COPPER_INGOT, net.minecraft.world.item.Items.COAL,
+				net.minecraft.world.item.Items.LAPIS_LAZULI, net.minecraft.world.item.Items.OAK_LOG, net.minecraft.world.item.Items.COBBLESTONE}) {
+			ItemStack stack = new ItemStack(item);
+			double rubies = Recipes.price(stack, menu.tier()) / 1000.0;
+			lines.add(Component.literal(stack.getHoverName().getString() + ": " + String.format(Locale.ROOT, rubies < 0.1 ? "%.3f" : "%.2f", rubies) + " rubies")
+					.withStyle(net.minecraft.ChatFormatting.GRAY));
+		}
+		lines.add(Component.literal("Storage blocks pay nine times. Anything else sells for a little.").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+		g.setComponentTooltipForNextFrame(font, lines, mx + leftPos, my + topPos);
 	}
 
 	private void drawVault(GuiGraphicsExtractor g) {

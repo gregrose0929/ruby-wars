@@ -46,15 +46,18 @@ public final class Shop {
 	 * @param stock  what the buyer gets
 	 * @param action special purchase (like a Heart upgrade); returns an error message or null
 	 */
-	private record Entry(int page, int slot, int price, Supplier<ItemStack> stock, String name, Function<ServerPlayer, String> action) {
+	private record Entry(int page, int slot, int price, Supplier<ItemStack> stock, String name, Function<ServerPlayer, String> action, String section) {
 	}
 
-	/** Page 0: weapons and base. Page 1: vehicles, aircraft, and the gear to fight them. */
-	private static final int PAGES = 4;
-	private static final String[] PAGE_NAMES = {"Weapons & Base", "Vehicles & Air Defense", "Industry & Building", "Gear & Support"};
-	private static final int NEXT_SLOT = 53;
-	private static final int BACK_SLOT = 45;
+	/** A card on a page, for the screen: which slot, and the section it's under. */
+	public record Card(int slot, String section) {
+	}
+
+	/** The Armory's tabs, each a kind of thing (built with the catalogue below). */
+	private static final List<String> PAGE_NAMES = new ArrayList<>();
 	private static int page;
+	private static int nextSlot;
+	private static String section = "";
 
 	private static List<Entry> entries;
 
@@ -64,158 +67,219 @@ public final class Shop {
 	private static List<Entry> entries() {
 		if (entries == null) {
 			entries = new ArrayList<>();
-			// Row 1: guns and grenades
-			gun(0, ModItems.SERVICE_PISTOL, 2);
-			gun(1, ModItems.ARR_RIFLE, 15);
-			gun(2, ModItems.COMBAT_SHOTGUN, 12);
-			gun(3, ModItems.LONGSHOT_SNIPER, 25);
-			gun(4, ModItems.RUBY_BLASTER, 30);
-			item(5, ModItems.FLAMETHROWER, 1, 25);
-			item(6, ModItems.FIRE_BOMB, 3, 5);
-			item(7, ModItems.FRAG_GRENADE, 4, 4);
-			item(8, ModItems.SMOKE_GRENADE, 4, 3);
-			// Row 2: ammo and raid gear
-			item(9, ModItems.LIGHT_AMMO, 32, 1);
-			item(10, ModItems.HEAVY_AMMO, 32, 2);
-			item(11, ModItems.SHOTGUN_SHELL, 16, 1);
-			item(12, ModItems.SNIPER_ROUND, 10, 2);
-			item(13, ModItems.RUBY_CELL, 20, 2);
-			item(14, ModItems.ROCKET_LAUNCHER, 1, 35);
-			item(15, ModItems.ROCKET, 4, 4);
-			item(16, ModItems.RANGEFINDER, 1, 3);
-			item(17, ModItems.BREACHING_CHARGE, 1, 20);
-			// Row 3: heavy weapons and electronics
-			item(18, ModBlocks.MORTAR, 1, 40);
-			item(19, ModItems.MORTAR_SHELL, 3, 6);
-			item(20, ModBlocks.MISSILE_SILO, 1, 80);
-			item(21, ModItems.CRUISE_MISSILE, 1, 60);
-			item(22, ModBlocks.RADAR_STATION, 1, 12);
-			item(23, ModBlocks.MISSILE_INTERCEPTOR, 1, 30);
-			item(24, ModBlocks.SENTRY_TURRET, 1, 15);
-			item(25, ModBlocks.ALARM_BLOCK, 1, 1);
-			item(26, ModBlocks.ARMORY, 1, 4);
-			// Row 4: fortifications and traps
-			item(27, ModBlocks.SANDBAGS, 16, 1);
-			item(28, ModBlocks.CONCRETE_WALL, 8, 1);
-			item(29, ModBlocks.REINFORCED_CONCRETE, 2, 1);
-			item(30, ModBlocks.BLAST_DOOR, 1, 4);
-			item(31, ModBlocks.LANDMINE, 1, 2);
-			item(34, ModBlocks.SEISMIC_SENSOR, 1, 6);
-			item(32, ModBlocks.CLAYMORE, 1, 2);
-			item(33, ModBlocks.BARBED_WIRE, 8, 1);
-			// Row 5: tools and upgrades
-			item(36, ModItems.BUILDERS_WAND, 1, 6);
-			item(38, ModItems.EXTENDED_MAG, 1, 6);
-			item(39, ModItems.RED_DOT_SIGHT, 1, 5);
-			item(41, ModItems.VERTICAL_GRIP, 1, 5);
-			item(42, ModItems.SUPPRESSOR, 1, 8);
-			item(37, ModItems.EXCAVATOR, 1, 8);
-			item(45, ModItems.RUBY_HELMET, 1, 4);
-			item(46, ModItems.RUBY_CHESTPLATE, 1, 8);
-			item(47, ModItems.RUBY_LEGGINGS, 1, 7);
-			item(48, ModItems.RUBY_BOOTS, 1, 3);
-			item(50, ModItems.RUBY_SWORD, 1, 3);
-			item(51, ModItems.RUBY_PICKAXE, 1, 4);
-			entries.add(new Entry(0, 40, 0, () -> named(Items.NETHER_STAR, "Upgrade Ruby Heart"), "heart_upgrade", Claims::upgrade));
+			PAGE_NAMES.clear();
+			page = -1;
+			cat("Your Heart");
+			section("Upgrade your Heart");
+			entries.add(new Entry(page, nextSlot++, 0, () -> named(Items.NETHER_STAR, "Upgrade Ruby Heart"), "heart_upgrade", Claims::upgrade, section));
+			section("Another Armory");
+			item(ModBlocks.ARMORY, 1, 4);
 
-			page = 1;
-			// Row 1: vehicles and aircraft
-			item(0, ModItems.JEEP, 1, 40);
-			item(1, ModItems.TANK, 1, 100);
-			item(2, ModItems.TUNNEL_BORER, 1, 60);
-			item(3, ModItems.FIGHTER_JET, 1, 150);
-			item(4, ModItems.ATTACK_JET, 1, 170);
-			item(5, ModItems.BOMBER, 1, 220);
-			item(6, ModItems.ATTACK_HELI, 1, 160);
-			item(7, ModBlocks.AIRFIELD_PAD, 1, 30);
-			item(8, ModItems.DIRT_BIKE, 1, 20);
-			item(17, ModItems.QUAD, 1, 28);
-			// Row 3 (right): boats
-			item(24, ModItems.PATROL_BOAT, 1, 25);
-			item(25, ModItems.GUNBOAT, 1, 70);
-			item(26, ModItems.LANDING_CRAFT, 1, 55);
-			// Row 2: anti-vehicle and anti-air weapons
-			item(9, ModItems.SKYHAMMER, 1, 35);
-			item(10, ModItems.AA_MISSILE, 2, 8);
-			item(12, ModItems.LANCER, 1, 40);
-			item(13, ModItems.AT_MISSILE, 2, 10);
-			item(15, ModItems.C4, 2, 10);
-			item(16, ModBlocks.AT_MINE, 1, 6);
-			// Row 3: air defense for your base
-			item(18, ModBlocks.FLAK_CANNON, 1, 45);
-			item(19, ModBlocks.SAM_SITE, 1, 90);
-			item(20, ModItems.HEAVY_AA_GUN, 1, 70);
-			item(21, ModItems.RAILGUN, 1, 90);
+			cat("Guns");
+			section("Guns");
+			gun(ModItems.SERVICE_PISTOL, 2);
+			gun(ModItems.ARR_RIFLE, 15);
+			gun(ModItems.COMBAT_SHOTGUN, 12);
+			gun(ModItems.LONGSHOT_SNIPER, 25);
+			gun(ModItems.RUBY_BLASTER, 30);
+			item(ModItems.FLAMETHROWER, 1, 25);
+			section("Attachments");
+			item(ModItems.EXTENDED_MAG, 1, 6);
+			item(ModItems.RED_DOT_SIGHT, 1, 5);
+			item(ModItems.VERTICAL_GRIP, 1, 5);
+			item(ModItems.SUPPRESSOR, 1, 8);
 
-			page = 2;
-			// Row 1: power
-			item(0, ModBlocks.COMBUSTION_GENERATOR, 1, 12);
-			item(1, ModBlocks.SOLAR_PANEL, 1, 10);
-			item(2, ModBlocks.BATTERY, 1, 15);
-			// Row 1 (right): security
-			item(4, ModBlocks.SECURITY_CAMERA, 1, 5);
-			item(5, ModBlocks.MONITOR, 1, 8);
-			item(6, ModBlocks.LASER_TRIPWIRE, 1, 6);
-			item(7, ModBlocks.KEYCARD_DOOR, 1, 6);
-			item(8, ModItems.KEYCARD, 1, 2);
-			// Row 3 (right): moving parts
-			item(23, ModBlocks.RUBY_BEARING, 1, 12);
-			item(24, ModBlocks.RUBY_PISTON, 1, 10);
-			item(25, ModBlocks.KEYCARD_READER, 1, 5);
-			// Row 2: production
-			item(9, ModBlocks.RUBY_DRILL, 1, 25);
-			item(10, ModBlocks.ORE_REFINERY, 1, 20);
-			item(11, ModBlocks.AMMO_FACTORY, 1, 18);
-			item(12, ModBlocks.TRADE_DEPOT, 1, 15);
-			item(13, ModBlocks.VAULT, 1, 20);
-			// Row 3: base defense
-			item(18, ModBlocks.SHIELD_GENERATOR, 1, 60);
-			item(19, ModBlocks.POINT_DEFENSE, 1, 45);
-			// Row 4: building
-			item(27, ModItems.ARCHITECT_WAND, 1, 10);
-			item(28, ModItems.REMODELER, 1, 8);
-			item(29, ModItems.BLUEPRINT, 1, 2);
-			item(30, ModBlocks.CONSTRUCTOR, 1, 30);
-			item(32, ModBlocks.REINFORCED_GLASS, 8, 3);
-			item(33, ModBlocks.FLOODLIGHT, 2, 1);
-			item(31, ModBlocks.CONVEYOR, 16, 2);
-			item(34, ModBlocks.ELEVATOR, 2, 2);
-			item(35, ModBlocks.CAMO_NET, 16, 1);
-			item(20, ModBlocks.TESLA_COIL, 1, 35);
-			item(21, ModBlocks.HOLO_CAMO, 8, 4);
+			cat("Ammo");
+			section("For guns");
+			item(ModItems.LIGHT_AMMO, 32, 1);
+			item(ModItems.HEAVY_AMMO, 32, 2);
+			item(ModItems.SHOTGUN_SHELL, 16, 1);
+			item(ModItems.SNIPER_ROUND, 10, 2);
+			item(ModItems.RUBY_CELL, 20, 2);
+			section("Rockets and shells");
+			item(ModItems.ROCKET, 4, 4);
+			item(ModItems.AA_MISSILE, 2, 8);
+			item(ModItems.AT_MISSILE, 2, 10);
+			item(ModItems.MORTAR_SHELL, 3, 6);
 
-			page = 3;
-			// Row 1: carrying
-			item(0, ModItems.FIELD_PACK, 1, 8);
-			item(1, ModItems.HEAVY_RUCKSACK, 1, 20);
-			item(2, ModItems.FIELD_RADIO, 1, 4);
-			item(3, ModItems.JETPACK, 1, 30);
-			item(4, ModItems.GRAPPLING_HOOK, 1, 15);
-			item(5, ModItems.NIGHT_GOGGLES, 1, 12);
-			// Row 2: support
-			item(9, ModItems.GUARD_CONTRACT, 1, 25);
-			item(10, ModItems.AT_GUARD_CONTRACT, 1, 40);
-			item(11, ModItems.RECON_DRONE, 1, 12);
-			item(12, ModItems.AIR_STRIKE_FLARE, 1, 60);
-			item(13, ModItems.SCOUT_DRONE, 1, 20);
-			// Row 3: cosmetics
-			item(18, ModItems.PAINT_KIT, 1, 3);
-			page = 0;
+			cat("Explosives");
+			section("Grenades");
+			item(ModItems.FRAG_GRENADE, 4, 4);
+			item(ModItems.SMOKE_GRENADE, 4, 3);
+			item(ModItems.FIRE_BOMB, 3, 5);
+			section("Launchers");
+			item(ModItems.ROCKET_LAUNCHER, 1, 35);
+			item(ModItems.LANCER, 1, 40);
+			item(ModItems.SKYHAMMER, 1, 35);
+			section("Breaking in");
+			item(ModItems.BREACHING_CHARGE, 1, 20);
+			item(ModItems.C4, 2, 10);
+			section("Artillery and strikes");
+			item(ModBlocks.MORTAR, 1, 40);
+			item(ModItems.RANGEFINDER, 1, 3);
+			item(ModBlocks.MISSILE_SILO, 1, 80);
+			item(ModItems.CRUISE_MISSILE, 1, 60);
+			item(ModItems.AIR_STRIKE_FLARE, 1, 60);
+
+			cat("Defenses");
+			section("Walls");
+			item(ModBlocks.SANDBAGS, 16, 1);
+			item(ModBlocks.CONCRETE_WALL, 8, 1);
+			item(ModBlocks.REINFORCED_CONCRETE, 2, 1);
+			item(ModBlocks.REINFORCED_GLASS, 8, 3);
+			item(ModBlocks.BLAST_DOOR, 1, 4);
+			item(ModBlocks.BARBED_WIRE, 8, 1);
+			section("Hiding");
+			item(ModBlocks.HOLO_CAMO, 8, 4);
+			item(ModBlocks.CAMO_NET, 16, 1);
+			section("Traps");
+			item(ModBlocks.LANDMINE, 1, 2);
+			item(ModBlocks.CLAYMORE, 1, 2);
+			item(ModBlocks.AT_MINE, 1, 6);
+			section("Turrets");
+			item(ModBlocks.SENTRY_TURRET, 1, 15);
+			item(ModBlocks.TESLA_COIL, 1, 35);
+
+			cat("Air Defense");
+			section("Guns you man");
+			item(ModItems.HEAVY_AA_GUN, 1, 70);
+			item(ModItems.RAILGUN, 1, 90);
+			section("Automatic");
+			item(ModBlocks.FLAK_CANNON, 1, 45);
+			item(ModBlocks.SAM_SITE, 1, 90);
+			item(ModBlocks.POINT_DEFENSE, 1, 45);
+			item(ModBlocks.MISSILE_INTERCEPTOR, 1, 30);
+			item(ModBlocks.SHIELD_GENERATOR, 1, 60);
+			section("Early warning");
+			item(ModBlocks.RADAR_STATION, 1, 12);
+
+			cat("Vehicles");
+			section("On land");
+			item(ModItems.JEEP, 1, 40);
+			item(ModItems.TANK, 1, 100);
+			item(ModItems.DIRT_BIKE, 1, 20);
+			item(ModItems.QUAD, 1, 28);
+			item(ModItems.TUNNEL_BORER, 1, 60);
+			section("On water");
+			item(ModItems.PATROL_BOAT, 1, 25);
+			item(ModItems.GUNBOAT, 1, 70);
+			item(ModItems.LANDING_CRAFT, 1, 55);
+
+			cat("Aircraft");
+			section("Aircraft");
+			item(ModItems.FIGHTER_JET, 1, 150);
+			item(ModItems.ATTACK_JET, 1, 170);
+			item(ModItems.BOMBER, 1, 220);
+			item(ModItems.ATTACK_HELI, 1, 160);
+			section("Airfield");
+			item(ModBlocks.AIRFIELD_PAD, 1, 30);
+
+			cat("Machines");
+			section("Power");
+			item(ModBlocks.COMBUSTION_GENERATOR, 1, 12);
+			item(ModBlocks.SOLAR_PANEL, 1, 10);
+			item(ModBlocks.BATTERY, 1, 15);
+			section("Making rubies");
+			item(ModBlocks.RUBY_DRILL, 1, 25);
+			item(ModBlocks.ORE_REFINERY, 1, 20);
+			item(ModBlocks.TRADE_DEPOT, 1, 15);
+			item(ModBlocks.VAULT, 1, 20);
+			item(ModBlocks.AMMO_FACTORY, 1, 18);
+			section("Moving things");
+			item(ModBlocks.CONVEYOR, 16, 2);
+			item(ModBlocks.ELEVATOR, 2, 2);
+
+			cat("Building");
+			section("Building tools");
+			item(ModItems.ARCHITECT_WAND, 1, 10);
+			item(ModItems.REMODELER, 1, 8);
+			item(ModItems.BUILDERS_WAND, 1, 6);
+			item(ModItems.EXCAVATOR, 1, 8);
+			section("Copying buildings");
+			item(ModItems.BLUEPRINT, 1, 2);
+			item(ModBlocks.CONSTRUCTOR, 1, 30);
+			section("Moving parts");
+			item(ModBlocks.RUBY_BEARING, 1, 12);
+			item(ModBlocks.RUBY_PISTON, 1, 10);
+			section("Lights");
+			item(ModBlocks.FLOODLIGHT, 2, 1);
+
+			cat("Security");
+			section("Locked doors");
+			item(ModBlocks.KEYCARD_DOOR, 1, 6);
+			item(ModBlocks.KEYCARD_READER, 1, 5);
+			item(ModItems.KEYCARD, 1, 2);
+			section("Watching and alarms");
+			item(ModBlocks.SECURITY_CAMERA, 1, 5);
+			item(ModBlocks.MONITOR, 1, 8);
+			item(ModBlocks.LASER_TRIPWIRE, 1, 6);
+			item(ModBlocks.SEISMIC_SENSOR, 1, 6);
+			item(ModBlocks.ALARM_BLOCK, 1, 1);
+
+			cat("Gear");
+			section("Carrying and talking");
+			item(ModItems.FIELD_PACK, 1, 8);
+			item(ModItems.HEAVY_RUCKSACK, 1, 20);
+			item(ModItems.FIELD_RADIO, 1, 4);
+			section("Getting around");
+			item(ModItems.JETPACK, 1, 30);
+			item(ModItems.GRAPPLING_HOOK, 1, 15);
+			item(ModItems.NIGHT_GOGGLES, 1, 12);
+			section("Ruby armor and tools");
+			item(ModItems.RUBY_HELMET, 1, 4);
+			item(ModItems.RUBY_CHESTPLATE, 1, 8);
+			item(ModItems.RUBY_LEGGINGS, 1, 7);
+			item(ModItems.RUBY_BOOTS, 1, 3);
+			item(ModItems.RUBY_SWORD, 1, 3);
+			item(ModItems.RUBY_PICKAXE, 1, 4);
+
+			cat("Support");
+			section("Guards");
+			item(ModItems.GUARD_CONTRACT, 1, 25);
+			item(ModItems.AT_GUARD_CONTRACT, 1, 40);
+			section("Drones");
+			item(ModItems.RECON_DRONE, 1, 12);
+			item(ModItems.SCOUT_DRONE, 1, 20);
+			section("Paint");
+			item(ModItems.PAINT_KIT, 1, 3);
 		}
 		return entries;
 	}
 
-	private static void gun(int slot, Item gun, int price) {
+	/** A new tab. */
+	private static void cat(String name) {
+		page++;
+		PAGE_NAMES.add(name);
+		nextSlot = 0;
+		section = "";
+	}
+
+	private static void section(String name) {
+		section = name;
+	}
+
+	/** The cards on a page, in order, with their sections (for the screen). */
+	public static List<Card> cards(int page) {
+		List<Card> out = new ArrayList<>();
+		for (Entry e : entries()) {
+			if (e.page() == page) {
+				out.add(new Card(e.slot(), e.section()));
+			}
+		}
+		return out;
+	}
+
+	private static void gun(Item gun, int price) {
 		int magazine = ((GunItem) gun).stats().magazine();
-		entries.add(new Entry(page, slot, price, () -> {
+		entries.add(new Entry(page, nextSlot++, price, () -> {
 			ItemStack stack = new ItemStack(gun);
 			stack.set(ModComponents.AMMO, magazine);
 			return stack;
-		}, id(gun), null));
+		}, id(gun), null, section));
 	}
 
-	private static void item(int slot, ItemLike item, int count, int price) {
-		entries.add(new Entry(page, slot, price, () -> new ItemStack(item, count), id(item.asItem()), null));
+	private static void item(ItemLike item, int count, int price) {
+		entries.add(new Entry(page, nextSlot++, price, () -> new ItemStack(item, count), id(item.asItem()), null, section));
 	}
 
 	/** The research that still locks this entry for this player, or null. */
@@ -249,8 +313,10 @@ public final class Shop {
 
 	public static void open(ServerPlayer player, int page) {
 		SimpleContainer container = new SimpleContainer(SLOTS);
-		fill(container, player, page);
-		String title = "Armory: " + PAGE_NAMES[page];
+		fill(container, player, Math.max(0, Math.min(pageCount() - 1, page)));
+		entries();
+		int shown = Math.max(0, Math.min(PAGE_NAMES.size() - 1, page));
+		String title = "Armory: " + PAGE_NAMES.get(shown);
 		player.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<Integer>() {
 			@Override
 			public Integer getScreenOpeningData(ServerPlayer p) {
@@ -264,7 +330,7 @@ public final class Shop {
 
 			@Override
 			public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, Inventory inventory, Player p) {
-				return new ArmoryMenu(id, inventory, container, page);
+				return new ArmoryMenu(id, inventory, container, shown);
 			}
 		});
 	}
@@ -294,9 +360,9 @@ public final class Shop {
 			List<Component> lore = new ArrayList<>();
 			Research.Node lock = locked(entry, player);
 			if (lock != null) {
-				lore.add(Component.literal("LOCKED: research " + lock.title() + " (" + lock.cost() + " points)")
+				lore.add(Component.literal("Unlock: the " + lock.title() + " upgrade (" + lock.cost() + " stars)")
 						.withStyle(style -> style.withItalic(false).withColor(ChatFormatting.DARK_AQUA)));
-				lore.add(Component.literal("Press J to open research").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
+				lore.add(Component.literal("Press J to open your upgrades").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
 				display.set(DataComponents.CUSTOM_NAME, Component.literal("[Locked] ").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.DARK_AQUA))
 						.append(Component.literal(display.getHoverName().getString()).withStyle(style -> style.withItalic(false).withColor(ChatFormatting.DARK_GRAY))));
 				display.setCount(1);
@@ -317,23 +383,21 @@ public final class Shop {
 				Component.literal("Mine Ruby Ore deep underground,").withStyle(ChatFormatting.GRAY),
 				Component.literal("or loot supply drops.").withStyle(ChatFormatting.GRAY))));
 		container.setItem(49, info);
-		if (page + 1 < PAGES) {
-			container.setItem(NEXT_SLOT, named(Items.SPECTRAL_ARROW, PAGE_NAMES[page + 1] + " ->"));
-		}
-		if (page > 0) {
-			container.setItem(BACK_SLOT, named(Items.SPECTRAL_ARROW, "<- " + PAGE_NAMES[page - 1]));
-		}
 	}
 
 	private static void buy(ServerPlayer player, int slot, Container container, int page) {
-		if ((slot == NEXT_SLOT && page + 1 < PAGES || slot == BACK_SLOT && page > 0) && player.containerMenu instanceof ArmoryMenu menu) {
-			menu.turnTo(player, slot == NEXT_SLOT ? page + 1 : page - 1);
-			return;
-		}
 		for (Entry entry : entries()) {
 			if (entry.page() != page || entry.slot() != slot) {
 				continue;
 			}
+			buyEntry(player, entry);
+			fill(container, player, page);
+			return;
+		}
+	}
+
+	private static void buyEntry(ServerPlayer player, Entry entry) {
+		{
 			int price = price(entry, player);
 			if (price < 0) {
 				return;
@@ -359,8 +423,6 @@ public final class Shop {
 				player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_YES, SoundSource.PLAYERS, 0.8F, 1.0F);
 				Goals.add(player.level().getServer(), player.getUUID(), "armory", 1);
 			}
-			fill(container, player, page);
-			return;
 		}
 	}
 
@@ -406,11 +468,30 @@ public final class Shop {
 		fill(container, player, page);
 	}
 
-	static int pageCount() {
-		return PAGES;
+	public static int pageCount() {
+		entries();
+		return PAGE_NAMES.size();
 	}
 
 	public static String pageName(int page) {
-		return page >= 0 && page < PAGE_NAMES.length ? PAGE_NAMES[page] : "";
+		entries();
+		return page >= 0 && page < PAGE_NAMES.size() ? PAGE_NAMES.get(page) : "";
+	}
+
+	/** "Buy ammo": the ammo for the gun in {@code slot} on {@code page}, bought as if clicked. */
+	static void buyAmmo(ServerPlayer player, Container container, int page, int slot) {
+		for (Entry gun : entries()) {
+			if (gun.page() != page || gun.slot() != slot || !(gun.stock().get().getItem() instanceof GunItem g)) {
+				continue;
+			}
+			String want = id(g.stats().ammo().item());
+			for (Entry ammo : entries()) {
+				if (ammo.name().equals(want)) {
+					buyEntry(player, ammo);
+					fill(container, player, page);
+					return;
+				}
+			}
+		}
 	}
 }

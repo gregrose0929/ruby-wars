@@ -92,13 +92,44 @@ public final class LookInfo {
 				lines.add(kind.title + " " + MachineKind.TIER_NAMES[m.tier() - 1]);
 				lines.add("Owner: " + name(m.owner()));
 				lines.add(statusText(m.status()));
-				if (kind == MachineKind.BATTERY || kind.output(m.tier()) > 0) {
+				String holds = holds(m, kind.inputs, m.getContainerSize());
+				if (kind.slots() > 0) {
+					lines.add(holds.isEmpty() ? "Empty" : "Holds " + holds);
+				}
+				if (kind == MachineKind.BATTERY || kind.output(m.tier()) > 0 || kind.draw(m.tier()) > 0) {
 					UUID owner = m.owner();
 					long cap = Grid.capacity(owner);
 					bar = cap > 0 ? (float) Grid.charge(owner) / cap : -1;
 					lines.add("Grid: " + Grid.charge(owner) + " / " + cap + " charge");
 				}
 				color = m.status() == MachineBlockEntity.WORKING ? GREEN : m.status() == MachineBlockEntity.IDLE ? BLUE : AMBER;
+			} else if (state.getBlock() instanceof dev.rubymod.industry.ConveyorBlock) {
+				net.minecraft.core.Direction facing = state.getValue(dev.rubymod.industry.ConveyorBlock.FACING);
+				lines.add("Conveyor Belt, running " + facing.getName());
+				var front = player.level().getBlockEntity(pos.relative(facing));
+				BlockState frontState = player.level().getBlockState(pos.relative(facing));
+				lines.add(front instanceof net.minecraft.world.Container ? "Feeds the " + frontState.getBlock().getName().getString()
+						: frontState.getBlock() instanceof dev.rubymod.industry.ConveyorBlock ? "Feeds the next belt" : "Nothing at the end: items stop there");
+				int carried = 0;
+				for (var item : player.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(pos).inflate(0.1))) {
+					carried += item.getItem().getCount();
+				}
+				lines.add(carried > 0 ? "Carrying " + carried : "Nothing on it");
+				color = front instanceof net.minecraft.world.Container ? GREEN : AMBER;
+			} else if (be instanceof net.minecraft.world.Container chest && !(be instanceof DefenseBlockEntity) && !(be instanceof GraveBlockEntity)
+					&& (state.is(net.minecraft.world.level.block.Blocks.CHEST) || state.is(net.minecraft.world.level.block.Blocks.BARREL)
+							|| state.is(net.minecraft.world.level.block.Blocks.TRAPPED_CHEST) || state.is(net.minecraft.world.level.block.Blocks.HOPPER))) {
+				lines.add(state.getBlock().getName().getString());
+				String holds = holds(chest, 0, chest.getContainerSize());
+				lines.add(holds.isEmpty() ? "Empty" : holds);
+				int used = 0;
+				for (int i = 0; i < chest.getContainerSize(); i++) {
+					if (!chest.getItem(i).isEmpty()) {
+						used++;
+					}
+				}
+				bar = used / (float) Math.max(1, chest.getContainerSize());
+				color = used >= chest.getContainerSize() ? AMBER : BLUE;
 			} else if (be instanceof DefenseBlockEntity d) {
 				lines.add(state.getBlock().getName().getString());
 				if (state.is(ModBlocks.SENTRY_TURRET) || state.is(ModBlocks.FLAK_CANNON)) {
@@ -110,7 +141,7 @@ public final class LookInfo {
 					bar = d.charges / (float) DefenseBlockEntity.MAX_CHARGES;
 					color = d.charges > 0 ? GREEN : RED;
 				}
-				lines.add(SeasonData.get().phase.isBattle() ? "Armed" : "Switches on at Lockdown");
+				lines.add(SeasonData.get().phase.pvp() ? "Armed: enemies, raiders and monsters" : "Armed for raiders and monsters (enemies from Open War)");
 			} else if (be instanceof GraveBlockEntity g) {
 				lines.add("War Grave: " + g.ownerName());
 				int s = g.lockedSeconds();
@@ -137,6 +168,28 @@ public final class LookInfo {
 		Net.send(player, new MorePayloads.LookInfo(query.pos(), query.entityId(), lines, bar, color));
 	}
 
+	/** "12 Cobblestone, 4 Raw Iron and 2 more" from slots {@code from} to {@code to}. */
+	private static String holds(net.minecraft.world.Container c, int from, int to) {
+		java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+		for (int i = from; i < to; i++) {
+			var s = c.getItem(i);
+			if (!s.isEmpty()) {
+				counts.merge(s.getHoverName().getString(), s.getCount(), Integer::sum);
+			}
+		}
+		StringBuilder b = new StringBuilder();
+		int n = 0;
+		for (var e : counts.entrySet()) {
+			if (n == 2) {
+				b.append(" and ").append(counts.size() - 2).append(" more");
+				break;
+			}
+			b.append(n > 0 ? ", " : "").append(e.getValue()).append(' ').append(e.getKey());
+			n++;
+		}
+		return b.toString();
+	}
+
 	private static SeasonData.Claim claimAt(BlockPos pos) {
 		for (SeasonData.Claim c : SeasonData.get().claims.values()) {
 			if (!c.destroyed && c.pos().equals(pos)) {
@@ -157,8 +210,8 @@ public final class LookInfo {
 	private static String statusText(int status) {
 		return switch (status) {
 			case MachineBlockEntity.WORKING -> "Working";
-			case MachineBlockEntity.NO_POWER -> "No power";
-			case MachineBlockEntity.OUTPUT_FULL -> "Output full";
+			case MachineBlockEntity.NO_POWER -> "No power: add solar panels or a generator";
+			case MachineBlockEntity.OUTPUT_FULL -> "Full: empty it, or add a conveyor belt";
 			case MachineBlockEntity.NO_INPUT -> "Waiting for input";
 			case MachineBlockEntity.NIGHT -> "Night: no sun";
 			default -> "Idle";

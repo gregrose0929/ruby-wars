@@ -370,7 +370,15 @@ public final class BattleDirector {
 
 	private static void checkForWinner(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
-		if (!data.phase.pvp() || data.players.size() < 2) {
+		if (!data.phase.pvp()) {
+			return;
+		}
+		if (data.players.size() < 2) {
+			// A one-player season (testing, or everyone else left) ends once nobody's left standing.
+			if (aliveCount() == 0) {
+				data.winner = "";
+				enterPhase(server, Phase.ENDED);
+			}
 			return;
 		}
 		// One squad (or one solo player) left standing wins.

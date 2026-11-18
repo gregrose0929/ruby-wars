@@ -15,7 +15,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * The Armory's menu: 54 display slots (the shop page; 45-53 are navigation and
  * info) and no player inventory. Clicking an item buys it (server side, see
- * Shop.buy); menu buttons 100+ jump to a page. Drawn by ArmoryScreen.
+ * Shop.buy); menu buttons: 100+ a tab, 1000+ buy a card, 2000+ buy a gun's ammo. Drawn by ArmoryScreen.
  */
 public class ArmoryMenu extends AbstractContainerMenu {
 	public static final int SLOTS = 54;
@@ -37,9 +37,8 @@ public class ArmoryMenu extends AbstractContainerMenu {
 		this.page.set(page);
 		addDataSlot(this.page);
 		for (int i = 0; i < SLOTS; i++) {
-			int x = i < 45 ? GRID_X + (i % 9) * CELL + 2 : -10000;
-			int y = i < 45 ? GRID_Y + (i / 9) * CELL + 2 : -10000;
-			addSlot(new Slot(shop, i, x, y) {
+			// The screen draws the cards itself (named, in sections): the slots only carry the items across.
+			addSlot(new Slot(shop, i, -10000, -10000) {
 				@Override
 				public boolean mayPickup(Player player) {
 					return false;
@@ -81,8 +80,20 @@ public class ArmoryMenu extends AbstractContainerMenu {
 
 	@Override
 	public boolean clickMenuButton(Player player, int id) {
-		if (id >= 100 && id < 100 + Shop.pageCount() && player instanceof ServerPlayer sp) {
+		if (!(player instanceof ServerPlayer sp)) {
+			return false;
+		}
+		// 100+: a tab. 1000+: buy the card in that slot. 2000+: buy ammo for the gun in that slot.
+		if (id >= 100 && id < 100 + Shop.pageCount()) {
 			turnTo(sp, id - 100);
+			return true;
+		}
+		if (id >= 1000 && id < 1000 + 45) {
+			Shop.click(sp, id - 1000, shop, page.get());
+			return true;
+		}
+		if (id >= 2000 && id < 2000 + 45) {
+			Shop.buyAmmo(sp, shop, page.get(), id - 2000);
 			return true;
 		}
 		return false;

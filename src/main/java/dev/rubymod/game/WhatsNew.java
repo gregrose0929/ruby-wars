@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-18-coaster-park";
+	private static final String VERSION = "2026-11-18-armory";
 	private static final List<String> LINES = List.of(
-			"minecraft:minecart|Ruby Coaster Park: ten spots on one main street, and one is yours to keep. Name your coaster!",
-			"minecraft:spyglass|Change any piece of your track (Pick a Piece), with a see-through preview before it goes in.",
-			"minecraft:water_bucket|New: Splashdown, big-size pieces, night lights, and laps: go round as many times as you like.");
+			"rubymod:armory|A new Armory: tabs for each kind of thing, cards with names and prices, and a panel that says what each does. Then Buy.",
+			"rubymod:ruby_drill|The Ruby Drill keeps what it digs; conveyor belts (follow the yellow arrows) carry it to a chest. The Trade Depot buys anything.",
+			"rubymod:sentry_turret|Base defenses all follow one rule: raiders, monsters, and enemy players from Open War. Look at things to see how they're doing.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

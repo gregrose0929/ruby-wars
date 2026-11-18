@@ -51,11 +51,8 @@ public class LandmineBlock extends Block {
 			}
 			return;
 		}
-		if (!Rules.phase().pvp()) {
-			return;
-		}
 		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ());
-		if (claim != null && Rules.isEnemyOf(claim, entity.getControllingPassenger() != null ? entity.getControllingPassenger() : entity)) {
+		if (claim != null && Rules.defenseTarget(claim, entity.getControllingPassenger() != null ? entity.getControllingPassenger() : entity)) {
 			serverLevel.removeBlock(pos, false);
 			dev.rubymod.game.Armor.blast(serverLevel, null, null, net.minecraft.world.phys.Vec3.atCenterOf(pos), 80.0F, null);
 			Explosions.explode(serverLevel, null, pos.getX() + 0.5, pos.getY() + 0.3, pos.getZ() + 0.5, 3.0F, false);

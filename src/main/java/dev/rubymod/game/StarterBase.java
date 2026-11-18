@@ -63,7 +63,7 @@ public final class StarterBase {
 		level.playSound(null, heart, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 0.8F, 1.2F);
 		player.sendSystemMessage(Component.literal("Your starter base is ready, with " + STARTING_RUBIES + " rubies in the bank! The Solar Panels power "
 				+ "a Ruby Drill; a conveyor belt carries what it digs into the chest next to it. Put things in the Trade Depot to sell them "
-				+ "into your bank, and spend at the Armory (right-click it). Upgrade your Heart there too (first page) for a bigger base.")
+				+ "into your bank, and spend at the Armory (right-click it). Upgrade your Heart there too (the Your Heart tab) for a bigger base.")
 				.withStyle(ChatFormatting.GREEN));
 		if (!missed.isEmpty()) {
 			player.sendSystemMessage(Component.literal("No room for your " + String.join(", ", missed) + ": it's in your inventory, place it yourself.")

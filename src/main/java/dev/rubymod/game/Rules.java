@@ -168,6 +168,23 @@ public final class Rules {
 	}
 
 	/** Is this entity an enemy of the claim's owner (used by turrets, mines, alarms)? */
+	/**
+	 * Should a base's defenses (turrets, traps, Tesla Coils) go for this? The same rule for all of them: raiders (and an
+	 * enemy's guards) whenever they're attacking, monsters any time, and enemy players once PvP is on.
+	 */
+	public static boolean defenseTarget(SeasonData.Claim claim, Entity entity) {
+		if (claim == null || entity == null || !entity.isAlive()) {
+			return false;
+		}
+		if (entity instanceof dev.rubymod.entity.SoldierEntity soldier) {
+			return soldier.isEnemyOfClaim(claim);
+		}
+		if (entity instanceof net.minecraft.world.entity.monster.Enemy) {
+			return true;
+		}
+		return phase().pvp() && isEnemyOf(claim, entity);
+	}
+
 	public static boolean isEnemyOf(SeasonData.Claim claim, Entity entity) {
 		if (!(entity instanceof Player p) || p.isSpectator() || p.isCreative()) {
 			return false;

@@ -148,7 +148,7 @@ public class DefenseBlockEntity extends BlockEntity {
 				}
 			}
 			case CLAYMORE -> {
-				if (t % 4 == 0 && Rules.phase().pvp() && (claim = claimHere(serverLevel, pos)) != null) {
+				if (t % 4 == 0 && (claim = claimHere(serverLevel, pos)) != null) {
 					tickClaymore(serverLevel, pos, state, claim);
 				} else if (t % 4 == 0 && dev.rubymod.game.Horde.inOutpost(serverLevel, pos)) {
 					tickHordeClaymore(serverLevel, pos, state);
@@ -543,7 +543,8 @@ public class DefenseBlockEntity extends BlockEntity {
 		Direction facing = state.hasProperty(ClaymoreBlock.FACING) ? state.getValue(ClaymoreBlock.FACING) : Direction.NORTH;
 		Vec3 front = Vec3.atCenterOf(pos).add(Vec3.atLowerCornerOf(facing.getUnitVec3i()).scale(2.5));
 		AABB zone = new AABB(front, front).inflate(1.8, 1.5, 1.8);
-		List<Player> victims = level.getEntitiesOfClass(Player.class, zone, p -> p.isAlive() && Rules.isEnemyOf(claim, p));
+		List<net.minecraft.world.entity.LivingEntity> victims = level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, zone,
+				e -> Rules.defenseTarget(claim, e));
 		if (victims.isEmpty()) {
 			return;
 		}

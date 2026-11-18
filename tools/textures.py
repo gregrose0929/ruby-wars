@@ -1049,7 +1049,9 @@ def blocks():
             for x in range(16):
                 ridge = (y + 2 * k) % 4 == 0
                 edge = x in (0, 15)
-                c = (60, 64, 70) if edge else (46, 46, 50) if ridge else (28, 28, 31)
+                # Yellow arrows pointing (and moving) the way the belt runs.
+                arrow = 3 <= x <= 12 and int((y + 2 * k) - abs(x - 7.5) * 0.9) % 8 == 0
+                c = (60, 64, 70) if edge else (210, 170, 50) if arrow else (46, 46, 50) if ridge else (28, 28, 31)
                 row.append(c + (255,))
             belt.append(row)
     b["conveyor_belt"] = belt

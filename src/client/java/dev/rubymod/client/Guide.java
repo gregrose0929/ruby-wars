@@ -19,7 +19,7 @@ public final class Guide {
 			new Step("Place your Ruby Heart", "Pick a spot for your base (K opens the map) and place it. A starter base appears around it: "
 					+ "an Armory, and a Ruby Drill that digs ore into a chest (sell it at the Trade Depot).", "heart", false),
 			new Step("Buy something at your Armory", "Right-click the Armory by your Heart. It spends the rubies you carry, then your bank.", "armory", false),
-			new Step("Upgrade your Heart", "At the Armory, first page (Weapons & Base): click the Nether Star, \"Upgrade Ruby Heart\". "
+			new Step("Upgrade your Heart", "At the Armory, the first tab (Your Heart): \"Upgrade Ruby Heart\", then Buy. "
 					+ "20 rubies for tier 2 (a bigger claim, more health, more drills), then 60 for tier 3.", "heart2", false),
 			new Step("Place a base defense", "Sentry Turrets, walls and mines from the Armory: raiders attack your Heart on days 3, 6, 9 and 12.",
 					"defense", false),
@@ -85,7 +85,7 @@ public final class Guide {
 		}
 		if (phase == Phase.BUILD) {
 			int day = ClientState.hud == null ? 0 : ClientState.hud.day();
-			return "Build day " + day + ". Raids on days 3, 6, 9 and 12. Battle Day starts when everyone's ready: last squad standing wins.";
+			return "Build day " + day + ". Raids on days 3, 6, 9 and 12. Battle Day comes when the admin calls it (or on the date they set): last squad standing wins.";
 		}
 		if (phase == Phase.ENDED) {
 			return "The season is over. A new one starts soon.";

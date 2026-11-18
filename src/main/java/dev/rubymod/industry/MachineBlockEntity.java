@@ -481,8 +481,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		double best = r;
 		for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
 				new AABB(top, top).inflate(r), e -> e.isAlive() && !e.isSpectator())) {
-			boolean hostile = e instanceof net.minecraft.world.entity.monster.Enemy || dev.rubymod.game.Horde.isEnemy(e)
-					|| e instanceof Player p && claim != null && Rules.phase().pvp() && Rules.isEnemyOf(claim, p);
+			boolean hostile = dev.rubymod.game.Horde.isEnemy(e) || (claim == null ? e instanceof net.minecraft.world.entity.monster.Enemy
+					: Rules.defenseTarget(claim, e));
 			double d = e.position().distanceTo(top);
 			if (hostile && d < best && canSee(level, top, e.getEyePosition())) {
 				best = d;

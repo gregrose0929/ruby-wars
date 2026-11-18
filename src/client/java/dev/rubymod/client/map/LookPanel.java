@@ -57,7 +57,7 @@ public class LookPanel implements HudElement {
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker delta) {
 		Minecraft mc = Minecraft.getInstance();
 		MorePayloads.LookInfo info = ClientState.look;
-		if (info == null || System.currentTimeMillis() - ClientState.lookAt > 900 || lastEntity == -2) {
+		if (info == null || System.currentTimeMillis() - ClientState.lookAt > 900 || lastEntity == -2 || dev.rubymod.client.GameHud.menuOpen()) {
 			return;
 		}
 		boolean match = info.entityId() >= 0 ? info.entityId() == lastEntity : lastEntity < 0 && info.pos().equals(lastPos);
