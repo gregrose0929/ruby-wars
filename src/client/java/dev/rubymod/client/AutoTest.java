@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "basecheck" -> baseCheckScript();
 			case "bridgecheck" -> bridgeCheckScript();
 			case "collapsecheck" -> collapseCheckScript();
 			case "skycheck" -> skyCheckScript();
@@ -6188,6 +6189,91 @@ public final class AutoTest {
 			var level = me(server).level();
 			log("gate: back: iron at x+7 {}, at x+10 {}", level.getBlockState(bridgeAt.offset(7, 2, 0)).getBlock(), level.getBlockState(bridgeAt.offset(10, 2, 0)).getBlock());
 		}));
+	}
+
+		private static net.minecraft.core.BlockPos baseAt;
+
+	/** Moving base parts: a piston's push setting, a lift that carries the player, and a Keycard Reader gate. */
+	private static void baseCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "execute as @p at @s run tp @s ~-60 ~ ~60");
+		});
+		then(200, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = p.level();
+			var b = p.blockPosition();
+			baseAt = b;
+			for (int x = -2; x <= 16; x++) {
+				for (int y = 1; y <= 8; y++) {
+					for (int z = -2; z <= 12; z++) {
+						level.setBlockAndUpdate(b.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+			var east = net.minecraft.core.Direction.EAST;
+			var lever = net.minecraft.world.level.block.Blocks.LEVER.defaultBlockState()
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACING, net.minecraft.core.Direction.WEST);
+			// 1. A gate pushed five blocks (the setting).
+			level.setBlockAndUpdate(b.offset(2, 1, 2), dev.rubymod.registry.ModBlocks.RUBY_PISTON.defaultBlockState()
+					.setValue(dev.rubymod.block.RubyMoverBlock.FACING, east).setValue(dev.rubymod.block.RubyMoverBlock.DISTANCE, 5));
+			for (int y = 1; y <= 3; y++) {
+				level.setBlockAndUpdate(b.offset(3, y, 2), net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState());
+			}
+			level.setBlockAndUpdate(b.offset(1, 1, 2), lever);
+			// 2. A lift: a piston facing up, a 3 x 1 iron platform on it, a lever on its west side.
+			level.setBlockAndUpdate(b.offset(4, 1, 8), dev.rubymod.registry.ModBlocks.RUBY_PISTON.defaultBlockState()
+					.setValue(dev.rubymod.block.RubyMoverBlock.FACING, net.minecraft.core.Direction.UP));
+			for (int x = 3; x <= 5; x++) {
+				level.setBlockAndUpdate(b.offset(x, 2, 8), net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState());
+			}
+			level.setBlockAndUpdate(b.offset(3, 1, 8), lever);
+			// 3. A reader gate: a piston facing east, a 1 x 3 wall, the Keycard Reader on top of the piston.
+			level.setBlockAndUpdate(b.offset(10, 1, 2), dev.rubymod.registry.ModBlocks.RUBY_PISTON.defaultBlockState()
+					.setValue(dev.rubymod.block.RubyMoverBlock.FACING, east).setValue(dev.rubymod.block.RubyMoverBlock.DISTANCE, 2));
+			for (int y = 1; y <= 3; y++) {
+				level.setBlockAndUpdate(b.offset(11, y, 2), net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState());
+			}
+			level.setBlockAndUpdate(b.offset(10, 2, 2), dev.rubymod.registry.ModBlocks.KEYCARD_READER.defaultBlockState());
+		}));
+		java.util.function.Consumer<net.minecraft.core.BlockPos> pull = at -> onServer(Minecraft.getInstance(), server -> {
+			var level = me(server).level();
+			((net.minecraft.world.level.block.LeverBlock) net.minecraft.world.level.block.Blocks.LEVER).pull(level.getBlockState(at), level, at, null);
+		});
+		// 1.
+		then(80, mc -> pull.accept(baseAt.offset(1, 1, 2)));
+		then(110, mc -> onServer(mc, server -> {
+			var level = me(server).level();
+			log("base: gate set to 5: iron at +3 {}, at +8 {}", level.getBlockState(baseAt.offset(3, 2, 2)).getBlock(), level.getBlockState(baseAt.offset(8, 2, 2)).getBlock());
+		}));
+		// 2.
+		then(5, mc -> command(mc, "execute as @p run tp @s " + (baseAt.getX() + 4.5) + " " + (baseAt.getY() + 3) + " " + (baseAt.getZ() + 8.5) + " 0 20"));
+		double[] before = new double[1];
+		then(30, mc -> {
+			before[0] = mc.player.getY();
+			pull.accept(baseAt.offset(3, 1, 8));
+		});
+		then(20, mc -> shot(mc, "base-1-lift-rising"));
+		then(100, mc -> onServer(mc, server -> {
+			var level = me(server).level();
+			log("base: lift: player went from y {} to {}, platform now at +5 {}", before[0], me(server).getY(),
+					level.getBlockState(baseAt.offset(4, 5, 8)).getBlock());
+		}));
+		// 3.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.teleportTo(p.level(), baseAt.getX() + 8.5, baseAt.getY() + 1, baseAt.getZ() + 4.5, java.util.Set.of(), 30, 10, false);
+			log("base: reader swipe: {}", dev.rubymod.block.KeycardReaderBlock.swipe(p.level(), baseAt.offset(10, 2, 2), p));
+		}));
+		then(80, mc -> {
+			shot(mc, "base-2-reader-open");
+			onServer(mc, server -> log("base: reader gate open: iron at +11 {}, at +13 {}", me(server).level().getBlockState(baseAt.offset(11, 2, 2)).getBlock(),
+					me(server).level().getBlockState(baseAt.offset(13, 2, 2)).getBlock()));
+		});
+		then(200, mc -> onServer(mc, server -> log("base: reader gate shut again: iron at +11 {}, at +13 {}",
+				me(server).level().getBlockState(baseAt.offset(11, 2, 2)).getBlock(), me(server).level().getBlockState(baseAt.offset(13, 2, 2)).getBlock())));
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */

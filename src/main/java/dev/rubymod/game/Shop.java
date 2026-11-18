@@ -157,6 +157,7 @@ public final class Shop {
 			// Row 3 (right): moving parts
 			item(23, ModBlocks.RUBY_BEARING, 1, 12);
 			item(24, ModBlocks.RUBY_PISTON, 1, 10);
+			item(25, ModBlocks.KEYCARD_READER, 1, 5);
 			// Row 2: production
 			item(9, ModBlocks.RUBY_DRILL, 1, 25);
 			item(10, ModBlocks.ORE_REFINERY, 1, 20);

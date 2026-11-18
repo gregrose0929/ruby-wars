@@ -62,6 +62,9 @@ public final class Movers {
 		Vec3 pivot;
 		int age;
 		Runnable done;
+		/** Whoever's standing on what slides, and where they started (they ride along). */
+		List<net.minecraft.world.entity.Entity> riders = new ArrayList<>();
+		List<Vec3> riderStarts = new ArrayList<>();
 	}
 
 	private static final List<Move> MOVING = new ArrayList<>();
@@ -251,6 +254,19 @@ public final class Movers {
 			m.parts.add(part);
 		}
 		level.playSound(null, m.machine, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 1.0F, 0.6F);
+		if (m.slide != null) {
+			// Riders: anyone standing on top of what slides goes with it (a lift, a moving walkway).
+			for (BlockPos p : blocks) {
+				net.minecraft.world.phys.AABB top = new net.minecraft.world.phys.AABB(p.getX(), p.getY() + 0.9, p.getZ(), p.getX() + 1, p.getY() + 1.6, p.getZ() + 1);
+				for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity) null, top,
+						e -> !(e instanceof Display) && !e.isPassenger() && !e.isSpectator() && Math.abs(e.getY() - (p.getY() + 1)) < 0.4)) {
+					if (!m.riders.contains(e)) {
+						m.riders.add(e);
+						m.riderStarts.add(e.position());
+					}
+				}
+			}
+		}
 		MOVING.add(m);
 		return null;
 	}
@@ -278,12 +294,20 @@ public final class Movers {
 		for (Iterator<Move> it = MOVING.iterator(); it.hasNext();) {
 			Move m = it.next();
 			m.age++;
+			float t = Math.min(1, m.age / (float) TICKS);
+			float eased = t * t * (3 - 2 * t);
 			if (m.age % 2 == 0 && m.age < TICKS) {
-				float t = m.age / (float) TICKS;
-				float eased = t * t * (3 - 2 * t);
 				for (Part p : m.parts) {
 					pose(m, p, eased);
 				}
+			}
+			carry(m, eased);
+			// The machine at work: a grind for a bearing, a clank for a piston, and a few sparks at its face.
+			if (m.age % 6 == 0 && m.age < TICKS) {
+				Vec3 c = m.pivot;
+				m.level.playSound(null, c.x, c.y, c.z, m.slide != null ? SoundEvents.CHAIN_PLACE : SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 0.7F,
+						m.slide != null ? 0.6F : 0.5F);
+				m.level.sendParticles(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, c.x, c.y, c.z, 3, 0.4, 0.4, 0.4, 0.05);
 			}
 			if (m.age >= TICKS + 2) {
 				finish(m);
@@ -292,11 +316,34 @@ public final class Movers {
 		}
 	}
 
+	/** Riders go with what they're standing on (every tick, so it's smooth), and don't take a fall for it. */
+	private static void carry(Move m, float eased) {
+		if (m.riders.isEmpty()) {
+			return;
+		}
+		Vec3 off = new Vec3(m.slide.getStepX(), m.slide.getStepY(), m.slide.getStepZ()).scale(m.distance * eased);
+		for (int i = 0; i < m.riders.size(); i++) {
+			net.minecraft.world.entity.Entity e = m.riders.get(i);
+			if (e.isRemoved() || e.level() != m.level) {
+				continue;
+			}
+			Vec3 to = m.riderStarts.get(i).add(off).add(0, m.slide == Direction.UP ? 0.02 : 0, 0);
+			if (e instanceof net.minecraft.server.level.ServerPlayer sp) {
+				sp.teleportTo(m.level, to.x, to.y, to.z, java.util.Set.of(net.minecraft.world.entity.Relative.Y_ROT, net.minecraft.world.entity.Relative.X_ROT), 0, 0, false);
+			} else {
+				e.teleportTo(to.x, to.y, to.z);
+			}
+			e.setDeltaMovement(Vec3.ZERO);
+			e.resetFallDistance();
+		}
+	}
+
 	/** Back into the world where they ended up (turned to match), and the displays go. */
 	private static void finish(Move m) {
 		for (Part p : m.parts) {
 			pose(m, p, 1);
 		}
+		carry(m, 1);
 		for (Part p : m.parts) {
 			BlockPos to = target(m, p.from());
 			BlockState s = m.slide != null ? p.state() : turned(p.state(), m.axis, m.degrees);
@@ -307,6 +354,17 @@ public final class Movers {
 			p.show().discard();
 		}
 		m.level.playSound(null, m.machine, SoundEvents.PISTON_CONTRACT, SoundSource.BLOCKS, 1.0F, 0.7F);
+		// Settling into place: a thud, and a little dust off each block (not too many).
+		m.level.playSound(null, m.machine, SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, 1.0F, 0.6F);
+		int puffs = 0;
+		for (Part p : m.parts) {
+			if (puffs++ > 40) {
+				break;
+			}
+			BlockPos to = target(m, p.from());
+			m.level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(net.minecraft.core.particles.ParticleTypes.BLOCK, p.state()),
+					to.getX() + 0.5, to.getY() + 0.5, to.getZ() + 0.5, 3, 0.35, 0.35, 0.35, 0.05);
+		}
 		if (m.done != null) {
 			m.done.run();
 		}

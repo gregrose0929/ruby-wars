@@ -38,6 +38,7 @@
 		"rubymod:laser_tripwire",
 		"rubymod:keycard_door",
 		"rubymod:ruby_bearing",
-		"rubymod:ruby_piston"
+		"rubymod:ruby_piston",
+		"rubymod:keycard_reader"
 	]
 }

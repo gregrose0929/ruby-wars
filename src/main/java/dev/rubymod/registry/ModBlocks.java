@@ -81,6 +81,8 @@ public class ModBlocks {
 			props().mapColor(MapColor.COLOR_RED).strength(3.0F, 6.0F).sound(SoundType.METAL));
 	public static final Block RUBY_PISTON = register("ruby_piston", p -> new dev.rubymod.block.RubyMoverBlock(false, p),
 			props().mapColor(MapColor.COLOR_RED).strength(3.0F, 6.0F).sound(SoundType.METAL));
+	public static final Block KEYCARD_READER = register("keycard_reader", dev.rubymod.block.KeycardReaderBlock::new,
+			props().mapColor(MapColor.COLOR_BLACK).strength(3.0F, 6.0F).sound(SoundType.METAL).lightLevel(s -> s.getValue(dev.rubymod.block.KeycardReaderBlock.POWERED) ? 9 : 0));
 	public static final Block SECURITY_CAMERA = register("security_camera",
 			p -> new DefenseBlock(DefenseBlock.Kind.CAMERA, Block.box(4, 4, 4, 12, 12, 12), p),
 			props().mapColor(MapColor.COLOR_BLACK).strength(2.0F, 6.0F).sound(SoundType.METAL).noOcclusion());

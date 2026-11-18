@@ -24,8 +24,8 @@ import net.minecraft.world.phys.BlockHitResult;
 /**
  * The Ruby Bearing and the Ruby Piston: power one (a lever, a button held, any redstone) and the blocks stuck to its
  * front move: a bearing swings them a quarter turn round its axis (a drawbridge, a roof that opens), a piston slides
- * them out {@link #PUSH} blocks (a sliding gate). Power off, and they go back. Right-click a bearing with an empty hand
- * to make it swing the other way.
+ * them out (a sliding gate, a lift). Power off, and they go back. Right-click with an empty hand to set it up: a
+ * piston's push, a bearing's direction (crouch: a quarter or a half turn).
  */
 public class RubyMoverBlock extends Block {
 	public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
@@ -34,19 +34,24 @@ public class RubyMoverBlock extends Block {
 	public static final BooleanProperty OUT = BooleanProperty.create("out");
 	/** A bearing that swings the other way. */
 	public static final BooleanProperty REVERSED = BooleanProperty.create("reversed");
-	public static final int PUSH = 3;
+	/** A bearing that turns half way round (not a quarter). */
+	public static final BooleanProperty HALF = BooleanProperty.create("half");
+	/** How far a piston pushes. */
+	public static final net.minecraft.world.level.block.state.properties.IntegerProperty DISTANCE =
+			net.minecraft.world.level.block.state.properties.IntegerProperty.create("distance", 1, 8);
 
 	private final boolean bearing;
 
 	public RubyMoverBlock(boolean bearing, Properties properties) {
 		super(properties);
 		this.bearing = bearing;
-		registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(POWERED, false).setValue(OUT, false).setValue(REVERSED, false));
+		registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(POWERED, false).setValue(OUT, false).setValue(REVERSED, false)
+				.setValue(HALF, false).setValue(DISTANCE, 3));
 	}
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(FACING, POWERED, OUT, REVERSED);
+		builder.add(FACING, POWERED, OUT, REVERSED, HALF, DISTANCE);
 	}
 
 	@Override
@@ -55,12 +60,29 @@ public class RubyMoverBlock extends Block {
 		return defaultBlockState().setValue(FACING, context.getClickedFace());
 	}
 
+	/**
+	 * Settings (empty hand, while its blocks are home): a piston's push (1 to 8 blocks, round and round); a bearing's
+	 * direction, or (crouching) a quarter or a half turn.
+	 */
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-		if (!bearing) {
-			return InteractionResult.PASS;
+		if (level.isClientSide()) {
+			return InteractionResult.SUCCESS;
 		}
-		if (!level.isClientSide()) {
+		if (state.getValue(OUT) || Movers.busy(pos)) {
+			player.sendOverlayMessage(Component.literal("Change it while its blocks are home (power it off first).").withStyle(ChatFormatting.YELLOW));
+			return InteractionResult.SUCCESS;
+		}
+		if (!bearing) {
+			int d = state.getValue(DISTANCE) % 8 + 1;
+			level.setBlock(pos, state.setValue(DISTANCE, d), 3);
+			player.sendOverlayMessage(Component.literal("Ruby Piston: pushes " + d + (d == 1 ? " block" : " blocks") + " now.").withStyle(ChatFormatting.LIGHT_PURPLE));
+		} else if (player.isShiftKeyDown()) {
+			boolean half = !state.getValue(HALF);
+			level.setBlock(pos, state.setValue(HALF, half), 3);
+			player.sendOverlayMessage(Component.literal("Ruby Bearing: turns " + (half ? "half way round" : "a quarter turn") + " now.")
+					.withStyle(ChatFormatting.LIGHT_PURPLE));
+		} else {
 			boolean reversed = !state.getValue(REVERSED);
 			level.setBlock(pos, state.setValue(REVERSED, reversed), 3);
 			player.sendOverlayMessage(Component.literal("Ruby Bearing: it'll swing " + (reversed ? "the other way" : "the first way") + " now.")
@@ -101,10 +123,10 @@ public class RubyMoverBlock extends Block {
 		};
 		String why;
 		if (mover.bearing) {
-			float degrees = (state.getValue(REVERSED) ? -90 : 90) * (want ? 1 : -1);
+			float degrees = (state.getValue(REVERSED) ? -90 : 90) * (state.getValue(HALF) ? 2 : 1) * (want ? 1 : -1);
 			why = Movers.rotate(level, pos, front, degrees, done);
 		} else {
-			why = Movers.slide(level, pos, front, want ? front : front.getOpposite(), PUSH, done);
+			why = Movers.slide(level, pos, front, want ? front : front.getOpposite(), state.getValue(DISTANCE), done);
 		}
 		if (why != null) {
 			for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, new net.minecraft.world.phys.AABB(pos).inflate(16))) {

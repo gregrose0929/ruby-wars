@@ -24,10 +24,10 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-17-late";
+	private static final String VERSION = "2026-11-17-later";
 	private static final List<String> LINES = List.of(
-			"rubymod:ruby_bearing|New: Ruby Bearing and Ruby Piston. Power one and the blocks on its front swing round or slide.",
-			"minecraft:tnt|Buildings come down: after shells, missiles and Breaching Charges, whatever's left hanging falls.",
+			"rubymod:ruby_bearing|New: Ruby Bearing and Piston for drawbridges, gates and lifts, and a Keycard Reader to open them.",
+			"minecraft:tnt|Shelled buildings come down: weak spans give way, in dust and rubble. Build with steel!",
 			"rubymod:tunnel_borer|Also new: Tunnel Borer, Grappling Hook, Flamethrower, bikes, base security, Battle Day storms and sky.");
 
 	/** Who's seen this update's card. */

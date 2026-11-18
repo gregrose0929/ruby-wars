@@ -58,6 +58,10 @@ public final class Rules {
 		if (claim == null || claim.canUse(player.getUUID())) {
 			return true;
 		}
+		// Anyone can swipe at a Keycard Reader (it decides for itself).
+		if (state.is(ModBlocks.KEYCARD_READER)) {
+			return true;
+		}
 		// Keycard Doors open for whoever carries that base's Keycard (any day), and nobody else outside it.
 		if (state.is(ModBlocks.KEYCARD_DOOR)) {
 			return BaseSecurity.hasCard(player, claim);

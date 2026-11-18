@@ -39,6 +39,7 @@
 	"block.rubymod.security_camera": "Security Camera",
 	"block.rubymod.ruby_bearing": "Ruby Bearing",
 	"block.rubymod.ruby_piston": "Ruby Piston",
+	"block.rubymod.keycard_reader": "Keycard Reader",
 	"block.rubymod.monitor": "Monitor",
 	"block.rubymod.laser_tripwire": "Laser Tripwire",
 	"block.rubymod.keycard_door": "Keycard Door",
