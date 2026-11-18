@@ -17,7 +17,8 @@
 		"DeathScreenMixin",
 		"ToastMixin",
 		"RideViewMixin",
-		"KeyboardInputMixin"
+		"KeyboardInputMixin",
+		"FogRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

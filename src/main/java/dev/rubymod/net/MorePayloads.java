@@ -434,6 +434,17 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server to client: the Battle Day storm blowing now (a WarzoneTerrain theme, or -1). */
+	public record StormState(int theme) implements CustomPacketPayload {
+		public static final Type<StormState> TYPE = new Type<>(RubyMod.id("storm_state"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, StormState> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, StormState::theme, StormState::new);
+
+		@Override
+		public Type<StormState> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client to server, watching a base's cameras: next camera, or step away. */
 	public record CameraInput(boolean next, boolean exit) implements CustomPacketPayload {
 		public static final Type<CameraInput> TYPE = new Type<>(RubyMod.id("camera_input"));
@@ -672,6 +683,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.serverboundPlay().register(DroneInput.TYPE, DroneInput.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DroneGlow.TYPE, DroneGlow.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(CameraInput.TYPE, CameraInput.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(StormState.TYPE, StormState.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DeathInfo.TYPE, DeathInfo.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Autopilot.TYPE, Autopilot.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(RaidStatus.TYPE, RaidStatus.CODEC);

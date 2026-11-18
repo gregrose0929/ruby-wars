@@ -45,6 +45,7 @@ public final class DronePilot {
 
 	public static void register() {
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.DroneView.TYPE, (payload, context) -> view(context.client(), payload.entityId(), payload.camera()));
+		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.StormState.TYPE, (payload, context) -> dev.rubymod.game.Storms.set(payload.theme()));
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.DroneGlow.TYPE, (payload, context) -> {
 			long until = System.currentTimeMillis() + payload.seconds() * 1000L;
 			for (int id : payload.ids()) {

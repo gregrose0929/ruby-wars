@@ -411,6 +411,10 @@ public class AircraftEntity extends Mob {
 			}
 		}
 		speed = Mth.clamp(speed + accel, 0.0, kind.maxSpeed() * 1.35);
+		// In a Battle Day storm the engines can't push through: well short of full speed.
+		if (airborne && dev.rubymod.game.Storms.inStorm(level(), getX(), getZ())) {
+			speed = Math.min(speed, kind.maxSpeed() * dev.rubymod.game.Storms.AIR_SPEED);
+		}
 
 		float pitch = getXRot();
 		float yaw = getYRot();
@@ -524,6 +528,9 @@ public class AircraftEntity extends Mob {
 		// comes to a stop by itself when you let go.
 		double fwd = input.z;
 		Vec3 wanted = forward.scale(fwd * kind.maxSpeed()).add(right.scale(-input.x * kind.maxSpeed() * 0.55));
+		if (dev.rubymod.game.Storms.inStorm(level(), getX(), getZ())) {
+			wanted = wanted.scale(dev.rubymod.game.Storms.AIR_SPEED);
+		}
 		Vec3 horizontal = new Vec3(v.x, 0, v.z);
 		Vec3 diff = wanted.subtract(horizontal);
 		double step = (fwd == 0 && input.x == 0 ? 0.06 : 0.045) * (airborne ? 1.0 : 0.5);

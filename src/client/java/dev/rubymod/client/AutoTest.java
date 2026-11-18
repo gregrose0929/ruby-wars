@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "stormcheck" -> stormCheckScript();
 			case "securitycheck" -> securityCheckScript();
 			case "grapplecheck" -> grappleCheckScript();
 			case "borercheck" -> borerCheckScript();
@@ -5875,6 +5876,40 @@ public final class AutoTest {
 		then(5, mc -> mc.options.keyShift.setDown(true));
 		then(10, mc -> mc.options.keyShift.setDown(false));
 		then(20, mc -> log("security: stepped away: watching {}, camera is the player {}", DronePilot.flying(), mc.getCameraEntity() == mc.player));
+	}
+
+		/** Battle Day storms: a sandstorm in the Red Desert corner, a blizzard in the Snow Plateau corner. */
+	private static void stormCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode creative @a");
+		});
+		// The Red Desert: the corner whose theme says so (x and z both negative on this map).
+		then(200, mc -> {
+			command(mc, "execute as @p run tp @s -330 -60 -330 45 0");
+			onServer(mc, server -> dev.rubymod.game.Storms.force(dev.rubymod.world.WarzoneTerrain.THEME_DESERT));
+		});
+		then(100, mc -> {
+			log("storm: desert: theme {}, inside {}, fog {}", dev.rubymod.game.Storms.theme(),
+					dev.rubymod.game.Storms.inStorm(mc.level, mc.player.getX(), mc.player.getZ()), StormClient.thickness());
+			shot(mc, "storm-1-sandstorm");
+		});
+		then(5, mc -> {
+			command(mc, "execute as @p run tp @s 330 -60 -330 135 0");
+			onServer(mc, server -> dev.rubymod.game.Storms.force(dev.rubymod.world.WarzoneTerrain.THEME_SNOW));
+		});
+		then(40, mc -> log("storm: blizzard, walking in: fog {}", StormClient.thickness()));
+		then(60, mc -> {
+			log("storm: blizzard: inside {}, fog {}", dev.rubymod.game.Storms.inStorm(mc.level, mc.player.getX(), mc.player.getZ()), StormClient.thickness());
+			shot(mc, "storm-2-blizzard");
+		});
+		then(5, mc -> command(mc, "execute as @p run tp @s -330 -60 -330 45 0"));
+		then(60, mc -> {
+			log("storm: the desert, now the blizzard's elsewhere: inside {}, fog {}", dev.rubymod.game.Storms.inStorm(mc.level, mc.player.getX(), mc.player.getZ()),
+					StormClient.thickness());
+			shot(mc, "storm-3-clear");
+			onServer(mc, server -> dev.rubymod.game.Storms.force(null));
+		});
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */

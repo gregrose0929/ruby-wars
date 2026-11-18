@@ -76,6 +76,7 @@ public class RubyModClient implements ClientModInitializer {
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			DronePilot.tick(client);
+			StormClient.tick(client);
 			dev.rubymod.client.rift.RiftClient.tick(client);
 			while (reloadKey.consumeClick()) {
 				if (Targeting.piloting(client) != null) {

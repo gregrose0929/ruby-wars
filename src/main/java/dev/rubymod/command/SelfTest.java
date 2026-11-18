@@ -190,6 +190,29 @@ public final class SelfTest {
 			level.setBlockAndUpdate(sensor, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 		}
 
+		// ----- Battle Day storms -----
+		{
+			int was = dev.rubymod.game.Storms.theme();
+			check("storms: a sandstorm first, then clear, then a blizzard",
+					dev.rubymod.game.Storms.scheduled(0) == dev.rubymod.world.WarzoneTerrain.THEME_DESERT
+							&& dev.rubymod.game.Storms.scheduled(20L * 60 * 15) == dev.rubymod.game.Storms.NONE
+							&& dev.rubymod.game.Storms.scheduled(20L * 60 * 21) == dev.rubymod.world.WarzoneTerrain.THEME_SNOW);
+			dev.rubymod.game.Storms.set(dev.rubymod.world.WarzoneTerrain.THEME_DESERT);
+			double[] desert = {0, 0};
+			for (int a = 0; a < 360; a += 5) {
+				double x = Math.cos(Math.toRadians(a)) * 470;
+				double z = Math.sin(Math.toRadians(a)) * 470;
+				if (dev.rubymod.world.WarzoneTerrain.column((int) x, (int) z).theme() == dev.rubymod.world.WarzoneTerrain.THEME_DESERT) {
+					desert[0] = x;
+					desert[1] = z;
+				}
+			}
+			check("storms: the sandstorm covers the Red Desert", dev.rubymod.game.Storms.inStorm(level, desert[0], desert[1]));
+			check("storms: but not the crater, or the Snow Plateau", !dev.rubymod.game.Storms.inStorm(level, desert[0] * 0.2, desert[1] * 0.2)
+					&& !dev.rubymod.game.Storms.inStorm(level, -desert[0], -desert[1]));
+			dev.rubymod.game.Storms.set(was);
+		}
+
 		// ----- Keycard Doors and Laser Tripwires -----
 		{
 			BlockPos door = base.offset(-6, 1, -6);

@@ -201,6 +201,7 @@ public final class GameEvents {
 			}
 			Jetpacks.tick(server);
 			dev.rubymod.item.GrapplingHookItem.tick(server);
+			Storms.tick(server);
 			VersionCheck.tick(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
@@ -235,6 +236,7 @@ public final class GameEvents {
 			BattleDirector.onJoin(handler.getPlayer());
 			dev.rubymod.game.hub.Renames.onJoin(server, handler.getPlayer());
 			WhatsNew.onJoin(server, handler.getPlayer());
+			Storms.onJoin(handler.getPlayer());
 			VersionCheck.onJoin(handler.getPlayer());
 			// Moving a player to another dimension while they're still being added to the world
 			// breaks them, so duel restores and hub routing wait a few ticks.
