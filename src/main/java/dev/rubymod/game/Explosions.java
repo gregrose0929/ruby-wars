@@ -37,7 +37,15 @@ public final class Explosions {
 	}
 
 	public static void explode(ServerLevel level, Entity source, double x, double y, double z, float power, boolean breakBlocks) {
+		// Breaching Charges, cruise missiles and mortar shells bring buildings down (see Collapse).
+		boolean wrecks = breakBlocks && (source instanceof dev.rubymod.entity.BreachingChargeEntity || source instanceof dev.rubymod.entity.CruiseMissileEntity
+				|| source instanceof dev.rubymod.entity.MortarShellEntity);
+		Vec3 centre = new Vec3(x, y, z);
+		List<net.minecraft.world.level.block.state.BlockState> blasted = wrecks ? Collapse.sample(level, centre, power) : List.of();
 		level.explode(source, x, y, z, power, breakBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE);
+		if (wrecks) {
+			Collapse.after(level, centre, power, blasted);
+		}
 		dev.rubymod.game.convoy.Convoy.onBlast(level, x, y, z, power);
 		if (power >= 3.0F) {
 			Vec3 at = new Vec3(x, y, z);

@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "collapsecheck" -> collapseCheckScript();
 			case "skycheck" -> skyCheckScript();
 			case "bikecheck" -> bikeCheckScript();
 			case "firecheck" -> fireCheckScript();
@@ -6035,6 +6036,69 @@ public final class AutoTest {
 			command(mc, "time set noon");
 		});
 		then(120, mc -> log("sky: off again: redness {}", BattleSky.redness()));
+	}
+
+		/** A wooden building hit low on one side by a mortar: the walls and roof left hanging come down. */
+	private static void collapseCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode creative @a");
+			command(mc, "execute as @p at @s run tp @s ~-150 ~ ~150");
+		});
+		then(200, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = p.level();
+			// A two-storey wooden building on stilts (logs at the corners), with a floor and a roof, 12 blocks away.
+			var at = p.blockPosition().offset(-3, 0, -20);
+			for (int x = 0; x <= 6; x++) {
+				for (int z = 0; z <= 6; z++) {
+					boolean corner = (x == 0 || x == 6) && (z == 0 || z == 6);
+					for (int y = 0; y <= 3; y++) {
+						if (corner) {
+							level.setBlockAndUpdate(at.offset(x, y, z), net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState());
+						}
+					}
+					level.setBlockAndUpdate(at.offset(x, 4, z), net.minecraft.world.level.block.Blocks.SPRUCE_PLANKS.defaultBlockState());
+					boolean edge = x == 0 || x == 6 || z == 0 || z == 6;
+					for (int y = 5; y <= 7; y++) {
+						if (edge) {
+							level.setBlockAndUpdate(at.offset(x, y, z), (y == 6 && (x == 3 || z == 3)) ? net.minecraft.world.level.block.Blocks.GLASS.defaultBlockState()
+									: net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
+						}
+					}
+					level.setBlockAndUpdate(at.offset(x, 8, z), net.minecraft.world.level.block.Blocks.DARK_OAK_PLANKS.defaultBlockState());
+				}
+			}
+		}));
+		then(20, mc -> command(mc, "execute as @p at @s run tp @s ~ ~ ~ facing ~ ~5 ~-17"));
+		then(40, mc -> shot(mc, "collapse-1-before"));
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var at = p.blockPosition().offset(-3, 0, -20);
+			var level = p.level();
+			// Two shells on the near stilts.
+			for (var hit : new net.minecraft.core.BlockPos[] {at.offset(6, 1, 6), at.offset(0, 1, 6), at.offset(6, 1, 0), at.offset(0, 1, 0)}) {
+				var shell = dev.rubymod.registry.ModEntities.MORTAR_SHELL.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+				dev.rubymod.game.Explosions.explode(level, shell, hit.getX() + 0.5, hit.getY() + 0.5, hit.getZ() + 0.5, 4.5F, true);
+			}
+			log("collapse: falling blocks {}", level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class, p.getBoundingBox().inflate(30)).size());
+		}));
+		then(3, mc -> shot(mc, "collapse-2-falling"));
+		then(60, mc -> {
+			int left = 0;
+			var at = mc.player.blockPosition().offset(-3, 0, -20);
+			for (int x = 0; x <= 6; x++) {
+				for (int z = 0; z <= 6; z++) {
+					for (int y = 4; y <= 8; y++) {
+						if (!mc.level.getBlockState(at.offset(x, y, z)).isAir()) {
+							left++;
+						}
+					}
+				}
+			}
+			log("collapse: blocks still up in the air afterwards: {}", left);
+			shot(mc, "collapse-3-after");
+		});
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
