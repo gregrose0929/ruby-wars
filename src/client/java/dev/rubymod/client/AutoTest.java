@@ -6085,7 +6085,8 @@ public final class AutoTest {
 			log("collapse: falling blocks {}", level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class, p.getBoundingBox().inflate(30)).size());
 		}));
 		then(3, mc -> shot(mc, "collapse-2-falling"));
-		then(60, mc -> {
+		then(14, mc -> shot(mc, "collapse-2b-landing"));
+		then(46, mc -> {
 			int left = 0;
 			var at = mc.player.blockPosition().offset(-3, 0, -20);
 			for (int x = 0; x <= 6; x++) {

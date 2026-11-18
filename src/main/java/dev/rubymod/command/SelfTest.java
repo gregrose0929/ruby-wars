@@ -297,6 +297,49 @@ public final class SelfTest {
 			}
 		}
 
+		// ----- Strength: how far a material can reach out from its support -----
+		{
+			java.util.function.BiFunction<net.minecraft.world.level.block.Block, net.minecraft.world.level.block.Block, Integer> beam = (pillar, span) -> {
+				BlockPos at = base.offset(150, 40, -40);
+				for (int x = -2; x <= 10; x++) {
+					for (int z = -2; z <= 2; z++) {
+						level.setBlockAndUpdate(at.offset(x, -1, z), Blocks.STONE.defaultBlockState());
+						for (int y = 0; y <= 5; y++) {
+							level.setBlockAndUpdate(at.offset(x, y, z), Blocks.AIR.defaultBlockState());
+						}
+					}
+				}
+				for (int y = 0; y <= 3; y++) {
+					level.setBlockAndUpdate(at.offset(0, y, 0), pillar.defaultBlockState());
+				}
+				for (int x = 1; x <= 8; x++) {
+					level.setBlockAndUpdate(at.offset(x, 3, 0), span.defaultBlockState());
+				}
+				dev.rubymod.game.Collapse.settle(level, at.offset(4, 3, 0), 4);
+				int held = 0;
+				for (int x = 1; x <= 8; x++) {
+					if (level.getBlockState(at.offset(x, 3, 0)).is(span)) {
+						held++;
+					}
+				}
+				for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class, new net.minecraft.world.phys.AABB(at).inflate(16))) {
+					e.discard();
+				}
+				for (int x = -2; x <= 10; x++) {
+					for (int z = -2; z <= 2; z++) {
+						for (int y = -1; y <= 5; y++) {
+							level.setBlockAndUpdate(at.offset(x, y, z), Blocks.AIR.defaultBlockState());
+						}
+					}
+				}
+				return held;
+			};
+			int wood = beam.apply(Blocks.STONE_BRICKS, Blocks.OAK_PLANKS);
+			int steel = beam.apply(Blocks.IRON_BLOCK, Blocks.IRON_BLOCK);
+			check("strength: a wooden beam reaches five blocks out, the rest falls (" + wood + " of 8 stay)", wood == 5);
+			check("strength: a steel beam on a steel pillar holds all eight (" + steel + ")", steel == 8);
+		}
+
 		// ----- Battle Day storms -----
 		{
 			int was = dev.rubymod.game.Storms.theme();
