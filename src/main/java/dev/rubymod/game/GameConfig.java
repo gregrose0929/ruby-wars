@@ -89,6 +89,8 @@ public class GameConfig {
 	/** Squads: players per squad, and whether squadmates can hurt each other. */
 	public int squadMaxSize = 4;
 	public boolean friendlyFire = false;
+	/** Battle Day at night: searchlights, flares, and night-vision goggles worth having (/rubywars nightbattle on). */
+	public boolean nightBattle = false;
 	/** Seconds a PvP hit keeps you "in combat"; logging out then kills you. */
 	public int combatTagSeconds = 15;
 

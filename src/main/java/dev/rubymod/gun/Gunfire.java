@@ -126,6 +126,7 @@ public final class Gunfire {
 		}
 
 		playShot(level, player, stats);
+		dev.rubymod.entity.LightEntity.flash(level, player.getEyePosition().add(player.getLookAngle().scale(0.8)));
 		if (!stats.silenced()) {
 			Vec3 muzzle = eye.add(player.getLookAngle().scale(0.8)).add(0, -0.15, 0);
 			// Others see the muzzle smoke; the shooter doesn't (it would cloud their sights).

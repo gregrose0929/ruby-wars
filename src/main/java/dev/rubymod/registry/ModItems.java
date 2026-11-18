@@ -81,6 +81,11 @@ public class ModItems {
 	public static final Item GRAPPLING_HOOK = register("grappling_hook", dev.rubymod.item.GrapplingHookItem::new,
 			new Item.Properties().durability(120));
 	public static final Item KEYCARD = register("keycard", dev.rubymod.item.KeycardItem::new, new Item.Properties().stacksTo(1));
+	/** Worn on the head: night vision, and the world turns green. */
+	public static final Item NIGHT_GOGGLES = register("night_goggles", Item::new, new Item.Properties().stacksTo(1)
+			.component(net.minecraft.core.component.DataComponents.EQUIPPABLE,
+					net.minecraft.world.item.equipment.Equippable.builder(net.minecraft.world.entity.EquipmentSlot.HEAD)
+							.setEquipSound(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_IRON).build()));
 	public static final Item FIELD_RADIO = register("field_radio", dev.rubymod.item.FieldRadioItem::new, new Item.Properties().stacksTo(1));
 	/** Worn in the chest slot: hold Space in the air to fly. */
 	public static final Item JETPACK = register("jetpack", dev.rubymod.item.JetpackItem::new, new Item.Properties().stacksTo(1)

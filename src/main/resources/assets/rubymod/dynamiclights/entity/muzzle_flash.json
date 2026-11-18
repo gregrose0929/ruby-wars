@@ -1,0 +1,6 @@
+{
+	"match": {
+		"type": "rubymod:muzzle_flash"
+	},
+	"luminance": 13
+}

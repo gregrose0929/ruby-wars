@@ -1,0 +1,6 @@
+{
+	"match": {
+		"type": "rubymod:illumination_flare"
+	},
+	"luminance": 15
+}

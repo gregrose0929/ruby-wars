@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "lightcheck" -> lightCheckScript();
 			case "basecheck" -> baseCheckScript();
 			case "bridgecheck" -> bridgeCheckScript();
 			case "collapsecheck" -> collapseCheckScript();
@@ -6274,6 +6275,99 @@ public final class AutoTest {
 		});
 		then(200, mc -> onServer(mc, server -> log("base: reader gate shut again: iron at +11 {}, at +13 {}",
 				me(server).level().getBlockState(baseAt.offset(11, 2, 2)).getBlock(), me(server).level().getBlockState(baseAt.offset(13, 2, 2)).getBlock())));
+	}
+
+		/** Dynamic lights at night (flares, muzzle flashes), Night Battle searchlights, and night-vision goggles. */
+	private static void lightCheckScript() {
+		then(5, mc -> {
+			command(mc, "gamemode creative @a");
+			command(mc, "time set 18000");
+			command(mc, "execute as @p at @s run tp @s ~200 ~ ~200 0 10");
+			log("light: LambDynamicLights loaded: {}", net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("lambdynlights"));
+		});
+		then(200, mc -> {
+			command(mc, "time set 18000");
+			shot(mc, "light-0-dark");
+		});
+		then(5, mc -> command(mc, "item replace entity @p weapon.mainhand with minecraft:torch"));
+		then(30, mc -> {
+			mc.player.setXRot(40);
+		});
+		then(10, mc -> shot(mc, "light-0b-torch"));
+		then(5, mc -> {
+			command(mc, "item replace entity @p weapon.mainhand with minecraft:air");
+			mc.player.setXRot(40);
+		});
+		// Two flares hanging close, ahead.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var look = p.getLookAngle();
+			dev.rubymod.entity.LightEntity.flare(p.level(), p.position().add(look.x * 3, 6, look.z * 3));
+			dev.rubymod.entity.LightEntity.flare(p.level(), p.position().add(look.x * 14 + 5, 7, look.z * 14));
+		}));
+		then(40, mc -> {
+			for (var f : mc.level.getEntitiesOfClass(dev.rubymod.entity.LightEntity.class, mc.player.getBoundingBox().inflate(40))) {
+				log("light: flare on the client at {} ({} blocks up)", f.blockPosition(), Math.round(f.getY() - mc.player.getY()));
+			}
+			shot(mc, "light-1-flares");
+		});
+		// A burst from a rifle (muzzle flashes light the ground).
+		then(5, mc -> {
+			command(mc, "kill @e[type=rubymod:illumination_flare]");
+			command(mc, "give @p rubymod:arr_rifle");
+			command(mc, "give @p rubymod:heavy_ammo 64");
+		});
+		then(20, mc -> {
+			for (int i = 0; i < 9; i++) {
+				if (mc.player.getInventory().getItem(i).is(dev.rubymod.registry.ModItems.ARR_RIFLE)) {
+					mc.player.getInventory().setSelectedSlot(i);
+				}
+			}
+			mc.player.setXRot(25);
+		});
+		for (int i = 0; i < 6; i++) {
+			then(2, mc -> onServer(mc, server -> {
+				var p = me(server);
+				var gun = p.getMainHandItem();
+				if (gun.getItem() instanceof dev.rubymod.gun.GunItem g) {
+					gun.set(dev.rubymod.registry.ModComponents.AMMO, 30);
+					dev.rubymod.gun.Gunfire.forget(p.getUUID());
+					dev.rubymod.gun.Gunfire.tryFire(p.level(), p, gun, g);
+				}
+			}));
+		}
+		then(1, mc -> {
+			log("light: muzzle flashes around: {}", mc.level.getEntitiesOfClass(dev.rubymod.entity.LightEntity.class, mc.player.getBoundingBox().inflate(4)).size());
+			shot(mc, "light-2-muzzle");
+		});
+		// Night Battle by a base: searchlights.
+		then(10, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var heart = p.blockPosition().offset(0, 0, 25);
+			p.level().setBlockAndUpdate(heart, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(p.level(), p, heart);
+			dev.rubymod.game.NightBattle.forced = true;
+		}));
+		then(80, mc -> {
+			int beams = 0;
+			for (var e : mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.BlockDisplay.class, mc.player.getBoundingBox().inflate(60))) {
+				beams++;
+			}
+			log("light: block displays near (searchlight beams): {}", beams);
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~-12 0 -25");
+		});
+		then(30, mc -> shot(mc, "light-3-searchlights"));
+		// Goggles on.
+		then(5, mc -> command(mc, "item replace entity @p armor.head with rubymod:night_goggles"));
+		then(60, mc -> {
+			log("light: goggles: night vision {}", mc.player.hasEffect(net.minecraft.world.effect.MobEffects.NIGHT_VISION));
+			shot(mc, "light-4-goggles");
+		});
+		then(5, mc -> {
+			command(mc, "item replace entity @p armor.head with minecraft:air");
+			onServer(mc, server -> dev.rubymod.game.NightBattle.forced = false);
+			command(mc, "time set noon");
+		});
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */

@@ -288,6 +288,7 @@ public class RubyModClient implements ClientModInitializer {
 		HudElementRegistry.addLast(RubyMod.id("hud"), new GameHud());
 		HudElementRegistry.addLast(RubyMod.id("zoom"), new ZoomHud());
 		HudElementRegistry.addLast(RubyMod.id("how_to"), new HowToCard());
+		HudElementRegistry.addFirst(RubyMod.id("night_goggles"), new GogglesHud());
 		HudElementRegistry.addLast(RubyMod.id("big_title"), new BigTitle());
 		HudElementRegistry.addLast(RubyMod.id("jetpack"), new Jetpack.Hud());
 		net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry.registerModelLayer(Jetpack.LAYER, Jetpack::layer);
@@ -360,7 +361,9 @@ public class RubyModClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.BOMBER, AircraftRenderer::new);
 		EntityRendererRegistry.register(ModEntities.ATTACK_HELI, AircraftRenderer::new);
 		EntityRendererRegistry.register(ModEntities.STICKY_CHARGE, ThrownItemRenderer::new);
-		EntityRendererRegistry.register(ModEntities.WRECK, net.minecraft.client.renderer.entity.NoopRenderer::new);
+		EntityRendererRegistry.register(ModEntities.WRECK, InvisibleRenderer::new);
+		EntityRendererRegistry.register(ModEntities.MUZZLE_FLASH, InvisibleRenderer::new);
+		EntityRendererRegistry.register(ModEntities.ILLUMINATION_FLARE, InvisibleRenderer::new);
 		EntityRendererRegistry.register(ModEntities.TARGET_DUMMY, net.minecraft.client.renderer.entity.ArmorStandRenderer::new);
 		EntityRendererRegistry.register(ModEntities.ROCKET,
 				context -> new ProjectileModelRenderer<>(context, r -> r.isShell() ? ModBlocks.TANK_SHELL_MODEL : ModBlocks.ROCKET_MODEL, 1.6F));

@@ -1,0 +1,6 @@
+{
+	"match": {
+		"type": "rubymod:cruise_missile"
+	},
+	"luminance": 15
+}

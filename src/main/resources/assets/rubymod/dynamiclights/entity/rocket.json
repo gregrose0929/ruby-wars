@@ -1,0 +1,6 @@
+{
+	"match": {
+		"type": "rubymod:rocket"
+	},
+	"luminance": 12
+}

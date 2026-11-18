@@ -27,6 +27,12 @@ public class ModEntities {
 			EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(8).updateInterval(5));
 	public static final EntityType<GrenadeEntity> SMOKE_GRENADE = register("smoke_grenade",
 			EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(8).updateInterval(5));
+	public static final EntityType<dev.rubymod.entity.LightEntity> MUZZLE_FLASH = register("muzzle_flash",
+			EntityType.Builder.<dev.rubymod.entity.LightEntity>of(dev.rubymod.entity.LightEntity::new, MobCategory.MISC).sized(0.1F, 0.1F)
+					.clientTrackingRange(4).updateInterval(20).noSave());
+	public static final EntityType<dev.rubymod.entity.LightEntity> ILLUMINATION_FLARE = register("illumination_flare",
+			EntityType.Builder.<dev.rubymod.entity.LightEntity>of(dev.rubymod.entity.LightEntity::new, MobCategory.MISC).sized(0.3F, 0.3F)
+					.clientTrackingRange(16).updateInterval(2).noSave());
 	public static final EntityType<GrenadeEntity> FIRE_BOMB = register("fire_bomb",
 			EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(8).updateInterval(5));
 	public static final EntityType<RocketEntity> ROCKET = register("rocket",

@@ -63,7 +63,7 @@ public final class GameEvents {
 		dev.rubymod.game.hub.HubPark.register();
 		// No hostile mobs (config: hostileMobs); raid soldiers, guards and animals are unaffected.
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-			if (Cosmetics.strayHat(entity) || Cosmetics.lentItem(entity) || dev.rubymod.game.hub.HubPark.stale(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world) || dev.rubymod.game.convoy.Convoy.stale(entity)) {
+			if (Cosmetics.strayHat(entity) || Cosmetics.lentItem(entity) || dev.rubymod.game.hub.HubPark.stale(entity) || dev.rubymod.game.party.FreeRoam.stale(entity, world) || dev.rubymod.game.convoy.Convoy.stale(entity) || NightBattle.stale(entity)) {
 				entity.discard();
 				return;
 			}
@@ -156,6 +156,7 @@ public final class GameEvents {
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			Collapse.clear();
 			Movers.finishAll();
+			NightBattle.clear();
 			SeasonData.save();
 			dev.rubymod.industry.Grid.saveIfDirty();
 			Stats.save();
@@ -206,6 +207,7 @@ public final class GameEvents {
 			Storms.tick(server);
 			Collapse.tick(server);
 			Movers.tick();
+			NightBattle.tick(server);
 			VersionCheck.tick(server);
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);

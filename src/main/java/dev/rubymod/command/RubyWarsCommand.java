@@ -127,6 +127,9 @@ public final class RubyWarsCommand {
 					dev.rubymod.game.TrainingGround.build(c.getSource().getLevel(), net.minecraft.core.BlockPos.containing(c.getSource().getPosition()));
 					return ok(c, "Training ground built: gun range to the west, vehicle yard to the east, airfield to the south.");
 				}))
+				.then(Commands.literal("nightbattle").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.then(Commands.literal("on").executes(c -> nightBattle(c, true)))
+						.then(Commands.literal("off").executes(c -> nightBattle(c, false))))
 				.then(Commands.literal("selftest").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.executes(c -> SelfTest.run(c.getSource()))
 						.then(Commands.literal("prepare").executes(c -> SelfTest.prepare(c.getSource(), true)))
@@ -193,6 +196,15 @@ public final class RubyWarsCommand {
 		return 1;
 	}
 
+
+	/** Night Battle on or off (saved): Battle Day fought at night, with searchlights and flares. */
+	private static int nightBattle(CommandContext<CommandSourceStack> c, boolean on) {
+		dev.rubymod.game.GameConfig.get().nightBattle = on;
+		dev.rubymod.game.GameConfig.save();
+		c.getSource().sendSystemMessage(Component.literal(on ? "Night Battle is on: Battle Day will be fought at night, with searchlights and flares."
+				: "Night Battle is off: Battle Day by daylight.").withStyle(ChatFormatting.GOLD));
+		return 1;
+	}
 
 	/** Admin testing kit: every gun loaded, ammo, raid gear, attachments, vehicles, and a full set of ruby armor. */
 	private static int kit(CommandContext<CommandSourceStack> c) throws CommandSyntaxException {

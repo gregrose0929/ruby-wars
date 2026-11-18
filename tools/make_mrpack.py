@@ -36,6 +36,8 @@ EXTRA_MODS = [
     ("mouse-tweaks", "required", "unsupported"),
     ("appleskin", "required", "optional"),
     ("simple-voice-chat", "required", "required"),
+    # Dynamic lights: flares, muzzle flashes, rockets, burning wrecks light up what's round them as they move.
+    ("lambdynamiclights", "required", "unsupported"),
 ]
 
 
