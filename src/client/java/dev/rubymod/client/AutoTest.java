@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "bikecheck" -> bikeCheckScript();
 			case "firecheck" -> fireCheckScript();
 			case "stormcheck" -> stormCheckScript();
 			case "securitycheck" -> securityCheckScript();
@@ -5973,6 +5974,44 @@ public final class AutoTest {
 			log("fire: fire bomb: {} fires where it landed, bombs left {}", fires, mc.player.getMainHandItem().getCount());
 			shot(mc, "fire-2-bomb");
 		});
+	}
+
+		/** The Dirt Bike and the Quad against the jeep: three seconds flat out each, on flat ground. */
+	private static void bikeCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "execute as @p at @s run tp @s ~100 ~ ~-300 0 0");
+		});
+		String[] kinds = {"jeep", "quad", "dirt_bike"};
+		for (String kind : kinds) {
+			then(kind.equals("jeep") ? 200 : 20, mc -> onServer(mc, server -> {
+				var p = me(server);
+				p.stopRiding();
+				var type = switch (kind) {
+					case "jeep" -> dev.rubymod.registry.ModEntities.JEEP;
+					case "quad" -> dev.rubymod.registry.ModEntities.QUAD;
+					default -> dev.rubymod.registry.ModEntities.DIRT_BIKE;
+				};
+				var v = type.create(p.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+				v.snapTo(p.getX(), p.getY(), p.getZ(), 0, 0);
+				p.level().addFreshEntity(v);
+				p.startRiding(v);
+			}));
+			double[] start = new double[1];
+			then(10, mc -> {
+				mc.player.setYRot(0);
+				start[0] = mc.player.getZ();
+				mc.options.keyUp.setDown(true);
+			});
+			then(60, mc -> {
+				mc.options.keyUp.setDown(false);
+				log("bike: {}: {} blocks in 3 s", kind, Math.round(mc.player.getZ() - start[0]));
+				mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			});
+			then(15, mc -> shot(mc, "bike-" + kind));
+			then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		}
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */

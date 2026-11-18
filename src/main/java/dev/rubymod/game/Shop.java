@@ -128,6 +128,8 @@ public final class Shop {
 			item(5, ModItems.BOMBER, 1, 220);
 			item(6, ModItems.ATTACK_HELI, 1, 160);
 			item(7, ModBlocks.AIRFIELD_PAD, 1, 30);
+			item(8, ModItems.DIRT_BIKE, 1, 20);
+			item(17, ModItems.QUAD, 1, 28);
 			// Row 2: anti-vehicle and anti-air weapons
 			item(9, ModItems.SKYHAMMER, 1, 35);
 			item(10, ModItems.AA_MISSILE, 2, 8);
