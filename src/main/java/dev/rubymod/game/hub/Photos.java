@@ -62,7 +62,6 @@ final class Photos {
 			}
 		}
 		HubPark.label(level, (WX1 + WX2) / 2.0 + 0.5, FLOOR + ROWS + 2.6, WZ - 0.3, "FAMILY PHOTO WALL", ChatFormatting.GOLD, 1.0F);
-		HubPark.label(level, (WX1 + WX2) / 2.0 + 0.5, FLOOR + ROWS + 2.1, WZ - 0.3, "Get a Toy Camera from Tilly!", ChatFormatting.WHITE, 0.5F);
 		for (int i = 0; i < MAPS.size(); i++) {
 			hang(level, i);
 		}

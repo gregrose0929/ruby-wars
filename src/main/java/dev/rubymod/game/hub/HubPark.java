@@ -49,7 +49,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The hub's park: six little islands floating round the plaza, reached by launch pads, and the toys on the plaza.
+ * The hub's park: six little islands floating round the plaza, reached by launch pads.
  *
  * <ul>
  * <li>Fun Park (east): the rollercoaster station, trampolines, a bumper-car ice rink, the shooting gallery, a snow fort.</li>
@@ -58,7 +58,7 @@ import net.minecraft.world.phys.Vec3;
  * <li>Mini Golf (south-west): three holes.</li>
  * <li>The Stage (north-west): a DJ booth, a dance floor that lights up to the music, a photo spot.</li>
  * <li>Sky parkour (north-west): a jumping course in the sky, with checkpoints.</li>
- * <li>On the plaza: the launch pads, the cannon, the toy chest, a fireworks button, benches, and some critters.</li>
+ * <li>On the plaza: the launch pads, the cannon, a fireworks button, benches, and some critters.</li>
  * </ul>
  *
  * Rebuilt (blocks and display entities) every time the server starts; rides and the like are in HubRides and HubGames.
@@ -118,7 +118,6 @@ public final class HubPark {
 	static final Vec3 STAGE_CENTER = new Vec3(-46 + STAGE_DX, FLOOR + 2, -40 + STAGE_DZ);
 	static final List<BlockPos> DANCE_FLOOR = new ArrayList<>();
 	// The plaza's things you click.
-	private static final BlockPos TOY_CHEST = new BlockPos(3, FLOOR + 1, 10);
 	private static final BlockPos FIREWORKS = new BlockPos(-6, FLOOR + 2, -4);
 	private static final BlockPos SNOW_PILE = new BlockPos(68, FLOOR + 1, 5);
 	private static final BlockPos JUKEBOX = new BlockPos(-46 + STAGE_DX, FLOOR + 2, -40 + STAGE_DZ);
@@ -135,7 +134,7 @@ public final class HubPark {
 	}
 
 	private static final List<Place> PLACES = List.of(
-			new Place("plaza", "The Plaza", "Toys, Sky Rings", "minecraft:bell", stand(-1, FLOOR, 6), "Parkour, pets, photo wall"),
+			new Place("plaza", "The Plaza", "Sky Rings, fireworks", "minecraft:bell", stand(-1, FLOOR, 6), "Parkour, pets, photo wall"),
 			new Place("funpark", "Fun Park", "Coaster, bumpers, more", "minecraft:minecart", stand(46, FLOOR, 5), "Mouse, swings, drop tower"),
 			new Place("splash", "Splash Island", "Slides, flume, rapids", "minecraft:water_bucket", stand(54, FLOOR, -76), "Capsule, wave pool, swans"),
 			new Place("golf", "Mini Golf", "Four crazy holes", "minecraft:slime_ball", stand(-40, FLOOR, 57), "Windmill, volcano, cove"),
@@ -259,10 +258,6 @@ public final class HubPark {
 
 	/** Right-clicking a block in the hub. Null: not one of ours. */
 	public static InteractionResult useBlock(ServerPlayer p, BlockPos pos, BlockState state) {
-		if (pos.equals(TOY_CHEST)) {
-			HubGames.toyChest(p);
-			return InteractionResult.SUCCESS;
-		}
 		if (pos.equals(FIREWORKS)) {
 			fireworksButton(p);
 			return InteractionResult.SUCCESS;
@@ -700,7 +695,6 @@ public final class HubPark {
 		Booths.build(level);
 		Pets.build(level);
 		Records.build(level);
-		Prizes.build(level);
 		Seasons.build(level);
 		Coaster.build(level);
 		Scenery.build(level);
@@ -717,7 +711,6 @@ public final class HubPark {
 		// (the green arrows on the ground are gone: they looked messy)
 		plazaLights(level);
 		Dressing.build(level);
-		Eggs.build(level);
 		Wonder.build(level, new Vec3(60.5, FLOOR + 16, -96.5));
 
 	}
@@ -735,16 +728,7 @@ public final class HubPark {
 		pad(level, -11, FLOOR, 18, "Mini Golf", stand(-40, FLOOR, 57));
 		pad(level, -20, FLOOR, 9, "Speedway", stand(-109, FLOOR, -40));
 		pad(level, -17, FLOOR, -10, "Sky Parkour", stand(-22, FLOOR + 3, -36));
-		// The toy chest, the fireworks button.
-		set(level, TOY_CHEST.getX(), TOY_CHEST.getY(), TOY_CHEST.getZ(), Blocks.BARREL.defaultBlockState());
-		HubHosts.add(level, new Vec3(4.5, FLOOR + 1, 11.5), 180, net.minecraft.world.entity.npc.villager.VillagerProfession.MASON,
-				net.minecraft.world.entity.npc.villager.VillagerType.PLAINS, new HubHosts.Host("toys", "Tilly", "Toy Maker", 0xFF7CC0, "minecraft:firework_star",
-						"Pick a box of toys! The classics (confetti cannon, rubber chicken, bouncy ball, snowballs), outdoor toys (a kite, a "
-								+ "frisbee, a beach ball, a pogo stick), or silly ones (bubbles, water balloons, a sparkler, a whoopee cushion). "
-								+ "Right-click to use them. They stay in the hub.",
-						"Toys: right-click Tilly for some!", q -> List.of("classic|The classics", "outdoor|Kite, frisbee, beach ball, pogo",
-								"silly|Bubbles, balloons, sparkler, cushion", "gadgets|Grapple, paint gun, boots, morph, camera"),
-								(q, key) -> HubGames.toyChest(q, key)));
+		// The fireworks button. (Tilly's toy chest is gone.)
 		guide(level);
 		set(level, FIREWORKS.getX(), FIREWORKS.getY() - 1, FIREWORKS.getZ(), Blocks.QUARTZ_PILLAR.defaultBlockState());
 		set(level, FIREWORKS.getX(), FIREWORKS.getY(), FIREWORKS.getZ(), Blocks.STONE_BUTTON.defaultBlockState().setValue(ButtonBlock.FACE, AttachFace.FLOOR));
@@ -789,7 +773,6 @@ public final class HubPark {
 				.append(Component.literal("\n\u2190 Sky Parkour, and Sky Rings with Wren").withStyle(ChatFormatting.YELLOW))
 				.append(Component.literal("\n\u2192 Waterfall Plunge (by Splash Island)").withStyle(ChatFormatting.GOLD))
 				.append(Component.literal("\n\nCaptain Cloud flies you on a happy ghast!").withStyle(ChatFormatting.AQUA))
-				.append(Component.literal("\n\nTilly has toys and gadgets (and a camera!).\nPhotos go on the Family Photo Wall.").withStyle(ChatFormatting.WHITE))
 				.append(Component.literal("\n\nYour Park Map (in your hotbar) flies you anywhere.\nCoach Kit runs Tag, Hide and Seek and more!")
 						.withStyle(ChatFormatting.WHITE));
 		keep(Props.text(level, new Vec3(-7.5, FLOOR + 1.6, 11.5), text, 0.55F, TAG));
@@ -1122,7 +1105,6 @@ public final class HubPark {
 		Pets.tick(level, tick);
 		SkyTours.tick(level);
 		Dressing.tick(level, tick);
-		Eggs.tick(level);
 		Wonder.tick(level);
 		Plunge.tick(level);
 		Seasons.tick(level, tick);

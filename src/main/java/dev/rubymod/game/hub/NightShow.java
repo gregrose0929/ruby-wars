@@ -53,7 +53,7 @@ final class NightShow {
 				for (ServerPlayer p : level.players()) {
 					p.sendSystemMessage(Component.literal("★ The night show's starting! Look up! ★").withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
 				}
-				parade(level, true);
+				parade(level, false); // (the Sky Parade's giant toys are gone)
 			} else {
 				parade(level, false);
 			}

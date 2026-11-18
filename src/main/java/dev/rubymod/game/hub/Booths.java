@@ -94,7 +94,7 @@ final class Booths {
 
 	private static void prize(ServerLevel level, ServerPlayer p, String why) {
 		Prizes.plushie(level, p);
-		Alerts.title(p, "YOU WIN!", why + " A plushie for the Prize Shelf!", ChatFormatting.GOLD);
+		Alerts.title(p, "YOU WIN!", why + " You won a plushie!", ChatFormatting.GOLD);
 		HubPark.burst(level, p.position().add(0, 3, 0));
 	}
 

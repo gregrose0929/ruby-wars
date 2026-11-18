@@ -134,6 +134,11 @@ public final class HubGames {
 			"Teddy Bear (prize!)", new double[] {0, 0, -1},
 			"Rubber Duck (Duck Shoot prize!)", new double[] {0, 0, -1});
 
+	/** Toys that went (Tilly's boxes, the egg hunt's crown): put away if anyone still has one. */
+	private static final java.util.Set<String> GONE = java.util.Set.of("Confetti Cannon", "Rubber Chicken", "Bouncy Ball", HubToys.KITE,
+			HubToys.BUBBLES, HubToys.POGO, HubToys.FRISBEE, HubToys.BALLOON, HubToys.SPARKLER, HubToys.CUSHION, HubToys.BEACH_BALL, HubToys.GRAPPLE,
+			HubToys.PAINT, HubToys.BOOTS, HubToys.MORPH, Photos.CAMERA, "Golden Crown");
+
 	/** Take away anything that belongs somewhere else (the putter when you leave Mini Golf, and so on). */
 	static void putBack(ServerLevel level) {
 		for (ServerPlayer p : level.players()) {
@@ -145,6 +150,9 @@ public final class HubGames {
 					continue;
 				}
 				double[] home = HOME.get(s.getHoverName().getString());
+				if (home == null && GONE.contains(s.getHoverName().getString())) {
+					home = new double[] {0, 0, -1};
+				}
 				if (home != null && (home[2] < 0 || Math.hypot(p.getX() - home[0], p.getZ() - home[1]) > home[2])) {
 					inv.setItem(i, ItemStack.EMPTY);
 					changed = true;
@@ -394,7 +402,11 @@ public final class HubGames {
 	private static int song = -1;
 	private static int songEnds;
 
-	/** The stage's music is playing (the plaza's tune waits). */
+	/** The middle of the dance floor, where the music comes from; quiet enough that it's only heard round the stage. */
+	private static final net.minecraft.world.phys.Vec3 DANCE_MIDDLE = HubPark.STAGE_CENTER.add(0, -1, 7.5);
+	private static final float DANCE_VOLUME = 1.2F;
+
+	/** The stage's music is playing. */
 	public static boolean stageBusy() {
 		return song >= 0 && tick < songEnds;
 	}
@@ -412,9 +424,9 @@ public final class HubGames {
 		}
 		song = i;
 		songEnds = tick + SONG_SECONDS[song] * 20;
-		level.playSound(null, BlockPos.containing(HubPark.STAGE_CENTER), SONGS[song], SoundSource.RECORDS, 4.0F, 1.0F);
+		level.playSound(null, BlockPos.containing(DANCE_MIDDLE), SONGS[song], SoundSource.RECORDS, DANCE_VOLUME, 1.0F);
 		for (ServerPlayer q : level.players()) {
-			if (q.position().distanceTo(HubPark.STAGE_CENTER) < 40) {
+			if (q.position().distanceTo(DANCE_MIDDLE) < 24) {
 				q.sendOverlayMessage(Component.literal("\u266a Now playing: " + SONG_NAMES[song] + " (picked by " + p.getName().getString() + ")")
 						.withStyle(ChatFormatting.LIGHT_PURPLE));
 			}
@@ -438,9 +450,9 @@ public final class HubGames {
 			return;
 		}
 		songEnds = tick + SONG_SECONDS[song] * 20;
-		level.playSound(null, BlockPos.containing(HubPark.STAGE_CENTER), SONGS[song], SoundSource.RECORDS, 4.0F, 1.0F);
+		level.playSound(null, BlockPos.containing(DANCE_MIDDLE), SONGS[song], SoundSource.RECORDS, DANCE_VOLUME, 1.0F);
 		for (ServerPlayer q : level.players()) {
-			if (q.position().distanceTo(HubPark.STAGE_CENTER) < 40) {
+			if (q.position().distanceTo(DANCE_MIDDLE) < 24) {
 				q.sendOverlayMessage(Component.literal("♪ Now playing: " + SONG_NAMES[song] + " (DJ " + p.getName().getString() + ")").withStyle(ChatFormatting.LIGHT_PURPLE));
 			}
 		}

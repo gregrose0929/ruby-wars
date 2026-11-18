@@ -593,10 +593,7 @@ public final class Hub {
 				player.resetFallDistance();
 			}
 		}
-		// The plaza's tune: twenty seconds long, started again as it ends (in the Music volume, for anyone who'd rather not).
-		if (!hub.players().isEmpty() && server.getTickCount() % 400 < 20 && !dev.rubymod.game.hub.HubGames.stageBusy()) {
-			hub.playSound(null, new BlockPos(0, FLOOR + 3, 0), dev.rubymod.registry.ModSounds.HUB_THEME, net.minecraft.sounds.SoundSource.MUSIC, 1.0F, 1.0F);
-		}
+		// (No plaza tune any more: music only on the dance floor.)
 		if (!hub.players().isEmpty() && server.getTickCount() % 40 == 0) {
 			updateLabels(hub);
 			updateWarTable(hub);

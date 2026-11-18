@@ -27,6 +27,7 @@ final class Removals {
 
 	static void run(ServerLevel level) {
 		second(level);
+		third(level);
 		Path mark = level.getServer().getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve("removed_v1");
 		if (Files.exists(mark)) {
 			return;
@@ -61,6 +62,30 @@ final class Removals {
 					}
 				}
 			}
+		}
+	}
+
+	/** The third lot (the toy chest's barrel, the Prize Shelf), once. */
+	private static void third(ServerLevel level) {
+		Path mark = level.getServer().getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve("removed_v3");
+		if (Files.exists(mark)) {
+			return;
+		}
+		BlockState air = Blocks.AIR.defaultBlockState();
+		level.setBlock(new BlockPos(3, FLOOR + 1, 10), air, 18);
+		for (int x = 10; x <= 13; x++) {
+			for (int y = 1; y <= 5; y++) {
+				for (int z = 13; z <= 14; z++) {
+					level.setBlock(new BlockPos(x, FLOOR + y, z), air, 18);
+				}
+			}
+		}
+		dev.rubymod.RubyMod.LOGGER.info("Removals: the toy chest and the Prize Shelf tidied away");
+		try {
+			Files.createDirectories(mark.getParent());
+			Files.writeString(mark, "done");
+		} catch (Exception e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't mark the removals done", e);
 		}
 	}
 

@@ -86,35 +86,9 @@ final class Prizes {
 		award(level, p, pick[0], pick[1]);
 	}
 
-	/** Somebody won a prize: up it goes on the shelf. */
+	/** Somebody won a prize: a well done (the Prize Shelf is gone, so nothing to keep). */
 	static void award(ServerLevel level, ServerPlayer p, String model, String what) {
-		COUNT.merge(p.getName().getString(), 1, Integer::sum);
-		if (SHOWN.size() >= SPOTS) {
-			SHOWN.remove(0);
-			if (!WHO.isEmpty()) {
-				WHO.remove(0);
-			}
-			HubPark.discard(level, MODELS.remove(0));
-			if (!TAGS.isEmpty()) {
-				HubPark.discard(level, TAGS.remove(0));
-			}
-			for (int i = 0; i < MODELS.size(); i++) {
-				Display.ItemDisplay d = MODELS.get(i) == null ? null : (Display.ItemDisplay) level.getEntity(MODELS.get(i));
-				Vec3 s = spot(i);
-				if (d != null) {
-					d.teleportTo(s.x, s.y, s.z);
-				}
-				net.minecraft.world.entity.Entity t = i < TAGS.size() && TAGS.get(i) != null ? level.getEntity(TAGS.get(i)) : null;
-				if (t != null) {
-					t.teleportTo(s.x, s.y - 0.08, s.z - 0.28);
-				}
-			}
-		}
-		SHOWN.add(model);
-		WHO.add(p.getName().getString());
-		place(level, SHOWN.size() - 1);
-		text(level);
-		p.sendSystemMessage(Component.literal("★ You won " + what + "! It's on the Prize Shelf on the plaza.").withStyle(ChatFormatting.GOLD));
+		p.sendSystemMessage(Component.literal("★ You won " + what + "! Well done!").withStyle(ChatFormatting.GOLD));
 	}
 
 	private static void text(ServerLevel level) {

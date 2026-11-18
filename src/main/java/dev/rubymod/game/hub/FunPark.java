@@ -337,7 +337,7 @@ final class FunPark {
 			Records.submit(level, "Most ducks (Duck Shoot)", p.getName().getString(), e.getValue(), false, String::valueOf);
 			if (e.getValue() >= 5) {
 				Prizes.award(level, p, "duck", "a rubber duck");
-				Alerts.title(p, "YOU WIN!", e.getValue() + " ducks! A rubber duck for the Prize Shelf!", ChatFormatting.GOLD);
+				Alerts.title(p, "YOU WIN!", e.getValue() + " ducks! You won a rubber duck!", ChatFormatting.GOLD);
 				HubPark.burst(level, p.position().add(0, 3, 0));
 			} else {
 				Alerts.title(p, "TIME!", "Ducks hit: " + line, ChatFormatting.AQUA);
@@ -623,7 +623,6 @@ final class FunPark {
 				s.setYRot(yaw);
 			}
 		}
-		boolean music = false;
 		for (Iterator<Map.Entry<UUID, Integer>> it = CAROUSEL_RIDERS.entrySet().iterator(); it.hasNext();) {
 			var e = it.next();
 			ServerPlayer p = level.getServer().getPlayerList().getPlayer(e.getKey());
@@ -634,20 +633,13 @@ final class FunPark {
 				}
 				continue;
 			}
-			music = true;
 			e.setValue(e.getValue() + 1);
 			if (e.getValue() > 40 * 20) {
 				it.remove();
 				letOff(p, CAROUSEL_EXIT, "Whoa there! Talk to Cora to ride again.");
 			}
 		}
-		if (music && tick % 5 == 0) {
-			float pitch = TUNE[(tick / 5) % TUNE.length];
-			if (pitch > 0) {
-				level.playSound(null, BlockPos.containing(CAROUSEL), SoundEvents.NOTE_BLOCK_FLUTE.value(), SoundSource.RECORDS, 1.2F, pitch);
-				level.playSound(null, BlockPos.containing(CAROUSEL), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.RECORDS, 0.5F, pitch);
-			}
-		}
+		// (The carousel's tune is gone: music only on the dance floor.)
 	}
 
 	// ----- The bouncy castle -----

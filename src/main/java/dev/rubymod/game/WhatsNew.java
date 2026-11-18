@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-17-boats";
+	private static final String VERSION = "2026-11-18-coasters";
 	private static final List<String> LINES = List.of(
-			"minecraft:oak_boat|New: Patrol Boat, Gunboat and Landing Craft (it carries a jeep and drops its ramp on a beach).",
-			"minecraft:torch|Flares, muzzle flashes, rockets and burning wrecks light up the dark. Night-vision goggles too.",
-			"rubymod:ruby_bearing|Ruby Bearing and Piston for drawbridges, gates and lifts; shelled buildings come down.");
+			"minecraft:minecart|Coaster Workshop: banked turns, a corkscrew, bunny hops, smoother rides, and three-car trains: ride with friends!",
+			"minecraft:jukebox|The park is quieter: music only plays on the dance floor (ask DJ Remy).",
+			"minecraft:oak_boat|Still new: war boats, flares and night-vision goggles, the Ruby Bearing and Piston.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;
