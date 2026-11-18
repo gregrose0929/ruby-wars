@@ -58,6 +58,24 @@ public final class SelfTest {
 	private SelfTest() {
 	}
 
+	/**
+	 * Keep the test area (out from the world spawn, where the checks build their bases and spawn their zombies) loaded
+	 * and ticking, so things added there really are in the world. Run a few seconds before the test; "done" after.
+	 */
+	public static int prepare(CommandSourceStack source, boolean on) {
+		ServerLevel level = source.getLevel();
+		BlockPos spawn = level.getRespawnData().pos();
+		int n = 0;
+		for (int cx = (spawn.getX() + 200) >> 4; cx <= (spawn.getX() + 500) >> 4; cx++) {
+			for (int cz = (spawn.getZ() + 200) >> 4; cz <= (spawn.getZ() + 500) >> 4; cz++) {
+				level.setChunkForced(cx, cz, on);
+				n++;
+			}
+		}
+		RubyMod.LOGGER.info("[selftest] {} {} chunks round the test area", on ? "loading" : "letting go of", n);
+		return 1;
+	}
+
 	public static int run(CommandSourceStack source) {
 		SelfTest test = new SelfTest();
 		String saved = SeasonData.snapshot();
@@ -188,6 +206,52 @@ public final class SelfTest {
 					+ ", enemy " + Rules.isEnemyOf(claim, bravo) + ", sensor " + level.getBlockState(sensor).getBlock() + "]", DefenseBlockEntity.testSeismic(level, sensor));
 			borer.discard();
 			level.setBlockAndUpdate(sensor, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		}
+
+		// ----- Fire: flamethrower and fire bombs -----
+		{
+			BlockPos inClaim = base.offset(4, 20, -4);
+			level.setBlockAndUpdate(inClaim.below(), Blocks.OAK_PLANKS.defaultBlockState());
+			level.setBlockAndUpdate(inClaim, Blocks.AIR.defaultBlockState());
+			check("fire: can't be lit in a claim outside Battle Day", !dev.rubymod.game.Fire.light(level, inClaim));
+			data.phase = Phase.WAR;
+			check("fire: can be lit in a claim on Battle Day", dev.rubymod.game.Fire.light(level, inClaim));
+			data.phase = Phase.BUILD;
+			level.setBlockAndUpdate(inClaim, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(inClaim.below(), Blocks.AIR.defaultBlockState());
+			BlockPos field = base.offset(150, 30, 0);
+			for (int x = -4; x <= 4; x++) {
+				for (int z = -4; z <= 4; z++) {
+					level.setBlockAndUpdate(field.offset(x, -1, z), Blocks.STONE.defaultBlockState());
+					for (int y = 0; y <= 3; y++) {
+						level.setBlockAndUpdate(field.offset(x, y, z), Blocks.AIR.defaultBlockState());
+					}
+				}
+			}
+			var burning = EntityTypes.PIG.create(level, EntitySpawnReason.COMMAND);
+			burning.setNoAi(true);
+			burning.setPos(field.getX() + 1.5, field.getY(), field.getZ() + 0.5);
+			boolean added = level.addFreshEntity(burning);
+			var bomb = dev.rubymod.entity.GrenadeEntity.fireBomb(level, alpha);
+			bomb.setPos(field.getX() + 0.5, field.getY() + 0.2, field.getZ() + 0.5);
+			bomb.burst(level);
+			int fires = 0;
+			for (int x = -3; x <= 3; x++) {
+				for (int z = -3; z <= 3; z++) {
+					if (level.getBlockState(field.offset(x, 0, z)).is(Blocks.FIRE)) {
+						fires++;
+					}
+				}
+			}
+			check("fire bomb: sets the ground around it alight outside claims (" + fires + " fires)", fires >= 15);
+			check("fire bomb: sets an animal close by on fire [added " + added + ", ticking " + level.isPositionEntityTicking(field) + "]", burning.getRemainingFireTicks() > 0);
+			burning.discard();
+			for (int x = -4; x <= 4; x++) {
+				for (int z = -4; z <= 4; z++) {
+					level.setBlockAndUpdate(field.offset(x, 0, z), Blocks.AIR.defaultBlockState());
+					level.setBlockAndUpdate(field.offset(x, -1, z), Blocks.AIR.defaultBlockState());
+				}
+			}
 		}
 
 		// ----- Battle Day storms -----

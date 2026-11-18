@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "firecheck" -> fireCheckScript();
 			case "stormcheck" -> stormCheckScript();
 			case "securitycheck" -> securityCheckScript();
 			case "grapplecheck" -> grappleCheckScript();
@@ -5909,6 +5910,68 @@ public final class AutoTest {
 					StormClient.thickness());
 			shot(mc, "storm-3-clear");
 			onServer(mc, server -> dev.rubymod.game.Storms.force(null));
+		});
+	}
+
+		/** The flamethrower on a wooden wall, and a fire bomb on the grass (outside any claim). */
+	private static void fireCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "execute as @p at @s run tp @s ~-200 ~ ~-150 0 0");
+		});
+		then(200, mc -> {
+			command(mc, "execute as @p at @s run fill ~-3 ~ ~5 ~3 ~3 ~5 minecraft:oak_planks");
+			command(mc, "give @p rubymod:flamethrower");
+			command(mc, "give @p rubymod:fire_bomb 3");
+		});
+		then(20, mc -> {
+			for (int i = 0; i < 9; i++) {
+				if (mc.player.getInventory().getItem(i).is(dev.rubymod.registry.ModItems.FLAMETHROWER)) {
+					mc.player.getInventory().setSelectedSlot(i);
+				}
+			}
+			mc.player.setXRot(10);
+			mc.options.keyUse.setDown(true);
+		});
+		then(40, mc -> shot(mc, "fire-1-spraying"));
+		then(20, mc -> {
+			mc.options.keyUse.setDown(false);
+			int fires = 0;
+			for (int x = -4; x <= 4; x++) {
+				for (int y = -1; y <= 4; y++) {
+					for (int z = 0; z <= 6; z++) {
+						if (mc.level.getBlockState(mc.player.blockPosition().offset(x, y, z)).is(net.minecraft.world.level.block.Blocks.FIRE)) {
+							fires++;
+						}
+					}
+				}
+			}
+			log("fire: after 3 s of flamethrower: {} fires, fuel used {}", fires, mc.player.getMainHandItem().getDamageValue());
+		});
+		then(5, mc -> {
+			for (int i = 0; i < 9; i++) {
+				if (mc.player.getInventory().getItem(i).is(dev.rubymod.registry.ModItems.FIRE_BOMB)) {
+					mc.player.getInventory().setSelectedSlot(i);
+				}
+			}
+			mc.player.setYRot(180);
+			mc.player.setXRot(-20);
+		});
+		then(5, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(40, mc -> {
+			int fires = 0;
+			for (int x = -6; x <= 6; x++) {
+				for (int y = -2; y <= 2; y++) {
+					for (int z = -16; z <= -2; z++) {
+						if (mc.level.getBlockState(mc.player.blockPosition().offset(x, y, z)).is(net.minecraft.world.level.block.Blocks.FIRE)) {
+							fires++;
+						}
+					}
+				}
+			}
+			log("fire: fire bomb: {} fires where it landed, bombs left {}", fires, mc.player.getMainHandItem().getCount());
+			shot(mc, "fire-2-bomb");
 		});
 	}
 

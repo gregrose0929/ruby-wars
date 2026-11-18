@@ -1,8 +1,8 @@
 # Give the park time to finish building first (it keeps the server busy for a few seconds after it starts).
 wait 12
-# Load the test area (spawn +300..+460, +290..+350) so test entities can be added.
-forceload add ~290 ~290 ~460 ~350
+# Load the test area (out from the world spawn) so test entities are really in the world.
+rubywars selftest prepare
 wait 8
 rubywars selftest
 wait 2
-forceload remove all
+rubywars selftest done

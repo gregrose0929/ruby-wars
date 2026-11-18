@@ -19,6 +19,7 @@ public class ThrowableWeaponItem extends Item {
 	public enum Kind {
 		FRAG,
 		SMOKE,
+		FIRE,
 		AIR_STRIKE
 	}
 
@@ -36,6 +37,7 @@ public class ThrowableWeaponItem extends Item {
 			ModProjectile thrown = switch (kind) {
 				case FRAG -> GrenadeEntity.throwFrom(level, player, false);
 				case SMOKE -> GrenadeEntity.throwFrom(level, player, true);
+				case FIRE -> GrenadeEntity.fireBomb(level, player);
 				case AIR_STRIKE -> AirStrikeFlareEntity.throwFrom(level, player);
 			};
 			thrown.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 1.1F, 1.0F);

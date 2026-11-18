@@ -70,6 +70,8 @@ public final class Shop {
 			gun(2, ModItems.COMBAT_SHOTGUN, 12);
 			gun(3, ModItems.LONGSHOT_SNIPER, 25);
 			gun(4, ModItems.RUBY_BLASTER, 30);
+			item(5, ModItems.FLAMETHROWER, 1, 25);
+			item(6, ModItems.FIRE_BOMB, 3, 5);
 			item(7, ModItems.FRAG_GRENADE, 4, 4);
 			item(8, ModItems.SMOKE_GRENADE, 4, 3);
 			// Row 2: ammo and raid gear

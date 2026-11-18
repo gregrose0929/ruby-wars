@@ -1,5 +1,9 @@
 package dev.rubymod.entity;
 
+import net.minecraft.world.entity.Entity;
+
+import net.minecraft.core.BlockPos;
+
 import dev.rubymod.registry.ModEntities;
 import dev.rubymod.registry.ModItems;
 
@@ -34,13 +38,59 @@ public class GrenadeEntity extends ModProjectile {
 		return grenade;
 	}
 
+	/** A fire bomb: a bottle of fuel that shatters on whatever it hits and sets the spot alight. */
+	public static GrenadeEntity fireBomb(Level level, LivingEntity thrower) {
+		GrenadeEntity bomb = new GrenadeEntity(ModEntities.FIRE_BOMB, level);
+		bomb.setPos(thrower.getX(), thrower.getEyeY() - 0.1, thrower.getZ());
+		bomb.setOwner(thrower);
+		bomb.setItem(ModItems.FIRE_BOMB.getDefaultInstance());
+		return bomb;
+	}
+
 	private boolean isSmoke() {
 		return getType() == ModEntities.SMOKE_GRENADE;
 	}
 
+	private boolean isFire() {
+		return getType() == ModEntities.FIRE_BOMB;
+	}
+
 	@Override
 	protected Item getDefaultItem() {
-		return isSmoke() ? ModItems.SMOKE_GRENADE : ModItems.FRAG_GRENADE;
+		return isFire() ? ModItems.FIRE_BOMB : isSmoke() ? ModItems.SMOKE_GRENADE : ModItems.FRAG_GRENADE;
+	}
+
+	/** The fire bomb breaks: flames on the ground all round (where fire's allowed), and everyone close catches fire. */
+	public void burst(ServerLevel level) {
+		Vec3 at = position();
+		level.playSound(null, at.x, at.y, at.z, SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 1.2F, 0.9F);
+		level.playSound(null, at.x, at.y, at.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.2F, 0.8F);
+		level.sendParticles(ParticleTypes.FLAME, at.x, at.y + 0.3, at.z, 60, 1.4, 0.4, 1.4, 0.05);
+		level.sendParticles(ParticleTypes.LARGE_SMOKE, at.x, at.y + 0.5, at.z, 12, 1.0, 0.5, 1.0, 0.02);
+		BlockPos c = BlockPos.containing(at);
+		for (int dx = -3; dx <= 3; dx++) {
+			for (int dz = -3; dz <= 3; dz++) {
+				if (Math.hypot(dx, dz) > 2.8) {
+					continue;
+				}
+				for (int dy = 2; dy >= -3; dy--) {
+					BlockPos p = c.offset(dx, dy, dz);
+					if (level.getBlockState(p).isAir() && !level.getBlockState(p.below()).isAir()) {
+						dev.rubymod.game.Fire.light(level, p);
+						break;
+					}
+				}
+			}
+		}
+		Entity owner = getOwner();
+		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(3.5), e -> e.isAlive())) {
+			if (e instanceof net.minecraft.world.entity.player.Player victim && owner instanceof net.minecraft.world.entity.player.Player thrower
+					&& victim != thrower && !dev.rubymod.game.Rules.canHurt(thrower, victim)) {
+				continue;
+			}
+			e.igniteForSeconds(6);
+		}
+		discard();
 	}
 
 	@Override
@@ -65,6 +115,10 @@ public class GrenadeEntity extends ModProjectile {
 		}
 		super.tick();
 		if (level() instanceof ServerLevel level && tickCount >= FUSE) {
+			if (isFire()) {
+				burst(level);
+				return;
+			}
 			detonate(level);
 		}
 	}
@@ -93,6 +147,13 @@ public class GrenadeEntity extends ModProjectile {
 	@Override
 	protected void onHitBlock(BlockHitResult hit) {
 		super.onHitBlock(hit);
+		if (isFire()) {
+			if (level() instanceof ServerLevel level) {
+				setPos(hit.getLocation().add(Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i()).scale(0.3)));
+				burst(level);
+			}
+			return;
+		}
 		Vec3 v = getDeltaMovement();
 		Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i());
 		Vec3 bounced = v.subtract(n.scale(2 * v.dot(n))).scale(0.35);
@@ -105,6 +166,10 @@ public class GrenadeEntity extends ModProjectile {
 
 	@Override
 	protected void onHitEntity(EntityHitResult hit) {
+		if (isFire() && level() instanceof ServerLevel level && hit.getEntity() != getOwner()) {
+			burst(level);
+			return;
+		}
 		setDeltaMovement(getDeltaMovement().scale(-0.1));
 	}
 }

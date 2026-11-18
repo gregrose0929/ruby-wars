@@ -128,7 +128,9 @@ public final class RubyWarsCommand {
 					return ok(c, "Training ground built: gun range to the west, vehicle yard to the east, airfield to the south.");
 				}))
 				.then(Commands.literal("selftest").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-						.executes(c -> SelfTest.run(c.getSource())))
+						.executes(c -> SelfTest.run(c.getSource()))
+						.then(Commands.literal("prepare").executes(c -> SelfTest.prepare(c.getSource(), true)))
+						.then(Commands.literal("done").executes(c -> SelfTest.prepare(c.getSource(), false))))
 				.then(Commands.literal("reset").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.literal("confirm").executes(RubyWarsCommand::reset))));
 	}

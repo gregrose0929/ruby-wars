@@ -27,6 +27,8 @@ public class ModEntities {
 			EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(8).updateInterval(5));
 	public static final EntityType<GrenadeEntity> SMOKE_GRENADE = register("smoke_grenade",
 			EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(8).updateInterval(5));
+	public static final EntityType<GrenadeEntity> FIRE_BOMB = register("fire_bomb",
+			EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, MobCategory.MISC).sized(0.25F, 0.25F).clientTrackingRange(8).updateInterval(5));
 	public static final EntityType<RocketEntity> ROCKET = register("rocket",
 			EntityType.Builder.<RocketEntity>of(RocketEntity::new, MobCategory.MISC).sized(0.3F, 0.3F).clientTrackingRange(10).updateInterval(1));
 	public static final EntityType<MortarShellEntity> MORTAR_SHELL = register("mortar_shell",

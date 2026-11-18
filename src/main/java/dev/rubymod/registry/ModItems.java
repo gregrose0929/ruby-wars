@@ -54,6 +54,8 @@ public class ModItems {
 	// --- Throwables and raid gear ---
 	public static final Item FRAG_GRENADE = register("frag_grenade", p -> new ThrowableWeaponItem(ThrowableWeaponItem.Kind.FRAG, p), new Item.Properties().stacksTo(16));
 	public static final Item SMOKE_GRENADE = register("smoke_grenade", p -> new ThrowableWeaponItem(ThrowableWeaponItem.Kind.SMOKE, p), new Item.Properties().stacksTo(16));
+	public static final Item FIRE_BOMB = register("fire_bomb", p -> new ThrowableWeaponItem(ThrowableWeaponItem.Kind.FIRE, p), new Item.Properties().stacksTo(16));
+	public static final Item FLAMETHROWER = register("flamethrower", dev.rubymod.item.FlamethrowerItem::new, new Item.Properties().durability(400));
 	public static final Item AIR_STRIKE_FLARE = register("air_strike_flare", p -> new ThrowableWeaponItem(ThrowableWeaponItem.Kind.AIR_STRIKE, p),
 			new Item.Properties().stacksTo(1).rarity(Rarity.EPIC));
 	public static final Item ROCKET_LAUNCHER = register("rocket_launcher", RocketLauncherItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE));

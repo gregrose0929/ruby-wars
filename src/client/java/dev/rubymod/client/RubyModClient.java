@@ -332,6 +332,7 @@ public class RubyModClient implements ClientModInitializer {
 
 		EntityRendererRegistry.register(ModEntities.FRAG_GRENADE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.SMOKE_GRENADE, ThrownItemRenderer::new);
+		EntityRendererRegistry.register(ModEntities.FIRE_BOMB, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.AIR_STRIKE_FLARE, context -> new ThrownItemRenderer<>(context, 1.0F, true));
 		EntityRendererRegistry.register(ModEntities.BREACHING_CHARGE, ThrownItemRenderer::new);
 		EntityRendererRegistry.register(ModEntities.JEEP, VehicleRenderer::new);

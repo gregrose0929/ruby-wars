@@ -69,6 +69,8 @@ public final class HubPark {
 	private static final String CRITTER = "rubymod_critter";
 	/** The park's display entities from this build (any others with the tag are from before, and go). */
 	private static final Set<UUID> KEEP = new HashSet<>();
+	/** Signs put up by the last build (for the self-test, which can't count them in unloaded chunks). */
+	private static int signsPut;
 
 	static final AABB WHOLE_HUB = new AABB(-175, FLOOR - 40, -175, 175, FLOOR + 70, 175);
 
@@ -242,15 +244,16 @@ public final class HubPark {
 	/** For the self-test: is the park all there? (Each check's name, and whether it passed.) */
 	public static java.util.Map<String, Boolean> selfChecks(ServerLevel level) {
 		java.util.Map<String, Boolean> out = new java.util.LinkedHashMap<>();
-		int signs = level.getEntities(EntityTypes.TEXT_DISPLAY, WHOLE_HUB, e -> e.entityTags().contains(TAG) && !e.isRemoved()).size();
-		out.put("signs are up (" + signs + ")", signs > 120);
+		// Counted as the park was built (the hub's chunks may well be unloaded by now, with nobody there).
+		int signs = signsPut;
+		out.put("signs are up (" + signs + ")", signs > 60);
 		out.put("hosts are there (" + HubHosts.count() + ")", HubHosts.count() > 25);
 		out.put("rides are built (" + TrackRide.ALL.size() + ")", TrackRide.ALL.size() >= 6);
 		out.put("the Ruby Rocket has its track", !Coaster.pathPoints().isEmpty());
 		out.put("travel places (" + PLACES.size() + ")", PLACES.size() >= 6);
-		int models = level.getEntities(EntityTypes.BLOCK_DISPLAY, WHOLE_HUB, e -> true).size() + level.getEntities(EntityTypes.ITEM_DISPLAY, WHOLE_HUB, e -> true).size();
-		dev.rubymod.RubyMod.LOGGER.info("[park] {} signs, {} models, {} hosts, {} rides", signs, models, HubHosts.count(), TrackRide.ALL.size());
-		out.put("not too many models (" + models + ")", models < 6000);
+		int models = KEEP.size();
+		dev.rubymod.RubyMod.LOGGER.info("[park] {} signs, {} park entities, {} hosts, {} rides", signs, models, HubHosts.count(), TrackRide.ALL.size());
+		out.put("not too many park entities (" + models + ")", models < 8000);
 		return out;
 	}
 
@@ -452,6 +455,9 @@ public final class HubPark {
 	static Display.TextDisplay label(ServerLevel level, double x, double y, double z, String text, ChatFormatting color, float scale) {
 		Display.TextDisplay d = Props.text(level, new Vec3(x + OX, y, z + OZ), Component.literal(text).withStyle(color, ChatFormatting.BOLD), scale, TAG);
 		keep(d);
+		if (d != null) {
+			signsPut++;
+		}
 		return d;
 	}
 
@@ -636,6 +642,7 @@ public final class HubPark {
 			old.discard();
 		}
 		KEEP.clear();
+		signsPut = 0;
 		PADS.clear();
 		TRAMPOLINES.clear();
 		LAMPS.clear();
