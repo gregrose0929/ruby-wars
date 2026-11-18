@@ -4586,6 +4586,7 @@ public final class AutoTest {
 			case "grapplecheck" -> grappleCheckScript();
 			case "borercheck" -> borerCheckScript();
 			case "coasterspace" -> coasterSpaceScript();
+			case "coasterride" -> coasterRideScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -5699,6 +5700,65 @@ public final class AutoTest {
 	private static void coasterInfo(String what) {
 		then(10, mc -> onServer(mc, server -> log("coasterspace: {}: {}", what,
 				((dev.rubymod.game.party.CoasterWorkshop) pg("coasters")).testInfo(me(server)))));
+	}
+
+	private static void press(String piece) {
+		then(12, mc -> {
+			int slot = slotOf(mc, piece);
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+			if (piece.startsWith("Undo")) {
+				mc.options.keyShift.setDown(true);
+			}
+		});
+		then(4, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(4, mc -> {
+			mc.options.keyShift.setDown(false);
+			if (!piece.startsWith("Undo") && !piece.contains(">>") && !piece.contains("<<")) {
+				onServer(mc, server -> log("coasterride: {} (slot {}): {}", piece, slotOf(mc, piece),
+						((dev.rubymod.game.party.CoasterWorkshop) pg("coasters")).testInfo(me(server))));
+			}
+		});
+	}
+
+	/** The new coaster pieces (banked turns, bunny hops, a corkscrew), the train, and riding it. */
+	private static void coasterRideScript() {
+		then(40, mc -> {
+			command(mc, "time set noon");
+			command(mc, "execute as @p run play coasters");
+		});
+		then(600, mc -> log("coasterride: {} at {}", pg("coasters").debugState(), mc.player.position()));
+		// The page buttons and a few pieces by hand, then the whole coaster through the test hook.
+		for (String piece : new String[] {"Undo (crouch: start again)", "More pieces >>", "Even more pieces >>", "Banked Right", "<< Back"}) {
+			press(piece);
+		}
+		then(10, mc -> onServer(mc, server -> log("coasterride: built: {}", ((dev.rubymod.game.party.CoasterWorkshop) pg("coasters")).testBuild(me(server),
+				"STRAIGHT", "LAUNCH", "CORKSCREW", "BANK_RIGHT", "HOPS", "BANK_RIGHT", "UP", "BIG_DROP", "BANK_RIGHT", "HELIX", "FINISH"))));
+		then(40, mc -> shot(mc, "cr-overview"));
+		then(80, mc -> {
+			int slot = slotOf(mc, "Ride!");
+			if (slot >= 0 && slot < 9) {
+				mc.player.getInventory().setSelectedSlot(slot);
+			}
+		});
+		then(4, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+		then(10, mc -> {
+			log("coasterride: aboard {}, cars nearby {}", mc.player.isPassenger(),
+					mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, mc.player.getBoundingBox().inflate(8)).size());
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(10, mc -> shot(mc, "cr-boarding"));
+		for (int i = 0; i < 16; i++) {
+			int n = i;
+			then(14, mc -> {
+				mc.options.setCameraType(n % 4 == 3 ? CameraType.FIRST_PERSON : CameraType.THIRD_PERSON_BACK);
+				log("coasterride: {} riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
+				shot(mc, "cr-ride-" + n);
+			});
+		}
+		then(200, mc -> log("coasterride: after: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 	}
 
 	/** Coaster Workshop's bigger plots: how far a coaster can go now. */

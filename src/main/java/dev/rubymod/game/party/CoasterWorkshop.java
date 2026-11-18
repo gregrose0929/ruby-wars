@@ -71,7 +71,9 @@ public class CoasterWorkshop extends PartyGame {
 		DOWN("Drop Down", Items.ANVIL, ChatFormatting.AQUA), LOOP("Loop!", Items.SLIME_BALL, ChatFormatting.GREEN),
 		LAUNCH("Launch", Items.FIREWORK_ROCKET, ChatFormatting.RED), BIG_DROP("Big Drop", Items.POINTED_DRIPSTONE, ChatFormatting.AQUA),
 		HELIX("Helix", Items.NAUTILUS_SHELL, ChatFormatting.GREEN), TUNNEL("Tunnel", Items.COBBLESTONE, ChatFormatting.GRAY),
-		FINISH("Finish the Circuit", Items.COMPASS, ChatFormatting.GOLD);
+		FINISH("Finish the Circuit", Items.COMPASS, ChatFormatting.GOLD),
+		BANK_LEFT("Banked Left", Items.PRISMARINE_SHARD, ChatFormatting.YELLOW), BANK_RIGHT("Banked Right", Items.AMETHYST_SHARD, ChatFormatting.YELLOW),
+		HOPS("Bunny Hops", Items.RABBIT_FOOT, ChatFormatting.AQUA), CORKSCREW("Corkscrew!", Items.BREEZE_ROD, ChatFormatting.GREEN);
 
 		final String label;
 		final Item icon;
@@ -87,10 +89,12 @@ public class CoasterWorkshop extends PartyGame {
 	private static final String UNDO = "Undo (crouch: start again)";
 	private static final String RIDE = "Ride!";
 	private static final String MORE = "More pieces >>";
+	private static final String MORE2 = "Even more pieces >>";
 	private static final String BACK = "<< Back";
 	private static final String PAINT = "Track Colour";
 	private static final Piece[] PAGE1 = {Piece.STRAIGHT, Piece.LEFT, Piece.RIGHT, Piece.UP, Piece.DOWN, Piece.LOOP};
 	private static final Piece[] PAGE2 = {Piece.LAUNCH, Piece.BIG_DROP, Piece.HELIX, Piece.TUNNEL, Piece.FINISH};
+	private static final Piece[] PAGE3 = {Piece.BANK_LEFT, Piece.BANK_RIGHT, Piece.HOPS, Piece.CORKSCREW};
 	private static final DyeColor[][] COLOURS = {{DyeColor.RED, DyeColor.YELLOW}, {DyeColor.BLUE, DyeColor.WHITE}, {DyeColor.LIME, DyeColor.GREEN},
 		{DyeColor.PURPLE, DyeColor.PINK}, {DyeColor.ORANGE, DyeColor.BLACK}, {null, DyeColor.WHITE}};
 	private static final String[] COLOUR_NAMES = {"Red", "Blue", "Green", "Purple", "Orange", "Rainbow"};
@@ -112,24 +116,43 @@ public class CoasterWorkshop extends PartyGame {
 
 	private final Map<String, Coaster> coasters = new LinkedHashMap<>();
 
-	/** A car going round: who, on whose coaster, where. */
+	/** A train going round: three cars on whose coaster, who's in each, where the front is. */
 	private static final class Ride {
-		final UUID rider;
 		final Coaster coaster;
-		final UUID seat;
-		final UUID car;
-		double d;
+		final UUID[] riders = new UUID[CARS];
+		final UUID[] seats = new UUID[CARS];
+		final UUID[] cars = new UUID[CARS];
+		/** How far along the front car is (the others follow GAP behind each other). */
+		double d = (CARS - 1) * GAP;
 		double v = 0.2;
+		/** Ticks left waiting in the station for friends to hop on. */
+		int boarding = BOARDING;
+		boolean launched;
+		boolean braked;
+		int windCool;
+		int wheeCool;
 
-		Ride(UUID rider, Coaster coaster, UUID seat, UUID car) {
-			this.rider = rider;
+		Ride(Coaster coaster) {
 			this.coaster = coaster;
-			this.seat = seat;
-			this.car = car;
+		}
+
+		int free() {
+			for (int k = 0; k < CARS; k++) {
+				if (riders[k] == null) {
+					return k;
+				}
+			}
+			return -1;
 		}
 	}
 
+	private static final int CARS = 3;
+	private static final double GAP = 2.0;
+	private static final int BOARDING = 50;
+
+	/** Rider to their train. */
 	private final Map<UUID, Ride> rides = new HashMap<>();
+	private final List<Ride> trains = new ArrayList<>();
 	private boolean builtThisRun;
 	private boolean loaded;
 
@@ -257,14 +280,20 @@ public class CoasterWorkshop extends PartyGame {
 	/** The hotbar: page 1 (the basics) or page 2 (the big stuff). */
 	private static void tools(ServerPlayer player, int page) {
 		player.getInventory().clearContent();
-		for (Piece piece : page == 1 ? PAGE1 : PAGE2) {
+		for (Piece piece : page == 1 ? PAGE1 : page == 2 ? PAGE2 : PAGE3) {
 			give(player, tool(piece.icon, piece.label, piece.color));
 		}
-		if (page == 2) {
+		if (page == 3) {
 			give(player, tool(Items.DYE.pick(DyeColor.MAGENTA), PAINT, ChatFormatting.LIGHT_PURPLE));
 		}
-		give(player, tool(Items.BARRIER, UNDO, ChatFormatting.GRAY), tool(Items.PAPER, page == 1 ? MORE : BACK, ChatFormatting.AQUA),
-				tool(Items.MINECART, RIDE, ChatFormatting.GOLD));
+		give(player, tool(Items.BARRIER, UNDO, ChatFormatting.GRAY));
+		if (page < 3) {
+			give(player, tool(Items.PAPER, page == 1 ? MORE : MORE2, ChatFormatting.AQUA));
+		}
+		if (page > 1) {
+			give(player, tool(Items.MAP, BACK, ChatFormatting.AQUA));
+		}
+		give(player, tool(Items.MINECART, RIDE, ChatFormatting.GOLD));
 		player.getInventory().setSelectedSlot(0);
 		player.inventoryMenu.broadcastChanges();
 	}
@@ -317,8 +346,8 @@ public class CoasterWorkshop extends PartyGame {
 		}
 		player.getCooldowns().addCooldown(stack, 6);
 		Coaster c = mine(player);
-		if (MORE.equals(name) || BACK.equals(name)) {
-			tools(player, MORE.equals(name) ? 2 : 1);
+		if (MORE.equals(name) || MORE2.equals(name) || BACK.equals(name)) {
+			tools(player, MORE.equals(name) ? 2 : MORE2.equals(name) ? 3 : 1);
 			return false;
 		}
 		if (PAINT.equals(name)) {
@@ -338,14 +367,8 @@ public class CoasterWorkshop extends PartyGame {
 					player.sendOverlayMessage(Component.literal("It's finished! Ride it, or Undo to keep building.").withStyle(ChatFormatting.YELLOW));
 					return false;
 				}
-				int before = c.path.size();
-				c.pieces.add(piece);
-				lay(c);
-				String why = !fits(c) ? "That would go off the edge of your plot! Try turning." : crashes(c, before, piece == Piece.FINISH)
-						? "That would crash into your track! Try another way." : null;
+				String why = tryAdd(c, piece);
 				if (why != null) {
-					c.pieces.remove(c.pieces.size() - 1);
-					lay(c);
 					player.sendOverlayMessage(Component.literal(why).withStyle(ChatFormatting.YELLOW));
 					return false;
 				}
@@ -383,6 +406,43 @@ public class CoasterWorkshop extends PartyGame {
 			return false;
 		}
 		return true;
+	}
+
+	/** Add a piece if it fits and doesn't crash into the track; otherwise why not. */
+	private String tryAdd(Coaster c, Piece piece) {
+		int before = c.path.size();
+		c.pieces.add(piece);
+		lay(c);
+		String why = !fits(c) ? "That would go off the edge of your plot! Try turning." : crashes(c, before, piece == Piece.FINISH)
+				? "That would crash into your track! Try another way." : null;
+		if (why != null) {
+			c.pieces.remove(c.pieces.size() - 1);
+			lay(c);
+		}
+		return why;
+	}
+
+	/** For autotests: start this player's coaster again from these pieces (by name); what happened to each. */
+	public String testBuild(ServerPlayer p, String... names) {
+		Coaster c = mine(p);
+		c.pieces.clear();
+		lay(c);
+		StringBuilder b = new StringBuilder();
+		for (String name : names) {
+			Piece piece = Piece.valueOf(name);
+			String why = tryAdd(c, piece);
+			b.append(name).append(why == null ? " ok" : " NO: " + why).append("; ");
+		}
+		if (level() != null) {
+			redraw(level(), c);
+		}
+		save();
+		return b + testInfo(p);
+	}
+
+	/** For autotests: where this player's station is. */
+	public BlockPos testStation(ServerPlayer p) {
+		return station(mine(p).plot);
 	}
 
 	@Override
@@ -454,16 +514,57 @@ public class CoasterWorkshop extends PartyGame {
 					at = at.add(dir(yaw).scale(12.1)).add(0, rise, 0);
 				}
 				case HELIX -> {
-					// A full circle to the right, going down (or up, if it's low already).
+					// A full circle to the right, going down (or up, if it's low already), leaning in.
 					double r = 5;
 					double drop = at.y - (s.getY() + 0.6) > 5 ? -5 : 5;
 					Vec3 centre = at.add(side(yaw).scale(r));
 					for (int i = 0; i < 24; i++) {
 						double a = Math.toRadians(yaw + i * 15);
 						Vec3 q = centre.subtract(side(Math.toDegrees(a)).scale(r));
-						add(pts, up, boost, new Vec3(q.x, at.y + drop * i / 24.0, q.z), new Vec3(0, 1, 0), false);
+						q = new Vec3(q.x, at.y + drop * i / 24.0, q.z);
+						add(pts, up, boost, q, banked(q, centre, 30, i / 24.0), false);
 					}
 					at = at.add(0, drop, 0).add(dir(yaw).scale(0.5));
+				}
+				case BANK_LEFT, BANK_RIGHT -> {
+					// A tighter turn, tipped right over toward the middle.
+					double r = 6;
+					double sign = p == Piece.BANK_LEFT ? -1 : 1;
+					Vec3 centre = at.add(side(yaw).scale(r * sign));
+					int n = 12;
+					for (int i = 0; i < n; i++) {
+						double a = Math.toRadians(yaw + sign * i * 90.0 / n);
+						Vec3 q = centre.subtract(side(Math.toDegrees(a)).scale(r * sign));
+						q = new Vec3(q.x, at.y, q.z);
+						add(pts, up, boost, q, banked(q, centre, 45, i / (double) n), false);
+					}
+					yaw += sign * 90;
+					Vec3 centre2 = centre.subtract(side(yaw).scale(r * sign));
+					at = new Vec3(centre2.x, at.y, centre2.z);
+				}
+				case HOPS -> {
+					// Three quick little hills: up out of your seat over each one.
+					for (int i = 0; i < 18; i++) {
+						double h = 2.2 * Math.pow(Math.sin(Math.PI * i / 6.0), 2);
+						add(pts, up, boost, at.add(dir(yaw).scale(i)).add(0, h, 0), new Vec3(0, 1, 0), false);
+					}
+					at = at.add(dir(yaw).scale(18));
+				}
+				case CORKSCREW -> {
+					// Once right round, upside down in the middle, while going forward.
+					double r = 1.8;
+					double len = 14;
+					Vec3 f = dir(yaw);
+					Vec3 sd = side(yaw);
+					int n = 28;
+					for (int i = 0; i < n; i++) {
+						double t = i / (double) n;
+						double th = 2 * Math.PI * t * t * (3 - 2 * t);
+						Vec3 axis = at.add(f.scale(len * t)).add(0, r, 0);
+						Vec3 q = axis.add(0, -r * Math.cos(th), 0).add(sd.scale(r * Math.sin(th)));
+						add(pts, up, boost, q, axis.subtract(q).normalize(), false);
+					}
+					at = at.add(f.scale(len));
 				}
 				case TUNNEL -> {
 					for (int i = 0; i < 8; i++) {
@@ -532,6 +633,9 @@ public class CoasterWorkshop extends PartyGame {
 		ups.add(up.get(up.size() - 1));
 		la.add(false);
 		tl.add(false);
+		// Round off the corners where the pieces meet (and between their points): a smoother ride.
+		path = smooth(path, 6, false);
+		ups = smooth(ups, 6, true);
 		c.tunnel = new boolean[tl.size()];
 		for (int i = 0; i < tl.size(); i++) {
 			c.tunnel[i] = tl.get(i);
@@ -542,6 +646,38 @@ public class CoasterWorkshop extends PartyGame {
 		for (int i = 0; i < la.size(); i++) {
 			c.launch[i] = la.get(i);
 		}
+	}
+
+	/** Which way is up on a banked turn: leaning toward {@code centre}, easing in and out over the turn (t 0 to 1). */
+	private static Vec3 banked(Vec3 q, Vec3 centre, double degrees, double t) {
+		double ease = Math.min(1, Math.min(t, 1 - t) * 4);
+		double b = Math.toRadians(degrees) * ease * ease * (3 - 2 * ease);
+		Vec3 in = new Vec3(centre.x - q.x, 0, centre.z - q.z);
+		in = in.lengthSqr() < 1e-6 ? Vec3.ZERO : in.normalize();
+		return new Vec3(0, Math.cos(b), 0).add(in.scale(Math.sin(b)));
+	}
+
+	/** A running average (twice) over {@code w} points each way; the ends stay put. */
+	private static List<Vec3> smooth(List<Vec3> in, int w, boolean unit) {
+		List<Vec3> out = new ArrayList<>(in);
+		for (int pass = 0; pass < 2; pass++) {
+			List<Vec3> src = new ArrayList<>(out);
+			for (int i = 1; i < src.size() - 1; i++) {
+				int h = Math.min(w, Math.min(i, src.size() - 1 - i));
+				double x = 0;
+				double y = 0;
+				double z = 0;
+				for (int k = i - h; k <= i + h; k++) {
+					Vec3 v = src.get(k);
+					x += v.x;
+					y += v.y;
+					z += v.z;
+				}
+				Vec3 m = new Vec3(x, y, z).scale(1.0 / (2 * h + 1));
+				out.set(i, unit && m.lengthSqr() > 1e-6 ? m.normalize() : m);
+			}
+		}
+		return out;
 	}
 
 	private static void add(List<Vec3> pts, List<Vec3> up, List<Boolean> boost, Vec3 p, Vec3 u, boolean b) {
@@ -630,6 +766,9 @@ public class CoasterWorkshop extends PartyGame {
 		BlockState rock = Blocks.STONE_BRICKS.defaultBlockState();
 		BlockState tie = Blocks.CONCRETE.pick(DyeColor.BLACK).defaultBlockState();
 		BlockState steel = Blocks.CONCRETE.pick(DyeColor.WHITE).defaultBlockState();
+		BlockState chain = Blocks.CONCRETE.pick(DyeColor.GRAY).defaultBlockState();
+		BlockState magnet = Blocks.GOLD_BLOCK.defaultBlockState();
+		BlockState footing = Blocks.POLISHED_ANDESITE.defaultBlockState();
 		int seg = (int) Math.round(1.5 / STEP);
 		for (int i = 0; i + seg < c.path.size(); i += seg) {
 			Vec3 a = c.path.get(i);
@@ -652,11 +791,19 @@ public class CoasterWorkshop extends PartyGame {
 				beam(level, c, a.add(0, 4.2, 0), b.add(0, 4.2, 0), 0.0F, rock);
 			}
 			beam(level, c, a.add(fa[1].scale(-0.35)), b.add(fb[1].scale(-0.35)), 0.3F, spine);
+			boolean boosting = i < c.launch.length && c.launch[i];
+			// Climbing: the chain lift, a dark strip up the middle.
+			if (!boosting && b.y - a.y > 0.25 && fa[1].y > 0.6) {
+				beam(level, c, a.add(fa[1].scale(-0.17)), b.add(fb[1].scale(-0.17)), 0.12F, chain);
+			}
 			Vec3 mid = a.lerp(b, 0.5).add(fa[1].scale(-0.15));
-			beam(level, c, mid.add(fa[2].scale(-0.5)), mid.add(fa[2].scale(0.5)), 0.1F, tie);
-			// Supports under raised track (not in loops).
-			if (i % (seg * 3) == 0 && fa[1].y > 0.9 && a.y > station(c.plot).getY() + 1.4) {
-				beam(level, c, a.add(0, -0.5, 0), new Vec3(a.x, station(c.plot).getY(), a.z), 0.3F, steel);
+			// Ties (gold launch magnets on a launch).
+			beam(level, c, mid.add(fa[2].scale(-0.5)), mid.add(fa[2].scale(0.5)), boosting ? 0.16F : 0.1F, boosting ? magnet : tie);
+			// Supports under raised track (not in loops), on a stone footing.
+			int ground = station(c.plot).getY();
+			if (i % (seg * 3) == 0 && fa[1].y > 0.6 && a.y > ground + 1.4) {
+				beam(level, c, a.add(fa[1].scale(-0.5)), new Vec3(a.x, ground, a.z), 0.3F, steel);
+				beam(level, c, new Vec3(a.x, ground - 0.05, a.z), new Vec3(a.x, ground + 0.35, a.z), 0.8F, footing);
 			}
 		}
 		// The end of the track: a glowing marker where the next piece goes.
@@ -714,33 +861,73 @@ public class CoasterWorkshop extends PartyGame {
 			p.sendOverlayMessage(Component.literal("Build some track first! Right-click the pieces in your hotbar.").withStyle(ChatFormatting.YELLOW));
 			return;
 		}
-		Display.BlockDisplay seat = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
-		Display.ItemDisplay car = EntityTypes.ITEM_DISPLAY.create(level, EntitySpawnReason.EVENT);
-		if (seat == null || car == null) {
+		// A train still waiting in this station? Hop on with your friends.
+		Ride r = null;
+		for (Ride t : trains) {
+			if (t.coaster == c && t.boarding > 0 && t.free() >= 0) {
+				r = t;
+			}
+		}
+		if (r == null) {
+			r = new Ride(c);
+			if (!makeTrain(level, r)) {
+				return;
+			}
+			trains.add(r);
+		}
+		int k = r.free();
+		Entity seat = level.getEntity(r.seats[k]);
+		if (seat == null) {
 			return;
 		}
-		Vec3 at = c.path.get(0);
-		seat.snapTo(at.x, at.y + 0.55, at.z, 0, 0);
-		((BlockDisplayAccessor) seat).rubymod$setBlockState(Blocks.AIR.defaultBlockState());
-		((DisplayAccessor) seat).rubymod$setPosRotInterpolationDuration(2);
-		seat.addTag(tag());
-		spawned.add(seat.getUUID());
-		level.addFreshEntity(seat);
-		car.snapTo(at.x, at.y + 0.55, at.z, 0, 0);
-		ItemStack look = new ItemStack(Items.STICK);
-		look.set(DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_coaster_solo_" + new String[] {"red", "blue", "green", "yellow", "red", "blue"}[c.plot]));
-		((ItemDisplayAccessor) car).rubymod$setItemStack(look);
-		car.addTag(tag());
-		spawned.add(car.getUUID());
-		level.addFreshEntity(car);
-		car.startRiding(seat, true, true);
 		p.stopRiding();
 		p.startRiding(seat, true, true);
-		Ride r = new Ride(p.getUUID(), c, seat.getUUID(), car.getUUID());
+		r.riders[k] = p.getUUID();
 		rides.put(p.getUUID(), r);
-		place(level, r);
-		p.sendOverlayMessage(Component.literal("Hold on! (crouch to get off)").withStyle(ChatFormatting.GOLD));
+		p.sendOverlayMessage(Component.literal(k == 0 ? "Front seat! Hold on (crouch to get off)" : "All aboard! (crouch to get off)").withStyle(ChatFormatting.GOLD));
 		level.playSound(null, p.blockPosition(), SoundEvents.IRON_DOOR_CLOSE, SoundSource.PLAYERS, 0.8F, 1.2F);
+	}
+
+	/** A train of three cars in the station, the front one at the head of the platform. */
+	private boolean makeTrain(ServerLevel level, Ride r) {
+		String colour = new String[] {"red", "blue", "green", "yellow", "red", "blue"}[r.coaster.plot];
+		for (int k = 0; k < CARS; k++) {
+			Display.BlockDisplay seat = EntityTypes.BLOCK_DISPLAY.create(level, EntitySpawnReason.EVENT);
+			Display.ItemDisplay car = EntityTypes.ITEM_DISPLAY.create(level, EntitySpawnReason.EVENT);
+			if (seat == null || car == null) {
+				end(level, r);
+				return false;
+			}
+			Vec3 at = r.coaster.path.get((int) Math.min(r.coaster.path.size() - 1, Math.max(0, r.d - k * GAP) / STEP));
+			seat.snapTo(at.x, at.y + 0.55, at.z, 0, 0);
+			((BlockDisplayAccessor) seat).rubymod$setBlockState(Blocks.AIR.defaultBlockState());
+			((DisplayAccessor) seat).rubymod$setPosRotInterpolationDuration(2);
+			seat.addTag(tag());
+			spawned.add(seat.getUUID());
+			level.addFreshEntity(seat);
+			car.snapTo(at.x, at.y + 0.55, at.z, 0, 0);
+			ItemStack look = new ItemStack(Items.STICK);
+			look.set(DataComponents.ITEM_MODEL, dev.rubymod.RubyMod.id("park_coaster_solo_" + colour));
+			((ItemDisplayAccessor) car).rubymod$setItemStack(look);
+			car.addTag(tag());
+			spawned.add(car.getUUID());
+			level.addFreshEntity(car);
+			car.startRiding(seat, true, true);
+			r.seats[k] = seat.getUUID();
+			r.cars[k] = car.getUUID();
+		}
+		place(level, r);
+		level.playSound(null, station(r.coaster.plot), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 0.6F, 1.6F);
+		return true;
+	}
+
+	private void tell(Ride r, Component text) {
+		for (UUID id : r.riders) {
+			ServerPlayer p = id == null ? null : PartyGames.player(server, id);
+			if (p != null) {
+				p.sendOverlayMessage(text);
+			}
+		}
 	}
 
 	@Override
@@ -749,66 +936,151 @@ public class CoasterWorkshop extends PartyGame {
 		if (level == null) {
 			return;
 		}
-		for (var it = rides.entrySet().iterator(); it.hasNext();) {
-			Ride r = it.next().getValue();
-			ServerPlayer p = PartyGames.player(server, r.rider);
-			Entity seat = level.getEntity(r.seat);
+		for (var it = trains.iterator(); it.hasNext();) {
+			Ride r = it.next();
 			Coaster c = r.coaster;
 			int n = c.path.size();
-			if (p == null || seat == null || p.getVehicle() != seat || r.d / STEP >= n - 1) {
-				boolean done = r.d / STEP >= n - 1;
+			boolean done = r.d / STEP >= n - 1;
+			// Who's still aboard? (Crouching gets you off: back to the station.)
+			ServerPlayer front = null;
+			List<ServerPlayer> aboard = new ArrayList<>();
+			for (int k = 0; k < CARS; k++) {
+				if (r.riders[k] == null) {
+					continue;
+				}
+				ServerPlayer p = PartyGames.player(server, r.riders[k]);
+				Entity seat = level.getEntity(r.seats[k]);
+				if (p == null || seat == null || p.getVehicle() != seat) {
+					if (rides.get(r.riders[k]) == r) {
+						rides.remove(r.riders[k]);
+					}
+					r.riders[k] = null;
+					if (p != null && p.level() == level) {
+						offTrain(p, c, k, false);
+					}
+					continue;
+				}
+				aboard.add(p);
+				if (front == null) {
+					front = p;
+				}
+			}
+			if (front == null || done) {
 				end(level, r);
 				it.remove();
-				if (p != null && p.level() == level) {
-					BlockPos s = station(c.plot);
-					teleport(p, s.getX() + 3.5, s.getY(), s.getZ() + 2.5, 270);
-					p.removeEffect(MobEffects.SPEED);
-					if (done) {
-						Alerts.title(p, c.circuit ? "WHAT A RIDE!" : "END OF THE LINE!", c.circuit ? "" : "Tip: bring the track back round to the station",
-								ChatFormatting.GOLD);
+				for (int k = 0; k < CARS; k++) {
+					ServerPlayer p = r.riders[k] == null ? null : PartyGames.player(server, r.riders[k]);
+					if (p != null) {
+						rides.remove(p.getUUID());
+						if (p.level() == level) {
+							offTrain(p, c, k, true);
+						}
 					}
 				}
 				continue;
 			}
-			int i = (int) Math.min(n - 1, r.d / STEP);
-			int j = (int) Math.min(n - 1, i + 4);
+			// Waiting in the station for friends.
+			if (r.boarding > 0) {
+				r.boarding--;
+				if (r.boarding % 20 == 0 && r.boarding > 0) {
+					tell(r, Component.literal("Leaving in " + (r.boarding / 20) + "...  (friends: press Ride! here to hop on)").withStyle(ChatFormatting.GOLD));
+				}
+				if (r.boarding == 0) {
+					tell(r, Component.literal("Here we go!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+					level.playSound(null, station(c.plot), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 0.8F, 1.2F);
+				}
+				continue;
+			}
+			// Speed: the middle of the train goes up and down; the front sets off launches and the brakes.
+			int lead = (int) Math.min(n - 1, r.d / STEP);
+			int i = (int) Math.min(n - 1, Math.max(0, r.d - GAP) / STEP);
+			int j = Math.min(n - 1, i + 4);
 			double dy = c.path.get(j).y - c.path.get(i).y;
-			if (c.launch[i]) {
+			boolean lift = false;
+			if (c.launch[lead]) {
+				if (!r.launched) {
+					r.launched = true;
+					level.playSound(null, front, SoundEvents.FIREWORK_ROCKET_LAUNCH, SoundSource.PLAYERS, 1.0F, 0.6F);
+					level.playSound(null, front, SoundEvents.WIND_CHARGE_BURST.value(), SoundSource.PLAYERS, 0.7F, 0.8F);
+				}
 				r.v = Math.min(1.5, r.v + 0.06);
 			} else {
+				r.launched = false;
 				double v2 = r.v * r.v - 2 * 0.03 * dy * r.v - 0.0004;
 				r.v = Math.sqrt(Math.max(0, v2));
+				// A chain lift takes you up anything you're too slow for.
+				lift = r.v < 0.2 && dy > 0.05;
 			}
-			// A chain lift takes you up anything you're too slow for.
 			r.v = Math.max(0.2, Math.min(1.6, r.v));
-			double left = (n - 1 - i) * STEP;
-			if (!c.circuit && left < 6) {
-				r.v = Math.min(r.v, 0.12 + left * 0.05);
+			// The brakes, coming into the station (or the end of the line).
+			double left = (n - 1 - lead) * STEP;
+			if (left < 8 && r.v > 0.12 + left * 0.05) {
+				r.v = 0.12 + left * 0.05;
+				if (!r.braked) {
+					r.braked = true;
+					level.playSound(null, front, SoundEvents.PISTON_CONTRACT, SoundSource.PLAYERS, 0.7F, 0.6F);
+					level.playSound(null, front, SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.4F, 1.6F);
+				}
 			}
-			if (r.v > 1.0 && roundTicks % 6 == 0) {
-				p.addEffect(new MobEffectInstance(MobEffects.SPEED, 14, 3, false, false));
+			// Sounds: the chain lift's clack, rattling along, the wind at speed.
+			if (lift && roundTicks % 4 == 0) {
+				level.playSound(null, front, SoundEvents.LEVER_CLICK, SoundSource.PLAYERS, 0.35F, 1.9F);
+				level.playSound(null, front, SoundEvents.CHAIN_STEP, SoundSource.PLAYERS, 0.4F, 0.8F);
 			}
-			if (r.v > 0.9 && roundTicks % 10 == 0) {
-				level.playSound(null, p.blockPosition(), SoundEvents.MINECART_RIDING, SoundSource.PLAYERS, 0.6F, 1.4F);
+			if (r.v > 0.6 && roundTicks % 10 == 0) {
+				level.playSound(null, front, SoundEvents.MINECART_RIDING, SoundSource.PLAYERS, (float) (0.2 + 0.3 * r.v), (float) (0.9 + 0.4 * r.v));
 			}
-			if (c.launch[i] && roundTicks % 3 == 0) {
-				level.sendParticles(ParticleTypes.FIREWORK, p.getX(), p.getY(), p.getZ(), 2, 0.3, 0.1, 0.3, 0.02);
+			if (--r.windCool <= 0 && r.v > 1.1) {
+				r.windCool = 70;
+				level.playSound(null, front, SoundEvents.ELYTRA_FLYING, SoundSource.PLAYERS, 0.35F, 1.3F);
+			}
+			if (--r.wheeCool <= 0 && r.v > 1.0 && dy < -0.5) {
+				r.wheeCool = 120;
+				String[] shout = {"WHEEEE!", "AAAAH!", "WOOHOO!", "YEEHAW!"};
+				tell(r, Component.literal(shout[level.getRandom().nextInt(shout.length)]).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
+			}
+			for (ServerPlayer p : aboard) {
+				if (r.v > 1.0 && roundTicks % 6 == 0) {
+					p.addEffect(new MobEffectInstance(MobEffects.SPEED, 14, 3, false, false));
+				}
+				if (c.launch[lead] && roundTicks % 3 == 0) {
+					level.sendParticles(ParticleTypes.FIREWORK, p.getX(), p.getY(), p.getZ(), 2, 0.3, 0.1, 0.3, 0.02);
+				}
 			}
 			r.d += r.v;
 			place(level, r);
 		}
 	}
 
-	/** The seat to the track, and the car turned to it (tipped only a little: it rides round you). */
+	/** Back on the station platform (side by side, if you rode together). */
+	private void offTrain(ServerPlayer p, Coaster c, int k, boolean done) {
+		BlockPos s = station(c.plot);
+		teleport(p, s.getX() + 3.5 - k, s.getY(), s.getZ() + 2.5, 270);
+		p.removeEffect(MobEffects.SPEED);
+		if (done) {
+			Alerts.title(p, c.circuit ? "WHAT A RIDE!" : "END OF THE LINE!", c.circuit ? "" : "Tip: bring the track back round to the station",
+					ChatFormatting.GOLD);
+		}
+	}
+
 	private void place(ServerLevel level, Ride r) {
-		Coaster c = r.coaster;
+		for (int k = 0; k < CARS; k++) {
+			placeCar(level, r.coaster, r.seats[k], r.cars[k], Math.max(0, r.d - k * GAP));
+		}
+	}
+
+	/**
+	 * A seat to the track, and its car turned to it: tipped up and down only a little, and leaning into banked turns
+	 * (it rides round you: you stay upright).
+	 */
+	private void placeCar(ServerLevel level, Coaster c, UUID seatId, UUID carId, double d) {
 		int n = c.path.size();
-		double f = Math.min(n - 1.001, r.d / STEP);
+		double f = Math.min(n - 1.001, d / STEP);
 		int i = (int) Math.floor(f);
 		Vec3 p = c.path.get(i).lerp(c.path.get(i + 1), f - i);
 		Vec3[] fr = frame(c, i);
 		Vec3 sp = p.add(fr[1].scale(0.55));
-		Entity seat = level.getEntity(r.seat);
+		Entity seat = seatId == null ? null : level.getEntity(seatId);
 		if (seat == null) {
 			return;
 		}
@@ -819,34 +1091,48 @@ public class CoasterWorkshop extends PartyGame {
 		for (Entity rider : seat.getPassengers()) {
 			rider.resetFallDistance();
 		}
-		if (level.getEntity(r.car) instanceof Display d) {
+		if (level.getEntity(carId) instanceof Display disp) {
+			double yr = Math.toRadians(yaw);
+			Vec3 hd = new Vec3(-Math.sin(yr), 0, Math.cos(yr));
 			double pitch = Math.max(-0.35, Math.min(0.35, Math.asin(Math.max(-1, Math.min(1, fr[0].y)))));
-			Quaternionf q = new Quaternionf().rotateY((float) Math.toRadians(-yaw)).rotateX((float) -pitch);
-			Vector3f carUp = q.transform(new Vector3f(0, 1, 0));
-			Vector3f off = new Vector3f(carUp).mul(0.9F).sub(new Vector3f((float) fr[1].x, (float) fr[1].y, (float) fr[1].z).mul(0.55F));
-			((DisplayAccessor) d).rubymod$setTransformationInterpolationDelay(0);
-			((DisplayAccessor) d).rubymod$setTransformationInterpolationDuration(2);
-			((DisplayAccessor) d).rubymod$setTransformation(new Transformation(off, new Quaternionf(q).rotateY((float) Math.PI), new Vector3f(1.8F, 1.8F, 1.8F),
-					new Quaternionf()));
+			Vec3 fc = hd.scale(Math.cos(pitch)).add(0, Math.sin(pitch), 0);
+			Vec3 b0 = new Vec3(0, 1, 0).subtract(fc.scale(fc.y)).normalize();
+			Vec3 r0 = b0.cross(fc);
+			Vec3 uu = fr[1].subtract(fc.scale(fc.dot(fr[1])));
+			double roll = Math.atan2(uu.dot(r0), uu.dot(b0));
+			// Lean with the track up to 40 degrees, and back upright when it goes upside down.
+			double lim = 0.7;
+			double rc = Math.abs(roll) <= lim ? roll
+					: Math.copySign(lim, roll) * Math.cos((Math.abs(roll) - lim) * Math.PI / (2 * (Math.PI - lim)));
+			Vec3 carUp = b0.scale(Math.cos(rc)).add(r0.scale(Math.sin(rc)));
+			Vec3 right = carUp.cross(fc);
+			Quaternionf q = new Quaternionf().setFromNormalized(new org.joml.Matrix3f((float) right.x, (float) right.y, (float) right.z,
+					(float) carUp.x, (float) carUp.y, (float) carUp.z, (float) fc.x, (float) fc.y, (float) fc.z));
+			Vector3f off = new Vector3f((float) carUp.x, (float) carUp.y, (float) carUp.z).mul(0.9F)
+					.sub(new Vector3f((float) fr[1].x, (float) fr[1].y, (float) fr[1].z).mul(0.55F));
+			((DisplayAccessor) disp).rubymod$setTransformationInterpolationDelay(0);
+			((DisplayAccessor) disp).rubymod$setTransformationInterpolationDuration(2);
+			((DisplayAccessor) disp).rubymod$setTransformation(new Transformation(off, new Quaternionf(q).rotateY((float) Math.PI),
+					new Vector3f(1.8F, 1.8F, 1.8F), new Quaternionf()));
 		}
 	}
 
 	private void end(ServerLevel level, Ride r) {
-		for (UUID id : new UUID[] {r.car, r.seat}) {
-			Entity e = level.getEntity(id);
-			if (e != null) {
-				e.discard();
+		for (UUID[] ids : new UUID[][] {r.cars, r.seats}) {
+			for (UUID id : ids) {
+				Entity e = id == null ? null : level.getEntity(id);
+				if (e != null) {
+					e.discard();
+				}
+				spawned.remove(id);
 			}
-			spawned.remove(id);
 		}
 	}
 
 	@Override
 	protected void onLeft(UUID id, Part part) {
-		Ride r = rides.remove(id);
-		if (r != null && level() != null) {
-			end(level(), r);
-		}
+		// Their car carries on empty (the train's tick notices they're gone).
+		rides.remove(id);
 	}
 
 	// ----- Keeping the coasters -----
@@ -939,6 +1225,7 @@ public class CoasterWorkshop extends PartyGame {
 		loaded = false;
 		coasters.clear();
 		rides.clear();
+		trains.clear();
 	}
 
 	/** For autotests: this player's coaster: pieces, and how far its track reaches from the station (ahead, side, up). */
