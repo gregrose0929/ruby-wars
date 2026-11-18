@@ -76,6 +76,7 @@ public final class Gunfire {
 		// Fused traits for this shot (read by the bullets and the hits it makes).
 		CURRENT = Trait.of(stack);
 		PIERCED = 0;
+		PENETRATED = 0;
 		dev.rubymod.game.rift.RiftWeapons.armed(player, CURRENT, Trait.legendary(stack));
 		int interval = stats.special() == GunStats.Special.SPINUP ? dev.rubymod.game.rift.RiftWeapons.spinInterval(player)
 				: CURRENT.contains(Trait.SPINUP) ? Math.max(1, Math.round(stats.fireInterval() * dev.rubymod.game.rift.RiftWeapons.spinInterval(player) / 6.0F))
@@ -178,6 +179,19 @@ public final class Gunfire {
 			} else if (BlockDamage.hit(level, pos, stats.damage(), shooter)) {
 				drawTracer(level, start, hitPos, stats);
 				return; // Shot through: the block is gone.
+			}
+			// Through glass and wood (rifles and snipers): on out of the far side, a little weaker.
+			float through = PENETRATED < MAX_PENETRATE ? penetration(stats, state) : 0;
+			if (through > 0) {
+				PENETRATED++;
+				Vec3 exit = hitPos;
+				for (int i = 0; i < 30 && BlockPos.containing(exit).equals(pos); i++) {
+					exit = exit.add(dir.scale(0.1));
+				}
+				exit = exit.add(dir.scale(0.02));
+				drawTracer(level, start, hitPos, stats);
+				trace(level, shooter, stats.scaled(through), exit, dir, range - start.distanceTo(exit), bounces);
+				return;
 			}
 			if (bounces > 0) {
 				double travelled = start.distanceTo(hitPos);
@@ -478,6 +492,29 @@ public final class Gunfire {
 	/** The traits of the gun being fired right now, and how many enemies this shot has pierced. */
 	private static List<Trait> CURRENT = List.of();
 	private static int PIERCED;
+	/** Glass and wood the current shot has already gone through. */
+	private static int PENETRATED;
+	private static final int MAX_PENETRATE = 2;
+
+	/**
+	 * Rifle and sniper rounds go through glass and wood (not stone, concrete or metal), losing some punch each time:
+	 * how much of the damage gets through this block (0: it doesn't).
+	 */
+	public static float penetration(GunStats stats, BlockState state) {
+		if (stats.ammo() != AmmoType.HEAVY && stats.ammo() != AmmoType.SNIPER
+				|| stats.special() != GunStats.Special.NONE && stats.special() != GunStats.Special.GLINT && stats.special() != GunStats.Special.SPINUP) {
+			return 0;
+		}
+		SoundType sound = state.getSoundType();
+		if (sound == SoundType.GLASS) {
+			return 0.9F;
+		}
+		if (sound == SoundType.WOOD || sound == SoundType.CHERRY_WOOD || sound == SoundType.BAMBOO_WOOD || sound == SoundType.NETHER_WOOD
+				|| sound == SoundType.STEM || sound == SoundType.SCAFFOLDING || state.is(BlockTags.PLANKS) || state.is(BlockTags.LOGS)) {
+			return stats.ammo() == AmmoType.SNIPER ? 0.8F : 0.65F;
+		}
+		return 0;
+	}
 
 	/** Drop a pending reload (the Ruby Chakram came back to your hand first). */
 	public static void forgetReload(ServerPlayer player) {

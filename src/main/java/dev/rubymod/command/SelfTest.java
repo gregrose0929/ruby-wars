@@ -445,6 +445,41 @@ public final class SelfTest {
 			target.discard();
 		}
 		check("guns: rifle hits a target 5 blocks away and uses a round [" + gunDetail + ", phase " + Rules.phase() + ", alpha eliminated " + Rules.isEliminated(alpha.getUUID()) + ", canHurt " + Rules.canHurt(alpha, victim) + "]", gunWorks);
+		// Through walls: rifles and snipers go through glass and wood, not stone; pistols don't.
+		{
+			java.util.function.BiFunction<net.minecraft.world.item.Item, net.minecraft.world.level.block.state.BlockState[], Float> through = (gun, wall) -> {
+				Zombie z = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
+				z.setNoAi(true);
+				z.setPos(range.getX() + 6.5, alpha.getY(), range.getZ() + 0.5);
+				level.addFreshEntity(z);
+				for (int k = 0; k < wall.length; k++) {
+					level.setBlockAndUpdate(range.offset(3 + k, 1, 0), wall[k]);
+				}
+				ItemStack g = new ItemStack(gun);
+				g.set(ModComponents.AMMO, 30);
+				Gunfire.forget(alpha.getUUID());
+				float before = z.getHealth();
+				Gunfire.tryFire(level, alpha, g, (GunItem) gun);
+				float dealt = before - z.getHealth();
+				z.discard();
+				for (int k = 0; k < wall.length; k++) {
+					level.setBlockAndUpdate(range.offset(3 + k, 1, 0), Blocks.AIR.defaultBlockState());
+				}
+				return dealt;
+			};
+			var glass = Blocks.GLASS.defaultBlockState();
+			var planks = Blocks.OAK_PLANKS.defaultBlockState();
+			var stone = Blocks.STONE.defaultBlockState();
+			float open = through.apply(ModItems.ARR_RIFLE, new net.minecraft.world.level.block.state.BlockState[0]);
+			float viaGlass = through.apply(ModItems.ARR_RIFLE, new net.minecraft.world.level.block.state.BlockState[] {glass});
+			float viaWood = through.apply(ModItems.ARR_RIFLE, new net.minecraft.world.level.block.state.BlockState[] {planks, planks});
+			float viaStone = through.apply(ModItems.ARR_RIFLE, new net.minecraft.world.level.block.state.BlockState[] {stone});
+			float pistolGlass = through.apply(ModItems.SERVICE_PISTOL, new net.minecraft.world.level.block.state.BlockState[] {glass});
+			check("walls: a rifle round goes through glass, a little weaker (" + open + " -> " + viaGlass + ")", viaGlass > 0 && viaGlass < open);
+			check("walls: and through two planks of wood, weaker again (" + viaWood + ")", viaWood > 0 && viaWood < viaGlass);
+			check("walls: but not through stone (" + viaStone + ")", viaStone == 0);
+			check("walls: a pistol round doesn't go through glass (" + pistolGlass + ")", pistolGlass == 0);
+		}
 		ItemStack moddedRifle = new ItemStack(ModItems.ARR_RIFLE);
 		moddedRifle.set(ModComponents.ATTACHMENTS, List.of("EXTENDED_MAG", "SUPPRESSOR"));
 		GunStats modded = ((GunItem) ModItems.ARR_RIFLE).stats(moddedRifle);
