@@ -105,7 +105,7 @@ final class FunPark {
 	private static void gameHosts(ServerLevel level) {
 		HubHosts.add(level, new Vec3(52.5, FLOOR + 1, -0.5), 0, VillagerProfession.MASON, VillagerType.PLAINS,
 				new HubHosts.Host("workshop", "Bolt", "Coaster Workshop", 0xFFB040, "minecraft:rail",
-						"Build your very own roller coaster, piece by piece, then ride it! Friends can ride yours too.",
+						"Ruby Coaster Park needs more rides! Everyone gets their own spot to build a roller coaster, piece by piece. Then ride them all!",
 						"Coaster Workshop: right-click Bolt to build a coaster!", HubHosts.play("Build a coaster!"), (p, key) -> goPlay(p, "coasters")));
 		HubHosts.add(level, new Vec3(52.5, FLOOR + 1, 4.5), 180, VillagerProfession.LIBRARIAN, VillagerType.SAVANNA,
 				new HubHosts.Host("partyboard", "Dizzy", "Party Board", 0x60D0FF, "minecraft:slime_ball",

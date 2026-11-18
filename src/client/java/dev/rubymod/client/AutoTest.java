@@ -5722,21 +5722,98 @@ public final class AutoTest {
 		});
 	}
 
-	/** The new coaster pieces (banked turns, bunny hops, a corkscrew), the train, and riding it. */
+	private static dev.rubymod.game.party.CoasterWorkshop cw() {
+		return (dev.rubymod.game.party.CoasterWorkshop) pg("coasters");
+	}
+
+	private static void pressStarting(String prefix) {
+		then(12, mc -> {
+			for (int i = 0; i < 9; i++) {
+				if (mc.player.getInventory().getItem(i).getHoverName().getString().startsWith(prefix)) {
+					mc.player.getInventory().setSelectedSlot(i);
+				}
+			}
+		});
+		then(4, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
+	}
+
+	private static void tpTo(double x, double y, double z, float yaw, float pitch) {
+		then(5, mc -> onServer(mc, server -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(),
+				"tp " + me(server).getName().getString() + " " + x + " " + y + " " + z + " " + yaw + " " + pitch)));
+	}
+
+	/** Ruby Coaster Park: the spots and the main street, editing pieces, the hologram, a name, laps, and a ride. */
 	private static void coasterRideScript() {
 		then(40, mc -> {
 			command(mc, "time set noon");
 			command(mc, "execute as @p run play coasters");
 		});
-		then(600, mc -> log("coasterride: {} at {}", pg("coasters").debugState(), mc.player.position()));
-		// The page buttons and a few pieces by hand, then the whole coaster through the test hook.
-		for (String piece : new String[] {"Undo (crouch: start again)", "More pieces >>", "Even more pieces >>", "Banked Right", "<< Back"}) {
-			press(piece);
-		}
-		then(10, mc -> onServer(mc, server -> log("coasterride: built: {}", ((dev.rubymod.game.party.CoasterWorkshop) pg("coasters")).testBuild(me(server),
-				"STRAIGHT", "LAUNCH", "CORKSCREW", "BANK_RIGHT", "HOPS", "BANK_RIGHT", "UP", "BIG_DROP", "BANK_RIGHT", "HELIX", "FINISH"))));
-		then(40, mc -> shot(mc, "cr-overview"));
-		then(80, mc -> {
+		then(1600, mc -> log("coasterride: {} at {}", pg("coasters").debugState(), mc.player.position()));
+		then(10, mc -> onServer(mc, server -> {
+			cw().testFreeOthers(me(server));
+			log("coasterride: spots {}", cw().spots());
+			log("coasterride: info {}", cw().testInfo(me(server)));
+			// The family server's coaster, as saved: does it still fit the new spot?
+			log("coasterride: old one: {}", cw().testBuild(me(server), "STRAIGHT", "STRAIGHT", "STRAIGHT", "STRAIGHT", "STRAIGHT", "STRAIGHT", "STRAIGHT",
+					"RIGHT", "RIGHT", "UP", "UP", "UP", "UP", "UP", "UP", "RIGHT", "BIG_DROP", "HELIX", "RIGHT", "DOWN", "DOWN", "LEFT", "LEFT", "STRAIGHT",
+					"STRAIGHT", "LAUNCH", "LAUNCH", "LEFT", "STRAIGHT", "STRAIGHT", "LEFT", "STRAIGHT", "FINISH"));
+			log("coasterride: built: {}", cw().testBuild(me(server), "STRAIGHT", "LAUNCH", "CORKSCREW+", "BANK_RIGHT", "SPLASH", "HOPS+", "BANK_RIGHT",
+					"UP+", "BIG_DROP", "BANK_RIGHT", "FINISH"));
+			log("coasterride: {}", cw().testEdit(me(server), 3, false, "RIGHT+"));
+			log("coasterride: {}", cw().testEdit(me(server), 2, true, "LOOP"));
+			log("coasterride: {}", cw().testEdit(me(server), 2, false, "REMOVE"));
+			log("coasterride: {}", cw().testEdit(me(server), 3, false, "FINISH"));
+		}));
+		// A name, typed in chat.
+		then(5, mc -> onServer(mc, server -> cw().testStartNaming(me(server))));
+		then(10, mc -> mc.player.connection.sendChat("Thunder Run"));
+		then(20, mc -> onServer(mc, server -> {
+			cw().testLapsAndName(me(server), 2, null);
+			log("coasterride: named: {}", cw().testInfo(me(server)));
+		}));
+		// The park.
+		then(5, mc -> onServer(mc, server -> {
+			var c = cw().testCenter();
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "execute in rubymod:arena run tp " + me(server).getName().getString() + " "
+					+ (c.getX() + 0.5) + " " + c.getY() + " " + (c.getZ() - 300.5) + " 0 -5");
+		}));
+		then(60, mc -> shot(mc, "cr-entrance"));
+		then(5, mc -> onServer(mc, server -> {
+			var c = cw().testCenter();
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "execute in rubymod:arena run tp " + me(server).getName().getString() + " "
+					+ (c.getX() + 0.5) + " " + c.getY() + " " + (c.getZ() - 120.5) + " 0 0");
+		}));
+		then(60, mc -> shot(mc, "cr-street"));
+		then(5, mc -> onServer(mc, server -> {
+			var st = cw().testStation(me(server));
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "execute in rubymod:arena run tp " + me(server).getName().getString() + " "
+					+ (st.getX() - 6.5) + " " + (st.getY() + 6) + " " + (st.getZ() + 12.5) + " 230 25");
+		}));
+		then(60, mc -> shot(mc, "cr-spot"));
+		// The hologram: an unfinished track, holding a Loop (green, on the end); then piece 2 picked (a swap).
+		then(5, mc -> onServer(mc, server -> {
+			log("coasterride: short: {}", cw().testBuild(me(server), "STRAIGHT", "LAUNCH", "CORKSCREW"));
+			var st = cw().testStation(me(server));
+			boolean east = st.getX() > cw().testCenter().getX();
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "execute in rubymod:arena run tp " + me(server).getName().getString()
+					+ " " + (st.getX() + (east ? 6.5 : -5.5)) + " " + (st.getY() + 7) + " " + (st.getZ() + (east ? 9.5 : -8.5)) + " " + (east ? 240 : 60) + " 20");
+		}));
+		then(10, mc -> onServer(mc, server -> cw().testHold(me(server), "Loop!")));
+		then(40, mc -> shot(mc, "cr-hologram"));
+		then(5, mc -> onServer(mc, server -> cw().testSelect(me(server), 1)));
+		then(40, mc -> shot(mc, "cr-hologram-swap"));
+		then(5, mc -> onServer(mc, server -> {
+			cw().testSelect(me(server), -1);
+			log("coasterride: rebuilt: {}", cw().testBuild(me(server), "STRAIGHT", "LAUNCH", "LOOP", "STRAIGHT", "CORKSCREW+", "BANK_RIGHT", "SPLASH", "HOPS+", "FINISH"));
+			cw().testLapsAndName(me(server), 2, null);
+		}));
+		// Ride: two laps.
+		then(5, mc -> onServer(mc, server -> {
+			var st = cw().testStation(me(server));
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "execute in rubymod:arena run tp " + me(server).getName().getString() + " "
+					+ (st.getX() + 3.5) + " " + st.getY() + " " + (st.getZ() + 2.5) + " 270 0");
+		}));
+		then(20, mc -> {
 			int slot = slotOf(mc, "Ride!");
 			if (slot >= 0 && slot < 9) {
 				mc.player.getInventory().setSelectedSlot(slot);
@@ -5744,20 +5821,19 @@ public final class AutoTest {
 		});
 		then(4, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
 		then(10, mc -> {
-			log("coasterride: aboard {}, cars nearby {}", mc.player.isPassenger(),
-					mc.level.getEntitiesOfClass(net.minecraft.world.entity.Display.ItemDisplay.class, mc.player.getBoundingBox().inflate(8)).size());
+			log("coasterride: aboard {}", mc.player.isPassenger());
 			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
 		});
-		then(10, mc -> shot(mc, "cr-boarding"));
-		for (int i = 0; i < 16; i++) {
+		for (int i = 0; i < 30; i++) {
 			int n = i;
-			then(14, mc -> {
-				mc.options.setCameraType(n % 4 == 3 ? CameraType.FIRST_PERSON : CameraType.THIRD_PERSON_BACK);
-				log("coasterride: {} riding {} at {}", n, mc.player.isPassenger(), mc.player.position());
-				shot(mc, "cr-ride-" + n);
+			then(20, mc -> {
+				onServer(mc, server -> log("coasterride: {} riding {} {}", n, me(server).isPassenger(), cw().testTrains()));
+				if (n % 3 == 0) {
+					shot(mc, "cr-ride-" + n);
+				}
 			});
 		}
-		then(200, mc -> log("coasterride: after: riding {} at {}", mc.player.isPassenger(), mc.player.position()));
+		then(300, mc -> log("coasterride: after: riding {}, {}", mc.player.isPassenger(), mc.level == null ? "" : ""));
 		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 	}
 

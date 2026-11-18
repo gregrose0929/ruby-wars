@@ -89,6 +89,20 @@ public final class RubyWarsCommand {
 						.then(Commands.literal("days").then(Commands.argument("days", IntegerArgumentType.integer(1, 60))
 								.executes(c -> schedule(c, IntegerArgumentType.getInteger(c, "days") * 1440L)))))
 				.then(Commands.literal("admin").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::admin))
+				.then(Commands.literal("coasters").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
+					var game = (dev.rubymod.game.party.CoasterWorkshop) dev.rubymod.game.party.PartyGames.byId("coasters");
+					for (String line : game.spots()) {
+						c.getSource().sendSystemMessage(Component.literal(line));
+					}
+					c.getSource().sendSystemMessage(Component.literal("To give a spot up: /rubywars coasters free <name> (their coaster goes).")
+							.withStyle(ChatFormatting.GRAY));
+					return 1;
+				})
+						.then(Commands.literal("free").then(Commands.argument("name", StringArgumentType.word()).executes(c -> {
+							var game = (dev.rubymod.game.party.CoasterWorkshop) dev.rubymod.game.party.PartyGames.byId("coasters");
+							String name = StringArgumentType.getString(c, "name");
+							return game.free(name) ? ok(c, name + "'s spot in Ruby Coaster Park is free now.") : fail(c, name + " doesn't have a spot.");
+						}))))
 				.then(Commands.literal("battle").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.executes(c -> battle(c, 60))
 						.then(Commands.literal("cancel").executes(c -> SeasonTicker.cancelBattle(c.getSource().getServer())

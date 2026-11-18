@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-18-coasters";
+	private static final String VERSION = "2026-11-18-coaster-park";
 	private static final List<String> LINES = List.of(
-			"minecraft:minecart|Coaster Workshop: banked turns, a corkscrew, bunny hops, smoother rides, and three-car trains: ride with friends!",
-			"minecraft:jukebox|The park is quieter: music only plays on the dance floor (ask DJ Remy).",
-			"minecraft:oak_boat|Still new: war boats, flares and night-vision goggles, the Ruby Bearing and Piston.");
+			"minecraft:minecart|Ruby Coaster Park: ten spots on one main street, and one is yours to keep. Name your coaster!",
+			"minecraft:spyglass|Change any piece of your track (Pick a Piece), with a see-through preview before it goes in.",
+			"minecraft:water_bucket|New: Splashdown, big-size pieces, night lights, and laps: go round as many times as you like.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;
