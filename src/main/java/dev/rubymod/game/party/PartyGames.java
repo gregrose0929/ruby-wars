@@ -178,6 +178,16 @@ public final class PartyGames {
 		}
 	}
 
+	/** Is any arena still being built in the background? (The server stays awake till they're done.) */
+	public static boolean stillBuilding() {
+		for (PartyGame game : ALL) {
+			if (game.stillBuilding()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** Build every arena in the background when the server starts, so first rounds start right away. */
 	public static void prebuild(MinecraftServer server) {
 		for (PartyGame game : ALL) {

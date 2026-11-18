@@ -14,6 +14,7 @@
 		"MannequinAccessor",
 		"PlayerMixin",
 		"ServerExplosionMixin",
+		"ServerPauseMixin",
 		"TextDisplayAccessor"
 	],
 	"injectors": {

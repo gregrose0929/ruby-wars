@@ -560,6 +560,11 @@ public abstract class PartyGame {
 		return !work.isEmpty();
 	}
 
+	/** Still building its arena in the background? */
+	public boolean stillBuilding() {
+		return !work.isEmpty();
+	}
+
 	/** Build for up to sliceNanos (within this tick's shared budget). */
 	void runWork(long sliceNanos) {
 		if (work.isEmpty()) {
