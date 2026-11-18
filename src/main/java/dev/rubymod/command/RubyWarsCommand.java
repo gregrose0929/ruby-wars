@@ -76,7 +76,19 @@ public final class RubyWarsCommand {
 								}))))
 				.then(Commands.literal("trust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, true))))
 				.then(Commands.literal("untrust").then(Commands.argument("player", EntityArgument.player()).executes(c -> trust(c, false))))
-				.then(Commands.literal("start").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::start))
+				.then(Commands.literal("start").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> start(c, 0))
+						.then(Commands.literal("untilisay").executes(c -> start(c, 0)))
+						.then(Commands.literal("1week").executes(c -> start(c, WEEK)))
+						.then(Commands.literal("2weeks").executes(c -> start(c, 2 * WEEK)))
+						.then(Commands.literal("days").then(Commands.argument("days", IntegerArgumentType.integer(1, 60))
+								.executes(c -> start(c, IntegerArgumentType.getInteger(c, "days") * 1440L)))))
+				.then(Commands.literal("schedule").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.then(Commands.literal("untilisay").executes(c -> schedule(c, 0)))
+						.then(Commands.literal("1week").executes(c -> schedule(c, WEEK)))
+						.then(Commands.literal("2weeks").executes(c -> schedule(c, 2 * WEEK)))
+						.then(Commands.literal("days").then(Commands.argument("days", IntegerArgumentType.integer(1, 60))
+								.executes(c -> schedule(c, IntegerArgumentType.getInteger(c, "days") * 1440L)))))
+				.then(Commands.literal("admin").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::admin))
 				.then(Commands.literal("battle").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.executes(c -> battle(c, 60))
 						.then(Commands.literal("cancel").executes(c -> SeasonTicker.cancelBattle(c.getSource().getServer())
@@ -161,7 +173,8 @@ public final class RubyWarsCommand {
 		String paused = data.pausedRemaining >= 0 ? " (paused)" : "";
 		source.sendSystemMessage(Component.literal("Phase: " + data.phase.title() + "  |  Time left: " + formatTime(SeasonTicker.remainingMillis()) + paused));
 		if (data.phase == Phase.BUILD) {
-			source.sendSystemMessage(Component.literal("Day " + SeasonTicker.currentDay() + (GameConfig.get().buildLimitMinutes > 0 ? " of 14"
+			long length = SeasonTicker.durationOf(Phase.BUILD);
+			source.sendSystemMessage(Component.literal("Day " + SeasonTicker.currentDay() + (length > 0 ? " of " + Math.max(1, length / 86_400_000L)
 					: " of the build phase (it ends when an admin runs /rubywars battle)")));
 		}
 		if (data.phase.isBattle() || data.phase == Phase.ENDED) {
@@ -307,15 +320,68 @@ public final class RubyWarsCommand {
 		return 0;
 	}
 
-	private static int start(CommandContext<CommandSourceStack> c) {
+	private static final long WEEK = 7 * 1440L;
+
+	/** /rubywars start [untilisay | 1week | 2weeks | days N]: begin the season; Battle Day comes then (or when you call it). */
+	private static int start(CommandContext<CommandSourceStack> c, long minutes) {
 		if (SeasonData.get().phase != Phase.LOBBY) {
-			c.getSource().sendFailure(Component.literal("The season already started. Use /rubywars phase to jump around, or /rubywars reset confirm."));
+			c.getSource().sendFailure(Component.literal("The season already started. To change when Battle Day comes: /rubywars schedule. "
+					+ "To start over: /rubywars reset confirm, then /rubywars start."));
 			return 0;
 		}
+		SeasonData.get().buildMinutes = minutes;
+		SeasonData.markDirty();
 		BattleDirector.startSeason(c.getSource().getServer());
-		int limit = GameConfig.get().buildLimitMinutes;
-		return ok(c, limit > 0 ? "Season started! The build phase runs " + limit + " minutes." : "Season started! Build for as long as you like: "
-				+ "when everyone's ready, run /rubywars battle.");
+		return ok(c, minutes > 0 ? "Season started! Battle Day begins in " + SeasonTicker.describe(minutes * 60_000L)
+				+ " (/rubywars battle starts it sooner)." : "Season started! Build for as long as you like: when everyone's ready, run /rubywars battle.");
+	}
+
+	private static int schedule(CommandContext<CommandSourceStack> c, long minutes) {
+		String error = SeasonTicker.schedule(c.getSource().getServer(), minutes);
+		if (error != null) {
+			return fail(c, error);
+		}
+		return ok(c, minutes > 0 ? "Battle Day begins in " + SeasonTicker.describe(minutes * 60_000L) + "."
+				: "Battle Day has no date now: it begins when you run /rubywars battle.");
+	}
+
+	private static net.minecraft.network.chat.MutableComponent button(String label, String command, String hover, ChatFormatting color) {
+		return Component.literal("[" + label + "]").withStyle(s -> s.withColor(color).withBold(true)
+				.withClickEvent(new net.minecraft.network.chat.ClickEvent.RunCommand(command))
+				.withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(Component.literal(hover))));
+	}
+
+	/** /rubywars admin: the season at a glance, with buttons to click. */
+	private static int admin(CommandContext<CommandSourceStack> c) {
+		SeasonData data = SeasonData.get();
+		CommandSourceStack s = c.getSource();
+		s.sendSystemMessage(Component.literal("Ruby Wars admin - Season " + data.season + ": " + data.phase.title()).withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		if (data.phase == Phase.LOBBY) {
+			s.sendSystemMessage(Component.literal("Start the season. Battle Day comes: ").withStyle(ChatFormatting.GRAY)
+					.append(button("When I say", "/rubywars start untilisay", "No date: you start the battle with /rubywars battle", ChatFormatting.GREEN))
+					.append(" ").append(button("In 1 week", "/rubywars start 1week", "Battle Day starts by itself a week from now", ChatFormatting.AQUA))
+					.append(" ").append(button("In 2 weeks", "/rubywars start 2weeks", "Battle Day starts by itself two weeks from now", ChatFormatting.AQUA)));
+		} else if (data.phase == Phase.BUILD) {
+			long left = SeasonTicker.remainingMillis();
+			s.sendSystemMessage(Component.literal("Day " + SeasonTicker.currentDay() + " of building. Battle Day: "
+					+ (left < 0 ? "when you say" : "in " + SeasonTicker.describe(left))).withStyle(ChatFormatting.GRAY));
+			s.sendSystemMessage(Component.literal("Battle: ").withStyle(ChatFormatting.GRAY)
+					.append(button("Start it now", "/rubywars battle", "A one-minute countdown everyone sees, then Battle Day", ChatFormatting.RED))
+					.append(" ").append(button("Call it off", "/rubywars battle cancel", "Stop a countdown you started", ChatFormatting.GRAY)));
+			s.sendSystemMessage(Component.literal("Change the date: ").withStyle(ChatFormatting.GRAY)
+					.append(button("When I say", "/rubywars schedule untilisay", "No date: you start it", ChatFormatting.GREEN))
+					.append(" ").append(button("In 1 week", "/rubywars schedule 1week", "A week from now", ChatFormatting.AQUA))
+					.append(" ").append(button("In 2 weeks", "/rubywars schedule 2weeks", "Two weeks from now", ChatFormatting.AQUA)));
+		} else {
+			s.sendSystemMessage(Component.literal("The battle is on. Players left: " + BattleDirector.aliveCount()).withStyle(ChatFormatting.GRAY));
+		}
+		if (data.phase != Phase.LOBBY) {
+			s.sendSystemMessage(Component.literal("New season: ").withStyle(ChatFormatting.GRAY)
+					.append(button("End this season", "/rubywars reset confirm",
+							"Clears every base claim and record and goes back to the lobby (champions are kept). Then start a new one here.",
+							ChatFormatting.DARK_RED)));
+		}
+		return 1;
 	}
 
 	private static int phase(CommandContext<CommandSourceStack> c) {
@@ -365,6 +431,7 @@ public final class RubyWarsCommand {
 		data.phaseEndsAt = 0;
 		data.pausedRemaining = -1;
 		data.buildStartedAt = 0;
+		data.buildMinutes = -1;
 		data.winner = "";
 		data.season = nextSeason;
 		data.pastChampions = champions;
@@ -378,6 +445,6 @@ public final class RubyWarsCommand {
 				player.setGameMode(GameType.SURVIVAL);
 			}
 		}
-		return ok(c, "Reset to the lobby for Season " + nextSeason + ". Run /rubywars start when everyone's ready.");
+		return ok(c, "Reset to the lobby for Season " + nextSeason + ". Run /rubywars admin (or /rubywars start) when everyone's ready.");
 	}
 }

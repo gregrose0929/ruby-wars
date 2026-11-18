@@ -40,6 +40,8 @@ public class SeasonData {
 	/** Time left (ms) when the timer was paused; -1 = not paused. */
 	public long pausedRemaining = -1;
 	public long buildStartedAt;
+	/** How long this season's build phase runs before Battle Day, in minutes: 0 until an admin calls it; -1 the config's. */
+	public long buildMinutes = -1;
 	public long nextSupplyDropAt;
 	/** Build phase: when the next ruby meteor comes down (0: not set yet). */
 	public long nextMeteorAt;

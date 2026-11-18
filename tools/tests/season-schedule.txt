@@ -1,0 +1,25 @@
+# Choosing when Battle Day comes: start with a date, change it, back to "until I say", then call it.
+rubywars reset confirm
+wait 2
+rubywars start 1week
+wait 2
+rubywars status
+rubywars schedule 2weeks
+wait 2
+rubywars status
+rubywars schedule days 3
+wait 2
+rubywars status
+rubywars schedule untilisay
+wait 3
+rubywars status
+rubywars admin
+rubywars battle 5
+wait 8
+rubywars status
+rubywars schedule 1week
+rubywars reset confirm
+wait 2
+rubywars start
+wait 2
+rubywars status

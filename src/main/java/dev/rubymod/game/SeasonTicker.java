@@ -30,7 +30,7 @@ public final class SeasonTicker {
 	public static long durationOf(Phase phase) {
 		GameConfig c = GameConfig.get();
 		return switch (phase) {
-			case BUILD -> c.buildLimitMinutes * MINUTE;
+			case BUILD -> (SeasonData.get().buildMinutes >= 0 ? SeasonData.get().buildMinutes : c.buildLimitMinutes) * MINUTE;
 			case LOCKDOWN -> c.lockdownMinutes * MINUTE;
 			case WAR -> c.warMinutes * MINUTE;
 			case SUDDEN_DEATH -> c.suddenDeathMinutes * MINUTE;
@@ -45,8 +45,8 @@ public final class SeasonTicker {
 			return 0;
 		}
 		long length = durationOf(Phase.BUILD);
-		// No limit: real days. A limit shorter than two weeks (a test season) still counts fourteen "days".
-		long dayLength = length == 0 || length >= 14 * DAY ? DAY : Math.max(1, length / 14);
+		// No limit, or a week or more: real days. A limit shorter than a day (a test season) still counts fourteen "days".
+		long dayLength = length == 0 || length >= DAY ? DAY : Math.max(1, length / 14);
 		return (int) ((now() - data.buildStartedAt) / dayLength) + 1;
 	}
 
@@ -93,6 +93,41 @@ public final class SeasonTicker {
 
 	private static long lastBattleCall = -1;
 
+	/**
+	 * When Battle Day comes: "until I say" (0), or a number of minutes from now (a week, two weeks). Only in the build phase
+	 * (or before the season starts, for when it does). Returns an error, or null.
+	 */
+	public static String schedule(MinecraftServer server, long minutes) {
+		SeasonData data = SeasonData.get();
+		if (data.phase != Phase.BUILD && data.phase != Phase.LOBBY) {
+			return "The battle has already begun (" + data.phase.title() + ").";
+		}
+		data.buildMinutes = minutes;
+		if (data.phase == Phase.BUILD) {
+			data.pausedRemaining = -1;
+			data.phaseEndsAt = minutes > 0 ? now() + minutes * MINUTE : 0;
+			warned = 0;
+			Alerts.broadcast(server, Component.literal(minutes > 0 ? "Battle Day is set: it begins in " + describe(minutes * MINUTE) + "."
+					: "No date for Battle Day: keep building, it begins when the admin calls it.").withStyle(ChatFormatting.GOLD));
+		}
+		SeasonData.markDirty();
+		return null;
+	}
+
+	/** "7 days", "2 hours", "1 day 3 hours". */
+	public static String describe(long millis) {
+		long h = (millis + MINUTE * 59) / (60 * MINUTE);
+		long d = h / 24;
+		h %= 24;
+		if (d == 0) {
+			return h <= 1 ? "less than an hour" : h + " hours";
+		}
+		return d + (d == 1 ? " day" : " days") + (h > 0 ? " " + h + (h == 1 ? " hour" : " hours") : "");
+	}
+
+	/** Heads-ups before a scheduled Battle Day: 1 = a day before, 2 = an hour before. */
+	private static int warned;
+
 	/** Called once per second. */
 	public static void tickSecond(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
@@ -123,6 +158,19 @@ public final class SeasonTicker {
 				}
 			} else {
 				BattleDirector.enterPhase(server, data.phase.next());
+			}
+		}
+
+		// A scheduled Battle Day: a heads-up the day before, and an hour before.
+		if (data.phase == Phase.BUILD && data.phaseEndsAt != 0 && data.pausedRemaining < 0) {
+			long left = data.phaseEndsAt - now();
+			if (left < 60 * MINUTE && left > 0 && warned < 2) {
+				warned = 2;
+				Alerts.broadcastTitle(server, "BATTLE DAY", "begins in less than an hour", ChatFormatting.RED);
+			} else if (left < DAY && left >= 60 * MINUTE && warned < 1) {
+				warned = 1;
+				Alerts.broadcast(server, Component.literal("Battle Day is tomorrow (in " + describe(left) + "). Get your base ready!")
+						.withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 			}
 		}
 
@@ -186,6 +234,7 @@ public final class SeasonTicker {
 
 	static void resetNotices() {
 		waitingNotified = false;
+		warned = 0;
 		lastAnnouncedDay = -1;
 	}
 }
