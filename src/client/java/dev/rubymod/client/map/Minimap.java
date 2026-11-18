@@ -35,7 +35,7 @@ public class Minimap implements HudElement {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker delta) {
 		Minecraft mc = Minecraft.getInstance();
-		if (!enabled || mc.player == null || mc.level == null || Vehicles.inVehicle(mc) && dev.rubymod.client.Targeting.piloting(mc) != null) {
+		if (!enabled || mc.player == null || mc.level == null || dev.rubymod.client.GameHud.menuOpen() || Vehicles.inVehicle(mc) && dev.rubymod.client.Targeting.piloting(mc) != null) {
 			return;
 		}
 		boolean racing = ClientState.race != null && System.currentTimeMillis() - ClientState.raceAt < 1000;

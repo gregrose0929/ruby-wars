@@ -37,6 +37,10 @@ public class GameHud implements HudElement {
 		int h = g.guiHeight();
 
 		drawLowHealth(g, player, w, h);
+		// A menu open (the Armory, a machine...): the HUD panels step aside so nothing pokes out around it.
+		if (menuOpen()) {
+			return;
+		}
 		drawPhaseBanner(g, font, w);
 		drawHeart(g, font);
 		drawEconomy(g, font);
@@ -70,6 +74,12 @@ public class GameHud implements HudElement {
 		if (ClientState.hud != null && ClientState.hud.eliminated() && ClientState.inRubyWarsWorld() && ClientState.phase().isBattle() && player.isSpectator()) {
 			g.centeredText(font, Component.literal("ELIMINATED - spectating"), w / 2, h - 60, RED);
 		}
+	}
+
+	/** A screen is open other than chat (which leaves the HUD showing). */
+	public static boolean menuOpen() {
+		var screen = Minecraft.getInstance().gui.screen();
+		return screen != null && !(screen instanceof net.minecraft.client.gui.screens.ChatScreen);
 	}
 
 	/** "Killed by Sam with the AR-R Rifle from 34m" (or what got you, if nobody did). */

@@ -18,7 +18,8 @@ public class ManualScreen extends Screen {
 	private static final List<Page> PAGES = List.of(
 			new Page("Getting Started",
 					"New? Try Free Roam first (H): every gun, vehicle and aircraft to play with, nothing to lose.",
-					"In Ruby Wars, place your Ruby Heart: a starter base appears around it, with an Armory and a Ruby Drill that fills your bank by itself.",
+					"In Ruby Wars, place your Ruby Heart: a starter base appears around it, with an Armory and a Ruby Drill that digs ore into a chest.",
+					"Upgrade your Heart at the Armory (first page, the Nether Star): a bigger claim, more health and more drills. 20 rubies, then 60.",
 					"Buy defenses at the Armory before raid day (days 3, 6, 9, 12), spend stars on upgrades (J) for tanks and jets, and grow your base.",
 					"The NEXT STEP panel (left of the screen) and the GUIDE tab (J) show what to do next, step by step."),
 			new Page("The Hub",
@@ -78,7 +79,8 @@ public class ManualScreen extends Screen {
 					"H: choose a game.  K: map.  U: hide/show the minimap.  J: guide, goals & upgrades.  O: squad.  I: profile.  Y: this manual.  V: voice chat (Simple Voice Chat).",
 					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, scroll zoom, T designate, X flares, Z autopilot, C weapon cam, G gear. Bombs: look at the target, release on IN REACH. Helicopter: WASD fly, Space/Ctrl up/down, the mouse aims."),
 			new Page("Economy",
-					"Generators and solar panels fill your power grid. Ruby Drills dig ore; the Ore Refinery doubles it; the Trade Depot sells it into your bank.",
+					"Generators and solar panels fill your power grid. A Ruby Drill keeps what it digs (open it to collect, or run a conveyor belt to a chest); "
+							+ "the Ore Refinery doubles ore; the Trade Depot sells anything into your bank.",
 					"The Vault holds rubies and pays interest. Shop purchases come out of your bank automatically.",
 					"Upgrade machines Mk I to Mk V. Your Heart's tier sets how many drills you can own (1, then 2/4/6).",
 					"A Vault blown open on Battle Day spills a quarter of its owner's bank."),

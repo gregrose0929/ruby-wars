@@ -4587,6 +4587,7 @@ public final class AutoTest {
 			case "borercheck" -> borerCheckScript();
 			case "coasterspace" -> coasterSpaceScript();
 			case "coasterride" -> coasterRideScript();
+			case "armorycheck" -> armoryCheckScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9250,6 +9251,120 @@ public final class AutoTest {
 			});
 		}
 	}
+
+	/** The Armory's pages (do they fit?), turning a page in the same screen, the Drill keeping its finds and a belt to a chest. */
+	private static void armoryCheckScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset confirm");
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "give @a rubymod:ruby 30");
+			command(mc, "time set noon");
+		});
+		then(40, mc -> {
+			IntegratedServer server = mc.getSingleplayerServer();
+			server.execute(() -> Shop.open(server.getPlayerList().getPlayers().get(0), 0));
+		});
+		int[][] picks = {{1, 40}, {0, 9}, {9, 0}, {0, 3}};
+		for (int page = 0; page < 4; page++) {
+			int p = page;
+			then(15, mc -> {
+				if (mc.gui.screen() instanceof ArmoryScreen armory) {
+					if (p > 0) {
+						Object before = mc.gui.screen();
+						mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 100 + p);
+						lastScreen = before;
+					}
+				}
+			});
+			then(50, mc -> {
+				if (mc.gui.screen() instanceof ArmoryScreen armory) {
+					log("armorycheck: page {} showing {}, same screen as before {}", p, armory.getMenu().page(), p == 0 || mc.gui.screen() == lastScreen);
+					armory.selected = picks[p][0];
+				}
+			});
+			then(5, mc -> shot(mc, "armory-" + p + "a"));
+			then(5, mc -> {
+				if (mc.gui.screen() instanceof ArmoryScreen armory) {
+					armory.selected = picks[p][1];
+				}
+			});
+			then(5, mc -> shot(mc, "armory-" + p + "b"));
+		}
+		then(5, mc -> {
+			if (mc.gui.screen() instanceof ArmoryScreen armory) {
+				mc.gameMode.handleInventoryButtonClick(armory.getMenu().containerId, 100);
+			}
+		});
+		then(15, mc -> {
+			if (mc.gui.screen() instanceof ArmoryScreen armory) {
+				armory.selected = 40;
+			}
+		});
+		then(5, mc -> shot(mc, "armory-heart"));
+		then(2, mc -> mc.player.closeContainer());
+		// The Drill: one feeding a belt into a chest, one beside a Trade Depot (which shouldn't get anything).
+		then(10, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = p.level();
+			var b = p.blockPosition().offset(3, 0, 3);
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(b.offset(-1, 0, -1), b.offset(6, 2, 4))) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			dev.rubymod.industry.Grid.account(p.getUUID()).charge = 10_000_000L;
+			level.setBlockAndUpdate(b, dev.rubymod.registry.ModBlocks.RUBY_DRILL.defaultBlockState());
+			level.setBlockAndUpdate(b.east(), dev.rubymod.registry.ModBlocks.CONVEYOR.defaultBlockState()
+					.setValue(dev.rubymod.industry.ConveyorBlock.FACING, net.minecraft.core.Direction.EAST));
+			level.setBlockAndUpdate(b.east(2), net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+			level.setBlockAndUpdate(b.south(3), dev.rubymod.registry.ModBlocks.RUBY_DRILL.defaultBlockState());
+			level.setBlockAndUpdate(b.south(3).east(), dev.rubymod.registry.ModBlocks.TRADE_DEPOT.defaultBlockState());
+			for (var q : new net.minecraft.core.BlockPos[] {b, b.south(3), b.south(3).east()}) {
+				if (level.getBlockEntity(q) instanceof dev.rubymod.industry.MachineBlockEntity m) {
+					m.setOwner(p.getUUID());
+					m.setTier(5);
+				}
+			}
+			drillAt = b;
+		}));
+		then(900, mc -> onServer(mc, server -> {
+			var level = me(server).level();
+			int inDrill = 0;
+			int inDrill2 = 0;
+			int inChest = 0;
+			int inDepot = 0;
+			if (level.getBlockEntity(drillAt) instanceof net.minecraft.world.Container c) {
+				for (int i = 0; i < c.getContainerSize(); i++) {
+					inDrill += c.getItem(i).getCount();
+				}
+			}
+			if (level.getBlockEntity(drillAt.south(3)) instanceof net.minecraft.world.Container c) {
+				for (int i = 0; i < c.getContainerSize(); i++) {
+					inDrill2 += c.getItem(i).getCount();
+				}
+			}
+			if (level.getBlockEntity(drillAt.east(2)) instanceof net.minecraft.world.Container c) {
+				for (int i = 0; i < c.getContainerSize(); i++) {
+					inChest += c.getItem(i).getCount();
+				}
+			}
+			if (level.getBlockEntity(drillAt.south(3).east()) instanceof dev.rubymod.industry.MachineBlockEntity d) {
+				inDepot = d.status();
+			}
+			log("armorycheck: drill with a belt holds {}, its chest {}; drill beside a depot holds {} (depot status {})", inDrill, inChest, inDrill2, inDepot);
+			// The depot: dirt and a stick go in and sell.
+			if (level.getBlockEntity(drillAt.south(3).east()) instanceof dev.rubymod.industry.MachineBlockEntity d) {
+				d.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT, 8));
+				d.setItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK, 8));
+				bankBefore = dev.rubymod.industry.Grid.milliRubies(me(server).getUUID());
+			}
+		}));
+		then(100, mc -> onServer(mc, server -> log("armorycheck: depot sold dirt and sticks: bank {} -> {} milli-rubies", bankBefore,
+				dev.rubymod.industry.Grid.milliRubies(me(server).getUUID()))));
+	}
+
+	private static Object lastScreen;
+	private static net.minecraft.core.BlockPos drillAt;
+	private static long bankBefore;
 
 	/** Armory pages (research locks), a backpack, a War Grave after dying. */
 	private static void gearScript() {

@@ -23,7 +23,8 @@ public class ArmoryMenu extends AbstractContainerMenu {
 	public static final int GRID_Y = 30;
 	public static final int CELL = 22;
 	private final Container shop;
-	private final int page;
+	/** The page showing (a data slot, so turning a page just updates the open screen). */
+	private final net.minecraft.world.inventory.DataSlot page = net.minecraft.world.inventory.DataSlot.standalone();
 
 	/** Client side. */
 	public ArmoryMenu(int id, Inventory inventory, Integer page) {
@@ -33,7 +34,8 @@ public class ArmoryMenu extends AbstractContainerMenu {
 	public ArmoryMenu(int id, Inventory inventory, Container shop, int page) {
 		super(ModMenus.ARMORY, id);
 		this.shop = shop;
-		this.page = page;
+		this.page.set(page);
+		addDataSlot(this.page);
 		for (int i = 0; i < SLOTS; i++) {
 			int x = i < 45 ? GRID_X + (i % 9) * CELL + 2 : -10000;
 			int y = i < 45 ? GRID_Y + (i / 9) * CELL + 2 : -10000;
@@ -52,7 +54,17 @@ public class ArmoryMenu extends AbstractContainerMenu {
 	}
 
 	public int page() {
-		return page;
+		return page.get();
+	}
+
+	/** Show another page in this same screen. */
+	void turnTo(ServerPlayer player, int to) {
+		if (to < 0 || to >= Shop.pageCount()) {
+			return;
+		}
+		page.set(to);
+		Shop.refill(shop, player, to);
+		broadcastChanges();
 	}
 
 	public ItemStack display(int slot) {
@@ -62,7 +74,7 @@ public class ArmoryMenu extends AbstractContainerMenu {
 	@Override
 	public void clicked(int slotIndex, int button, ContainerInput input, Player player) {
 		if (slotIndex >= 0 && slotIndex < SLOTS && player instanceof ServerPlayer sp) {
-			Shop.click(sp, slotIndex, shop, page);
+			Shop.click(sp, slotIndex, shop, page.get());
 		}
 		sendAllDataToRemote();
 	}
@@ -70,7 +82,7 @@ public class ArmoryMenu extends AbstractContainerMenu {
 	@Override
 	public boolean clickMenuButton(Player player, int id) {
 		if (id >= 100 && id < 100 + Shop.pageCount() && player instanceof ServerPlayer sp) {
-			Shop.open(sp, id - 100);
+			turnTo(sp, id - 100);
 			return true;
 		}
 		return false;

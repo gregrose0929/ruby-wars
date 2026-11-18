@@ -38,6 +38,7 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 	private static final String[] TABS = {"Weapons & Base", "Vehicles & Air", "Industry", "Gear & Support"};
 	/** The card last clicked (shown when nothing is hovered); public so tests can pick one. */
 	public int selected = -1;
+	private int shownPage = -1;
 
 	public ArmoryScreen(ArmoryMenu menu, Inventory inventory, Component title) {
 		super(menu, inventory, title, fitWidth(), H);
@@ -84,6 +85,11 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+		// A new page: forget the card clicked on the last one.
+		if (menu.page() != shownPage) {
+			shownPage = menu.page();
+			selected = -1;
+		}
 		super.extractBackground(g, mouseX, mouseY, a);
 		int x = leftPos;
 		int y = topPos;
@@ -208,12 +214,18 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			lines.addAll(0, about);
 		}
 		for (Component c : lines) {
+			boolean full = false;
 			for (FormattedCharSequence line : font.split(c, imageWidth - 14 - px)) {
-				if (ly > H - 22) {
+				// Stop above the "Click to buy" line (the rest is in the item's tooltip in your inventory).
+				if (ly + 10 > H - 22) {
+					full = true;
 					break;
 				}
 				g.text(font, line, px, ly, lock ? MUTED : Ui.DIM, false);
 				ly += 10;
+			}
+			if (full) {
+				break;
 			}
 		}
 		g.text(font, lock ? "Unlock it with stars (J)" : "Click to buy", px, H - 20, lock ? MUTED : GREEN, false);

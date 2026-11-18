@@ -117,10 +117,12 @@ villages, rivers to the sea, and ruins to explore.
 ### Making rubies (industry)
 
 Build machines on one shared power grid: generators and solar panels for power, Battery
-Banks, a **Ruby Drill** that mines by itself, an **Ore Refinery** that doubles your ore, an
-Ammo Factory, a **Trade Depot** that sells things for rubies, and a **Ruby Vault** that holds
-your bank (and pays a little interest). Every machine upgrades from Mk I to Mk V, and they
-feed each other automatically (Drill → Refinery → Trade Depot is a complete line).
+Banks, a **Ruby Drill** that mines by itself and keeps what it finds until you collect it (or
+run a conveyor belt from it to a chest), an **Ore Refinery** that doubles your ore, an Ammo
+Factory, a **Trade Depot** that buys anything you put in it, and a **Ruby Vault** that holds
+your bank (and pays a little interest). Every machine upgrades from Mk I to Mk V; conveyor
+belts carry things from one to the next. Upgrade your **Ruby Heart** at the Armory (first
+page) for a bigger claim, more health and room for more drills.
 `/rubywars leaderboard` shows the top tycoons.
 
 ### Weapons and vehicles

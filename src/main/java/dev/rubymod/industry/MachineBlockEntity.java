@@ -590,11 +590,16 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	 * keeps flowing); plain chests next to the machine only catch what's left over.
 	 */
 	private void pushOutputs(ServerLevel level) {
+		// A drill keeps what it digs (come and collect it), unless a conveyor belt (or a hopper) carries it away.
+		boolean beltsOnly = kind() == MachineKind.RUBY_DRILL;
 		for (int pass = 0; pass < 2; pass++) {
 			for (Direction dir : Direction.values()) {
 				BlockPos side = worldPosition.relative(dir);
 				if (pass == 0 && dir.getAxis().isHorizontal() && ConveyorBlock.leadsAway(level.getBlockState(side), dir)) {
 					dropOnBelt(level, side);
+					continue;
+				}
+				if (beltsOnly) {
 					continue;
 				}
 				BlockEntity neighbor = level.getBlockEntity(side);

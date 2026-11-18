@@ -160,9 +160,39 @@ public final class Recipes {
 		PRICES.put(Items.OAK_LOG, 15);
 		PRICES.put(Items.SPRUCE_LOG, 15);
 		PRICES.put(Items.BIRCH_LOG, 15);
+		// Storage blocks: nine of what they're made of.
+		PRICES.put(Items.COAL_BLOCK, 360);
+		PRICES.put(Items.RAW_COPPER_BLOCK, 270);
+		PRICES.put(Items.RAW_IRON_BLOCK, 630);
+		PRICES.put(Items.IRON_BLOCK, 1260);
+		PRICES.put(Items.RAW_GOLD_BLOCK, 1080);
+		PRICES.put(Items.GOLD_BLOCK, 2250);
+		PRICES.put(Items.REDSTONE_BLOCK, 270);
+		PRICES.put(Items.LAPIS_BLOCK, 360);
+		PRICES.put(Items.DIAMOND_BLOCK, 13500);
+		PRICES.put(Items.EMERALD_BLOCK, 7200);
+		PRICES.put(Items.NETHERITE_INGOT, 18000);
+		PRICES.put(Items.QUARTZ, 40);
+		PRICES.put(Items.AMETHYST_SHARD, 30);
+		PRICES.put(Items.STONE, 3);
+		PRICES.put(Items.DEEPSLATE, 3);
+		PRICES.put(Items.OAK_PLANKS, 4);
+		PRICES.put(Items.SPRUCE_PLANKS, 4);
+		PRICES.put(Items.BIRCH_PLANKS, 4);
 	}
 
-	/** Thousandths of a ruby for one item at the Trade Depot (Mk I), 0 if it doesn't buy it. */
+	/** Anything not on the list still sells: a little for everyday things, more for rarer ones. */
+	private static int fallback(ItemStack stack) {
+		net.minecraft.world.item.Rarity rarity = stack.getRarity();
+		return switch (rarity) {
+			case UNCOMMON -> 40;
+			case RARE -> 150;
+			case EPIC -> 600;
+			default -> 3;
+		};
+	}
+
+	/** Thousandths of a ruby for one item at the Trade Depot (Mk I). It buys anything. */
 	public static int price(ItemStack stack) {
 		if (stack.is(ModItems.RUBY)) {
 			return 1000;
@@ -170,7 +200,11 @@ public final class Recipes {
 		if (stack.is(net.minecraft.tags.ItemTags.LOGS)) {
 			return 15;
 		}
-		return PRICES.getOrDefault(stack.getItem(), 0);
+		if (stack.isEmpty()) {
+			return 0;
+		}
+		Integer listed = PRICES.get(stack.getItem());
+		return listed != null ? listed : fallback(stack);
 	}
 
 	/** Better depots get better prices: +6% per tier above Mk I. */
@@ -179,6 +213,8 @@ public final class Recipes {
 			return 1000; // Rubies are always worth a ruby.
 		}
 		double rate = dev.rubymod.game.GameConfig.get().tradeDepotPriceMultiplier;
-		return (int) Math.round(price(stack) * rate * (1.0 + 0.06 * (tier - 1)));
+		int base = price(stack);
+		// Everything sells for something (at least a thousandth of a ruby).
+		return base <= 0 ? 0 : Math.max(1, (int) Math.round(base * rate * (1.0 + 0.06 * (tier - 1))));
 	}
 }

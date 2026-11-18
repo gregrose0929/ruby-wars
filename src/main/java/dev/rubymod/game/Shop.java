@@ -269,6 +269,20 @@ public final class Shop {
 		});
 	}
 
+	/** What upgrading the Heart gets you: this tier and the next. */
+	private static void heartLore(List<Component> lore, ServerPlayer player) {
+		SeasonData.Claim claim = SeasonData.get().claimOf(player.getUUID());
+		GameConfig c = GameConfig.get();
+		int tier = claim == null ? 1 : claim.tier;
+		int[] drills = c.drillsPerHeartTier;
+		lore.add(Component.literal("Your Heart: tier " + tier + " (claim " + c.heartRadius(tier) + " blocks out, " + c.heartHp(tier) + " health)")
+				.withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
+		lore.add(Component.literal("Tier " + (tier + 1) + ": claim " + c.heartRadius(tier + 1) + " blocks out, " + c.heartHp(tier + 1) + " health"
+				+ (drills != null && drills.length >= tier + 1 ? ", up to " + drills[Math.min(drills.length - 1, tier)] + " drills" : ""))
+				.withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GREEN)));
+		lore.add(Component.literal("Heals your Heart too. Not on Battle Day.").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
+	}
+
 	private static void fill(Container container, ServerPlayer player, int page) {
 		container.clearContent();
 		for (Entry entry : entries()) {
@@ -289,6 +303,9 @@ public final class Shop {
 			} else if (price < 0) {
 				lore.add(Component.literal("Max tier").withStyle(ChatFormatting.GRAY));
 			} else {
+				if (entry.action() != null) {
+					heartLore(lore, player);
+				}
 				lore.add(Component.literal("Cost: " + price + " rubies").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.RED)));
 				lore.add(Component.literal("Click to buy").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
 			}
@@ -309,12 +326,8 @@ public final class Shop {
 	}
 
 	private static void buy(ServerPlayer player, int slot, Container container, int page) {
-		if (slot == NEXT_SLOT && page + 1 < PAGES) {
-			open(player, page + 1);
-			return;
-		}
-		if (slot == BACK_SLOT && page > 0) {
-			open(player, page - 1);
+		if ((slot == NEXT_SLOT && page + 1 < PAGES || slot == BACK_SLOT && page > 0) && player.containerMenu instanceof ArmoryMenu menu) {
+			menu.turnTo(player, slot == NEXT_SLOT ? page + 1 : page - 1);
 			return;
 		}
 		for (Entry entry : entries()) {
@@ -387,6 +400,10 @@ public final class Shop {
 	/** A click in the Armory screen (see ArmoryMenu). */
 	static void click(ServerPlayer player, int slot, Container container, int page) {
 		buy(player, slot, container, page);
+	}
+
+	static void refill(Container container, ServerPlayer player, int page) {
+		fill(container, player, page);
 	}
 
 	static int pageCount() {

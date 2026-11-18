@@ -862,7 +862,7 @@ public final class SelfTest {
 		long charge = dev.rubymod.industry.Grid.charge(alpha.getUUID());
 		check("industry: a combustion generator charges the grid (" + charge + " after 5 s)", charge >= 290 && charge <= 310);
 
-		// Production line: drill -> refinery -> trade depot, each pushing into the next.
+		// Production line: the drill keeps what it digs; the refinery pushes into the trade depot.
 		var drill = machine(level, at.offset(2, 0, 0), ModBlocks.RUBY_DRILL, alpha);
 		drill.setTier(5);
 		var refinery = machine(level, at.offset(3, 0, 0), ModBlocks.ORE_REFINERY, alpha);
@@ -887,6 +887,12 @@ public final class SelfTest {
 		}
 		check("industry: the refinery doubles ore and the depot banks the sale (" + bank / 1000.0 + " rubies," + inv + ")",
 				bank > 0);
+		ItemStack refIn = refinery.getItem(0);
+		check("industry: the drill keeps what it digs (nothing handed to the refinery beside it: " + refIn + ")",
+				refIn.isEmpty() || refIn.is(net.minecraft.world.item.Items.RAW_IRON));
+		check("industry: the Trade Depot takes anything (dirt, a wooden sword, a rifle)",
+				depot.canPlaceItem(0, new ItemStack(net.minecraft.world.item.Items.DIRT)) && depot.canPlaceItem(0, new ItemStack(net.minecraft.world.item.Items.WOODEN_SWORD))
+						&& depot.canPlaceItem(0, new ItemStack(ModItems.ARR_RIFLE)));
 
 		// Vault: rubies in, interest-free withdraw out.
 		var vault = machine(level, at.offset(6, 0, 0), ModBlocks.VAULT, alpha);

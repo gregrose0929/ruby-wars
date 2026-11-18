@@ -17,13 +17,14 @@ public final class Guide {
 
 	public static final List<Step> STEPS = List.of(
 			new Step("Place your Ruby Heart", "Pick a spot for your base (K opens the map) and place it. A starter base appears around it: "
-					+ "an Armory, and a Ruby Drill that fills your bank by itself.", "heart", false),
-			new Step("Buy something at your Armory", "Right-click the Armory by your Heart. It spends your bank, which your drill keeps filling.", "armory", false),
+					+ "an Armory, and a Ruby Drill that digs ore into a chest (sell it at the Trade Depot).", "heart", false),
+			new Step("Buy something at your Armory", "Right-click the Armory by your Heart. It spends the rubies you carry, then your bank.", "armory", false),
+			new Step("Upgrade your Heart", "At the Armory, first page (Weapons & Base): click the Nether Star, \"Upgrade Ruby Heart\". "
+					+ "20 rubies for tier 2 (a bigger claim, more health, more drills), then 60 for tier 3.", "heart2", false),
 			new Step("Place a base defense", "Sentry Turrets, walls and mines from the Armory: raiders attack your Heart on days 3, 6, 9 and 12.",
 					"defense", false),
 			new Step("Spend stars on an upgrade", "Goals give stars. Press J, open UPGRADES and pick one: it unlocks tanks, jets and more "
 					+ "in the Armory.", "#research", false),
-			new Step("Upgrade your Heart", "Buy \"Upgrade Ruby Heart\" at the Armory: a bigger base and room for more drills.", "heart2", false),
 			new Step("Repel a raid", "Beat the raiders on a raid day, or call a practice raid any time with /rubywars raid.", "raid", false),
 			new Step("Join a squad", "Press O to team up: you share a base, respawns and upgrades.", "squad", true));
 

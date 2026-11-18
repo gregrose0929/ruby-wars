@@ -47,26 +47,37 @@ public final class StarterBase {
 		record.starterBase = true;
 		SeasonData.markDirty();
 		List<String> missed = new ArrayList<>();
-		// The power line: panels, the drill between them and the depot, so the drill hands its ore straight over.
+		// The power line: panels, then the drill; a conveyor belt carries what it digs into a chest; the depot and vault beside it.
 		place(level, player, heart.offset(-2, 0, 3), ModBlocks.SOLAR_PANEL, missed);
 		place(level, player, heart.offset(-1, 0, 3), ModBlocks.SOLAR_PANEL, missed);
 		BlockPos drill = place(level, player, heart.offset(0, 0, 3), ModBlocks.RUBY_DRILL, missed);
-		BlockPos depot = place(level, player, heart.offset(1, 0, 3), ModBlocks.TRADE_DEPOT, missed);
-		place(level, player, heart.offset(3, 0, 3), ModBlocks.VAULT, missed);
-		place(level, player, heart.offset(0, 0, -3), ModBlocks.ARMORY, missed);
-		if (drill != null && depot != null && drill.distManhattan(depot) != 1) {
-			player.sendSystemMessage(Component.literal("Tip: put your Trade Depot right next to the Ruby Drill so it can sell what it digs.")
-					.withStyle(ChatFormatting.GRAY));
+		BlockPos belt = drill == null ? null : placeAt(level, drill.east(),
+				ModBlocks.CONVEYOR.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, Direction.EAST));
+		if (belt != null) {
+			placeAt(level, belt.east(), net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState().setValue(net.minecraft.world.level.block.ChestBlock.FACING, Direction.NORTH));
 		}
+		place(level, player, heart.offset(3, 0, 5), ModBlocks.TRADE_DEPOT, missed);
+		place(level, player, heart.offset(5, 0, 3), ModBlocks.VAULT, missed);
+		place(level, player, heart.offset(0, 0, -3), ModBlocks.ARMORY, missed);
 		Grid.deposit(player.getUUID(), STARTING_RUBIES * 1000L);
 		level.playSound(null, heart, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 0.8F, 1.2F);
 		player.sendSystemMessage(Component.literal("Your starter base is ready, with " + STARTING_RUBIES + " rubies in the bank! The Solar Panels power "
-				+ "a Ruby Drill, the Trade Depot sells what it digs into your bank, and the Armory (right-click it) spends from your bank.")
+				+ "a Ruby Drill; a conveyor belt carries what it digs into the chest next to it. Put things in the Trade Depot to sell them "
+				+ "into your bank, and spend at the Armory (right-click it). Upgrade your Heart there too (first page) for a bigger base.")
 				.withStyle(ChatFormatting.GREEN));
 		if (!missed.isEmpty()) {
 			player.sendSystemMessage(Component.literal("No room for your " + String.join(", ", missed) + ": it's in your inventory, place it yourself.")
 					.withStyle(ChatFormatting.YELLOW));
 		}
+	}
+
+	/** A plain block at {@code at}, if there's room and ground under it. */
+	private static BlockPos placeAt(ServerLevel level, BlockPos at, BlockState state) {
+		if (!level.getBlockState(at).canBeReplaced() || !level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) {
+			return null;
+		}
+		level.setBlock(at, state, Block.UPDATE_ALL);
+		return at;
 	}
 
 	/** Put {@code block} at the nearest free ground around {@code at} (or give it to the player). */
