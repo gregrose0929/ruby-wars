@@ -130,6 +130,10 @@ public final class Shop {
 			item(7, ModBlocks.AIRFIELD_PAD, 1, 30);
 			item(8, ModItems.DIRT_BIKE, 1, 20);
 			item(17, ModItems.QUAD, 1, 28);
+			// Row 3 (right): boats
+			item(24, ModItems.PATROL_BOAT, 1, 25);
+			item(25, ModItems.GUNBOAT, 1, 70);
+			item(26, ModItems.LANDING_CRAFT, 1, 55);
 			// Row 2: anti-vehicle and anti-air weapons
 			item(9, ModItems.SKYHAMMER, 1, 35);
 			item(10, ModItems.AA_MISSILE, 2, 8);

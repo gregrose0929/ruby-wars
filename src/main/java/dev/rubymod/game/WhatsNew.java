@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-17-later";
+	private static final String VERSION = "2026-11-17-boats";
 	private static final List<String> LINES = List.of(
-			"rubymod:ruby_bearing|New: Ruby Bearing and Piston for drawbridges, gates and lifts, and a Keycard Reader to open them.",
-			"minecraft:tnt|Shelled buildings come down: weak spans give way, in dust and rubble. Build with steel!",
-			"rubymod:tunnel_borer|Also new: Tunnel Borer, Grappling Hook, Flamethrower, bikes, base security, Battle Day storms and sky.");
+			"minecraft:oak_boat|New: Patrol Boat, Gunboat and Landing Craft (it carries a jeep and drops its ramp on a beach).",
+			"minecraft:torch|Flares, muzzle flashes, rockets and burning wrecks light up the dark. Night-vision goggles too.",
+			"rubymod:ruby_bearing|Ruby Bearing and Piston for drawbridges, gates and lifts; shelled buildings come down.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

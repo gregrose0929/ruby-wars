@@ -75,6 +75,12 @@ public class ModEntities {
 	public static final EntityType<dev.rubymod.entity.ReconDroneEntity> RECON_DRONE = register("recon_drone",
 			EntityType.Builder.<dev.rubymod.entity.ReconDroneEntity>of(dev.rubymod.entity.ReconDroneEntity::new, MobCategory.MISC).sized(1.8F, 0.9F)
 					.clientTrackingRange(16).updateInterval(2));
+	public static final EntityType<dev.rubymod.entity.BoatEntity> PATROL_BOAT = register("patrol_boat",
+			EntityType.Builder.<dev.rubymod.entity.BoatEntity>of(dev.rubymod.entity.BoatEntity::new, MobCategory.MISC).sized(1.9F, 1.0F).clientTrackingRange(10));
+	public static final EntityType<dev.rubymod.entity.BoatEntity> GUNBOAT = register("gunboat",
+			EntityType.Builder.<dev.rubymod.entity.BoatEntity>of(dev.rubymod.entity.BoatEntity::new, MobCategory.MISC).sized(2.3F, 1.2F).clientTrackingRange(10));
+	public static final EntityType<dev.rubymod.entity.BoatEntity> LANDING_CRAFT = register("landing_craft",
+			EntityType.Builder.<dev.rubymod.entity.BoatEntity>of(dev.rubymod.entity.BoatEntity::new, MobCategory.MISC).sized(2.9F, 1.2F).clientTrackingRange(10));
 	public static final EntityType<dev.rubymod.entity.LightVehicleEntity> DIRT_BIKE = register("dirt_bike",
 			EntityType.Builder.<dev.rubymod.entity.LightVehicleEntity>of(dev.rubymod.entity.LightVehicleEntity::new, MobCategory.MISC).sized(0.9F, 1.1F)
 					.clientTrackingRange(10));
@@ -121,6 +127,9 @@ public class ModEntities {
 		FabricDefaultAttributeRegistry.register(SCOUT_DRONE, dev.rubymod.entity.ScoutDroneEntity.attributes());
 		FabricDefaultAttributeRegistry.register(TUNNEL_BORER, dev.rubymod.entity.TunnelBorerEntity.attributes());
 		FabricDefaultAttributeRegistry.register(DIRT_BIKE, dev.rubymod.entity.LightVehicleEntity.bikeAttributes());
+		FabricDefaultAttributeRegistry.register(PATROL_BOAT, dev.rubymod.entity.BoatEntity.patrolAttributes());
+		FabricDefaultAttributeRegistry.register(GUNBOAT, dev.rubymod.entity.BoatEntity.gunboatAttributes());
+		FabricDefaultAttributeRegistry.register(LANDING_CRAFT, dev.rubymod.entity.BoatEntity.landingAttributes());
 		FabricDefaultAttributeRegistry.register(QUAD, dev.rubymod.entity.LightVehicleEntity.quadAttributes());
 		FabricDefaultAttributeRegistry.register(TARGET_DUMMY, net.minecraft.world.entity.decoration.ArmorStand.createAttributes());
 		FabricDefaultAttributeRegistry.register(FIGHTER_JET, AircraftEntity.attributes(AircraftType.FIGHTER));

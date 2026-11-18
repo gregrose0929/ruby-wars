@@ -98,6 +98,14 @@ public class VehicleEntity extends Mob {
 		builder.define(SMOKE, SMOKE_CHARGES);
 	}
 
+	/** Point the gun (a gunboat's deck gun turns smoothly toward where its driver looks). */
+	protected void aim(float yaw, float pitch) {
+		float now = turretYaw();
+		entityData.set(TURRET_YAW, Mth.wrapDegrees(now + Mth.clamp(Mth.wrapDegrees(yaw - now), -6.0F, 6.0F)));
+		float p = barrelPitch();
+		entityData.set(BARREL_PITCH, p + Mth.clamp(pitch - p, -4.0F, 4.0F));
+	}
+
 	/** Where the turret points (world yaw, degrees). */
 	public float turretYaw() {
 		return entityData.get(TURRET_YAW);

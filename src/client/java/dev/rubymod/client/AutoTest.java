@@ -4573,6 +4573,7 @@ public final class AutoTest {
 			case "pickercheck" -> pickerCheckScript();
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
+			case "boatcheck" -> boatCheckScript();
 			case "lightcheck" -> lightCheckScript();
 			case "basecheck" -> baseCheckScript();
 			case "bridgecheck" -> bridgeCheckScript();
@@ -6368,6 +6369,145 @@ public final class AutoTest {
 			onServer(mc, server -> dev.rubymod.game.NightBattle.forced = false);
 			command(mc, "time set noon");
 		});
+	}
+
+		private static net.minecraft.core.BlockPos poolAt;
+
+	private static dev.rubymod.entity.BoatEntity boatNear(net.minecraft.server.MinecraftServer server, net.minecraft.world.entity.EntityType<dev.rubymod.entity.BoatEntity> type) {
+		var p = me(server);
+		for (var b : p.level().getEntitiesOfClass(dev.rubymod.entity.BoatEntity.class, p.getBoundingBox().inflate(80), b -> b.getType() == type)) {
+			return b;
+		}
+		return null;
+	}
+
+	/** War boats: a patrol boat under way, the gunboat's deck gun, and a landing craft putting a jeep on a beach. */
+	private static void boatCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode creative @a");
+			command(mc, "execute as @p at @s run tp @s ~-250 ~ ~-250");
+			for (String t : new String[] {"patrol_boat", "gunboat", "landing_craft", "jeep"}) {
+				command(mc, "kill @e[type=rubymod:" + t + "]");
+			}
+		});
+		// A pool: 40 long (x), 16 wide, 3 deep; grass beyond its east end for a beach.
+		then(200, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = p.level();
+			var b = p.blockPosition();
+			poolAt = b;
+			for (int x = 0; x <= 40; x++) {
+				for (int z = 0; z <= 16; z++) {
+					for (int y = -3; y <= -1; y++) {
+						level.setBlock(b.offset(x, y, z), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 2);
+					}
+					for (int y = 0; y <= 4; y++) {
+						level.setBlock(b.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+					}
+				}
+			}
+			var boat = dev.rubymod.registry.ModEntities.PATROL_BOAT.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			boat.snapTo(b.getX() + 4.5, b.getY() - 0.4, b.getZ() + 4.5, -90, 0);
+			level.addFreshEntity(boat);
+			p.startRiding(boat);
+		}));
+		double[] start = new double[2];
+		then(20, mc -> {
+			mc.player.setYRot(-90);
+			start[0] = mc.player.getX();
+			start[1] = mc.player.getY();
+			mc.options.keyUp.setDown(true);
+		});
+		then(60, mc -> {
+			mc.options.keyUp.setDown(false);
+			log("boat: patrol boat: {} blocks in 3 s, riding {}, height change {}", Math.round(mc.player.getX() - start[0]), mc.player.isPassenger(),
+					String.format("%.2f", mc.player.getY() - start[1]));
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+		});
+		then(10, mc -> shot(mc, "boat-1-patrol"));
+		then(40, mc -> onServer(mc, server -> {
+			var b = boatNear(server, dev.rubymod.registry.ModEntities.PATROL_BOAT);
+			log("boat: afloat after drifting: {} (y {}, water top {})", b != null && b.afloat(), b == null ? 0 : String.format("%.2f", b.getY()), poolAt.getY());
+		}));
+		// The gunboat.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.stopRiding();
+			var g = dev.rubymod.registry.ModEntities.GUNBOAT.create(p.level(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			g.snapTo(poolAt.getX() + 12.5, poolAt.getY() - 0.4, poolAt.getZ() + 10.5, -90, 0);
+			p.level().addFreshEntity(g);
+			p.startRiding(g);
+		}));
+		then(40, mc -> {
+			mc.player.setYRot(-90);
+			mc.player.setXRot(-5);
+		});
+		then(60, mc -> mc.player.getInventory().setSelectedSlot(0));
+		then(3, mc -> {
+			onServer(mc, server -> {
+				var p = me(server);
+				if (p.getVehicle() instanceof dev.rubymod.entity.BoatEntity g) {
+					int before = p.level().getEntitiesOfClass(dev.rubymod.entity.RocketEntity.class, p.getBoundingBox().inflate(60)).size();
+					g.fireCannon(p);
+					int after = p.level().getEntitiesOfClass(dev.rubymod.entity.RocketEntity.class, p.getBoundingBox().inflate(60)).size();
+					log("boat: gunboat fired (server): shells {} -> {}", before, after);
+				}
+			});
+			shot(mc, "boat-2-gunboat");
+		});
+		// The landing craft: a jeep aboard, across, and onto the beach.
+		then(30, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.stopRiding();
+			var level = p.level();
+			var craft = dev.rubymod.registry.ModEntities.LANDING_CRAFT.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			craft.snapTo(poolAt.getX() + 20.5, poolAt.getY() - 0.4, poolAt.getZ() + 4.5, -90, 0);
+			level.addFreshEntity(craft);
+			craft.ramp(level, true, null);
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(craft.getX() + 2.2, craft.getY() + 0.6, craft.getZ(), -90, 0);
+			level.addFreshEntity(jeep);
+		}));
+		then(20, mc -> onServer(mc, server -> {
+			var craft = boatNear(server, dev.rubymod.registry.ModEntities.LANDING_CRAFT);
+			log("boat: landing craft: jeep aboard {}", craft != null && craft.cargo() != null);
+			if (craft != null) {
+				craft.ramp(me(server).level(), false, null);
+				me(server).startRiding(craft);
+			}
+		}));
+		then(20, mc -> {
+			mc.player.setYRot(-90);
+			mc.options.keyUp.setDown(true);
+		});
+		then(120, mc -> {
+			mc.options.keyUp.setDown(false);
+			shot(mc, "boat-3-landing-crossing");
+		});
+		then(40, mc -> onServer(mc, server -> {
+			var craft = boatNear(server, dev.rubymod.registry.ModEntities.LANDING_CRAFT);
+			if (craft != null) {
+				log("boat: landing craft at x +{} (beach at +41)", Math.round(craft.getX() - poolAt.getX()));
+				craft.ramp(me(server).level(), true, me(server));
+				var jeeps = me(server).level().getEntitiesOfClass(dev.rubymod.entity.VehicleEntity.class, craft.getBoundingBox().inflate(12),
+						v -> v.getType() == dev.rubymod.registry.ModEntities.JEEP);
+				for (var j : jeeps) {
+					log("boat: jeep after the ramp: aboard {}, at x +{} y {} (ground {})", j.isPassenger(), Math.round(j.getX() - poolAt.getX()),
+							String.format("%.1f", j.getY()), poolAt.getY());
+				}
+			}
+		}));
+		then(10, mc -> onServer(mc, server -> {
+			me(server).stopRiding();
+			var c = poolAt;
+			me(server).teleportTo(me(server).level(), c.getX() + 46.5, c.getY() + 1, c.getZ() + 12.5, java.util.Set.of(), 140, 20, false);
+		}));
+		then(30, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			shot(mc, "boat-4-beach");
+		});
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 	}
 
 		/** Every host in the park: walk up, press each of their buttons, and see nothing breaks. */
