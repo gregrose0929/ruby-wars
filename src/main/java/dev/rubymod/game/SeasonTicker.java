@@ -207,7 +207,7 @@ public final class SeasonTicker {
 						: at == null ? Payloads.HudSync.LAST_LIFE
 						: at == claim ? Payloads.HudSync.RESPAWN_HEART : Payloads.HudSync.RESPAWN_MATE;
 			}
-			int flags = respawn | (Squads.enabled() ? 8 : 0);
+			int flags = respawn | (Squads.enabled() ? 8 : 0) | (Hub.where(player) == Hub.Where.RUBY_WARS ? 16 : 0);
 			ServerPlayNetworking.send(player, new Payloads.HudSync(data.phase.ordinal(), seconds, data.pausedRemaining >= 0, currentDay(), hp, max,
 					alive, out, flags));
 		}

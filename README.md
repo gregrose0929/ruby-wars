@@ -210,6 +210,9 @@ every mode and cosmetic hats, trails and effects you earn by playing.
 | Field Manual (in-game guide) | Y |
 | Game picker | H |
 | Profile | I |
+| How-to card for a game or vehicle | N (show / hide) |
+| Park map in the hub (fly anywhere) | , (comma) |
+| Knocked out: watch the others | Click next player, right-click the one before, crouch to fly free |
 
 ---
 
@@ -226,12 +229,16 @@ Make yourself an operator (`op <yourname>` in the server console), then type
   (counted from now). Everyone gets a heads-up the day before and an hour before.
 - `/rubywars battle` starts Battle Day now, after a one-minute countdown
   (`/rubywars battle 300` for a longer one, `/rubywars battle cancel` to call it off).
-- `/rubywars reset confirm` ends the season and goes back to the lobby for the next one
-  (champions are kept).
+- `/rubywars reset confirm` ends the season and goes back to the lobby for the next one.
+  Everyone starts fresh in Ruby Wars (their Ruby Wars gear is cleared); the hub, party games,
+  Coaster Park, stats and the Hall of Champions are kept.
+- **A fresh island too:** on a Linux server, `rubywars newseason` does the reset *and* clears
+  the old bases off the map (the old island is moved to `/opt/rubywars/old-worlds`, nothing is
+  deleted, and a fresh one is made).
 
 Other admin commands (all start with `/rubywars`): `status`, `phase <name>`, `timer <minutes>`,
 `pause`, `resume`, `reload` (re-read the config), `backup`, `revive <player>`,
-`nightbattle on|off`, `raidnow <player>`, `research <player> <stars>`, `kit` (every item, for
+`nightbattle on|off`, `squads on|off` (off by default: everyone plays on their own), `raidnow <player>`, `research <player> <stars>`, `kit` (every item, for
 testing), `training` (build a practice ground here), `rearm` (refill your aircraft),
 `coasters` (who has which Coaster Park spot; `coasters free <name>` gives one up), and
 `selftest` (rule checks, on a test world only).

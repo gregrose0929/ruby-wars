@@ -479,30 +479,8 @@ public final class RubyWarsCommand {
 	}
 
 	private static int reset(CommandContext<CommandSourceStack> c) {
-		SeasonData data = SeasonData.get();
-		int nextSeason = data.season + 1;
-		var champions = new java.util.ArrayList<>(data.pastChampions);
-		data.claims.clear();
-		dev.rubymod.industry.Grid.reset();
-		data.players.clear();
-		data.phase = Phase.LOBBY;
-		data.phaseEndsAt = 0;
-		data.pausedRemaining = -1;
-		data.buildStartedAt = 0;
-		data.buildMinutes = -1;
-		data.winner = "";
-		data.season = nextSeason;
-		data.pastChampions = champions;
-		SeasonData.save();
-		GameConfig config = GameConfig.get();
-		var border = c.getSource().getServer().overworld().getWorldBorder();
-		border.setCenter(config.borderCenterX, config.borderCenterZ);
-		border.setSize(dev.rubymod.game.BattleDirector.startBorder(c.getSource().getServer()));
-		for (ServerPlayer player : c.getSource().getServer().getPlayerList().getPlayers()) {
-			if (player.isSpectator()) {
-				player.setGameMode(GameType.SURVIVAL);
-			}
-		}
-		return ok(c, "Reset to the lobby for Season " + nextSeason + ". Run /rubywars admin (or /rubywars start) when everyone's ready.");
+		int nextSeason = dev.rubymod.game.FreshStart.resetSeason(c.getSource().getServer());
+		ok(c, "Reset to the lobby for Season " + nextSeason + ". Everyone starts fresh in Ruby Wars (the hub and other games keep their things).");
+		return ok(c, "To also clear the old bases off the island, run on the server: rubywars newseason. Then /rubywars admin (or /rubywars start) when everyone's ready.");
 	}
 }

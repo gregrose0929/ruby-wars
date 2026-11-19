@@ -130,6 +130,7 @@ public final class GameEvents {
 			GameConfig.load();
 			SeasonData.load(server);
 			dev.rubymod.industry.Grid.load(server);
+			FreshStart.onServerStarted(server);
 			Explosions.clearHits();
 			Duels.reset();
 			Horde.reset();
@@ -169,6 +170,7 @@ public final class GameEvents {
 			}
 			LagCompensation.record(server);
 			WhatsNew.tick(server);
+			BetweenSeasons.tick(server);
 			CannonRounds.tick();
 			Explosions.tick(server);
 			Countermeasures.tick();
@@ -242,6 +244,9 @@ public final class GameEvents {
 			BattleDirector.onJoin(handler.getPlayer());
 			dev.rubymod.game.hub.Renames.onJoin(server, handler.getPlayer());
 			WhatsNew.onJoin(server, handler.getPlayer());
+			if (Hub.where(handler.getPlayer()) == Hub.Where.RUBY_WARS) {
+				BetweenSeasons.arrived(handler.getPlayer(), 320);
+			}
 			Storms.onJoin(handler.getPlayer());
 			VersionCheck.onJoin(handler.getPlayer());
 			// Moving a player to another dimension while they're still being added to the world

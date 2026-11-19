@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-18-solo";
+	private static final String VERSION = "2026-11-19-fresh";
 	private static final List<String> LINES = List.of(
-			"minecraft:totem_of_undying|Everyone plays on their own now. On Battle Day a line under the timer says if you'll respawn, or if it's your last life.",
-			"minecraft:ender_eye|Knocked out? Click to watch the next player, right-click for the one before, or press H for party games in the hub.",
-			"minecraft:minecart|Coaster Park: press Ride! in the plaza to pick anyone's coaster. And a wrap-up card with awards when a season ends.");
+			"minecraft:grass_block|A fresh island for the new season, and everyone starts again with nothing in Ruby Wars. Your hub and party-game things are kept.",
+			"minecraft:gold_block|The Hall of Champions: every season's winner, in the hub beside the path to Ruby Wars.",
+			"rubymod:ruby_drill|Your starter base now clears a space for itself, so it always fits. And the Ruby Wars panels stay out of the other games.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

@@ -212,6 +212,7 @@ public final class BattleDirector {
 	}
 
 	public static void onJoin(ServerPlayer player) {
+		FreshStart.check(player);
 		SeasonData data = SeasonData.get();
 		data.player(player.getUUID(), player.getName().getString());
 		if (data.phase != Phase.LOBBY) {

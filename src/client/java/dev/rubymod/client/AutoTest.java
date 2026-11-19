@@ -4590,6 +4590,7 @@ public final class AutoTest {
 			case "armorycheck" -> armoryCheckScript();
 			case "playthrough" -> playthroughScript();
 			case "onyourown" -> soloScript();
+			case "freshseason" -> freshScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9587,6 +9588,97 @@ public final class AutoTest {
 		then(10, mc -> mc.player.connection.sendCommand("rubywars ride " + soloSpot));
 		then(80, mc -> onServer(mc, server -> log("solo: after /rubywars ride: riding {}", cw().testRiding(me(server)))));
 		then(10, mc -> shot(mc, "solo-coaster-ride"));
+	}
+
+	/** A new season: the starter base on bumpy ground, the death screen, a fresh start, the Hall of Champions, the between-seasons card. */
+	private static void freshScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "time set 1000");
+		});
+		then(60, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			var spawn = level.getRespawnData().pos();
+			int x = spawn.getX() + 40;
+			int z = spawn.getZ() + 40;
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			heartAt = new net.minecraft.core.BlockPos(x, y, z);
+			// Bumps: a boulder, a hole, a mound, water, a log where pieces go.
+			level.setBlockAndUpdate(heartAt.offset(0, 0, 3), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(heartAt.offset(0, 1, 3), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(heartAt.offset(-2, -1, 3), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(heartAt.offset(-2, -2, 3), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(heartAt.offset(5, 0, 3), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+			level.setBlockAndUpdate(heartAt.offset(5, 1, 3), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+			level.setBlockAndUpdate(heartAt.offset(3, -1, 5), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+			level.setBlockAndUpdate(heartAt.offset(0, 0, -3), net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState());
+			p.teleportTo(level, x + 0.5, y, z - 5.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 30, true);
+			level.setBlockAndUpdate(heartAt, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heartAt);
+			int machines = 0;
+			for (var item : new net.minecraft.world.item.Item[] {dev.rubymod.registry.ModBlocks.SOLAR_PANEL.asItem(), dev.rubymod.registry.ModBlocks.RUBY_DRILL.asItem(),
+					dev.rubymod.registry.ModBlocks.TRADE_DEPOT.asItem(), dev.rubymod.registry.ModBlocks.VAULT.asItem(), dev.rubymod.registry.ModBlocks.ARMORY.asItem()}) {
+				machines += p.getInventory().countItem(item);
+			}
+			log("fresh: starter base on bumpy ground: pieces left in the inventory {} (want 0); drill {}, belt {}, chest {}, armory {}", machines,
+					level.getBlockState(heartAt.offset(0, 0, 3)).getBlock().getName().getString(),
+					level.getBlockState(heartAt.offset(1, 0, 3)).getBlock().getName().getString(),
+					level.getBlockState(heartAt.offset(2, 0, 3)).getBlock().getName().getString(),
+					level.getBlockState(heartAt.offset(0, 0, -3)).getBlock().getName().getString());
+		}));
+		then(40, mc -> shot(mc, "fresh-starter-base"));
+		// Battle Day: the death screen says the same as the line under the timer.
+		then(5, mc -> command(mc, "rubywars battle 5"));
+		then(60, mc -> command(mc, "rubywars phase war"));
+		then(60, mc -> command(mc, "kill @p"));
+		then(30, mc -> {
+			log("fresh: death screen open {}", mc.gui.screen() instanceof net.minecraft.client.gui.screens.DeathScreen);
+			shot(mc, "fresh-death-screen");
+		});
+		then(5, mc -> mc.player.respawn());
+		// Something to lose, then a new season.
+		then(60, mc -> {
+			command(mc, "give @p minecraft:diamond 5");
+			command(mc, "give @p rubymod:arr_rifle");
+		});
+		then(20, mc -> onServer(mc, server -> me(server).getEnderChestInventory().setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.EMERALD, 3))));
+		then(20, mc -> onServer(mc, server -> log("fresh: before the reset: {} diamonds, ender chest {}", me(server).getInventory().countItem(net.minecraft.world.item.Items.DIAMOND),
+				me(server).getEnderChestInventory().getItem(0))));
+		then(5, mc -> command(mc, "rubywars reset confirm"));
+		then(40, mc -> onServer(mc, server -> {
+			var p = me(server);
+			log("fresh: after the reset: season {} {}, inventory empty {}, ender chest empty {}, at {}, mode {}", dev.rubymod.game.SeasonData.get().season,
+					dev.rubymod.game.SeasonData.get().phase, p.getInventory().isEmpty(), p.getEnderChestInventory().isEmpty(), p.blockPosition(),
+					p.gameMode.getGameModeForPlayer());
+			dev.rubymod.game.SeasonData.get().pastChampions.add("Season 7: Sam");
+			dev.rubymod.game.SeasonData.get().pastChampions.add("Season 8: Alex");
+		}));
+		then(20, mc -> shot(mc, "fresh-after-reset"));
+		// The hub: the Hall of Champions, and the HUD's Ruby Wars panels gone.
+		then(5, mc -> onServer(mc, server -> log("fresh: to the hub: {}", dev.rubymod.game.Hub.go(me(server), "hub"))));
+		then(100, mc -> onServer(mc, server -> {
+			var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+			me(server).teleportTo(hub, -8.5, dev.rubymod.game.Hub.FLOOR + 1, 4.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 180, 5, true);
+		}));
+		then(80, mc -> {
+			log("fresh: in the hub: Ruby Wars HUD shows? {}", ClientState.inRubyWarsWorld());
+			shot(mc, "fresh-hall");
+		});
+		// Back into Ruby Wars between seasons: the card.
+		then(5, mc -> onServer(mc, server -> log("fresh: back to Ruby Wars: {}", dev.rubymod.game.Hub.go(me(server), "rubywars"))));
+		then(120, mc -> shot(mc, "fresh-between-seasons"));
+		// A party game: no Ruby Wars panels there either (even while it's being set up).
+		then(5, mc -> onServer(mc, server -> log("fresh: to King of the Hill: {}", dev.rubymod.game.Hub.go(me(server), "game:koth"))));
+		then(60, mc -> {
+			log("fresh: in a party game: Ruby Wars HUD shows? {}", ClientState.inRubyWarsWorld());
+			shot(mc, "fresh-party");
+		});
 	}
 
 	private static volatile int soloSpot;

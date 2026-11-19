@@ -51,6 +51,10 @@ public class SeasonData {
 	public Map<String, Claim> claims = new LinkedHashMap<>();
 	public Map<String, PlayerRecord> players = new LinkedHashMap<>();
 	public List<String> pastChampions = new ArrayList<>();
+	/** Seasons started with a fresh island (/rubywars reset): this season's number; everyone's Ruby Wars gear is cleared once. */
+	public int freshSeason;
+	/** Who has had this season's fresh start. */
+	public Set<String> freshStart = new HashSet<>();
 	public Map<String, Squads.Squad> squads = new LinkedHashMap<>();
 	public Map<String, List<Waypoints.Waypoint>> waypoints = new LinkedHashMap<>();
 

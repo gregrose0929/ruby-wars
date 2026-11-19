@@ -78,6 +78,9 @@ public final class Hub {
 	private static final int RIFT_X = -5;
 	private static final int CONVOY_X = 5;
 	private static final int HORDE_X = 14;
+	/** The Hall of Champions podium. */
+	private static final int HALL_X = -9;
+	private static final int HALL_Z = -3;
 	/** The Party Games arch stands at the back of the plaza, behind where you arrive. */
 	private static final int PARTY_Z = 15;
 	private static final String LABEL_TAG = "rubymod_hub_label";
@@ -320,6 +323,7 @@ public final class Hub {
 
 	/** Back into Ruby Wars: where you were, with what you had. */
 	public static void enterRubyWars(ServerPlayer player) {
+		FreshStart.check(player);
 		MinecraftServer server = player.level().getServer();
 		Path file = saveFile(server, player.getUUID());
 		CompoundTag tag = null;
@@ -384,6 +388,7 @@ public final class Hub {
 		}
 		Research.sync(player);
 		Alerts.title(player, "RUBY WARS", Rules.phase().title(), ChatFormatting.RED);
+		BetweenSeasons.arrived(player, 40);
 	}
 
 	// ----- Saving your Ruby Wars things -----
@@ -692,6 +697,7 @@ public final class Hub {
 		gate(level, 0, PARTY_Z, Blocks.PURPUR_BLOCK.defaultBlockState(), Blocks.PEARLESCENT_FROGLIGHT.defaultBlockState(),
 				Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.PURPLE).defaultBlockState(), Blocks.SOUL_LANTERN.defaultBlockState(),
 				ModBlocks.PARTY_PORTAL.defaultBlockState());
+		buildHall(level);
 		// The garden: cherry trees, flowers, lanterns.
 		for (int[] t : new int[][] {{-15, -6}, {15, -6}, {-14, 8}, {14, 8}, {-7, 16}, {7, 16}, {-17, 2}, {17, 2}}) {
 			cherry(level, t[0], t[1], 4 + Math.abs(t[0] * 3 + t[1]) % 2);
@@ -1137,7 +1143,8 @@ public final class Hub {
 			new Label("welcome", 0.5, FLOOR + 3.6, 0.5, 0.9F),
 			new Label("war", 0.5, FLOOR + 3.4, WAR_Z + 0.5, 0.8F),
 			new Label("board_party", -9.0, FLOOR + 1.0, 5.5, 1.6F),
-			new Label("board_records", 10.0, FLOOR + 1.0, 5.5, 1.6F));
+			new Label("board_records", 10.0, FLOOR + 1.0, 5.5, 1.6F),
+			new Label("champions", HALL_X + 0.5, FLOOR + 2.2, HALL_Z + 0.5, 1.3F));
 
 	private static Component labelText(MinecraftServer server, String key) {
 		return switch (key) {
@@ -1162,6 +1169,7 @@ public final class Hub {
 			case "war" -> warBoard(server);
 			case "board_party" -> partyBoard();
 			case "board_records" -> recordsBoard(server);
+			case "champions" -> championsBoard();
 			case "party_info" -> Component.literal(dev.rubymod.game.party.PartyGames.ALL.size() + " quick games to play together\n").withStyle(ChatFormatting.WHITE)
 					.append(Component.literal(partyPlaying() + " playing now").withStyle(ChatFormatting.GOLD));
 			case "horde_info" -> Component.literal("Survive the waves together!\n").withStyle(ChatFormatting.WHITE)
@@ -1171,6 +1179,36 @@ public final class Hub {
 				yield text.append(Component.literal("Walk into a portal to play.\nPress H any time to switch games.").withStyle(ChatFormatting.WHITE));
 			}
 		};
+	}
+
+	/** The Hall of Champions: a gold podium with a trophy on top, beside the path to Ruby Wars. */
+
+	private static void buildHall(ServerLevel level) {
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				set(level, HALL_X + dx, FLOOR, HALL_Z + dz, Blocks.GOLD_BLOCK.defaultBlockState());
+			}
+		}
+		set(level, HALL_X, FLOOR + 1, HALL_Z, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+	}
+
+	/** Every past champion (newest first), and how this season stands. */
+	private static Component championsBoard() {
+		SeasonData data = SeasonData.get();
+		MutableComponent text = Component.literal("\u2605 HALL OF CHAMPIONS \u2605\n").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+		List<String> past = data.pastChampions;
+		if (past.isEmpty()) {
+			text.append(Component.literal("No champions yet.\nWin a Ruby Wars season\nto be the first!\n").withStyle(ChatFormatting.WHITE));
+		}
+		for (int i = past.size() - 1, n = 0; i >= 0 && n < 6; i--, n++) {
+			text.append(Component.literal(past.get(i) + "\n").withStyle(n == 0 ? ChatFormatting.YELLOW : ChatFormatting.WHITE));
+		}
+		String now = switch (Rules.phase()) {
+			case LOBBY -> "Season " + data.season + " starts soon";
+			case ENDED -> "Season " + data.season + " is over: /rubywars recap";
+			default -> "Season " + data.season + ": " + Rules.phase().title();
+		};
+		return text.append(Component.literal(now).withStyle(ChatFormatting.GRAY));
 	}
 
 	private static int partyPlaying() {

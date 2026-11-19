@@ -69,7 +69,9 @@ public class ManualScreen extends Screen {
 					"Respawns: in Lockdown and Open War you come back at your Heart while it stands (the line under the timer says so). "
 							+ "Heart gone, or Sudden Death: your next death knocks you out.",
 					"Knocked out? Watch: click for the next player, right-click for the one before, crouch to fly free. Or press H and play party games in the hub.",
-					"When the season ends, everyone gets a wrap-up card: the winner and a few awards. /rubywars recap shows it again.",
+					"When the season ends, everyone gets a wrap-up card: the winner and a few awards. /rubywars recap shows it again. "
+							+ "Every winner goes up in the Hall of Champions, in the hub beside the path to Ruby Wars.",
+					"Each new season starts fresh: a fresh island, and everyone begins again with nothing in Ruby Wars (the hub and other games keep their things).",
 					"Mine Ruby Ore deep underground (or in the Ruby Crater) and spend rubies at an Armory.",
 					"No monsters and no hunger: just build and stay alive. Battle Day comes when the admin calls it (or on the date they set)."),
 			new Page("The Armory",
@@ -118,6 +120,8 @@ public class ManualScreen extends Screen {
 					"B: ping a spot on your map, or spot the enemy under your crosshair.",
 					"/duel guns|vehicles|planes <player>: a 1v1 test duel in the arena, first to 10 kills. You get your own gear back after.",
 					"H: choose a game.  K: map.  U: hide/show the minimap.  J: guide, goals & upgrades.  I: profile.  Y: this manual.  V: voice chat (Simple Voice Chat).",
+					"N: show or hide the how-to card for a game or vehicle.  Comma (in the hub): the park map, fly anywhere.  F9 (aircraft): full instruments.",
+					"Knocked out on Battle Day: click to watch the next player, right-click the one before, crouch to fly free.",
 					"In vehicles: W/S, A/D, Space (smoke / flares), Left Alt free look. Aircraft: R weapon, scroll zoom, T designate, X flares, Z autopilot, C weapon cam, G gear. Bombs: look at the target, release on IN REACH. Helicopter: WASD fly, Space/Ctrl up/down, the mouse aims."),
 			new Page("Economy",
 					"Generators and solar panels fill your power grid. A Ruby Drill keeps what it digs (open it to collect, or run a conveyor belt to a chest); "

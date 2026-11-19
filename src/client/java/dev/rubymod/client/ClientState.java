@@ -15,7 +15,8 @@ public final class ClientState {
 	/** In the Ruby Wars world itself (not the hub, Horde or a party game), where Hearts, claims and waypoints mean something. */
 	public static boolean inRubyWarsWorld() {
 		var level = net.minecraft.client.Minecraft.getInstance().level;
-		return level != null && level.dimension() == net.minecraft.world.level.Level.OVERWORLD;
+		// The server says where you are (a game can hold you somewhere while its arena is built); until it has, the world you're in.
+		return level != null && level.dimension() == net.minecraft.world.level.Level.OVERWORLD && (hud == null || hud.inRubyWars());
 	}
 	/** System time (ms) when the last HudSync arrived, to count the timer down smoothly between packets. */
 	public static long hudReceivedAt;

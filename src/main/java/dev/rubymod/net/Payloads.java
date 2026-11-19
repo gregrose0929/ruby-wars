@@ -287,7 +287,7 @@ public class Payloads {
 	 */
 	/**
 	 * @param flags bits 0-2: respawn state (0 not in a battle, 1 at your Heart, 2 at a squadmate's Heart,
-	 *              3 last life: your Heart is gone, 4 no respawns: Sudden Death or the Final Circle); bit 3: squads are on
+	 *              3 last life: your Heart is gone, 4 no respawns: Sudden Death or the Final Circle); bit 3: squads are on; bit 4: in Ruby Wars
 	 */
 	public record HudSync(int phase, int secondsLeft, boolean paused, int day, int heartHp, int heartMaxHp, int alive, boolean eliminated,
 			int flags) implements CustomPacketPayload {
@@ -299,6 +299,11 @@ public class Payloads {
 
 		public boolean squads() {
 			return (flags & 8) != 0;
+		}
+
+		/** In Ruby Wars itself (not the hub, a party game, Horde, the Rift or the convoy), as the server sees it. */
+		public boolean inRubyWars() {
+			return (flags & 16) != 0;
 		}
 
 		public static final Type<HudSync> TYPE = new Type<>(RubyMod.id("hud_sync"));

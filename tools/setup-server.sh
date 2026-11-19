@@ -50,8 +50,14 @@ SERVER_MODS=(fabric-api lithium ferrite-core simple-voice-chat appleskin chunky)
 # systemd and the firewall (for trying the script out). Needs java 25 on PATH.
 TEST_DIR=""
 NEW_MAP=""
+NEW_SEASON=""
 if [[ "${1:-}" == "--newmap" ]]; then
 	NEW_MAP=1
+fi
+# --newseason: a fresh Ruby Wars island for a new season. Only the Ruby Wars world is remade; the hub,
+# party games, the Coaster Park, stats and champions stay.
+if [[ "${1:-}" == "--newseason" ]]; then
+	NEW_SEASON=1
 fi
 if [[ "${1:-}" == "--test" ]]; then
 	TEST_DIR="$(realpath -m "${2:?usage: setup-server.sh --test DIR}")"
@@ -277,7 +283,8 @@ case "\${1:-}" in
 	start|stop|restart) exec sudo systemctl "\$1" rubywars ;;
 	update)  sudo $SCRIPT_COPY ;;
 	newmap)  sudo $SCRIPT_COPY --newmap ;;
-	*) echo "usage: rubywars console | cmd \"<command>\" | logs | status | start | stop | restart | update | newmap" ;;
+	newseason) sudo $SCRIPT_COPY --newseason ;;
+	*) echo "usage: rubywars console | cmd \"<command>\" | logs | status | start | stop | restart | update | newmap | newseason" ;;
 esac
 EOF
 chmod +x /usr/local/bin/rubywars
@@ -302,6 +309,28 @@ if [[ -n "$NEW_MAP" && -z "$TEST_DIR" ]]; then
 	else
 		echo 'level-type=rubymod\:ruby_wars' >> "$SERVER/server.properties"
 	fi
+fi
+
+# --newseason: reset the season (while the server runs), then put the old island aside and make a fresh one.
+if [[ -n "$NEW_SEASON" && -z "$TEST_DIR" ]]; then
+	OVERWORLD="$SERVER/world/dimensions/minecraft/overworld"
+	if systemctl is-active -q rubywars; then
+		say "Resetting the season"
+		/usr/local/bin/rubywars cmd "rubywars reset confirm" >/dev/null || true
+		sleep 3
+		/usr/local/bin/rubywars cmd "save-all flush" >/dev/null || true
+		sleep 5
+	else
+		# Not running: the mod resets the season when it starts and finds this note.
+		touch "$SERVER/world/rubywars/reset-season"
+	fi
+	systemctl stop rubywars || true
+	if [[ -d "$OVERWORLD" ]]; then
+		say "Moving the old Ruby Wars island to $BASE/old-worlds (nothing is deleted)"
+		mkdir -p "$BASE/old-worlds"
+		mv "$OVERWORLD" "$BASE/old-worlds/island-$(date +%Y%m%d-%H%M)"
+	fi
+	NEW_MAP=1
 fi
 
 # Entities are sent to players from 70% of the usual distance: fewer arrive at once when you land somewhere new (less stutter).

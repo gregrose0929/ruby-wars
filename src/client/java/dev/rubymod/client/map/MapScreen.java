@@ -95,21 +95,25 @@ public class MapScreen extends Screen {
 		String help = "Scroll to zoom, drag to move, right-click for a waypoint. " + (int) Math.round(span) + " blocks across";
 		g.text(font, font.plainSubstrByWidth(help, x0 + size - (x0 + 24)), x0 + 24, 6, dev.rubymod.client.ui.Ui.MUTED, false);
 		// Legend
-		String[] names = {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart", "Squad Heart"};
+		// Squad things only when squads are on.
+		boolean squads = dev.rubymod.client.ClientState.hud != null && dev.rubymod.client.ClientState.hud.squads();
+		String[] names = squads ? new String[] {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart", "Squad Heart"}
+				: new String[] {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart"};
 		int lx = x0 + size + 10;
 		if (lx + 92 < w) {
-			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, 118);
+			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 40);
 			for (int i = 0; i < names.length; i++) {
 				g.fill(lx + 2, y0 + i * 12 + 2, lx + 7, y0 + i * 12 + 7, Markers.color((byte) i));
 				g.text(font, names[i], lx + 11, y0 + i * 12, dev.rubymod.client.ui.Ui.DIM, false);
 			}
-			g.text(font, "Claims", lx + 2, y0 + 78, dev.rubymod.client.ui.Ui.GOLD, false);
-			int[] cc = {0xFF5BE37D, 0xFF55AAFF, 0xFFFF5050};
-			String[] cn = {"Yours", "Squad", "Other"};
+			int cy = y0 + names.length * 12 + 6;
+			g.text(font, "Claims", lx + 2, cy, dev.rubymod.client.ui.Ui.GOLD, false);
+			int[] cc = squads ? new int[] {0xFF5BE37D, 0xFF55AAFF, 0xFFFF5050} : new int[] {0xFF5BE37D, 0xFFFF5050};
+			String[] cn = squads ? new String[] {"Yours", "Squad", "Other"} : new String[] {"Yours", "Others"};
 			int cx = lx + 2;
-			for (int i = 0; i < 3; i++) {
-				g.outline(cx, y0 + 91, 5, 5, cc[i]);
-				g.text(font, cn[i], cx + 7, y0 + 90, dev.rubymod.client.ui.Ui.DIM, false);
+			for (int i = 0; i < cc.length; i++) {
+				g.outline(cx, cy + 13, 5, 5, cc[i]);
+				g.text(font, cn[i], cx + 7, cy + 12, dev.rubymod.client.ui.Ui.DIM, false);
 				cx += font.width(cn[i]) + 11;
 			}
 		}
