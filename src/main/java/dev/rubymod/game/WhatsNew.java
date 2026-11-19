@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-19-veterans";
+	private static final String VERSION = "2026-11-19-belts";
 	private static final List<String> LINES = List.of(
-			"minecraft:nether_star|Veteran stars: every Ruby Wars season you play adds a gold star after your name.",
-			"rubymod:ruby_heart|Ruby Heart looks (I, the Heart tab): Frosted, Emerald, Lava and more, unlocked by playing seasons.",
-			"minecraft:firework_rocket|Victory fireworks when you win a duel or party game, and statues of each season's champion in the hub.");
+			"rubymod:belt_loader|Belt Loaders take things out of chests, furnaces and machines (set one to an item to sort); Belt Sorters turn one item off to the side.",
+			"minecraft:furnace|Belts now feed furnaces properly (ore in the top, fuel below), and the Trade Depot sells whatever a belt brings it.",
+			"rubymod:trade_depot|A new Trade Depot screen: a bar to your next ruby, and a preview of what you're about to sell.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

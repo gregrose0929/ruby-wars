@@ -1,0 +1,36 @@
+{
+	"variants": {
+		"facing=north,right=false": {
+			"model": "rubymod:block/belt_sorter_left",
+			"y": 0
+		},
+		"facing=north,right=true": {
+			"model": "rubymod:block/belt_sorter_right",
+			"y": 0
+		},
+		"facing=east,right=false": {
+			"model": "rubymod:block/belt_sorter_left",
+			"y": 90
+		},
+		"facing=east,right=true": {
+			"model": "rubymod:block/belt_sorter_right",
+			"y": 90
+		},
+		"facing=south,right=false": {
+			"model": "rubymod:block/belt_sorter_left",
+			"y": 180
+		},
+		"facing=south,right=true": {
+			"model": "rubymod:block/belt_sorter_right",
+			"y": 180
+		},
+		"facing=west,right=false": {
+			"model": "rubymod:block/belt_sorter_left",
+			"y": 270
+		},
+		"facing=west,right=true": {
+			"model": "rubymod:block/belt_sorter_right",
+			"y": 270
+		}
+	}
+}

@@ -146,6 +146,12 @@ public class ModBlocks {
 			props().mapColor(MapColor.NONE).strength(8.0F, 6.0F).requiresCorrectToolForDrops().sound(SoundType.GLASS).noOcclusion());
 	public static final Block CONVEYOR = register("conveyor", dev.rubymod.industry.ConveyorBlock::new,
 			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
+	/** Takes things out of the chest (or furnace, or machine) behind it onto the belt in front: set it to one item to sort. */
+	public static final Block BELT_LOADER = register("belt_loader", dev.rubymod.industry.BeltLoaderBlock::new,
+			props().mapColor(MapColor.METAL).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
+	/** A belt piece that turns one kind of item off to the side. */
+	public static final Block BELT_SORTER = register("belt_sorter", dev.rubymod.industry.BeltSorterBlock::new,
+			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
 	/** A bright base light. */
 	public static final Block FLOODLIGHT = register("floodlight", p -> new dev.rubymod.block.ShapedBlock(Block.box(3, 0, 3, 13, 14, 13), p),
 			props().mapColor(MapColor.METAL).strength(2.0F, 4.0F).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 15));

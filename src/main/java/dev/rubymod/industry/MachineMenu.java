@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** The machine screen's server/client half: machine slots, the player's inventory, and live numbers. */
 public class MachineMenu extends AbstractContainerMenu {
-	public static final int DATA_SLOTS = 18;
+	public static final int DATA_SLOTS = 31;
 	public static final int WIDTH = 176;
 	public static final int HEIGHT = 190;
 	public static final int INVENTORY_Y = 108;
@@ -85,7 +85,7 @@ public class MachineMenu extends AbstractContainerMenu {
 			case RUBY_DRILL -> grid(98, 26, 3, 3);
 			case ORE_REFINERY -> new int[][] {{44, 44}, {98, 44}, {116, 44}, {134, 44}};
 			case AMMO_FACTORY -> new int[][] {{44, 32}, {44, 56}, {116, 44}, {134, 44}};
-			case TRADE_DEPOT -> grid(26, 26, 3, 3);
+			case TRADE_DEPOT -> grid(12, 26, 3, 3);
 			case VAULT, CONSTRUCTOR -> new int[][] {{26, 44}};
 			default -> new int[0][];
 		};

@@ -900,6 +900,33 @@ public final class SelfTest {
 				depot.canPlaceItem(0, new ItemStack(net.minecraft.world.item.Items.DIRT)) && depot.canPlaceItem(0, new ItemStack(net.minecraft.world.item.Items.WOODEN_SWORD))
 						&& depot.canPlaceItem(0, new ItemStack(ModItems.ARR_RIFLE)));
 
+		// Belts: furnaces take ore in the top and fuel below whichever side; a Belt Loader sorts a chest and empties a furnace.
+		var beltFurnacePos = at.offset(2, 0, 3);
+		level.setBlockAndUpdate(beltFurnacePos, net.minecraft.world.level.block.Blocks.FURNACE.defaultBlockState());
+		ItemStack oreRest = dev.rubymod.industry.Belts.insert(level, beltFurnacePos, net.minecraft.core.Direction.EAST, new ItemStack(net.minecraft.world.item.Items.RAW_GOLD, 3));
+		ItemStack coalRest = dev.rubymod.industry.Belts.insert(level, beltFurnacePos, net.minecraft.core.Direction.EAST, new ItemStack(net.minecraft.world.item.Items.COAL, 2));
+		ItemStack dirtRest = dev.rubymod.industry.Belts.insert(level, beltFurnacePos, net.minecraft.core.Direction.EAST, new ItemStack(net.minecraft.world.item.Items.DIRT, 1));
+		var beltFurnace = (net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) level.getBlockEntity(beltFurnacePos);
+		check("belts: a furnace fed from the side gets ore to cook and coal to burn (and refuses dirt)",
+				oreRest.isEmpty() && coalRest.isEmpty() && !dirtRest.isEmpty() && beltFurnace.getItem(0).is(net.minecraft.world.item.Items.RAW_GOLD)
+						&& beltFurnace.getItem(1).is(net.minecraft.world.item.Items.COAL));
+		beltFurnace.setItem(2, new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT, 2));
+		ItemStack cooked = dev.rubymod.industry.Belts.extract(level, beltFurnacePos, net.minecraft.core.Direction.WEST, ItemStack.EMPTY, 8);
+		check("belts: taking from a furnace gives only what's cooked (" + cooked + ")", cooked.is(net.minecraft.world.item.Items.GOLD_INGOT)
+				&& beltFurnace.getItem(0).is(net.minecraft.world.item.Items.RAW_GOLD) && beltFurnace.getItem(1).is(net.minecraft.world.item.Items.COAL));
+		var sortChestPos = at.offset(4, 0, 3);
+		level.setBlockAndUpdate(sortChestPos, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+		var sortChest = (net.minecraft.world.Container) level.getBlockEntity(sortChestPos);
+		sortChest.setItem(0, new ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 10));
+		sortChest.setItem(1, new ItemStack(net.minecraft.world.item.Items.RAW_GOLD, 5));
+		ItemStack sorted = dev.rubymod.industry.Belts.extract(level, sortChestPos, net.minecraft.core.Direction.EAST, new ItemStack(net.minecraft.world.item.Items.RAW_GOLD), 8);
+		check("belts: a Belt Loader set to gold takes only the gold (" + sorted + ")", sorted.is(net.minecraft.world.item.Items.RAW_GOLD) && sorted.getCount() == 5
+				&& sortChest.getItem(0).getCount() == 10);
+		ItemStack anything = dev.rubymod.industry.Belts.extract(level, sortChestPos, net.minecraft.core.Direction.EAST, ItemStack.EMPTY, 8);
+		check("belts: an unset Belt Loader takes anything", anything.is(net.minecraft.world.item.Items.COBBLESTONE) && anything.getCount() == 8);
+		level.setBlockAndUpdate(beltFurnacePos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		level.setBlockAndUpdate(sortChestPos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+
 		// Vault: rubies in, interest-free withdraw out.
 		var vault = machine(level, at.offset(6, 0, 0), ModBlocks.VAULT, alpha);
 		long before = dev.rubymod.industry.Grid.rubies(alpha.getUUID());

@@ -4592,6 +4592,7 @@ public final class AutoTest {
 			case "onyourown" -> soloScript();
 			case "freshseason" -> freshScript();
 			case "veterans" -> veteransScript();
+			case "goldline" -> goldLineScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9769,6 +9770,91 @@ public final class AutoTest {
 			me(server).teleportTo(hub, -3.5, dev.rubymod.game.Hub.FLOOR + 1, 5.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 145, 5, true);
 		}));
 		then(260, mc -> shot(mc, "vet-hall"));
+	}
+
+	private static net.minecraft.core.BlockPos lineAt;
+
+	/**
+	 * A gold line: a chest of raw gold and coal, a Belt Loader onto a belt, a Belt Sorter sending the coal off to the
+	 * furnace's fuel, the gold on round to its top slot, and a Loader taking the ingots on to the Trade Depot.
+	 */
+	private static void goldLineScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "gamemode creative @a");
+			command(mc, "time set 1000");
+		});
+		then(40, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			int x = p.getBlockX() + 2;
+			int z = p.getBlockZ() - 2;
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			lineAt = new net.minecraft.core.BlockPos(x, y, z);
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 2, y - 1, z - 5, x + 7, y - 1, z + 2)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+			}
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 2, y, z - 5, x + 7, y + 4, z + 2)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			var E = net.minecraft.core.Direction.EAST;
+			var N = net.minecraft.core.Direction.NORTH;
+			var W = net.minecraft.core.Direction.WEST;
+			java.util.function.BiConsumer<net.minecraft.core.BlockPos, net.minecraft.core.Direction> belt = (q, d) -> level.setBlockAndUpdate(q,
+					dev.rubymod.registry.ModBlocks.CONVEYOR.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, d));
+			// The chest, and a Loader taking anything out of it.
+			level.setBlockAndUpdate(lineAt, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+			var chest = (net.minecraft.world.Container) level.getBlockEntity(lineAt);
+			chest.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RAW_GOLD, 12));
+			chest.setItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 4));
+			level.setBlockAndUpdate(lineAt.east(), dev.rubymod.registry.ModBlocks.BELT_LOADER.defaultBlockState().setValue(dev.rubymod.industry.BeltLoaderBlock.FACING, E));
+			belt.accept(lineAt.east(2), E);
+			// The Sorter: coal turns left (north) to the furnace's fuel; the gold goes on round to its top... side.
+			level.setBlockAndUpdate(lineAt.east(3), dev.rubymod.registry.ModBlocks.BELT_SORTER.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, E));
+			((dev.rubymod.industry.FilterBlockEntity) level.getBlockEntity(lineAt.east(3))).setFilter(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL));
+			belt.accept(lineAt.east(3).north(), N);
+			var furnacePos = lineAt.east(3).north(2);
+			level.setBlockAndUpdate(furnacePos, net.minecraft.world.level.block.Blocks.FURNACE.defaultBlockState());
+			belt.accept(lineAt.east(4), N);
+			belt.accept(lineAt.east(4).north(), N);
+			belt.accept(lineAt.east(4).north(2), W);
+			// Ingots out the other side, on to the Trade Depot.
+			level.setBlockAndUpdate(furnacePos.west(), dev.rubymod.registry.ModBlocks.BELT_LOADER.defaultBlockState().setValue(dev.rubymod.industry.BeltLoaderBlock.FACING, W));
+			belt.accept(furnacePos.west(2), W);
+			var depotPos = furnacePos.west(3);
+			level.setBlockAndUpdate(depotPos, dev.rubymod.registry.ModBlocks.TRADE_DEPOT.defaultBlockState());
+			((dev.rubymod.industry.MachineBlockEntity) level.getBlockEntity(depotPos)).setOwner(p.getUUID());
+			p.teleportTo(level, x + 2.5, y + 5, z + 3.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 180, 55, true);
+			p.getAbilities().flying = true;
+			p.onUpdateAbilities();
+			log("gold: line built at {}; bank {}", lineAt, dev.rubymod.industry.Grid.milliRubies(p.getUUID()));
+		}));
+		then(200, mc -> shot(mc, "gold-line-running"));
+		then(1400, mc -> onServer(mc, server -> {
+			var level = server.overworld();
+			var chest = (net.minecraft.world.Container) level.getBlockEntity(lineAt);
+			var furnace = (net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) level.getBlockEntity(lineAt.east(3).north(2));
+			log("gold: after 80 s: chest {} / {}, furnace in {} fuel {} out {}, bank {} milli-rubies", chest.getItem(0), chest.getItem(1), furnace.getItem(0),
+					furnace.getItem(1), furnace.getItem(2), dev.rubymod.industry.Grid.milliRubies(me(server).getUUID()));
+		}));
+		then(5, mc -> shot(mc, "gold-line-later"));
+		// The Trade Depot's screen: the next-ruby bar, with a preview of what's in your hand.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_INGOT, 16));
+			p.openMenu((dev.rubymod.industry.MachineBlockEntity) server.overworld().getBlockEntity(lineAt.east(3).north(2).west(3)));
+		}));
+		then(30, mc -> shot(mc, "gold-depot-screen"));
+		then(5, mc -> {
+			if (mc.gui.screen() instanceof MachineScreen screen) {
+				// Pick up the ingots: the bar shows what they'd make.
+				mc.gameMode.handleContainerInput(screen.getMenu().containerId, 9 + 27, 0, net.minecraft.world.inventory.ContainerInput.PICKUP, mc.player);
+			}
+		});
+		then(15, mc -> shot(mc, "gold-depot-preview"));
 	}
 
 	private static volatile int soloSpot;

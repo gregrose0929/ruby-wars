@@ -83,6 +83,8 @@
 	"block.rubymod.reinforced_glass": "Reinforced Glass",
 	"block.rubymod.floodlight": "Floodlight",
 	"block.rubymod.conveyor": "Conveyor Belt",
+	"block.rubymod.belt_loader": "Belt Loader",
+	"block.rubymod.belt_sorter": "Belt Sorter",
 	"block.rubymod.tesla_coil": "Tesla Coil",
 	"block.rubymod.elevator": "Elevator",
 	"block.rubymod.camo_net": "Camo Netting",

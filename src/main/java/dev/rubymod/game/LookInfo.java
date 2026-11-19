@@ -103,19 +103,38 @@ public final class LookInfo {
 					lines.add("Grid: " + Grid.charge(owner) + " / " + cap + " charge");
 				}
 				color = m.status() == MachineBlockEntity.WORKING ? GREEN : m.status() == MachineBlockEntity.IDLE ? BLUE : AMBER;
+			} else if (state.getBlock() instanceof dev.rubymod.industry.BeltLoaderBlock) {
+				net.minecraft.core.Direction facing = state.getValue(dev.rubymod.industry.BeltLoaderBlock.FACING);
+				String what = be instanceof dev.rubymod.industry.FilterBlockEntity f ? f.filterName() : "anything";
+				lines.add("Belt Loader: takes " + what);
+				BlockState behind = player.level().getBlockState(pos.relative(facing.getOpposite()));
+				BlockState ahead = player.level().getBlockState(pos.relative(facing));
+				boolean from = dev.rubymod.industry.Belts.containerAt(player.level(), pos.relative(facing.getOpposite())) != null;
+				boolean to = ahead.getBlock() instanceof dev.rubymod.industry.ConveyorBlock
+						|| dev.rubymod.industry.Belts.containerAt(player.level(), pos.relative(facing)) != null;
+				lines.add(from ? "From the " + behind.getBlock().getName().getString() : "Nothing behind it to take from");
+				lines.add(to ? "Onto the " + ahead.getBlock().getName().getString() : "Put a belt (or a chest) in front of it");
+				color = from && to ? GREEN : AMBER;
+			} else if (state.getBlock() instanceof dev.rubymod.industry.BeltSorterBlock) {
+				String what = be instanceof dev.rubymod.industry.FilterBlockEntity f && !f.filter().isEmpty() ? f.filterName() : null;
+				lines.add("Belt Sorter, running " + state.getValue(dev.rubymod.industry.ConveyorBlock.FACING).getName());
+				lines.add(what == null ? "Turns nothing yet: right-click it with an item"
+						: what + " turns " + (state.getValue(dev.rubymod.industry.BeltSorterBlock.RIGHT) ? "right" : "left") + ", the rest goes straight on");
+				color = what == null ? AMBER : GREEN;
 			} else if (state.getBlock() instanceof dev.rubymod.industry.ConveyorBlock) {
 				net.minecraft.core.Direction facing = state.getValue(dev.rubymod.industry.ConveyorBlock.FACING);
 				lines.add("Conveyor Belt, running " + facing.getName());
 				var front = player.level().getBlockEntity(pos.relative(facing));
 				BlockState frontState = player.level().getBlockState(pos.relative(facing));
-				lines.add(front instanceof net.minecraft.world.Container ? "Feeds the " + frontState.getBlock().getName().getString()
+				boolean feeds = dev.rubymod.industry.Belts.containerAt(player.level(), pos.relative(facing)) != null;
+				lines.add(feeds ? "Feeds the " + frontState.getBlock().getName().getString()
 						: frontState.getBlock() instanceof dev.rubymod.industry.ConveyorBlock ? "Feeds the next belt" : "Nothing at the end: items stop there");
 				int carried = 0;
 				for (var item : player.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(pos).inflate(0.1))) {
 					carried += item.getItem().getCount();
 				}
 				lines.add(carried > 0 ? "Carrying " + carried : "Nothing on it");
-				color = front instanceof net.minecraft.world.Container ? GREEN : AMBER;
+				color = feeds || frontState.getBlock() instanceof dev.rubymod.industry.ConveyorBlock ? GREEN : AMBER;
 			} else if (be instanceof net.minecraft.world.Container chest && !(be instanceof DefenseBlockEntity) && !(be instanceof GraveBlockEntity)
 					&& (state.is(net.minecraft.world.level.block.Blocks.CHEST) || state.is(net.minecraft.world.level.block.Blocks.BARREL)
 							|| state.is(net.minecraft.world.level.block.Blocks.TRAPPED_CHEST) || state.is(net.minecraft.world.level.block.Blocks.HOPPER))) {

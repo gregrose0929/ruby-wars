@@ -63,11 +63,16 @@ public class ConveyorBlock extends Block {
 		carry(level, pos, state, entity);
 	}
 
+	/** Which way this belt sends this entity (a Belt Sorter turns some items off to the side). */
+	protected Direction route(Level level, BlockPos pos, BlockState state, Entity entity) {
+		return state.getValue(FACING);
+	}
+
 	private void carry(Level level, BlockPos pos, BlockState state, Entity entity) {
 		if (entity.isShiftKeyDown()) {
 			return;
 		}
-		Direction facing = state.getValue(FACING);
+		Direction facing = route(level, pos, state, entity);
 		Vec3 dir = Vec3.atLowerCornerOf(facing.getUnitVec3i());
 		Vec3 v = entity.getDeltaMovement();
 		boolean item = entity instanceof ItemEntity;
@@ -86,10 +91,9 @@ public class ConveyorBlock extends Block {
 		if (along < 0.3) {
 			return;
 		}
-		BlockEntity front = level.getBlockEntity(pos.relative(facing));
-		if (front instanceof Container container) {
-			ItemStack stack = itemEntity.getItem();
-			ItemStack rest = HopperBlockEntity.addItem(null, container, stack.copy(), facing.getOpposite());
+		if (Belts.containerAt(level, pos.relative(facing)) != null) {
+			// Furnaces get things to cook in the top and fuel underneath, whichever side the belt comes in.
+			ItemStack rest = Belts.insert(level, pos.relative(facing), facing.getOpposite(), itemEntity.getItem());
 			if (rest.isEmpty()) {
 				itemEntity.discard();
 			} else {

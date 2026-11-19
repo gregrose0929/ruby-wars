@@ -105,7 +105,10 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		dev.rubymod.client.ui.Ui.tag(g, MachineKind.TIER_NAMES[Math.min(tier, MachineKind.MAX_TIER) - 1], imageWidth - bw - 6, 4, RUBY);
 
 		drawStatus(g);
-		drawPowerGauge(g, mouseX - leftPos, mouseY - topPos);
+		// Only machines that make, store or use power show the grid.
+		if (usesPower(kind)) {
+			drawPowerGauge(g, mouseX - leftPos, mouseY - topPos);
+		}
 		switch (kind) {
 			case COMBUSTION_GENERATOR -> drawGenerator(g);
 			case SOLAR_PANEL -> info(g, "Output", kind.output(tier) * 20 + " charge/s in sunlight", "Needs open sky above it");
@@ -174,7 +177,8 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		String hint = hint(status);
 		if (!hint.isEmpty()) {
 			int hx = 38 + font.width(text);
-			int room = (int) ((imageWidth - 8 - hx) / 0.75F);
+			// Up to the Upgrade button.
+			int room = (int) ((114 - hx) / 0.75F);
 			g.pose().pushMatrix();
 			g.pose().translate(hx, 94);
 			g.pose().scale(0.75F, 0.75F);
@@ -204,6 +208,10 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			};
 			default -> kind == MachineKind.TRADE_DEPOT ? "put anything in to sell it" : "";
 		};
+	}
+
+	private static boolean usesPower(MachineKind kind) {
+		return kind != MachineKind.TRADE_DEPOT && kind != MachineKind.VAULT;
 	}
 
 	/** The grid gauge: one bar for all of this player's machines. */
@@ -258,18 +266,112 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		g.text(font, r.count() + "x", 140, 64, MUTED, false);
 	}
 
+	/** What's waiting to be sold: the Depot's slots, plus whatever you're holding or pointing at (milli-rubies). */
+	private long depotPreview() {
+		long milli = 0;
+		int tier = menu.tier();
+		for (int i = 0; i < kind().slots(); i++) {
+			ItemStack s = menu.slots.get(i).getItem();
+			if (!s.isEmpty()) {
+				milli += (long) Recipes.price(s, tier) * s.getCount();
+			}
+		}
+		ItemStack carried = menu.getCarried();
+		if (!carried.isEmpty()) {
+			milli += (long) Recipes.price(carried, tier) * carried.getCount();
+		} else if (hoveredSlot != null && hoveredSlot.container instanceof Inventory && hoveredSlot.hasItem()) {
+			ItemStack s = hoveredSlot.getItem();
+			milli += (long) Recipes.price(s, tier) * s.getCount();
+		}
+		return milli;
+	}
+
+	private static String rubies(long milli) {
+		double r = milli / 1000.0;
+		return String.format(Locale.ROOT, r >= 100 ? "%,.0f" : r >= 10 ? "%.1f" : "%.2f", r);
+	}
+
+	/**
+	 * The Trade Depot: how far you are to your next ruby (a bar and a percentage), with what's waiting to sell
+	 * (or what you're holding) shown as a lighter stretch ahead of it, and what it sold last.
+	 */
 	private void drawDepot(GuiGraphicsExtractor g) {
-		g.text(font, "Sells for rubies", 86, 26, TEXT, false);
-		g.text(font, "straight to your bank", 86, 36, MUTED, false);
-		g.item(new ItemStack(ModItems.RUBY), 86, 52);
-		g.text(font, String.format(Locale.ROOT, "%,d earned", menu.get(15)), 106, 56, GREEN, false);
-		g.text(font, String.format(Locale.ROOT, "Bank: %,d", menu.wide(12, 13)), 86, 72, AMBER, false);
-		g.text(font, "Best prices (hover)", 86, 82, 0xFF5FC8E8, false);
+		int x = 70;
+		int w = imageWidth - x - 8;
+		int part = menu.get(18);
+		long preview = depotPreview();
+		// "Next ruby" and the percentage.
+		g.text(font, "Next ruby", x, 22, TEXT, false);
+		String pct = part / 10 + "%";
+		g.pose().pushMatrix();
+		g.pose().translate(x + w - font.width(pct) * 1.4F, 19);
+		g.pose().scale(1.4F, 1.4F);
+		g.text(font, pct, 0, 0, 0xFFFF5A82, true);
+		g.pose().popMatrix();
+		// The bar: what you have, then the preview.
+		int by = 33;
+		int bh = 12;
+		g.fill(x - 1, by - 1, x + w + 1, by + bh + 1, SLOT_EDGE);
+		g.fill(x, by, x + w, by + bh, SLOT_BG);
+		int have = (int) Math.round(w * part / 1000.0);
+		long total = part + preview;
+		int ahead = (int) Math.round(w * Math.min(1000, total) / 1000.0);
+		if (ahead > have) {
+			// A soft, pulsing stretch: what you're about to get.
+			float pulse = 0.55F + 0.25F * (float) Math.sin(System.currentTimeMillis() / 180.0);
+			g.fill(x + have, by + 1, x + ahead, by + bh - 1, dev.rubymod.client.ui.Ui.alpha(0xFFFF9AB0, pulse));
+		}
+		if (have > 0) {
+			g.fillGradient(x, by, x + have, by + bh, 0xFFFF4D7A, 0xFFB0103E);
+		}
+		for (int i = 1; i < 4; i++) {
+			g.fill(x + i * w / 4, by + bh - 3, x + i * w / 4 + 1, by + bh, 0x66000000);
+		}
+		// What the preview's worth.
+		String gain;
+		int gainColor = 0xFFFF9AB0;
+		if (preview <= 0) {
+			gain = "Add items to sell";
+			gainColor = MUTED;
+		} else if (total < 1000) {
+			gain = "+" + Math.max(1, preview / 10) + "% (" + rubies(preview) + " rubies)";
+		} else {
+			long whole = total / 1000;
+			gain = "+" + whole + (whole == 1 ? " ruby" : " rubies") + ", then " + (total % 1000) / 10 + "%";
+		}
+		g.text(font, dev.rubymod.client.ui.Ui.fit(gain, w), x, by + bh + 4, gainColor, false);
+		// The last few sales.
+		int sy = 62;
+		g.text(font, "Just sold", x, sy, MUTED, false);
+		int shown = 0;
+		for (int k = 0; k < 4 && shown < 2; k++) {
+			int id = menu.get(19 + k * 3);
+			if (id <= 0) {
+				continue;
+			}
+			Item item = BuiltInRegistries.ITEM.byId(id - 1);
+			int count = menu.get(20 + k * 3);
+			int paid = menu.get(21 + k * 3);
+			int ly = sy + 10 + shown * 10;
+			g.pose().pushMatrix();
+			g.pose().translate(x, ly - 1);
+			g.pose().scale(0.6F, 0.6F);
+			g.item(new ItemStack(item), 0, 0);
+			g.pose().popMatrix();
+			String line = count + "x  +" + rubies(paid);
+			g.text(font, dev.rubymod.client.ui.Ui.fit(line, w - 12), x + 12, ly, GREEN, false);
+			shown++;
+		}
+		if (shown == 0) {
+			g.text(font, "nothing yet", x, sy + 10, MUTED, false);
+		}
+		// Bank, and the price list on hover.
+		g.text(font, "Prices (hover)", 12, 82, 0xFF5FC8E8, false);
 	}
 
 	/** The Trade Depot's best prices, while hovering its "best prices" line. */
 	private void depotPrices(GuiGraphicsExtractor g, int mx, int my) {
-		if (kind() != MachineKind.TRADE_DEPOT || mx < 86 || mx > 86 + font.width("Best prices (hover)") || my < 81 || my > 91) {
+		if (kind() != MachineKind.TRADE_DEPOT || mx < 12 || mx > 12 + font.width("Prices (hover)") || my < 81 || my > 91) {
 			return;
 		}
 		List<Component> lines = new java.util.ArrayList<>();

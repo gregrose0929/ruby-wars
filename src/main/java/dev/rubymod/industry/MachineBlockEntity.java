@@ -317,6 +317,19 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		}
 	}
 
+	/** The Trade Depot's last four sales (item id + 1, count, milli-rubies), newest first. */
+	private final int[][] SALES = new int[4][];
+
+	private void recordSale(ItemStack stack, int count, long paid) {
+		int id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(stack.getItem()) + 1;
+		if (SALES[0] != null && SALES[0][0] == id) {
+			SALES[0] = new int[] {id, SALES[0][1] + count, (int) Math.min(Integer.MAX_VALUE, SALES[0][2] + paid)};
+			return;
+		}
+		System.arraycopy(SALES, 0, SALES, 1, SALES.length - 1);
+		SALES[0] = new int[] {id, count, (int) Math.min(Integer.MAX_VALUE, paid)};
+	}
+
 	private void tickDepot(ServerLevel level) {
 		if (ticks % kind().cycle(tier) != 0) {
 			return;
@@ -331,6 +344,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			}
 			int sell = Math.min(budget, stack.getCount());
 			earned += (long) price * sell;
+			recordSale(stack, sell, (long) price * sell);
 			stack.shrink(sell);
 			budget -= sell;
 		}
@@ -724,7 +738,17 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 				case 15 -> kind() == MachineKind.CONSTRUCTOR ? missing : lo(aux / 1000);
 				case 16 -> hi(Grid.producedPerSecond(owner));
 				case 17 -> hi(Grid.consumedPerSecond(owner));
-				default -> 0;
+				// The bank's part-way ruby (0-999), for the Trade Depot's "next ruby" bar.
+				case 18 -> (int) Math.floorMod(Grid.milliRubies(owner), 1000L);
+				default -> {
+					// 19-30: the Trade Depot's last four sales, newest first: item id + 1, how many, what it paid (milli-rubies, capped).
+					int k = index - 19;
+					if (k < 0 || k >= 12) {
+						yield 0;
+					}
+					int[] sale = SALES[k / 3];
+					yield sale == null ? 0 : Math.min(32767, sale[k % 3]);
+				}
 			};
 		}
 

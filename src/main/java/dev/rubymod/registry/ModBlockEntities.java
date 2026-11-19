@@ -32,6 +32,11 @@ public class ModBlockEntities {
 			RubyMod.id("holo_camo"),
 			new BlockEntityType<>(dev.rubymod.block.HoloBlockEntity::new, Set.of(ModBlocks.HOLO_CAMO)));
 
+	public static final BlockEntityType<dev.rubymod.industry.FilterBlockEntity> FILTER = Registry.register(
+			BuiltInRegistries.BLOCK_ENTITY_TYPE,
+			RubyMod.id("belt_filter"),
+			new BlockEntityType<>(dev.rubymod.industry.FilterBlockEntity::new, Set.of(ModBlocks.BELT_LOADER, ModBlocks.BELT_SORTER)));
+
 	public static void initialize() {
 	}
 }
