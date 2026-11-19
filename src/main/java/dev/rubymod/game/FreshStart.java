@@ -62,9 +62,39 @@ public final class FreshStart {
 		return nextSeason;
 	}
 
+	/**
+	 * Ruby Wars from the very beginning: Season 1, no past champions, nobody's season wins counted. (Everything a new
+	 * season clears goes too. The hub, the other games, profiles and cosmetics are kept.)
+	 */
+	public static void resetHistory(MinecraftServer server) {
+		resetSeason(server);
+		SeasonData data = SeasonData.get();
+		data.season = 1;
+		data.freshSeason = 1;
+		data.pastChampions.clear();
+		for (Stats.Record r : Stats.all()) {
+			r.seasonsWon = 0;
+		}
+		Stats.markDirty();
+		Stats.save();
+		SeasonData.save();
+	}
+
 	/** The server found "rubywars newseason"'s note (it was stopped when that ran): reset now. */
 	public static void onServerStarted(MinecraftServer server) {
 		Path note = server.getWorldPath(LevelResource.ROOT).resolve("rubywars").resolve("reset-season");
+		Path all = note.resolveSibling("reset-everything");
+		if (Files.exists(all)) {
+			resetHistory(server);
+			RubyMod.LOGGER.info("Ruby Wars reset to Season 1");
+			try {
+				Files.deleteIfExists(all);
+				Files.deleteIfExists(note);
+			} catch (IOException e) {
+				RubyMod.LOGGER.warn("Couldn't delete {}", all, e);
+			}
+			return;
+		}
 		if (Files.exists(note)) {
 			int season = resetSeason(server);
 			RubyMod.LOGGER.info("New season: reset to the lobby for Season {}", season);

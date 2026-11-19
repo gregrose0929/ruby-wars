@@ -58,6 +58,8 @@ fi
 # party games, the Coaster Park, stats and champions stay.
 if [[ "${1:-}" == "--newseason" ]]; then
 	NEW_SEASON=1
+	# "everything": back to Season 1 too (no past champions, no season wins).
+	[[ "${2:-}" == "everything" ]] && NEW_SEASON=everything
 fi
 if [[ "${1:-}" == "--test" ]]; then
 	TEST_DIR="$(realpath -m "${2:?usage: setup-server.sh --test DIR}")"
@@ -283,8 +285,8 @@ case "\${1:-}" in
 	start|stop|restart) exec sudo systemctl "\$1" rubywars ;;
 	update)  sudo $SCRIPT_COPY ;;
 	newmap)  sudo $SCRIPT_COPY --newmap ;;
-	newseason) sudo $SCRIPT_COPY --newseason ;;
-	*) echo "usage: rubywars console | cmd \"<command>\" | logs | status | start | stop | restart | update | newmap | newseason" ;;
+	newseason) sudo $SCRIPT_COPY --newseason "\${2:-}" ;;
+	*) echo "usage: rubywars console | cmd \"<command>\" | logs | status | start | stop | restart | update | newmap | newseason [everything]" ;;
 esac
 EOF
 chmod +x /usr/local/bin/rubywars
@@ -313,23 +315,32 @@ fi
 
 # --newseason: reset the season (while the server runs), then put the old island aside and make a fresh one.
 if [[ -n "$NEW_SEASON" && -z "$TEST_DIR" ]]; then
-	OVERWORLD="$SERVER/world/dimensions/minecraft/overworld"
+	RESET_CMD="rubywars reset confirm"
+	RESET_NOTE="reset-season"
+	if [[ "$NEW_SEASON" == "everything" ]]; then
+		RESET_CMD="rubywars reset everything confirm"
+		RESET_NOTE="reset-everything"
+	fi
 	if systemctl is-active -q rubywars; then
 		say "Resetting the season"
-		/usr/local/bin/rubywars cmd "rubywars reset confirm" >/dev/null || true
+		/usr/local/bin/rubywars cmd "$RESET_CMD" >/dev/null || true
 		sleep 3
 		/usr/local/bin/rubywars cmd "save-all flush" >/dev/null || true
 		sleep 5
 	else
 		# Not running: the mod resets the season when it starts and finds this note.
-		touch "$SERVER/world/rubywars/reset-season"
+		touch "$SERVER/world/rubywars/$RESET_NOTE"
 	fi
 	systemctl stop rubywars || true
-	if [[ -d "$OVERWORLD" ]]; then
-		say "Moving the old Ruby Wars island to $BASE/old-worlds (nothing is deleted)"
-		mkdir -p "$BASE/old-worlds"
-		mv "$OVERWORLD" "$BASE/old-worlds/island-$(date +%Y%m%d-%H%M)"
-	fi
+	# The Ruby Wars worlds (the island, and its Nether and End); the hub and the game arenas stay.
+	OLD="$BASE/old-worlds/island-$(date +%Y%m%d-%H%M%S)"
+	for dim in overworld the_nether the_end; do
+		if [[ -d "$SERVER/world/dimensions/minecraft/$dim" ]]; then
+			mkdir -p "$OLD"
+			mv "$SERVER/world/dimensions/minecraft/$dim" "$OLD/$dim"
+		fi
+	done
+	[[ -d "$OLD" ]] && say "Moved the old Ruby Wars worlds to $OLD (nothing is deleted)"
 	NEW_MAP=1
 fi
 

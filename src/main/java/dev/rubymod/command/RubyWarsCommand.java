@@ -187,7 +187,12 @@ public final class RubyWarsCommand {
 						.then(Commands.literal("prepare").executes(c -> SelfTest.prepare(c.getSource(), true)))
 						.then(Commands.literal("done").executes(c -> SelfTest.prepare(c.getSource(), false))))
 				.then(Commands.literal("reset").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-						.then(Commands.literal("confirm").executes(RubyWarsCommand::reset))));
+						.then(Commands.literal("confirm").executes(RubyWarsCommand::reset))
+						.then(Commands.literal("everything").then(Commands.literal("confirm").executes(c -> {
+							dev.rubymod.game.FreshStart.resetHistory(c.getSource().getServer());
+							ok(c, "Ruby Wars is back to Season 1: no champions, no season wins. Everyone starts fresh in Ruby Wars.");
+							return ok(c, "To remake the island too, run on the server: rubywars newseason everything");
+						})))));
 	}
 
 	private static int ok(CommandContext<CommandSourceStack> c, String message) {

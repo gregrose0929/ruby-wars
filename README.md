@@ -234,7 +234,9 @@ Make yourself an operator (`op <yourname>` in the server console), then type
   Coaster Park, stats and the Hall of Champions are kept.
 - **A fresh island too:** on a Linux server, `rubywars newseason` does the reset *and* clears
   the old bases off the map (the old island is moved to `/opt/rubywars/old-worlds`, nothing is
-  deleted, and a fresh one is made).
+  deleted, and a fresh one is made). `rubywars newseason everything` goes all the way back to
+  Season 1 as well (no past champions, no season wins); `/rubywars reset everything confirm`
+  does that part in game.
 
 Other admin commands (all start with `/rubywars`): `status`, `phase <name>`, `timer <minutes>`,
 `pause`, `resume`, `reload` (re-read the config), `backup`, `revive <player>`,
