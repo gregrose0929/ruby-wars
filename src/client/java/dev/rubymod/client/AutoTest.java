@@ -4591,6 +4591,7 @@ public final class AutoTest {
 			case "playthrough" -> playthroughScript();
 			case "onyourown" -> soloScript();
 			case "freshseason" -> freshScript();
+			case "veterans" -> veteransScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9679,6 +9680,95 @@ public final class AutoTest {
 			log("fresh: in a party game: Ruby Wars HUD shows? {}", ClientState.inRubyWarsWorld());
 			shot(mc, "fresh-party");
 		});
+	}
+
+	/** Veteran stars, Ruby Heart looks, victory fireworks, champion statues, and a season's end counting it all. */
+	private static void veteransScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "time set 1000");
+		});
+		then(60, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			int x = p.getBlockX();
+			int z = p.getBlockZ() + 6;
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			heartAt = new net.minecraft.core.BlockPos(x, y, z);
+			level.setBlockAndUpdate(heartAt, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heartAt);
+			p.teleportTo(level, x + 0.5, y, z - 3.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true);
+			log("vet: heart placed, look {}", level.getBlockState(heartAt).getValue(dev.rubymod.block.RubyHeartBlock.LOOK));
+			// A veteran of three seasons, with a win and an award.
+			var r = dev.rubymod.game.Stats.get(p);
+			r.seasonsPlayed = 3;
+			r.seasonsWon = 1;
+			r.awardsWon = 1;
+			dev.rubymod.game.Cosmetics.checkUnlocks(p);
+			dev.rubymod.game.Veterans.syncAll(server);
+			log("vet: unlocked hearts/fireworks: {}", r.unlocked.stream().filter(u -> u.startsWith("heart_") || u.startsWith("fw_")).sorted().toList());
+			log("vet: selected heart {}, firework {}", r.heart, r.firework);
+			log("vet: server name: {}", p.getDisplayName().getString());
+		}));
+		then(30, mc -> {
+			log("vet: client name: {}", mc.player.getDisplayName().getString());
+			mc.player.connection.sendChat("Hello from a veteran!");
+		});
+		then(10, mc -> onServer(mc, server -> log("vet: lava heart: {}", dev.rubymod.game.Cosmetics.select(me(server), "heart_lava"))));
+		then(20, mc -> onServer(mc, server -> log("vet: heart look now {}", server.overworld().getBlockState(heartAt).getValue(dev.rubymod.block.RubyHeartBlock.LOOK))));
+		then(20, mc -> {
+			mc.gui.setScreen(new net.minecraft.client.gui.screens.ChatScreen("", false));
+		});
+		then(20, mc -> shot(mc, "vet-heart-and-chat"));
+		then(5, mc -> mc.gui.setScreen(null));
+		for (String look : new String[] {"heart_frost", "heart_emerald", "heart_crystal", "heart_shadow", "heart_gold"}) {
+			then(10, mc -> onServer(mc, server -> dev.rubymod.game.Cosmetics.select(me(server), look)));
+			then(15, mc -> shot(mc, "vet-" + look));
+		}
+		then(5, mc -> mc.gui.setScreen(new ProfileScreen()));
+		then(40, mc -> shot(mc, "vet-profile"));
+		then(5, mc -> ProfileScreen.testTab(4));
+		then(10, mc -> shot(mc, "vet-profile-hearts"));
+		then(5, mc -> ProfileScreen.testTab(5));
+		then(10, mc -> shot(mc, "vet-profile-fireworks"));
+		then(5, mc -> mc.gui.setScreen(null));
+		// Fireworks: pick one (a preview goes up), then a win.
+		then(5, mc -> onServer(mc, server -> log("vet: rainbow fireworks: {}", dev.rubymod.game.Cosmetics.select(me(server), "fw_rainbow"))));
+		then(5, mc -> mc.player.setXRot(-40));
+		then(10, mc -> onServer(mc, server -> dev.rubymod.game.Celebrations.win(server, me(server).getUUID())));
+		then(48, mc -> shot(mc, "vet-fireworks"));
+		then(5, mc -> onServer(mc, server -> log("vet: health after the fireworks {}", me(server).getHealth())));
+		// A season ending: seasons played goes up, and the champion's show.
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.SeasonData.get().player(SOLO_RIVAL, "Sam");
+		}));
+		then(5, mc -> command(mc, "rubywars battle 5"));
+		then(60, mc -> command(mc, "rubywars phase war"));
+		then(40, mc -> onServer(mc, server -> {
+			var sam = dev.rubymod.game.SeasonData.get().players.get(SOLO_RIVAL.toString());
+			dev.rubymod.game.BattleDirector.eliminate(server, SOLO_RIVAL, sam, "test");
+		}));
+		then(60, mc -> {
+			onServer(mc, server -> log("vet: season over: phase {}, winner {}, seasons played {}, seasons won {}, champions {}",
+					dev.rubymod.game.SeasonData.get().phase, dev.rubymod.game.SeasonData.get().winner, dev.rubymod.game.Stats.get(me(server)).seasonsPlayed,
+					dev.rubymod.game.Stats.get(me(server)).seasonsWon, dev.rubymod.game.SeasonData.get().pastChampions));
+			mc.gui.setScreen(null);
+		});
+		// The Hall of Champions, with a statue.
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.SeasonData.get().pastChampions.add(0, "Season 0: Sam");
+			log("vet: to the hub: {}", dev.rubymod.game.Hub.go(me(server), "hub"));
+		}));
+		then(80, mc -> onServer(mc, server -> {
+			var hub = server.getLevel(dev.rubymod.game.Hub.HUB);
+			me(server).teleportTo(hub, -3.5, dev.rubymod.game.Hub.FLOOR + 1, 5.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 145, 5, true);
+		}));
+		then(260, mc -> shot(mc, "vet-hall"));
 	}
 
 	private static volatile int soloSpot;

@@ -328,6 +328,8 @@ public class RubyModClient implements ClientModInitializer {
 		dev.rubymod.client.BookScreen.register();
 		dev.rubymod.client.HostScreen.register();
 		dev.rubymod.client.SeasonRecapScreen.register();
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.VeteranSync.TYPE,
+				(p, c) -> dev.rubymod.game.Veterans.receive(p.lines()));
 		// In a vehicle the vehicle HUD replaces the hotbar, hearts, hunger, armor, air and XP.
 		for (var element : java.util.List.of(VanillaHudElements.HOTBAR, VanillaHudElements.HEALTH_BAR, VanillaHudElements.FOOD_BAR,
 				VanillaHudElements.ARMOR_BAR, VanillaHudElements.AIR_BAR, VanillaHudElements.EXPERIENCE_LEVEL, VanillaHudElements.INFO_BAR,

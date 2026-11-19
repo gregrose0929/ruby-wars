@@ -51,7 +51,7 @@ import net.minecraft.world.phys.Vec3;
  * picked on the profile screen (I). Hidden while you're invisible or watching.
  */
 public final class Cosmetics {
-	public enum Kind { ARMOR, TRAIL, KILL, PAINT }
+	public enum Kind { ARMOR, TRAIL, KILL, PAINT, HEART, FIREWORK }
 
 	public record Cosmetic(String id, Kind kind, String name, String icon, String how, Predicate<Stats.Record> earned) {
 	}
@@ -61,6 +61,23 @@ public final class Cosmetics {
 	}
 
 	public static final List<Cosmetic> ALL = List.of(
+			// Ruby Heart looks: the same Heart, a different look.
+			new Cosmetic("heart_ruby", Kind.HEART, "Classic Ruby", "rubymod:ruby_heart", "Everyone starts with this one", r -> true),
+			new Cosmetic("heart_frost", Kind.HEART, "Frosted Heart", "minecraft:blue_ice", "Play 1 Ruby Wars season", r -> r.seasonsPlayed >= 1),
+			new Cosmetic("heart_emerald", Kind.HEART, "Emerald Heart", "minecraft:emerald", "Play 2 Ruby Wars seasons", r -> r.seasonsPlayed >= 2),
+			new Cosmetic("heart_lava", Kind.HEART, "Lava Heart", "minecraft:magma_block", "Play 3 Ruby Wars seasons", r -> r.seasonsPlayed >= 3),
+			new Cosmetic("heart_crystal", Kind.HEART, "Crystal Heart", "minecraft:amethyst_cluster", "Play 5 Ruby Wars seasons", r -> r.seasonsPlayed >= 5),
+			new Cosmetic("heart_shadow", Kind.HEART, "Shadow Heart", "minecraft:crying_obsidian", "Win an award on a season's wrap-up card", r -> r.awardsWon >= 1),
+			new Cosmetic("heart_gold", Kind.HEART, "Golden Heart", "minecraft:gold_block", "Win a Ruby Wars season", r -> r.seasonsWon >= 1),
+			// Victory fireworks: they go up when you win a duel or a party game (and a big show for a season).
+			new Cosmetic("fw_ruby", Kind.FIREWORK, "Ruby Burst", "minecraft:firework_rocket", "Everyone starts with this one", r -> true),
+			new Cosmetic("fw_stars", Kind.FIREWORK, "Golden Stars", "minecraft:gold_nugget", "Reach level 3", level(3)),
+			new Cosmetic("fw_ocean", Kind.FIREWORK, "Ocean Sparkle", "minecraft:heart_of_the_sea", "Reach level 6", level(6)),
+			new Cosmetic("fw_creeper", Kind.FIREWORK, "Creeper Pop", "minecraft:creeper_head", "Reach level 9", level(9)),
+			new Cosmetic("fw_frost", Kind.FIREWORK, "Snowfall", "minecraft:snowball", "Play 1 Ruby Wars season", r -> r.seasonsPlayed >= 1),
+			new Cosmetic("fw_rainbow", Kind.FIREWORK, "Rainbow Blast", "minecraft:prismarine_crystals", "Win 3 party games", r -> r.totalWins() >= 3),
+			new Cosmetic("fw_duelist", Kind.FIREWORK, "Duelist's Sparks", "minecraft:blaze_rod", "Win 3 duels", r -> r.duelsWon >= 3),
+			new Cosmetic("fw_champion", Kind.FIREWORK, "Champion's Crown", "minecraft:totem_of_undying", "Win a Ruby Wars season", r -> r.seasonsWon >= 1),
 			new Cosmetic("set_recruit", Kind.ARMOR, "Recruit Fatigues", "minecraft:iron_chestplate", "Reach level 2", level(2)),
 			new Cosmetic("set_ranger", Kind.ARMOR, "Forest Ranger", "minecraft:fern", "Reach level 5", level(5)),
 			new Cosmetic("set_frost", Kind.ARMOR, "Frost Guard", "minecraft:packed_ice", "Reach level 10", level(10)),
@@ -141,6 +158,8 @@ public final class Cosmetics {
 					r.killEffect = c.id();
 				} else if (free && c.kind() == Kind.PAINT && r.paint.isEmpty()) {
 					r.paint = c.id();
+				} else if (free && c.kind() == Kind.FIREWORK && r.firework.isEmpty()) {
+					r.firework = c.id();
 				}
 				if (!free) {
 					fresh.add(c);
@@ -165,6 +184,8 @@ public final class Cosmetics {
 			case TRAIL -> "trail";
 			case KILL -> "kill effect";
 			case PAINT -> "truck paint";
+			case HEART -> "Ruby Heart look";
+			case FIREWORK -> "victory firework";
 		};
 	}
 
@@ -183,9 +204,14 @@ public final class Cosmetics {
 				case TRAIL -> r.trail = "";
 				case KILL -> r.killEffect = "";
 				case PAINT -> r.paint = "paint_red";
+				case HEART -> r.heart = "heart_ruby";
+				case FIREWORK -> r.firework = "";
 			}
 			Stats.markDirty();
 			dress(player);
+			if (kind == Kind.HEART) {
+				restyleHeart(player);
+			}
 			return null;
 		}
 		Cosmetic c = byId(id);
@@ -197,9 +223,21 @@ public final class Cosmetics {
 			case TRAIL -> r.trail = id;
 			case KILL -> r.killEffect = id;
 			case PAINT -> r.paint = id;
+			case HEART -> r.heart = id;
+			case FIREWORK -> r.firework = id;
 		}
 		Stats.markDirty();
 		dress(player);
+		if (c.kind() == Kind.HEART) {
+			restyleHeart(player);
+		} else if (c.kind() == Kind.FIREWORK) {
+			// A preview, high above you.
+			ItemStack rocket = Celebrations.rocket(id);
+			if (!rocket.isEmpty()) {
+				player.level().addFreshEntity(new net.minecraft.world.entity.projectile.FireworkRocketEntity(player.level(), player.getX() + 3, player.getY() + 1,
+						player.getZ() + 3, rocket));
+			}
+		}
 		return null;
 	}
 
@@ -208,10 +246,32 @@ public final class Cosmetics {
 		Stats.Record r = Stats.get(player);
 		List<String> lines = new ArrayList<>();
 		for (Cosmetic c : ALL) {
-			boolean wearing = c.id().equals(r.armor) || c.id().equals(r.trail) || c.id().equals(r.killEffect) || c.id().equals(r.paint);
+			boolean wearing = c.id().equals(r.armor) || c.id().equals(r.trail) || c.id().equals(r.killEffect) || c.id().equals(r.paint)
+					|| c.id().equals(r.heart == null || r.heart.isEmpty() ? "heart_ruby" : r.heart) || c.id().equals(r.firework);
 			lines.add(c.id() + "|" + c.kind() + "|" + c.name() + "|" + c.icon() + "|" + c.how() + "|" + r.unlocked.contains(c.id()) + "|" + wearing);
 		}
 		return lines;
+	}
+
+	/** The look this player's Ruby Heart takes. */
+	public static dev.rubymod.block.RubyHeartBlock.Look heartLook(java.util.UUID id) {
+		String h = Stats.get(id, null).heart;
+		return dev.rubymod.block.RubyHeartBlock.Look.byName(h == null || !h.startsWith("heart_") ? "ruby" : h.substring(6));
+	}
+
+	/** Their placed Heart (if it's standing and loaded) takes their look. */
+	public static void restyleHeart(ServerPlayer player) {
+		SeasonData.Claim claim = SeasonData.get().claimOf(player.getUUID());
+		if (claim == null || claim.destroyed) {
+			return;
+		}
+		ServerLevel level = player.level().getServer().getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION,
+				Identifier.parse(claim.dimension)));
+		BlockPos pos = claim.pos();
+		if (level == null || !level.isLoaded(pos) || !level.getBlockState(pos).is(dev.rubymod.registry.ModBlocks.RUBY_HEART)) {
+			return;
+		}
+		level.setBlock(pos, level.getBlockState(pos).setValue(dev.rubymod.block.RubyHeartBlock.LOOK, heartLook(player.getUUID())), 3);
 	}
 
 	/** The colour of this player's convoy truck. */

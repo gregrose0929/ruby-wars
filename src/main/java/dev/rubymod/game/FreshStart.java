@@ -48,6 +48,7 @@ public final class FreshStart {
 		data.pastChampions = champions;
 		data.freshSeason = nextSeason;
 		data.freshStart.clear();
+		data.seasonCounted = false;
 		SeasonData.save();
 		GameConfig config = GameConfig.get();
 		var border = server.overworld().getWorldBorder();
@@ -74,7 +75,10 @@ public final class FreshStart {
 		data.pastChampions.clear();
 		for (Stats.Record r : Stats.all()) {
 			r.seasonsWon = 0;
+			r.seasonsPlayed = 0;
+			r.awardsWon = 0;
 		}
+		Veterans.syncAll(server);
 		Stats.markDirty();
 		Stats.save();
 		SeasonData.save();

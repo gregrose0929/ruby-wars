@@ -55,6 +55,8 @@ public class SeasonData {
 	public int freshSeason;
 	/** Who has had this season's fresh start. */
 	public Set<String> freshStart = new HashSet<>();
+	/** This season's end has been counted (seasons played, awards). */
+	public boolean seasonCounted;
 	public Map<String, Squads.Squad> squads = new LinkedHashMap<>();
 	public Map<String, List<Waypoints.Waypoint>> waypoints = new LinkedHashMap<>();
 

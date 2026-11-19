@@ -24,8 +24,45 @@ import net.minecraft.world.phys.BlockHitResult;
  * Battle Day its owner respawns here until it is destroyed.
  */
 public class RubyHeartBlock extends Block {
+	/** How it looks (a cosmetic, picked on the profile screen): it's the same Heart whatever the look. */
+	public enum Look implements net.minecraft.util.StringRepresentable {
+		RUBY("ruby", 0xFF2040), FROST("frost", 0x9AD8FF), EMERALD("emerald", 0x3CE07A), LAVA("lava", 0xFF8A20), CRYSTAL("crystal", 0xC07CFF),
+		GOLD("gold", 0xFFD040), SHADOW("shadow", 0xB040FF);
+
+		private final String name;
+		public final int particle;
+
+		Look(String name, int particle) {
+			this.name = name;
+			this.particle = particle;
+		}
+
+		@Override
+		public String getSerializedName() {
+			return name;
+		}
+
+		public static Look byName(String name) {
+			for (Look l : values()) {
+				if (l.name.equals(name)) {
+					return l;
+				}
+			}
+			return RUBY;
+		}
+	}
+
+	public static final net.minecraft.world.level.block.state.properties.EnumProperty<Look> LOOK =
+			net.minecraft.world.level.block.state.properties.EnumProperty.create("look", Look.class);
+
 	public RubyHeartBlock(Properties properties) {
 		super(properties);
+		registerDefaultState(stateDefinition.any().setValue(LOOK, Look.RUBY));
+	}
+
+	@Override
+	protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(LOOK);
 	}
 
 	@Override
@@ -52,7 +89,7 @@ public class RubyHeartBlock extends Block {
 	@Override
 	public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
 		if (random.nextInt(3) == 0) {
-			level.addParticle(new DustParticleOptions(0xFF2040, 1.0F),
+			level.addParticle(new DustParticleOptions(state.getValue(LOOK).particle, 1.0F),
 					pos.getX() + random.nextDouble(), pos.getY() + 1.1, pos.getZ() + random.nextDouble(), 0, 0.02, 0);
 		}
 	}

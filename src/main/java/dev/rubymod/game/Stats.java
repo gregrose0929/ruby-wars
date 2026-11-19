@@ -70,6 +70,12 @@ public final class Stats {
 		/** Codex milestones already paid out (one per 10 entries found). */
 		public int riftCodexClaimed;
 		public int seasonsWon;
+		/** Ruby Wars seasons taken part in (veteran stars), and awards won on the wrap-up cards. */
+		public int seasonsPlayed;
+		public int awardsWon;
+		/** The Ruby Heart's look ("heart_ruby"...) and the victory fireworks ("" for none). */
+		public String heart = "heart_ruby";
+		public String firework = "";
 		public Set<String> unlocked = new HashSet<>();
 		public String hat = "";
 		public String trail = "";
@@ -236,6 +242,9 @@ public final class Stats {
 
 	public static void won(UUID id, String name, String mode) {
 		get(id, name).wins.merge(mode, 1, Integer::sum);
+		if (server != null) {
+			Celebrations.win(server, id);
+		}
 		addXp(id, name, 35);
 		changed(id);
 	}
@@ -296,14 +305,38 @@ public final class Stats {
 		changed(id);
 	}
 
+	/** Seasons played, without making a record for someone new. */
+	public static int seasonsPlayed(UUID id) {
+		Record r = players.get(id.toString());
+		return r == null ? 0 : r.seasonsPlayed;
+	}
+
+	public static Map<String, Integer> seasonsPlayedById() {
+		Map<String, Integer> out = new HashMap<>();
+		for (var e : players.entrySet()) {
+			out.put(e.getKey(), e.getValue().seasonsPlayed);
+		}
+		return out;
+	}
+
 	public static void duelWon(UUID id, String name) {
 		get(id, name).duelsWon++;
+		if (server != null) {
+			Celebrations.win(server, id);
+		}
 		addXp(id, name, 30);
 		changed(id);
 	}
 
 	public static void seasonWon(UUID id, String name) {
 		get(id, name).seasonsWon++;
+		if (server != null) {
+			Celebrations.season(server, id);
+			ServerPlayer winner = server.getPlayerList().getPlayer(id);
+			if (winner != null) {
+				Cosmetics.checkUnlocks(winner);
+			}
+		}
 		addXp(id, name, 500);
 		changed(id);
 	}

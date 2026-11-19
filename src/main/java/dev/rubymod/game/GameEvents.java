@@ -171,6 +171,7 @@ public final class GameEvents {
 			LagCompensation.record(server);
 			WhatsNew.tick(server);
 			BetweenSeasons.tick(server);
+			Celebrations.tick(server);
 			CannonRounds.tick();
 			Explosions.tick(server);
 			Countermeasures.tick();
@@ -244,6 +245,7 @@ public final class GameEvents {
 			BattleDirector.onJoin(handler.getPlayer());
 			dev.rubymod.game.hub.Renames.onJoin(server, handler.getPlayer());
 			WhatsNew.onJoin(server, handler.getPlayer());
+			Veterans.syncAll(server);
 			if (Hub.where(handler.getPlayer()) == Hub.Where.RUBY_WARS) {
 				BetweenSeasons.arrived(handler.getPlayer(), 320);
 			}

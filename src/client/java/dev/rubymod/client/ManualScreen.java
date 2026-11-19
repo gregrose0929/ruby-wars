@@ -26,7 +26,8 @@ public class ManualScreen extends Screen {
 					"Joining the server puts you in the hub. Walk into a portal to play: Ruby Wars (red), the Ruby Rift (pink), the Ruby Convoy (orange), "
 							+ "Co-op Horde (green) or the party games (purple, behind you).",
 					"Press H any time to switch games, or use /hub and /play rubywars|horde.",
-					"Press I for your profile: your stats, and cosmetics you've earned (hats, trails, kill effects).",
+					"Press I for your profile: your stats, and cosmetics you've earned: armor looks, trails, kill effects, truck paint, Ruby Heart looks and victory fireworks.",
+					"Each Ruby Wars season you play puts a gold star after your name. More seasons unlock new Heart looks; winners get a statue in the Hall of Champions.",
 					"Leaving Ruby Wars saves where you were and everything you carry; going back puts it all back.",
 					"On Battle Day everyone still in the season is called back into Ruby Wars."),
 			new Page("Party Games",

@@ -79,7 +79,7 @@ public final class Hub {
 	private static final int CONVOY_X = 5;
 	private static final int HORDE_X = 14;
 	/** The Hall of Champions podium. */
-	private static final int HALL_X = -9;
+	private static final int HALL_X = -8;
 	private static final int HALL_Z = -3;
 	/** The Party Games arch stands at the back of the plaza, behind where you arrive. */
 	private static final int PARTY_Z = 15;
@@ -604,6 +604,7 @@ public final class Hub {
 			updateWarTable(hub);
 			if (server.getTickCount() % 200 == 0) {
 				updatePodium(hub);
+				updateHall(hub);
 			}
 		}
 	}
@@ -782,7 +783,7 @@ public final class Hub {
 		for (Entity e : old) {
 			e.discard();
 		}
-		Props.text(hub, new Vec3(PODIUM_X + 1.0, FLOOR + 6.2, PODIUM_Z + 1.0), Component.literal("★ CHAMPIONS ★").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
+		Props.text(hub, new Vec3(PODIUM_X + 1.0, FLOOR + 6.2, PODIUM_Z + 1.0), Component.literal("★ TOP LEVELS ★").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
 				1.6F, PODIUM_TAG);
 		int[][] steps = {{0, 2}, {-2, 1}, {2, 1}};
 		String[] places = {"1st", "2nd", "3rd"};
@@ -806,6 +807,7 @@ public final class Hub {
 				statue.setItemSlot(slots[s], Cosmetics.showpiece(s, set));
 			}
 			statue.setPermanentlyInvulnerable(true);
+			((dev.rubymod.mixin.MannequinAccessor) statue).rubymod$hideDescription(true);
 			statue.setCustomName(Component.literal(places[i] + "  " + r.name + "  ").withStyle(colors[i], ChatFormatting.BOLD)
 					.append(Component.literal("Level " + Stats.level(r.xp)[0]).withStyle(ChatFormatting.AQUA)));
 			statue.setCustomNameVisible(true);
@@ -1144,7 +1146,7 @@ public final class Hub {
 			new Label("war", 0.5, FLOOR + 3.4, WAR_Z + 0.5, 0.8F),
 			new Label("board_party", -9.0, FLOOR + 1.0, 5.5, 1.6F),
 			new Label("board_records", 10.0, FLOOR + 1.0, 5.5, 1.6F),
-			new Label("champions", HALL_X + 0.5, FLOOR + 2.2, HALL_Z + 0.5, 1.3F));
+			new Label("champions", HALL_X + 0.5, FLOOR + 5.0, HALL_Z + 0.5, 1.3F));
 
 	private static Component labelText(MinecraftServer server, String key) {
 		return switch (key) {
@@ -1184,12 +1186,89 @@ public final class Hub {
 	/** The Hall of Champions: a gold podium with a trophy on top, beside the path to Ruby Wars. */
 
 	private static void buildHall(ServerLevel level) {
+		// Where the first podium stood (one block further west): back to grass.
+		set(level, HALL_X - 2, FLOOR, HALL_Z - 1, Blocks.GRASS_BLOCK.defaultBlockState());
+		set(level, HALL_X - 2, FLOOR, HALL_Z + 1, Blocks.GRASS_BLOCK.defaultBlockState());
+		set(level, HALL_X - 1, FLOOR + 1, HALL_Z, Blocks.AIR.defaultBlockState());
 		for (int dx = -1; dx <= 1; dx++) {
 			for (int dz = -1; dz <= 1; dz++) {
 				set(level, HALL_X + dx, FLOOR, HALL_Z + dz, Blocks.GOLD_BLOCK.defaultBlockState());
 			}
 		}
 		set(level, HALL_X, FLOOR + 1, HALL_Z, Blocks.CHISELED_QUARTZ_BLOCK.defaultBlockState());
+		// Pedestals either side for the champions before.
+		for (int dx : new int[] {-2, 2}) {
+			set(level, HALL_X + dx, FLOOR, HALL_Z, Blocks.GOLD_BLOCK.defaultBlockState());
+			set(level, HALL_X + dx, FLOOR + 1, HALL_Z, Blocks.GOLD_BLOCK.defaultBlockState());
+		}
+	}
+
+	private static final String HALL_TAG = "rubymod_hub_hall";
+	private static String hallShown = "";
+
+	/** A statue of each of the last three champions (the newest in the middle), in their own skin and armor look. */
+	private static void updateHall(ServerLevel hub) {
+		List<String> past = SeasonData.get().pastChampions;
+		List<String> shown = new ArrayList<>();
+		for (int i = past.size() - 1; i >= 0 && shown.size() < 3; i--) {
+			shown.add(past.get(i));
+		}
+		StringBuilder key = new StringBuilder();
+		for (String s : shown) {
+			String name = s.contains(": ") ? s.substring(s.indexOf(": ") + 2) : s;
+			Stats.Record r = statsByName(name);
+			key.append(s).append('/').append(r == null ? "" : r.armor).append(';');
+		}
+		List<Entity> old = hub.getEntities((Entity) null, new AABB(HALL_X - 4, FLOOR, HALL_Z - 3, HALL_X + 5, FLOOR + 6, HALL_Z + 4),
+				e -> e.entityTags().contains(HALL_TAG));
+		if (key.toString().equals(hallShown) && old.size() == shown.size()) {
+			return;
+		}
+		hallShown = key.toString();
+		for (Entity e : old) {
+			e.discard();
+		}
+		int[] spots = {0, -2, 2};
+		for (int i = 0; i < shown.size(); i++) {
+			String line = shown.get(i);
+			String name = line.contains(": ") ? line.substring(line.indexOf(": ") + 2) : line;
+			String season = line.contains(": ") ? line.substring(0, line.indexOf(": ")) : "";
+			var statue = EntityTypes.MANNEQUIN.create(hub, EntitySpawnReason.EVENT);
+			if (statue == null) {
+				continue;
+			}
+			// Facing the plaza, where everyone arrives.
+			float yaw = -35;
+			statue.snapTo(HALL_X + spots[i] + 0.5, FLOOR + 2, HALL_Z + 0.5, yaw, 0);
+			statue.yBodyRot = yaw;
+			statue.yHeadRot = yaw;
+			statue.getEntityData().set(dev.rubymod.mixin.MannequinAccessor.rubymod$profile(),
+					net.minecraft.world.item.component.ResolvableProfile.createUnresolved(name));
+			Stats.Record r = statsByName(name);
+			String set = r == null || r.armor == null ? "" : r.armor;
+			var slots = new net.minecraft.world.entity.EquipmentSlot[] {net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
+					net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET};
+			for (int s = 1; s < 4; s++) {
+				// No helmet: their face shows.
+				statue.setItemSlot(slots[s], Cosmetics.showpiece(s, set));
+			}
+			statue.setPermanentlyInvulnerable(true);
+			((dev.rubymod.mixin.MannequinAccessor) statue).rubymod$hideDescription(true);
+			statue.setCustomName(Component.literal(season + " Champion  ").withStyle(i == 0 ? ChatFormatting.GOLD : ChatFormatting.YELLOW, ChatFormatting.BOLD)
+					.append(Component.literal(name).withStyle(ChatFormatting.WHITE)));
+			statue.setCustomNameVisible(true);
+			statue.addTag(HALL_TAG);
+			hub.addFreshEntity(statue);
+		}
+	}
+
+	private static Stats.Record statsByName(String name) {
+		for (Stats.Record r : Stats.all()) {
+			if (name.equals(r.name)) {
+				return r;
+			}
+		}
+		return null;
 	}
 
 	/** Every past champion (newest first), and how this season stands. */
@@ -1205,7 +1284,7 @@ public final class Hub {
 		}
 		String now = switch (Rules.phase()) {
 			case LOBBY -> "Season " + data.season + " starts soon";
-			case ENDED -> "Season " + data.season + " is over: /rubywars recap";
+			case ENDED -> "Season " + data.season + " is over\n(/rubywars recap)";
 			default -> "Season " + data.season + ": " + Rules.phase().title();
 		};
 		return text.append(Component.literal(now).withStyle(ChatFormatting.GRAY));

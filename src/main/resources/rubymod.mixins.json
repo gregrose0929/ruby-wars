@@ -13,6 +13,7 @@
 		"ItemDisplayAccessor",
 		"MannequinAccessor",
 		"PlayerMixin",
+		"PlayerNameMixin",
 		"ServerExplosionMixin",
 		"ServerPauseMixin",
 		"TextDisplayAccessor"

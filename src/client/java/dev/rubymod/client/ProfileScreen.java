@@ -17,8 +17,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Your profile (I): lifetime stats on the left, cosmetics on the right (hats, trails,
- * kill effects). Click one you've unlocked to wear it (click again to take it off);
+ * Your profile (I): lifetime stats on the left, cosmetics on the right, a tab for each kind
+ * (armor looks, trails, kill effects, truck paint, Ruby Heart looks, victory fireworks). Click one you've unlocked to wear it (click again to take it off);
  * hover a locked one to see how to earn it.
  */
 public class ProfileScreen extends Screen {
@@ -29,6 +29,18 @@ public class ProfileScreen extends Screen {
 	}
 
 	private final List<Slot> slots = new ArrayList<>();
+	private final List<int[]> tabs = new ArrayList<>();
+	private static final String[] KINDS = {"ARMOR", "TRAIL", "KILL", "PAINT", "HEART", "FIREWORK"};
+	private static final String[] TAB_NAMES = {"Armor", "Trails", "Kills", "Truck", "Heart", "Fireworks"};
+	private static final String[] KIND_HELP = {"A look for your armor, nothing else.", "Sparkles where you walk.", "A flourish when you get a kill.",
+			"Your Ruby Convoy truck's paint.", "A new look for your Ruby Heart.", "For winning a duel or a party game."};
+	/** The tab last looked at (kept while the game's open). */
+	private static int kindTab;
+
+	/** For autotests. */
+	public static void testTab(int t) {
+		kindTab = t;
+	}
 	private final long opened = System.currentTimeMillis();
 
 	public ProfileScreen() {
@@ -96,44 +108,50 @@ public class ProfileScreen extends Screen {
 		Ui.section(g, "Cosmetics", rightX + 10, top + 9, colW - 20);
 		List<String> tip = null;
 		if (data != null) {
-			int sy = top + 24;
-			for (String kind : new String[] {"ARMOR", "TRAIL", "KILL", "PAINT"}) {
-				Ui.text(g, kind.equals("ARMOR") ? "Armor sets" : kind.equals("TRAIL") ? "Trails" : kind.equals("KILL") ? "Kill effects" : "Convoy truck paint",
-						rightX + 10, sy, Ui.DIM);
-				sy += 10;
-				int sx = rightX + 10;
-				for (String line : data.cosmetics()) {
-					String[] f = line.split("[|]");
-					if (f.length < 7 || !f[1].equals(kind)) {
-						continue;
-					}
-					if (sx + 16 > rightX + colW - 8) {
-						sx = rightX + 10;
-						sy += 18;
-					}
-					boolean unlocked = f[5].equals("true");
-					boolean wearing = f[6].equals("true");
-					slots.add(new Slot(f[0], kind, sx, sy, unlocked, wearing));
-					boolean over = Ui.inside(mouseX, mouseY, sx, sy, 16, 16);
-					Ui.inset(g, sx, sy, 16, 16);
-					if (wearing) {
-						g.fill(sx + 1, sy + 1, sx + 15, sy + 15, 0x405BD27A);
-						g.outline(sx, sy, 16, 16, Ui.GREEN);
-					} else if (over && unlocked) {
-						g.outline(sx, sy, 16, 16, Ui.TEXT);
-					}
-					g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[3]))), sx, sy);
-					if (!unlocked) {
-						g.fill(sx + 1, sy + 1, sx + 15, sy + 15, 0xB0101216);
-						Ui.icon(g, Ui.Icon.LOCK, sx + 4, sy + 4);
-					}
-					if (over) {
-						tip = List.of(f[2], wearing ? (kind.equals("PAINT") ? "Your truck's paint." : "You're using it. Click to take it off.")
-								: unlocked ? "Click to use it." : "To unlock: " + f[4]);
-					}
-					sx += 18;
+			// One kind at a time, picked with the tabs.
+			tabs.clear();
+			int tw = (colW - 20) / 3;
+			for (int t = 0; t < KINDS.length; t++) {
+				int tx = rightX + 10 + (t % 3) * tw;
+				int ty = top + 22 + (t / 3) * 18;
+				tabs.add(new int[] {tx, ty, tw - 2});
+				Ui.tab(g, TAB_NAMES[t], tx, ty, tw - 2, t == kindTab, mouseX, mouseY);
+			}
+			String kind = KINDS[kindTab];
+			int sy = top + 64;
+			Ui.text(g, KIND_HELP[kindTab], rightX + 10, sy, colW - 20, Ui.MUTED);
+			sy += 14;
+			int sx = rightX + 10;
+			for (String line : data.cosmetics()) {
+				String[] f = line.split("[|]");
+				if (f.length < 7 || !f[1].equals(kind)) {
+					continue;
 				}
-				sy += 19;
+				if (sx + 20 > rightX + colW - 8) {
+					sx = rightX + 10;
+					sy += 22;
+				}
+				boolean unlocked = f[5].equals("true");
+				boolean wearing = f[6].equals("true");
+				slots.add(new Slot(f[0], kind, sx, sy, unlocked, wearing));
+				boolean over = Ui.inside(mouseX, mouseY, sx, sy, 20, 20);
+				Ui.inset(g, sx, sy, 20, 20);
+				if (wearing) {
+					g.fill(sx + 1, sy + 1, sx + 19, sy + 19, 0x405BD27A);
+					g.outline(sx, sy, 20, 20, Ui.GREEN);
+				} else if (over && unlocked) {
+					g.outline(sx, sy, 20, 20, Ui.TEXT);
+				}
+				g.item(new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(f[3]))), sx + 2, sy + 2);
+				if (!unlocked) {
+					g.fill(sx + 1, sy + 1, sx + 19, sy + 19, 0xB0101216);
+					Ui.icon(g, Ui.Icon.LOCK, sx + 6, sy + 6);
+				}
+				if (over) {
+					tip = List.of(f[2], wearing ? (kind.equals("PAINT") ? "Your truck's paint." : kind.equals("HEART") ? "Your Heart's look."
+							: "You're using it. Click to take it off.") : unlocked ? "Click to use it." : "To unlock: " + f[4]);
+				}
+				sx += 22;
 			}
 		} else {
 			Ui.text(g, "Loading...", rightX + 10, top + 26, Ui.MUTED);
@@ -146,8 +164,15 @@ public class ProfileScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+		for (int t = 0; t < tabs.size(); t++) {
+			int[] b = tabs.get(t);
+			if (Ui.inside(event.x(), event.y(), b[0], b[1], b[2], 16)) {
+				kindTab = t;
+				return true;
+			}
+		}
 		for (Slot s : slots) {
-			if (event.x() >= s.x() && event.x() < s.x() + 16 && event.y() >= s.y() && event.y() < s.y() + 16) {
+			if (event.x() >= s.x() && event.x() < s.x() + 20 && event.y() >= s.y() && event.y() < s.y() + 20) {
 				if (s.unlocked()) {
 					ClientPlayNetworking.send(new MorePayloads.CosmeticSelect(s.wearing() ? "none:" + s.kind() : s.id()));
 				}

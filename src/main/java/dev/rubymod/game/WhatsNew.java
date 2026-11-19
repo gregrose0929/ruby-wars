@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-19-fresh";
+	private static final String VERSION = "2026-11-19-veterans";
 	private static final List<String> LINES = List.of(
-			"minecraft:grass_block|A fresh island for the new season, and everyone starts again with nothing in Ruby Wars. Your hub and party-game things are kept.",
-			"minecraft:gold_block|The Hall of Champions: every season's winner, in the hub beside the path to Ruby Wars.",
-			"rubymod:ruby_drill|Your starter base now clears a space for itself, so it always fits. And the Ruby Wars panels stay out of the other games.");
+			"minecraft:nether_star|Veteran stars: every Ruby Wars season you play adds a gold star after your name.",
+			"rubymod:ruby_heart|Ruby Heart looks (I, the Heart tab): Frosted, Emerald, Lava and more, unlocked by playing seasons.",
+			"minecraft:firework_rocket|Victory fireworks when you win a duel or party game, and statues of each season's champion in the hub.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

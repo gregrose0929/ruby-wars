@@ -683,7 +683,21 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: everyone's Ruby Wars seasons played (veteran stars), "uuid|seasons" each. */
+	public record VeteranSync(List<String> lines) implements CustomPacketPayload {
+		public static final Type<VeteranSync> TYPE = new Type<>(RubyMod.id("veteran_sync"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, VeteranSync> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), VeteranSync::lines,
+				VeteranSync::new);
+
+		@Override
+		public Type<VeteranSync> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(VeteranSync.TYPE, VeteranSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SeasonRecap.TYPE, SeasonRecap.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TravelAsk.TYPE, TravelAsk.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(PhotoAsk.TYPE, PhotoAsk.CODEC);

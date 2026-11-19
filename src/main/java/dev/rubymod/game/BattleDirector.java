@@ -393,6 +393,7 @@ public final class BattleDirector {
 
 	private static void announceWinner(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
+		countSeason(server);
 		if (data.winner.isEmpty()) {
 			Alerts.broadcastTitle(server, "NO SURVIVORS", "Season " + data.season + " ends in a draw", ChatFormatting.GRAY);
 			sendRecapToAll(server);
@@ -434,6 +435,64 @@ public final class BattleDirector {
 		if (data.phase != Phase.ENDED || data.players.isEmpty()) {
 			return "The wrap-up shows once a season is over.";
 		}
+		List<String> awards = awards(data);
+
+		List<String> mine = new ArrayList<>();
+		SeasonData.PlayerRecord me = data.players.get(player.getUUID().toString());
+		if (me != null) {
+			int count = data.players.size();
+			String place = !me.eliminated ? (data.winner.isEmpty() ? "Still standing" : "Winner!") : ordinal(me.finished) + " of " + count;
+			mine.add("Finished|" + place);
+			mine.add("Knockdowns|" + me.kills);
+			mine.add("Times knocked down|" + me.deaths);
+			mine.add("Hearts destroyed|" + me.heartsDestroyed);
+			mine.add("Best streak|" + me.bestKillstreak);
+			mine.add("Goals done|" + me.goalsDone.size());
+			mine.add("Rubies in the bank|" + String.format(java.util.Locale.ROOT, "%,d", dev.rubymod.industry.Grid.milliRubies(player.getUUID()) / 1000));
+			SeasonData.Claim claim = data.claimOf(player.getUUID());
+			mine.add("Your Heart|" + (claim == null ? "Never placed" : "Tier " + claim.tier + (claim.destroyed ? " (destroyed)" : " (standing)")));
+		}
+		Net.send(player, new dev.rubymod.net.MorePayloads.SeasonRecap("Season " + data.season + " is over!", data.winner, awards, mine));
+		return null;
+	}
+
+	/**
+	 * Once a season ends: everyone who took part gets a season played (a veteran star), award winners an award, and
+	 * any cosmetics that unlocks.
+	 */
+	private static void countSeason(MinecraftServer server) {
+		SeasonData data = SeasonData.get();
+		if (data.seasonCounted) {
+			return;
+		}
+		data.seasonCounted = true;
+		SeasonData.markDirty();
+		for (Map.Entry<String, SeasonData.PlayerRecord> e : data.players.entrySet()) {
+			SeasonData.PlayerRecord r = e.getValue();
+			UUID id = UUID.fromString(e.getKey());
+			if (r.heartGiven || r.starterBase || data.claimOf(id) != null) {
+				Stats.get(id, r.name).seasonsPlayed++;
+			}
+		}
+		for (String award : awards(data)) {
+			String who = award.split("[|]")[1];
+			for (Map.Entry<String, SeasonData.PlayerRecord> e : data.players.entrySet()) {
+				if (e.getValue().name.equals(who)) {
+					Stats.get(UUID.fromString(e.getKey()), who).awardsWon++;
+					break;
+				}
+			}
+		}
+		Stats.markDirty();
+		Stats.save();
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			Cosmetics.checkUnlocks(p);
+		}
+		Veterans.syncAll(server);
+	}
+
+	/** The wrap-up card's awards: "title|who|detail|item id" each. */
+	private static List<String> awards(SeasonData data) {
 		List<String> awards = new ArrayList<>();
 		award(awards, "Top fighter", data, r -> r.kills, n -> n + (n == 1 ? " knockdown" : " knockdowns"), "minecraft:iron_sword");
 		award(awards, "Heart breaker", data, r -> r.heartsDestroyed, n -> n + (n == 1 ? " Heart" : " Hearts"), "minecraft:tnt");
@@ -465,24 +524,7 @@ public final class BattleDirector {
 		}
 		data.players.values().stream().filter(r -> r.finished == 2).findFirst()
 				.ifPresent(r -> awards.add("Runner-up|" + r.name + "|So close!|minecraft:iron_ingot"));
-
-		List<String> mine = new ArrayList<>();
-		SeasonData.PlayerRecord me = data.players.get(player.getUUID().toString());
-		if (me != null) {
-			int count = data.players.size();
-			String place = !me.eliminated ? (data.winner.isEmpty() ? "Still standing" : "Winner!") : ordinal(me.finished) + " of " + count;
-			mine.add("Finished|" + place);
-			mine.add("Knockdowns|" + me.kills);
-			mine.add("Times knocked down|" + me.deaths);
-			mine.add("Hearts destroyed|" + me.heartsDestroyed);
-			mine.add("Best streak|" + me.bestKillstreak);
-			mine.add("Goals done|" + me.goalsDone.size());
-			mine.add("Rubies in the bank|" + String.format(java.util.Locale.ROOT, "%,d", dev.rubymod.industry.Grid.milliRubies(player.getUUID()) / 1000));
-			SeasonData.Claim claim = data.claimOf(player.getUUID());
-			mine.add("Your Heart|" + (claim == null ? "Never placed" : "Tier " + claim.tier + (claim.destroyed ? " (destroyed)" : " (standing)")));
-		}
-		Net.send(player, new dev.rubymod.net.MorePayloads.SeasonRecap("Season " + data.season + " is over!", data.winner, awards, mine));
-		return null;
+		return awards;
 	}
 
 	private static void award(List<String> out, String title, SeasonData data, java.util.function.ToIntFunction<SeasonData.PlayerRecord> score,

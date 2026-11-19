@@ -187,7 +187,11 @@ Defense, Support). Upgrades come from doing things, never from how long you play
 
 **Duels:** `/duel guns|vehicles|planes <player>` (or `/duel guns bot`) starts a 1v1 in its own
 arena to try weapons without touching the season. Press **I** for your profile: stats from
-every mode and cosmetic hats, trails and effects you earn by playing.
+every mode and cosmetics you earn by playing: armor looks, trails, kill effects, truck paint,
+**Ruby Heart looks** (Frosted, Emerald, Lava, Crystal, Shadow, Golden) and **victory fireworks**
+that go up when you win a duel or a party game (and a big show over the hub for a season win).
+Every Ruby Wars season you play adds a gold **veteran star** after your name, and each season's
+champion gets a **statue** in the Hall of Champions.
 
 ---
 

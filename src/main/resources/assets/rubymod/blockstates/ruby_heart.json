@@ -1,7 +1,25 @@
 {
 	"variants": {
-		"": {
+		"look=ruby": {
 			"model": "rubymod:block/ruby_heart"
+		},
+		"look=frost": {
+			"model": "rubymod:block/ruby_heart_frost"
+		},
+		"look=emerald": {
+			"model": "rubymod:block/ruby_heart_emerald"
+		},
+		"look=lava": {
+			"model": "rubymod:block/ruby_heart_lava"
+		},
+		"look=crystal": {
+			"model": "rubymod:block/ruby_heart_crystal"
+		},
+		"look=gold": {
+			"model": "rubymod:block/ruby_heart_gold"
+		},
+		"look=shadow": {
+			"model": "rubymod:block/ruby_heart_shadow"
 		}
 	}
 }
