@@ -1,0 +1,23 @@
+{
+	"parent": "rubymod:goals/root",
+	"criteria": {
+		"done": {
+			"trigger": "minecraft:impossible"
+		}
+	},
+	"display": {
+		"announce_to_chat": false,
+		"show_toast": false,
+		"frame": "task",
+		"icon": {
+			"id": "rubymod:trade_depot"
+		},
+		"title": "Build a Trade Depot",
+		"description": "+1 star to spend on upgrades"
+	},
+	"requirements": [
+		[
+			"done"
+		]
+	]
+}

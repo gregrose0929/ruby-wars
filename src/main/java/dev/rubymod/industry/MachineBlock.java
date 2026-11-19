@@ -39,6 +39,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  */
 public class MachineBlock extends BaseEntityBlock {
 	public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
+	/** Working right now: it glows a little, smokes or sparks, and hums. */
+	public static final net.minecraft.world.level.block.state.properties.BooleanProperty LIT =
+			net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT;
 
 	private final MachineKind kind;
 	private final VoxelShape shape;
@@ -47,7 +50,7 @@ public class MachineBlock extends BaseEntityBlock {
 		super(properties);
 		this.kind = kind;
 		this.shape = shape;
-		registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
+		registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(LIT, false));
 	}
 
 	public MachineKind kind() {
@@ -56,7 +59,7 @@ public class MachineBlock extends BaseEntityBlock {
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(FACING);
+		builder.add(FACING, LIT);
 	}
 
 	@Override
@@ -115,6 +118,58 @@ public class MachineBlock extends BaseEntityBlock {
 		}
 	}
 
+	/** Working: a little smoke, sparks or glints, by kind. */
+	@Override
+	public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
+		if (!state.getValue(LIT)) {
+			return;
+		}
+		double x = pos.getX() + 0.5;
+		double y = pos.getY() + 1.0;
+		double z = pos.getZ() + 0.5;
+		switch (kind) {
+			case RUBY_DRILL -> {
+				if (random.nextInt(3) == 0) {
+					level.addParticle(net.minecraft.core.particles.ParticleTypes.CRIT, x + random.nextGaussian() * 0.2, pos.getY() + 0.2, z + random.nextGaussian() * 0.2,
+							0, 0.05, 0);
+				}
+			}
+			case ORE_REFINERY, AMMO_FACTORY -> {
+				if (random.nextInt(4) == 0) {
+					level.addParticle(net.minecraft.core.particles.ParticleTypes.SMOKE, x + random.nextGaussian() * 0.15, y, z + random.nextGaussian() * 0.15, 0, 0.03, 0);
+				}
+				if (random.nextInt(8) == 0) {
+					level.addParticle(net.minecraft.core.particles.ParticleTypes.FLAME, x + random.nextGaussian() * 0.2, pos.getY() + 0.4, z + random.nextGaussian() * 0.2,
+							0, 0.01, 0);
+				}
+			}
+			case TRADE_DEPOT -> {
+				if (random.nextInt(4) == 0) {
+					level.addParticle(net.minecraft.core.particles.ParticleTypes.WAX_ON, x + random.nextGaussian() * 0.25, y, z + random.nextGaussian() * 0.25, 0, 0.05, 0);
+				}
+			}
+			case SOLAR_PANEL, BATTERY -> {
+				if (random.nextInt(12) == 0) {
+					level.addParticle(net.minecraft.core.particles.ParticleTypes.ELECTRIC_SPARK, x + random.nextGaussian() * 0.3, pos.getY() + 0.6,
+							z + random.nextGaussian() * 0.3, 0, 0.02, 0);
+				}
+			}
+			default -> {
+			}
+		}
+	}
+
+	/** A comparator next to a machine reads how full it is, like a chest. */
+	@Override
+	protected boolean hasAnalogOutputSignal(BlockState state) {
+		return true;
+	}
+
+	@Override
+	protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, net.minecraft.core.Direction direction) {
+		return net.minecraft.world.inventory.AbstractContainerMenu.getRedstoneSignalFromBlockEntity(level.getBlockEntity(pos));
+	}
+
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MachineBlockEntity be && player instanceof ServerPlayer sp) {
@@ -128,8 +183,8 @@ public class MachineBlock extends BaseEntityBlock {
 	}
 
 	/** A drill leaving the world frees one of its owner's drill slots. */
-	private void released(MachineBlockEntity be) {
-		if (kind == MachineKind.RUBY_DRILL) {
+	public static void released(MachineBlockEntity be) {
+		if (be.kind() == MachineKind.RUBY_DRILL) {
 			Grid.Account account = Grid.account(be.owner());
 			account.drills = Math.max(0, account.drills - 1);
 		}

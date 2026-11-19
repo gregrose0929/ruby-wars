@@ -174,7 +174,14 @@ public final class Cosmetics {
 				? "New " + kindName(fresh.get(0).kind()) + " unlocked: " + fresh.get(0).name()
 						+ (fresh.size() == 2 ? ", and " + fresh.get(1).name() : "") + "!"
 				: fresh.size() + " new things unlocked (" + fresh.get(0).name() + ", " + fresh.get(1).name() + " and more)!";
-		player.sendSystemMessage(Component.literal(what + " Press I to use " + (fresh.size() == 1 ? "it." : "them.")).withStyle(ChatFormatting.LIGHT_PURPLE));
+		if (fresh.size() <= 2) {
+			for (Cosmetic c : fresh) {
+				Alerts.toast(player, c.icon(), "New " + kindName(c.kind()) + "! (I)", c.name(), Alerts.PURPLE);
+			}
+		} else {
+			Alerts.toast(player, fresh.get(0).icon(), fresh.size() + " new cosmetics!", fresh.get(0).name() + ", " + fresh.get(1).name() + " and more (I)",
+					Alerts.PURPLE);
+		}
 		player.level().playSound(null, player.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 0.5F, 1.4F);
 	}
 

@@ -41,7 +41,7 @@ public final class DronePilots {
 		FLYING.put(p.getUUID(), drone);
 		Net.send(p, new MorePayloads.DroneView(drone.getId(), false));
 		level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.BEEHIVE_EXIT, SoundSource.PLAYERS, 1.0F, 1.8F);
-		p.sendSystemMessage(Component.literal("Scout Drone up! W A S D to fly, Space up, Shift down. Enemies it sees glow for your squad. Right-click to bring it home.")
+		p.sendSystemMessage(Component.literal("Scout Drone up! W A S D to fly, Space up, Shift down. Enemies it sees glow for you. Right-click to bring it home.")
 				.withStyle(ChatFormatting.AQUA));
 		return true;
 	}

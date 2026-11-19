@@ -43,15 +43,21 @@ public class GameHud implements HudElement {
 		}
 		drawPhaseBanner(g, font, w);
 		drawRespawnStatus(g, font, w);
-		drawHeart(g, font);
-		drawEconomy(g, font);
+		if (ClientSettings.heartPanel) {
+			drawHeart(g, font);
+		}
+		if (ClientSettings.bankPanel) {
+			drawEconomy(g, font);
+		}
 		drawGuide(g, font);
 		drawAmmo(g, font, player, w, h);
 		drawReload(g, w, h);
 		drawHitMarker(g, w, h);
 		drawDamageDirection(g, player, w, h);
 		drawRadar(g, font, w);
-		drawKillFeed(g, font, w);
+		if (ClientSettings.killFeed) {
+			drawKillFeed(g, font, w);
+		}
 		drawHitConfirm(g, font, w, h);
 		drawDeathCard(g, font, w, h);
 		var raid = ClientState.raid;
@@ -214,10 +220,17 @@ public class GameHud implements HudElement {
 				|| e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
 			return;
 		}
-		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY && ClientState.inRubyWarsWorld() ? 24 : 4;
+		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY && ClientState.inRubyWarsWorld() && ClientSettings.heartPanel ? 24 : 4;
 		panel(g, 4, y, 100, y + 30);
 		g.item(new ItemStack(dev.rubymod.registry.ModItems.RUBY), 7, y + 3);
-		g.text(font, String.format(java.util.Locale.ROOT, "%,d", e.bank()), 26, y + 7, 0xFFFF6A84, false);
+		// What you can spend: the bank, plus the rubies you're carrying (the Armory takes those first).
+		String bank = String.format(java.util.Locale.ROOT, "%,d", e.bank());
+		g.text(font, bank, 26, y + 7, 0xFFFF6A84, false);
+		var me = Minecraft.getInstance().player;
+		int carried = me == null ? 0 : me.getInventory().countItem(dev.rubymod.registry.ModItems.RUBY);
+		if (carried > 0) {
+			g.text(font, "+" + carried, 28 + font.width(bank), y + 7, 0xFFFFB0C0, false);
+		}
 		long cap = Math.max(1, e.capacity());
 		dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.BOLT, 7, y + 18);
 		dev.rubymod.client.ui.Ui.bar(g, 18, y + 20, 78, 5, (float) Math.min(1.0, e.charge() / (double) cap), 0xFFF5C542);
@@ -262,6 +275,9 @@ public class GameHud implements HudElement {
 	 * The guide's next step (see Guide), in a panel under the Heart and
 	 * bank panels, while building in the Ruby Wars world.
 	 */
+	private static int guideStep = -1;
+	private static long guideChangedAt;
+
 	private void drawGuide(GuiGraphicsExtractor g, Font font) {
 		Phase phase = ClientState.phase();
 		if (!ClientState.inRubyWarsWorld() || phase != Phase.LOBBY && phase != Phase.BUILD) {
@@ -271,13 +287,30 @@ public class GameHud implements HudElement {
 			return;
 		}
 		int step = ClientState.research == null ? -1 : Guide.current();
-		if (step < 0) {
+		if (step < 0 || "off".equals(ClientSettings.guide)) {
 			return;
 		}
-		int y = ClientState.hud != null && phase != Phase.LOBBY ? 24 : 4;
+		if (step != guideStep) {
+			guideStep = step;
+			guideChangedAt = System.currentTimeMillis();
+		}
+		int y = ClientState.hud != null && phase != Phase.LOBBY && ClientSettings.heartPanel ? 24 : 4;
 		var e = ClientState.economy;
-		if (!(e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY)) {
+		if (ClientSettings.bankPanel && !(e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0
+				&& e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY)) {
 			y += 34;
+		}
+		boolean open = "full".equals(ClientSettings.guide) || System.currentTimeMillis() - guideChangedAt < 15_000;
+		if (!open) {
+			// One line: the next step, and its count if it has one.
+			Guide.Step one = Guide.STEPS.get(step);
+			int[] p1 = Guide.progress(one);
+			String text = "Next: " + one.title() + (p1 != null && p1[1] > 1 ? "  " + p1[0] + "/" + p1[1] : "");
+			int tw = Math.min(g.guiWidth() - dev.rubymod.client.map.Minimap.SIZE - 20, font.width(text) + 16);
+			panel(g, 4, y, 4 + tw, y + 13);
+			g.fill(6, y + 2, 8, y + 11, GOLD);
+			g.text(font, font.plainSubstrByWidth(text, tw - 14), 12, y + 3, WHITE, false);
+			return;
 		}
 		Guide.Step s = step < 0 ? null : Guide.STEPS.get(step);
 		int[] progress = s == null ? null : Guide.progress(s);
@@ -538,7 +571,7 @@ public class GameHud implements HudElement {
 		return names[Math.floorMod(Math.round(bearing / 45.0F), 8)];
 	}
 
-	private static String formatTime(long seconds) {
+	public static String formatTime(long seconds) {
 		long d = seconds / 86400;
 		long hrs = (seconds % 86400) / 3600;
 		long m = (seconds % 3600) / 60;

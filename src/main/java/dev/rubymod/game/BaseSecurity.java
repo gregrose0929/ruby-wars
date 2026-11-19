@@ -92,7 +92,7 @@ public final class BaseSecurity {
 			return;
 		}
 		if (!claim.canUse(p.getUUID())) {
-			p.sendOverlayMessage(Component.literal("This Monitor is locked to its base's squad.").withStyle(ChatFormatting.RED));
+			p.sendOverlayMessage(Component.literal("This Monitor only works for its base's owner.").withStyle(ChatFormatting.RED));
 			return;
 		}
 		List<BlockPos> cameras = inClaim(level, claim, DefenseBlock.Kind.CAMERA, monitor);

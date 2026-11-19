@@ -66,13 +66,11 @@ public final class StarterBase {
 		place(level, player, heart.offset(0, 0, -3), ModBlocks.ARMORY, missed);
 		Grid.deposit(player.getUUID(), STARTING_RUBIES * 1000L);
 		level.playSound(null, heart, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 0.8F, 1.2F);
-		player.sendSystemMessage(Component.literal("Your starter base is ready, with " + STARTING_RUBIES + " rubies in the bank! The Solar Panels power "
-				+ "a Ruby Drill; a conveyor belt carries what it digs into the chest next to it. Put things in the Trade Depot to sell them "
-				+ "into your bank, and spend at the Armory (right-click it). Upgrade your Heart there too (the Your Heart tab) for a bigger base.")
-				.withStyle(ChatFormatting.GREEN));
+		// The details are in the Guide (J) and the Field Manual (Y): a toast is enough here.
+		Alerts.toast(player, "rubymod:ruby_drill", "Your starter base is ready", STARTING_RUBIES + " rubies in the bank to start", Alerts.GREEN);
+		Alerts.toast(player, "rubymod:armory", "Next: the Armory", "Right-click it to buy, and upgrade your Heart", Alerts.GOLD);
 		if (!missed.isEmpty()) {
-			player.sendSystemMessage(Component.literal("No room for your " + String.join(", ", missed) + ": it's in your inventory, place it yourself.")
-					.withStyle(ChatFormatting.YELLOW));
+			Alerts.toast(player, "minecraft:chest", "Some pieces didn't fit", String.join(", ", missed) + ": in your inventory", Alerts.GOLD);
 		}
 	}
 

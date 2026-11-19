@@ -114,13 +114,30 @@ public final class Goals {
 		SeasonData.markDirty();
 		ServerPlayer p = server == null ? null : server.getPlayerList().getPlayer(player);
 		if (p != null) {
+			advancement(p, id);
 			String stars = "★".repeat(goal.stars());
-			Alerts.title(p, "GOAL!", goal.title() + "  +" + stars, ChatFormatting.GOLD);
-			p.sendSystemMessage(Component.literal("Goal complete: " + goal.title() + "! +" + goal.stars() + " star" + (goal.stars() == 1 ? "" : "s")
-					+ " to spend on upgrades (press J).").withStyle(ChatFormatting.GOLD));
+			Alerts.toast(p, "minecraft:nether_star", "Goal done! +" + stars + " (J)", goal.title(), Alerts.GOLD);
 			p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.2F);
 		}
 		sync(server, player);
+	}
+
+	/** The goal's advancement (the advancements screen's Ruby Wars tab: see tools/goal_advancements.py). */
+	private static void advancement(ServerPlayer p, String id) {
+		var holder = p.level().getServer().getAdvancements().get(dev.rubymod.RubyMod.id("goals/" + id));
+		if (holder != null) {
+			p.getAdvancements().award(holder, "done");
+		}
+	}
+
+	/** Joining: every goal done this season shows as an advancement too. */
+	public static void syncAdvancements(ServerPlayer p) {
+		SeasonData.PlayerRecord r = record(p.getUUID());
+		if (r != null && r.goalsDone != null) {
+			for (String id : r.goalsDone) {
+				advancement(p, id);
+			}
+		}
 	}
 
 	private static void sync(MinecraftServer server, UUID player) {

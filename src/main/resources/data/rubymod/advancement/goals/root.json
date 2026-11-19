@@ -1,0 +1,22 @@
+{
+	"criteria": {
+		"joined": {
+			"trigger": "minecraft:tick"
+		}
+	},
+	"display": {
+		"announce_to_chat": false,
+		"show_toast": false,
+		"background": "minecraft:gui/advancements/backgrounds/nether",
+		"icon": {
+			"id": "rubymod:ruby"
+		},
+		"title": "Ruby Wars",
+		"description": "Goals that earn stars for upgrades (press J)"
+	},
+	"requirements": [
+		[
+			"joined"
+		]
+	]
+}

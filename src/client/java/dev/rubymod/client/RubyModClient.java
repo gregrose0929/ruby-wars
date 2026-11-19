@@ -34,6 +34,16 @@ public class RubyModClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		ClientSettings.load();
+		// Every Ruby Wars block says what it does when you hover it, in any inventory (the ".desc" lines in the language file).
+		net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> {
+			String key = stack.getItem().getDescriptionId() + ".desc";
+			if (key.startsWith("block.rubymod.") || key.startsWith("item.rubymod.")) {
+				if (net.minecraft.locale.Language.getInstance().has(key)) {
+					lines.add(Math.min(1, lines.size()), net.minecraft.network.chat.Component.translatable(key).withStyle(net.minecraft.ChatFormatting.GRAY));
+				}
+			}
+		});
 		dev.rubymod.client.model.GunModel.registerLayers();
 		dev.rubymod.client.mixin.SpecialModelRenderersAccessor.rubymod$idMapper().put(RubyMod.id("gun"),
 				dev.rubymod.client.gun.GunItemRenderer.Unbaked.MAP_CODEC);
@@ -56,7 +66,8 @@ public class RubyModClient implements ClientModInitializer {
 		KeyMapping researchKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.research", InputConstants.KEY_J, CATEGORY));
 		KeyMapping minimapKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.minimap", InputConstants.KEY_U, CATEGORY));
 		KeyMapping manualKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.manual", InputConstants.KEY_Y, CATEGORY));
-		KeyMapping squadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.squad", InputConstants.KEY_O, CATEGORY));
+		// The Ruby Wars menu: the map, guide, profile, manual, games and settings in one place (the squad screen's in there too).
+		KeyMapping menuKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.menu", InputConstants.KEY_M, CATEGORY));
 		KeyMapping modesKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.modes", InputConstants.KEY_H, CATEGORY));
 		KeyMapping profileKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.profile_menu", InputConstants.KEY_I, CATEGORY));
 		KeyMapping instrumentsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rubymod.instruments", InputConstants.KEY_F9, CATEGORY));
@@ -107,6 +118,7 @@ public class RubyModClient implements ClientModInitializer {
 			}
 			while (minimapKey.consumeClick()) {
 				dev.rubymod.client.map.Minimap.enabled = !dev.rubymod.client.map.Minimap.enabled;
+				ClientSettings.save();
 			}
 			while (manualKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {
@@ -140,13 +152,9 @@ public class RubyModClient implements ClientModInitializer {
 					client.gui.setScreen(new ModeScreen());
 				}
 			}
-			while (squadKey.consumeClick()) {
+			while (menuKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {
-					if (ClientState.hud != null && !ClientState.hud.squads()) {
-						client.player.sendOverlayMessage(net.minecraft.network.chat.Component.literal("Squads are off: everyone plays on their own."));
-						continue;
-					}
-					client.gui.setScreen(new SquadScreen());
+					client.gui.setScreen(new RubyMenuScreen());
 				}
 			}
 			while (autopilotKey.consumeClick()) {
@@ -316,6 +324,7 @@ public class RubyModClient implements ClientModInitializer {
 		});
 		HudElementRegistry.addLast(RubyMod.id("minimap"), new dev.rubymod.client.map.Minimap());
 		HudElementRegistry.addLast(RubyMod.id("look"), new dev.rubymod.client.map.LookPanel());
+		HudElementRegistry.addLast(RubyMod.id("travel_fade"), new TravelFade());
 		HudElementRegistry.addLast(RubyMod.id("pilot_hud"), new PilotHud());
 		HudElementRegistry.addLast(RubyMod.id("vehicle_hud"), new VehicleHud());
 		HudElementRegistry.addLast(RubyMod.id("launcher_seeker"), new LauncherSeeker());
@@ -328,6 +337,7 @@ public class RubyModClient implements ClientModInitializer {
 		dev.rubymod.client.BookScreen.register();
 		dev.rubymod.client.HostScreen.register();
 		dev.rubymod.client.SeasonRecapScreen.register();
+		RubyToast.register();
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.VeteranSync.TYPE,
 				(p, c) -> dev.rubymod.game.Veterans.receive(p.lines()));
 		// In a vehicle the vehicle HUD replaces the hotbar, hearts, hunger, armor, air and XP.

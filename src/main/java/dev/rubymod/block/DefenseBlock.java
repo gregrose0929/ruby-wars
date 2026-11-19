@@ -149,7 +149,7 @@ public class DefenseBlock extends BaseEntityBlock {
 				case CAMERA -> "Security Camera: watch it from a Monitor in this base.";
 				case MONITOR -> "Monitor";
 				case LASER -> "Laser Tripwire: armed. Enemies who cross the beam set off this base's alarms and turrets.";
-				case SEISMIC -> "Seismic Sensor: listening. Warns your squad when an enemy Tunnel Borer digs within 48 blocks.";
+				case SEISMIC -> "Seismic Sensor: listening. Warns you when an enemy Tunnel Borer digs within 48 blocks.";
 				case CLAYMORE -> "Claymore: armed on Battle Day. Fires at enemies in front of it.";
 				case FLAK -> "Flak Cannon: " + be.ammo + " shells. Fires bursting shells at enemy aircraft within 80 blocks. Load with Heavy Ammo.";
 				case SAM -> "SAM Site: " + be.charges + "/" + DefenseBlockEntity.MAX_CHARGES + " missiles. Shoots down enemy aircraft within 180 blocks. Reload with rubies.";

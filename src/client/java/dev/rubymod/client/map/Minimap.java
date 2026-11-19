@@ -24,7 +24,8 @@ import net.minecraft.util.Mth;
  * squadmates, and an arrow for you. North is up. Coordinates and heading below.
  */
 public class Minimap implements HudElement {
-	public static final int SIZE = 96;
+	/** 96, or 128 when the big minimap is chosen (Settings). */
+	public static int SIZE = 96;
 	/** Blocks across the map. */
 	private static final int SPAN = 128;
 	private static final Identifier TEXTURE = RubyMod.id("minimap");
@@ -42,6 +43,7 @@ public class Minimap implements HudElement {
 		if (!ClientState.inRubyWarsWorld() && !racing) {
 			return; // the map's only for Ruby Wars (and the Sky Race)
 		}
+		SIZE = dev.rubymod.client.ClientSettings.bigMinimap ? 128 : 96;
 		int w = g.guiWidth();
 		int x0 = w - SIZE - 4;
 		int y0 = 4;

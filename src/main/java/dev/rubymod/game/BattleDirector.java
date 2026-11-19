@@ -213,13 +213,13 @@ public final class BattleDirector {
 
 	public static void onJoin(ServerPlayer player) {
 		FreshStart.check(player);
+		Goals.syncAdvancements(player);
 		SeasonData data = SeasonData.get();
 		data.player(player.getUUID(), player.getName().getString());
 		if (data.phase != Phase.LOBBY) {
 			giveHeartIfNeeded(player);
 		}
 		Research.sync(player);
-		player.sendSystemMessage(Component.literal("Ruby Wars: press Y for the Field Manual.").withStyle(ChatFormatting.GRAY));
 		if (Rules.isEliminated(player.getUUID()) && data.phase.isBattle()) {
 			player.setGameMode(GameType.SPECTATOR);
 			player.sendSystemMessage(Component.literal("You've been eliminated this season. You can watch as a spectator.").withStyle(ChatFormatting.GRAY));

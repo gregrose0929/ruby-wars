@@ -1,0 +1,23 @@
+{
+	"parent": "rubymod:goals/root",
+	"criteria": {
+		"done": {
+			"trigger": "minecraft:impossible"
+		}
+	},
+	"display": {
+		"announce_to_chat": false,
+		"show_toast": false,
+		"frame": "goal",
+		"icon": {
+			"id": "rubymod:vault"
+		},
+		"title": "Bank 2,000 rubies",
+		"description": "+2 stars to spend on upgrades"
+	},
+	"requirements": [
+		[
+			"done"
+		]
+	]
+}

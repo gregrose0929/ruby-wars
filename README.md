@@ -215,6 +215,7 @@ champion gets a **statue** in the Hall of Champions.
 | Map | K (the minimap is top right; U hides it) |
 | Goals & upgrades | J |
 | Field Manual (in-game guide) | Y |
+| Ruby Wars menu (map, guide, profile, manual, games, settings) | M |
 | Game picker | H |
 | Profile | I |
 | How-to card for a game or vehicle | N (show / hide) |

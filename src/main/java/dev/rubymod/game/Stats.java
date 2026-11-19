@@ -226,7 +226,7 @@ public final class Stats {
 		ServerPlayer p = server == null ? null : server.getPlayerList().getPlayer(id);
 		if (p != null) {
 			if (after > before) {
-				Alerts.title(p, "LEVEL " + after + "!", "Press I for your profile", net.minecraft.ChatFormatting.AQUA);
+				Alerts.toast(p, "minecraft:experience_bottle", "Level " + after + "!", "Press I for your profile", Alerts.AQUA);
 				Alerts.jingle(p, dev.rubymod.registry.ModSounds.LEVEL_UP, 0.9F);
 			}
 		}

@@ -27,7 +27,7 @@ public class ReconDroneItem extends Item {
 			if (drone != null) {
 				server.addFreshEntity(drone);
 				server.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEEHIVE_EXIT, SoundSource.PLAYERS, 1.0F, 1.4F);
-				sp.sendOverlayMessage(Component.literal("Recon drone up: enemies within 56 blocks show on your squad's HUD for 90 s.")
+				sp.sendOverlayMessage(Component.literal("Recon drone up: enemies within 56 blocks show on your HUD for 90 s.")
 						.withStyle(ChatFormatting.AQUA));
 				player.getItemInHand(hand).consume(1, player);
 			}

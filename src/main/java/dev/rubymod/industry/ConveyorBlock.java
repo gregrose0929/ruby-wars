@@ -63,6 +63,11 @@ public class ConveyorBlock extends Block {
 		carry(level, pos, state, entity);
 	}
 
+	/** How fast this belt lifts what's on it (a Belt Ramp carries things up a level). */
+	protected double lift(BlockPos pos, Entity entity) {
+		return Double.NEGATIVE_INFINITY;
+	}
+
 	/** Which way this belt sends this entity (a Belt Sorter turns some items off to the side). */
 	protected Direction route(Level level, BlockPos pos, BlockState state, Entity entity) {
 		return state.getValue(FACING);
@@ -81,7 +86,7 @@ public class ConveyorBlock extends Block {
 		double across = facing.getAxis() == Direction.Axis.Z ? pos.getX() + 0.5 - entity.getX() : pos.getZ() + 0.5 - entity.getZ();
 		double ax = facing.getAxis() == Direction.Axis.Z ? across * 0.2 : 0;
 		double az = facing.getAxis() == Direction.Axis.X ? across * 0.2 : 0;
-		entity.setDeltaMovement(dir.x * speed + ax, v.y, dir.z * speed + az);
+		entity.setDeltaMovement(dir.x * speed + ax, Math.max(v.y, lift(pos, entity)), dir.z * speed + az);
 		if (!(entity instanceof ItemEntity itemEntity) || level.isClientSide()) {
 			return;
 		}

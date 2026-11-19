@@ -55,7 +55,7 @@ public final class Research {
 		node("railgun", "Railgun", "Defense", 5, "shields", "railgun", "The Railgun Emplacement", "railgun");
 		// Engineering & support
 		node("logistics", "Logistics", "Support", 2, null, "conveyor", "Conveyors, Belt Loaders and Sorters, Constructor and Elevators", "conveyor", "belt_loader",
-				"belt_sorter", "constructor", "elevator");
+				"belt_sorter", "belt_ramp", "constructor", "elevator");
 		node("guards", "Hired Guards", "Support", 3, null, "guard_contract", "Guard Contracts (riflemen and AT gunners)",
 				"guard_contract", "at_guard_contract");
 		node("recon", "Recon", "Support", 2, null, "recon_drone", "Recon and Scout Drones, and the Mortar", "recon_drone", "scout_drone", "mortar", "mortar_shell");
@@ -131,8 +131,7 @@ public final class Research {
 		r.research.add(id);
 		SeasonData.markDirty();
 		player.level().playSound(null, player.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 1.0F, 1.2F);
-		player.sendSystemMessage(Component.literal("Researched " + node.title() + ": " + node.description() + " now in the Armory.")
-				.withStyle(ChatFormatting.AQUA));
+		Alerts.toast(player, "minecraft:enchanted_book", "Unlocked: " + node.title(), "New in the Armory: " + node.description(), Alerts.AQUA);
 		Squads.Squad squad = Squads.of(player.getUUID());
 		if (squad != null && GameConfig.get().squadsShareResearch) {
 			Squads.tell(player.level().getServer(), squad, player.getName().getString() + " researched " + node.title() + " for the squad.");

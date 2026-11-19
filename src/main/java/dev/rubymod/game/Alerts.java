@@ -48,6 +48,21 @@ public final class Alerts {
 				Component.literal(title).withStyle(color, ChatFormatting.BOLD)));
 	}
 
+	/** Toast colours. */
+	public static final int GOLD = 0xF5C542, GREEN = 0x5BE37D, RUBY = 0xE0294A, AQUA = 0x5FC8E8, PURPLE = 0xC27BFF;
+
+	/**
+	 * A toast in the top corner instead of a line of chat: an item icon ("rubymod:ruby"), a short title and a line
+	 * under it. Players without the mod's client get it as chat.
+	 */
+	public static void toast(ServerPlayer player, String icon, String title, String body, int color) {
+		if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(player, dev.rubymod.net.MorePayloads.Note.TYPE)) {
+			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(player, new dev.rubymod.net.MorePayloads.Note(icon, title, body, color));
+			return;
+		}
+		player.sendSystemMessage(Component.literal(title + (body.isEmpty() ? "" : ": " + body)).withStyle(style -> style.withColor(color)));
+	}
+
 	/** A jingle only this player hears (so a crowd standing together doesn't get it once each). */
 	public static void jingle(ServerPlayer player, net.minecraft.sounds.SoundEvent sound, float volume) {
 		player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(net.minecraft.core.Holder.direct(sound), SoundSource.PLAYERS,

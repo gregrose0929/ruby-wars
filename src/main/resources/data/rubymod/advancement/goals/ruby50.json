@@ -1,0 +1,23 @@
+{
+	"parent": "rubymod:goals/root",
+	"criteria": {
+		"done": {
+			"trigger": "minecraft:impossible"
+		}
+	},
+	"display": {
+		"announce_to_chat": false,
+		"show_toast": false,
+		"frame": "goal",
+		"icon": {
+			"id": "rubymod:ruby_block"
+		},
+		"title": "Mine 50 Ruby Ore",
+		"description": "+2 stars to spend on upgrades"
+	},
+	"requirements": [
+		[
+			"done"
+		]
+	]
+}

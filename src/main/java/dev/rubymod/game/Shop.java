@@ -189,6 +189,8 @@ public final class Shop {
 			item(ModBlocks.CONVEYOR, 16, 2);
 			item(ModBlocks.BELT_LOADER, 1, 3);
 			item(ModBlocks.BELT_SORTER, 1, 3);
+			item(ModBlocks.BELT_RAMP, 4, 2);
+			item(ModItems.RUBY_WRENCH, 1, 4);
 			item(ModBlocks.ELEVATOR, 2, 2);
 
 			cat("Building");
@@ -279,13 +281,6 @@ public final class Shop {
 			return stack;
 		}, id(gun), null, section));
 	}
-
-	/** A line about the plain blocks that don't explain themselves (the Armory shows it). */
-	private static final java.util.Map<String, String> ABOUT = java.util.Map.of(
-			"rubymod:conveyor", "Carries items the way its yellow arrows point, into whatever's at the end: a chest, a furnace, a machine, the Trade Depot.",
-			"rubymod:belt_loader", "Takes things out of the chest, furnace or machine behind it and onto the belt in front. Right-click it with an item to take only that.",
-			"rubymod:belt_sorter", "A belt piece that turns one kind of item off to the side. Right-click it with an item to choose; empty hand swaps sides.",
-			"rubymod:elevator", "Stand on it and jump to go up to the next one, crouch to go down.");
 
 	private static void item(ItemLike item, int count, int price) {
 		entries.add(new Entry(page, nextSlot++, price, () -> new ItemStack(item, count), id(item.asItem()), null, section));
@@ -381,10 +376,7 @@ public final class Shop {
 				if (entry.action() != null) {
 					heartLore(lore, player);
 				}
-				String about = ABOUT.get(entry.name());
-				if (about != null) {
-					lore.add(Component.literal(about).withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
-				}
+				// (What plain blocks do comes from their ".desc" line in the language file, on every tooltip: see ItemDescriptions.)
 				lore.add(Component.literal("Cost: " + price + " rubies").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.RED)));
 				lore.add(Component.literal("Click to buy").withStyle(style -> style.withItalic(false).withColor(ChatFormatting.GRAY)));
 			}

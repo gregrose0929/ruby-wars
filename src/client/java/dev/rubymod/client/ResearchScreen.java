@@ -284,7 +284,7 @@ public class ResearchScreen extends Screen {
 				Ui.bar(g, x + 16, y + 11, colW - 26 - starW, 3, Math.min(1.0F, progress / (float) target), Ui.GOLD);
 			}
 		}
-		g.centeredText(font, "Each goal counts once. Squadmates share unlocks.", width / 2, end - 13, Ui.MUTED);
+		g.centeredText(font, "Each goal counts once a season.", width / 2, end - 13, Ui.MUTED);
 	}
 
 	@Override

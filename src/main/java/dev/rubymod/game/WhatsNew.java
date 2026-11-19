@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-19-models";
+	private static final String VERSION = "2026-11-19-polish";
 	private static final List<String> LINES = List.of(
-			"rubymod:tunnel_borer|New models: the Tunnel Borer, Dirt Bike, Quad and all three boats are built like the tank now, with moving drills, wheels and ramps.",
-			"rubymod:flamethrower|The flamethrower, grappling hook, night goggles, keycard and fire bomb got real 3D models, and the security blocks their own looks.",
-			"rubymod:belt_loader|Belt Loaders and Sorters sort chests onto belts, belts feed furnaces, and the Trade Depot shows a bar to your next ruby.");
+			"minecraft:compass|Press M for the new Ruby Wars menu: map, guide, profile, manual, games and Settings (choose what your HUD shows).",
+			"minecraft:nether_star|Goals, unlocks and news now pop up as toasts in the corner instead of filling chat. Goals show in the advancements screen too.",
+			"rubymod:ruby_wrench|Machines glow and hum while they work; the Ruby Wrench turns and picks them up; Belt Ramps carry things up a level.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

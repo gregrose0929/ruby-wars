@@ -152,6 +152,9 @@ public class ModBlocks {
 	/** A belt piece that turns one kind of item off to the side. */
 	public static final Block BELT_SORTER = register("belt_sorter", dev.rubymod.industry.BeltSorterBlock::new,
 			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
+	/** A belt that climbs a block. */
+	public static final Block BELT_RAMP = register("belt_ramp", dev.rubymod.industry.BeltRampBlock::new,
+			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
 	/** A bright base light. */
 	public static final Block FLOODLIGHT = register("floodlight", p -> new dev.rubymod.block.ShapedBlock(Block.box(3, 0, 3, 13, 14, 13), p),
 			props().mapColor(MapColor.METAL).strength(2.0F, 4.0F).sound(SoundType.METAL).noOcclusion().lightLevel(s -> 15));
@@ -188,7 +191,8 @@ public class ModBlocks {
 		float strength = kind == dev.rubymod.industry.MachineKind.VAULT ? 25.0F : 5.0F;
 		Block block = register(name, p -> new dev.rubymod.industry.MachineBlock(kind, shape, p),
 				props().mapColor(MapColor.METAL).strength(strength, 8.0F).sound(SoundType.METAL).noOcclusion().noLootTable()
-						.requiresCorrectToolForDrops(), dev.rubymod.industry.MachineItem::new);
+						.requiresCorrectToolForDrops().lightLevel(s -> s.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT) ? 6 : 0),
+				dev.rubymod.industry.MachineItem::new);
 		MACHINES.add(block);
 		return block;
 	}

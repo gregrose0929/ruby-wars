@@ -84,8 +84,8 @@ public final class Claims {
 		SeasonData.markDirty();
 		level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.0F, 1.2F);
 		Cosmetics.restyleHeart(player);
-		player.sendSystemMessage(Component.literal("Ruby Heart placed! You've claimed " + (claim.radius() * 2 + 1) + "x" + (claim.radius() * 2 + 1)
-				+ " blocks around it. Only you (and players you /rubywars trust) can build here.").withStyle(ChatFormatting.GREEN));
+		Alerts.toast(player, "rubymod:ruby_heart", "Ruby Heart placed", "Your land: " + (claim.radius() * 2 + 1) + "x" + (claim.radius() * 2 + 1)
+				+ " blocks, just yours", Alerts.GREEN);
 		StarterBase.maybeBuild(level, player, pos);
 	}
 
@@ -104,8 +104,7 @@ public final class Claims {
 		keep.trusted = claim.trusted;
 		keep.destroyed = true;
 		data.claims.put(claim.owner, keep);
-		owner.sendSystemMessage(Component.literal("You picked up your Ruby Heart. Your land is unclaimed until you place it again.")
-				.withStyle(ChatFormatting.YELLOW));
+		Alerts.toast(owner, "rubymod:ruby_heart", "Ruby Heart picked up", "Your land is open until you place it again", Alerts.GOLD);
 	}
 
 	public static void damageHeart(ServerLevel level, SeasonData.Claim claim, int damage, ServerPlayer attacker) {

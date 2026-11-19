@@ -287,7 +287,8 @@ public final class Hub {
 		} else if (from == Where.PARTY) {
 			current.leave(player);
 		}
-		// ... and arrive.
+		// ... and arrive, behind a quick fade (so the jump isn't a sudden pop).
+		dev.rubymod.net.Net.send(player, new dev.rubymod.net.MorePayloads.ScreenFx("travel", 0, 0));
 		switch (to) {
 			case RUBY_WARS -> enterRubyWars(player);
 			case HORDE -> Horde.join(player, challenge);

@@ -491,6 +491,27 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 		// The detail panel replaces item tooltips.
 	}
 
+	// ----- Keys: number keys pick a tab (0 is the tenth), Enter buys what's chosen -----
+
+	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+		int k = event.key();
+		int tabs = dev.rubymod.game.Shop.pageCount();
+		if (k >= 48 && k <= 57) {
+			int tab = k == 48 ? 9 : k - 49;
+			if (tab < tabs && tab != menu.page()) {
+				send(100 + tab);
+				Ui.click();
+			}
+			return true;
+		}
+		if ((k == 257 || k == 335) && selected >= 0 && !locked(menu.display(selected))) {
+			send(1000 + selected);
+			return true;
+		}
+		return super.keyPressed(event);
+	}
+
 	// ----- Clicking -----
 
 	private void send(int button) {

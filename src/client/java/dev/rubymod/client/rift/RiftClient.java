@@ -161,6 +161,10 @@ public final class RiftClient {
 		});
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.ScreenFx.TYPE, (p, c) -> {
 			Minecraft mc = Minecraft.getInstance();
+			if (p.kind().equals("travel")) {
+				dev.rubymod.client.TravelFade.start();
+				return;
+			}
 			if (p.kind().startsWith("music:")) {
 				RiftMusic.set(p.kind().substring(6));
 				return;

@@ -185,6 +185,36 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (kind.outputs > 0 && ticks % 10 == 0) {
 			pushOutputs(level);
 		}
+		showWorking(level);
+	}
+
+	/** When it last worked; it shows as working for a couple of seconds after (so it doesn't flicker between jobs). */
+	private long workedAt = -1000;
+
+	/** Lit (glowing, with particles) while working, and a quiet working sound now and then. */
+	private void showWorking(ServerLevel level) {
+		long now = level.getGameTime();
+		if (status == WORKING) {
+			workedAt = now;
+		}
+		boolean working = now - workedAt < 40 && kind() != MachineKind.BATTERY;
+		BlockState state = getBlockState();
+		if (state.hasProperty(MachineBlock.LIT) && state.getValue(MachineBlock.LIT) != working) {
+			level.setBlock(worldPosition, state.setValue(MachineBlock.LIT, working), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+		}
+		if (working && now % 60 == Math.floorMod(worldPosition.asLong(), 60)) {
+			net.minecraft.sounds.SoundEvent hum = switch (kind()) {
+				case RUBY_DRILL -> SoundEvents.GRINDSTONE_USE;
+				case ORE_REFINERY -> SoundEvents.BLASTFURNACE_FIRE_CRACKLE;
+				case AMMO_FACTORY -> SoundEvents.SMITHING_TABLE_USE;
+				case COMBUSTION_GENERATOR -> SoundEvents.FURNACE_FIRE_CRACKLE;
+				case CONSTRUCTOR -> SoundEvents.SCAFFOLDING_PLACE;
+				default -> null;
+			};
+			if (hum != null) {
+				level.playSound(null, worldPosition, hum, SoundSource.BLOCKS, 0.18F, 0.9F + level.getRandom().nextFloat() * 0.2F);
+			}
+		}
 	}
 
 	/** Back after being unloaded: a drill digs what it would have (at half speed, up to a day, until full). */
@@ -201,7 +231,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			made++;
 		}
 		if (made > 0 && level.getServer().getPlayerList().getPlayer(owner) instanceof ServerPlayer player) {
-			player.sendSystemMessage(Component.literal("Your Ruby Drill dug up " + made + " loads while you were away."));
+			dev.rubymod.game.Alerts.toast(player, "rubymod:ruby_drill", "While you were away", "Your Ruby Drill dug up " + made + " loads", dev.rubymod.game.Alerts.GREEN);
 		}
 	}
 
@@ -380,8 +410,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			if (interest > 0) {
 				Grid.deposit(owner, interest * 1000);
 				if (level.getServer().getPlayerList().getPlayer(owner) instanceof ServerPlayer player) {
-					player.sendSystemMessage(Component.literal("Vault interest: +" + interest + " rubies (bank: " + Grid.rubies(owner) + ")")
-							.withStyle(net.minecraft.ChatFormatting.GOLD));
+					dev.rubymod.game.Alerts.toast(player, "rubymod:vault", "Vault interest: +" + interest + " rubies",
+							String.format(java.util.Locale.ROOT, "Bank: %,d rubies", Grid.rubies(owner)), dev.rubymod.game.Alerts.GOLD);
 				}
 			}
 		}

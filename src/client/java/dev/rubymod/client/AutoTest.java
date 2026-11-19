@@ -4594,6 +4594,7 @@ public final class AutoTest {
 			case "veterans" -> veteransScript();
 			case "goldline" -> goldLineScript();
 			case "showroom" -> showroomScript();
+			case "smooth" -> polishScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9771,6 +9772,71 @@ public final class AutoTest {
 			me(server).teleportTo(hub, -3.5, dev.rubymod.game.Hub.FLOOR + 1, 5.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 145, 5, true);
 		}));
 		then(260, mc -> shot(mc, "vet-hall"));
+	}
+
+	/** Toasts, the compact guide, the Ruby Wars menu, Settings, Admin, machines at work, a belt ramp, the trip fade, goal advancements. */
+	private static void polishScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "time set 1000");
+		});
+		then(60, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			int x = p.getBlockX();
+			int z = p.getBlockZ() + 5;
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			heartAt = new net.minecraft.core.BlockPos(x, y, z);
+			level.setBlockAndUpdate(heartAt, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heartAt);
+			p.teleportTo(level, x + 0.5, y, z - 4.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true);
+		}));
+		then(30, mc -> shot(mc, "polish-toasts"));
+		then(400, mc -> shot(mc, "polish-guide-compact"));
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.Alerts.toast(me(server), "minecraft:nether_star", "Goal done! +★", "Build a Ruby Drill (spend stars: J)", dev.rubymod.game.Alerts.GOLD);
+			dev.rubymod.game.Alerts.toast(me(server), "rubymod:ruby_heart", "New Ruby Heart look!", "Frosted Heart (press I to use it)", dev.rubymod.game.Alerts.PURPLE);
+		}));
+		then(40, mc -> shot(mc, "polish-toast"));
+		then(5, mc -> onServer(mc, server -> {
+			var level = server.overworld();
+			var drill = level.getBlockState(heartAt.offset(0, 0, 3));
+			var holder = server.getAdvancements().get(dev.rubymod.RubyMod.id("goals/heart"));
+			log("polish: drill {} lit {}; heart goal advancement done {}", drill.getBlock().getName().getString(),
+					drill.hasProperty(dev.rubymod.industry.MachineBlock.LIT) && drill.getValue(dev.rubymod.industry.MachineBlock.LIT),
+					holder != null && me(server).getAdvancements().getOrStartProgress(holder).isDone());
+			// A belt, a ramp up, and a belt at the top, with a cobblestone dropped on the first.
+			var b0 = heartAt.offset(-6, 0, 0);
+			var east = net.minecraft.core.Direction.EAST;
+			level.setBlockAndUpdate(b0, dev.rubymod.registry.ModBlocks.CONVEYOR.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, east));
+			level.setBlockAndUpdate(b0.east(), dev.rubymod.registry.ModBlocks.BELT_RAMP.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, east));
+			level.setBlockAndUpdate(b0.east(2).above(), dev.rubymod.registry.ModBlocks.CONVEYOR.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, east));
+			level.setBlockAndUpdate(b0.east(2), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+			level.setBlockAndUpdate(b0.east(3).above(), net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+			var drop = new net.minecraft.world.entity.item.ItemEntity(level, b0.getX() + 0.5, b0.getY() + 0.3, b0.getZ() + 0.5,
+					new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 3));
+			drop.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+			level.addFreshEntity(drop);
+		}));
+		then(200, mc -> onServer(mc, server -> {
+			var chest = (net.minecraft.world.Container) server.overworld().getBlockEntity(heartAt.offset(-3, 1, 0));
+			log("polish: up the belt ramp into the chest at the top: {}", chest == null ? "no chest" : chest.getItem(0));
+		}));
+		then(5, mc -> mc.gui.setScreen(new RubyMenuScreen()));
+		then(20, mc -> shot(mc, "polish-menu"));
+		then(5, mc -> mc.gui.setScreen(new SettingsScreen()));
+		then(20, mc -> shot(mc, "polish-settings"));
+		then(5, mc -> mc.gui.setScreen(new AdminScreen()));
+		then(20, mc -> shot(mc, "polish-admin"));
+		then(5, mc -> mc.gui.setScreen(null));
+		then(5, mc -> onServer(mc, server -> log("polish: to the hub: {}", dev.rubymod.game.Hub.go(me(server), "hub"))));
+		then(6, mc -> shot(mc, "polish-fade"));
+		then(60, mc -> shot(mc, "polish-hub"));
 	}
 
 	/** Every vehicle model side by side (the tank for comparison), boats on a pool, then the Armory's vehicle icons. */

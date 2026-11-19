@@ -5,6 +5,7 @@
 	"client": [
 		"AbstractClientPlayerMixin",
 		"AvatarRendererMixin",
+		"BeltItemMixin",
 		"HudMixin",
 		"MinecraftMixin",
 		"CameraMixin",

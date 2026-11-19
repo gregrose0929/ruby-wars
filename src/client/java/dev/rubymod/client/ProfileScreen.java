@@ -162,6 +162,18 @@ public class ProfileScreen extends Screen {
 		}
 	}
 
+	/** Number keys pick a cosmetics tab. */
+	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+		int k = event.key();
+		if (k >= 49 && k < 49 + KINDS.length) {
+			kindTab = k - 49;
+			dev.rubymod.client.ui.Ui.click();
+			return true;
+		}
+		return super.keyPressed(event);
+	}
+
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
 		for (int t = 0; t < tabs.size(); t++) {

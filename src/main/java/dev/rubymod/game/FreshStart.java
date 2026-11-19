@@ -147,7 +147,6 @@ public final class FreshStart {
 		int top = overworld.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spawn.getX(), spawn.getZ());
 		player.teleportTo(overworld, spawn.getX() + 0.5, Math.max(spawn.getY(), top) + 0.1, spawn.getZ() + 0.5, Set.<Relative>of(), 0, 0, true);
 		player.inventoryMenu.broadcastChanges();
-		player.sendSystemMessage(Component.literal("Season " + data.season + ": a fresh start! Everyone begins again with nothing, on a fresh island.")
-				.withStyle(ChatFormatting.GOLD));
+		Alerts.toast(player, "minecraft:grass_block", "Season " + data.season + ": a fresh start", "Everyone begins again, on a fresh island", Alerts.GOLD);
 	}
 }

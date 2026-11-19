@@ -162,6 +162,14 @@ public final class Ui {
 	}
 
 	/** The RUBY WARS logo, {@code scale} times its pixel size (it's 110 x 24), centred on x. */
+	/** The button click every Ruby Wars screen makes. */
+	public static void click() {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (mc.player != null) {
+			mc.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.4F, 1.0F);
+		}
+	}
+
 	public static void logo(GuiGraphicsExtractor g, int cx, int y, int scale) {
 		g.blitSprite(RenderPipelines.GUI_TEXTURED, sprite("logo"), cx - 55 * scale, y, 110 * scale, 24 * scale);
 	}

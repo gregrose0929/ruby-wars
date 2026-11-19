@@ -75,6 +75,14 @@ public final class HelpPrefs {
 		return false;
 	}
 
+	/** Every how-to card shows again the next time (Settings). */
+	public static void reset() {
+		load();
+		SEEN.clear();
+		SHOWN.clear();
+		save();
+	}
+
 	/** Is this mode's help turned on (without counting a first look)? */
 	public static boolean on(String key) {
 		load();

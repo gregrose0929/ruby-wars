@@ -186,6 +186,22 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: a toast in the corner (an item icon, a title, a line under it, the accent colour). */
+	public record Note(String icon, String title, String body, int color) implements CustomPacketPayload {
+		public static final Type<Note> TYPE = new Type<>(RubyMod.id("note"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Note> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, Note::icon,
+				ByteBufCodecs.STRING_UTF8, Note::title,
+				ByteBufCodecs.STRING_UTF8, Note::body,
+				ByteBufCodecs.INT, Note::color,
+				Note::new);
+
+		@Override
+		public Type<Note> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: a big announcement and the line under it, drawn to fit the screen (see BigTitle). */
 	public record Title(String title, String subtitle, int color) implements CustomPacketPayload {
 		public static final Type<Title> TYPE = new Type<>(RubyMod.id("title"));
@@ -697,6 +713,7 @@ public final class MorePayloads {
 	}
 
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(Note.TYPE, Note.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(VeteranSync.TYPE, VeteranSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SeasonRecap.TYPE, SeasonRecap.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TravelAsk.TYPE, TravelAsk.CODEC);
