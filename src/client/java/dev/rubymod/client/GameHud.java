@@ -42,6 +42,7 @@ public class GameHud implements HudElement {
 			return;
 		}
 		drawPhaseBanner(g, font, w);
+		drawRespawnStatus(g, font, w);
 		drawHeart(g, font);
 		drawEconomy(g, font);
 		drawGuide(g, font);
@@ -72,7 +73,12 @@ public class GameHud implements HudElement {
 
 		// Only in the Ruby Wars world, during the battle, while watching: not in the hub or another game, and not after the season.
 		if (ClientState.hud != null && ClientState.hud.eliminated() && ClientState.inRubyWarsWorld() && ClientState.phase().isBattle() && player.isSpectator()) {
-			g.centeredText(font, Component.literal("ELIMINATED - spectating"), w / 2, h - 60, RED);
+			String a = "KNOCKED OUT - watching the battle";
+			String b = "Click: next player   Right-click: back   Crouch: fly free   H: party games in the hub";
+			int tw = Math.max(font.width(a), font.width(b)) + 12;
+			panel(g, w / 2 - tw / 2, h - 86, w / 2 + tw / 2, h - 60);
+			g.centeredText(font, Component.literal(a), w / 2, h - 83, RED);
+			g.centeredText(font, Component.literal(b), w / 2, h - 71, 0xFFCCCCCC);
 		}
 	}
 
@@ -148,6 +154,41 @@ public class GameHud implements HudElement {
 		int color = phase.pvp() ? RED : phase.isBattle() ? GOLD : WHITE;
 		panel(g, w / 2 - width / 2, 2, w / 2 + width / 2, 15);
 		g.centeredText(font, s, w / 2, 5, color);
+	}
+
+	/** Under the phase banner on Battle Day: whether dying sends you back to a Heart, or knocks you out. */
+	private void drawRespawnStatus(GuiGraphicsExtractor g, Font font, int w) {
+		var hud = ClientState.hud;
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (hud == null || !ClientState.inRubyWarsWorld() || mc.level != null && mc.level.dimension() == dev.rubymod.game.Duels.ARENA) {
+			return;
+		}
+		String text;
+		int color;
+		switch (hud.respawn()) {
+			case dev.rubymod.net.Payloads.HudSync.RESPAWN_HEART -> {
+				text = "Respawns: on (your Heart)";
+				color = 0xFF5BD27A;
+			}
+			case dev.rubymod.net.Payloads.HudSync.RESPAWN_MATE -> {
+				text = "Respawns: on (squadmate's Heart)";
+				color = 0xFF5BD27A;
+			}
+			case dev.rubymod.net.Payloads.HudSync.LAST_LIFE -> {
+				text = "LAST LIFE: your Heart is gone";
+				color = RED;
+			}
+			case dev.rubymod.net.Payloads.HudSync.NO_RESPAWNS -> {
+				text = "No respawns: dying knocks you out";
+				color = RED;
+			}
+			default -> {
+				return;
+			}
+		}
+		int width = font.width(text) + 10;
+		panel(g, w / 2 - width / 2, 17, w / 2 + width / 2, 29);
+		g.centeredText(font, text, w / 2, 19, color);
 	}
 
 	private void drawHeart(GuiGraphicsExtractor g, Font font) {

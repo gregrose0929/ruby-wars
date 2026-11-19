@@ -665,7 +665,26 @@ public final class MorePayloads {
 		}
 	}
 
+	/**
+	 * Server -> client: the season wrap-up card. awards: "title|who|detail|item id" each; mine: "label|value" each.
+	 */
+	public record SeasonRecap(String title, String winner, List<String> awards, List<String> mine) implements CustomPacketPayload {
+		public static final Type<SeasonRecap> TYPE = new Type<>(RubyMod.id("season_recap"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, SeasonRecap> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, SeasonRecap::title,
+				ByteBufCodecs.STRING_UTF8, SeasonRecap::winner,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SeasonRecap::awards,
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), SeasonRecap::mine,
+				SeasonRecap::new);
+
+		@Override
+		public Type<SeasonRecap> type() {
+			return TYPE;
+		}
+	}
+
 	public static void register() {
+		PayloadTypeRegistry.clientboundPlay().register(SeasonRecap.TYPE, SeasonRecap.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TravelAsk.TYPE, TravelAsk.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(PhotoAsk.TYPE, PhotoAsk.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BookScreen.TYPE, BookScreen.CODEC);

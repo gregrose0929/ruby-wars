@@ -676,6 +676,11 @@ public final class SelfTest {
 		// ----- Squads, research, graves, guards, raids, waypoints -----
 		data.player(bravo.getUUID(), "TestBravo").eliminated = false;
 		claim.trusted.remove(bravo.getUUID().toString());
+		boolean squadsWere = dev.rubymod.game.GameConfig.get().squadsEnabled;
+		dev.rubymod.game.GameConfig.get().squadsEnabled = false;
+		check("squads: off means everyone plays solo", dev.rubymod.game.Squads.create(alpha, "Test Squad") != null
+				&& dev.rubymod.game.Squads.of(alpha.getUUID()) == null);
+		dev.rubymod.game.GameConfig.get().squadsEnabled = true;
 		check("squads: make a squad", dev.rubymod.game.Squads.create(alpha, "Test Squad") == null);
 		dev.rubymod.game.Squads.invite(alpha, bravo);
 		check("squads: an invited player can join", dev.rubymod.game.Squads.join(bravo, "Test Squad") == null);
@@ -725,6 +730,7 @@ public final class SelfTest {
 		dev.rubymod.game.Squads.leave(bravo);
 		dev.rubymod.game.Squads.leave(alpha);
 		check("squads: leaving the last member disbands the squad", data.squads.isEmpty());
+		dev.rubymod.game.GameConfig.get().squadsEnabled = squadsWere;
 		check("combat: a PvP hit tags both players on Battle Day", runAs(Phase.WAR, () -> {
 			dev.rubymod.game.CombatTag.tag(alpha, bravo);
 			return dev.rubymod.game.CombatTag.tagged(alpha.getUUID()) && dev.rubymod.game.CombatTag.tagged(bravo.getUUID());

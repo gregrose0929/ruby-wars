@@ -4589,6 +4589,7 @@ public final class AutoTest {
 			case "coasterride" -> coasterRideScript();
 			case "armorycheck" -> armoryCheckScript();
 			case "playthrough" -> playthroughScript();
+			case "onyourown" -> soloScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9485,6 +9486,112 @@ public final class AutoTest {
 		then(10, mc -> shot(mc, "pt-end"));
 	}
 
+	/** Everyone on their own: squads off, the respawn line, watching when you're out, the wrap-up card, and Ride! in the plaza. */
+	private static void soloScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "time set 1000");
+			command(mc, "execute in minecraft:overworld run tp @p 260 200 260");
+		});
+		then(80, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) p.level();
+			int x = p.getBlockX();
+			int z = p.getBlockZ();
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 8, y - 1, z - 8, x + 8, y - 1, z + 8)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+			}
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 8, y, z - 8, x + 8, y + 6, z + 8)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			p.teleportTo(x + 0.5, y, z - 4.5);
+			heartAt = new net.minecraft.core.BlockPos(x, y, z);
+			level.setBlockAndUpdate(heartAt, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heartAt);
+			log("solo: squads on? {}; /squad create says: {}", dev.rubymod.game.Squads.enabled(), dev.rubymod.game.Squads.create(p, "Test Team"));
+		}));
+		then(40, mc -> command(mc, "rubywars battle 5"));
+		then(60, mc -> command(mc, "rubywars phase war"));
+		then(60, mc -> log("solo: war: respawn line {}", ClientState.hud == null ? -1 : ClientState.hud.respawn()));
+		then(5, mc -> shot(mc, "solo-respawn-on"));
+		then(5, mc -> onServer(mc, server -> {
+			var claim = dev.rubymod.game.SeasonData.get().claimOf(me(server).getUUID());
+			claim.destroyed = true;
+		}));
+		then(60, mc -> log("solo: heart gone: respawn line {}", ClientState.hud == null ? -1 : ClientState.hud.respawn()));
+		then(5, mc -> shot(mc, "solo-last-life"));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.SeasonData.get().claimOf(me(server).getUUID()).destroyed = false));
+		then(5, mc -> command(mc, "rubywars phase sudden_death"));
+		then(60, mc -> log("solo: sudden death: respawn line {}", ClientState.hud == null ? -1 : ClientState.hud.respawn()));
+		then(5, mc -> shot(mc, "solo-no-respawns"));
+		// Knocked out: spectating, with someone else (offline) still in so the battle goes on.
+		then(5, mc -> onServer(mc, server -> {
+			dev.rubymod.game.SeasonData.get().player(SOLO_RIVAL, "Sam");
+			dev.rubymod.game.SeasonData.get().player(SOLO_RIVAL_2, "Alex");
+			var r = dev.rubymod.game.SeasonData.get().player(me(server).getUUID());
+			r.eliminated = true;
+			r.finished = 2;
+			me(server).setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+		}));
+		then(60, mc -> mc.player.connection.sendCommand("rubywars watch next"));
+		then(30, mc -> {
+			log("solo: spectating: phase {}, eliminated on HUD {}", ClientState.phase(), ClientState.hud.eliminated());
+			shot(mc, "solo-spectating");
+		});
+		// Back in, and the rival goes out: the season ends and the wrap-up card opens.
+		then(5, mc -> onServer(mc, server -> {
+			var r = dev.rubymod.game.SeasonData.get().player(me(server).getUUID());
+			r.eliminated = false;
+			r.finished = 0;
+			r.kills = 3;
+			r.bestKillstreak = 2;
+			me(server).setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+			var sam = dev.rubymod.game.SeasonData.get().players.get(SOLO_RIVAL.toString());
+			sam.heartsDestroyed = 1;
+			dev.rubymod.game.BattleDirector.eliminate(server, SOLO_RIVAL_2, dev.rubymod.game.SeasonData.get().players.get(SOLO_RIVAL_2.toString()), "test");
+			dev.rubymod.game.BattleDirector.eliminate(server, SOLO_RIVAL, sam, "test");
+		}));
+		then(60, mc -> {
+			log("solo: end: phase {}, winner {}, recap open {}", ClientState.phase(), dev.rubymod.game.SeasonData.get().winner,
+					mc.gui.screen() instanceof SeasonRecapScreen);
+			shot(mc, "solo-recap");
+			mc.gui.setScreen(null);
+		});
+		then(20, mc -> mc.player.connection.sendCommand("rubywars recap"));
+		then(30, mc -> {
+			log("solo: recap after /rubywars recap: {}", mc.gui.screen() instanceof SeasonRecapScreen);
+			mc.gui.setScreen(null);
+		});
+		// Coaster Park: Ride! in the plaza lists the coasters; picking one puts you on it.
+		then(20, mc -> {
+			command(mc, "time set noon");
+			command(mc, "execute as @p run play coasters");
+		});
+		then(4000, mc -> log("solo: coasters: {}", pg("coasters").debugState()));
+		then(10, mc -> onServer(mc, server -> {
+			log("solo: built: {}", cw().testBuild(me(server), "STRAIGHT", "UP", "BIG_DROP", "RIGHT", "RIGHT", "STRAIGHT", "RIGHT", "RIGHT"));
+			var at = cw().testPlaza();
+			me(server).teleportTo(at.x, at.y, at.z);
+		}));
+		then(40, mc -> onServer(mc, server -> log("solo: Ride! in the plaza put me on a train? {} (want false: a list)", cw().testPressRide(me(server)))));
+		then(10, mc -> mc.gui.setScreen(new net.minecraft.client.gui.screens.ChatScreen("", false)));
+		then(20, mc -> shot(mc, "solo-coaster-picker"));
+		then(5, mc -> mc.gui.setScreen(null));
+		then(5, mc -> onServer(mc, server -> soloSpot = cw().testSpot(me(server))));
+		then(10, mc -> mc.player.connection.sendCommand("rubywars ride " + soloSpot));
+		then(80, mc -> onServer(mc, server -> log("solo: after /rubywars ride: riding {}", cw().testRiding(me(server)))));
+		then(10, mc -> shot(mc, "solo-coaster-ride"));
+	}
+
+	private static volatile int soloSpot;
+	private static final java.util.UUID SOLO_RIVAL_2 = java.util.UUID.fromString("00000000-0000-0000-0000-00000000005b");
+	private static final java.util.UUID SOLO_RIVAL = java.util.UUID.fromString("00000000-0000-0000-0000-00000000005a");
 	private static Object lastScreen;
 	private static net.minecraft.core.BlockPos drillAt;
 	private static long bankBefore;

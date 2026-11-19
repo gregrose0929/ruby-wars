@@ -285,8 +285,22 @@ public class Payloads {
 	 * @param alive        players still in the game (Battle Day)
 	 * @param eliminated   you have been eliminated
 	 */
-	public record HudSync(int phase, int secondsLeft, boolean paused, int day, int heartHp, int heartMaxHp, int alive, boolean eliminated)
-			implements CustomPacketPayload {
+	/**
+	 * @param flags bits 0-2: respawn state (0 not in a battle, 1 at your Heart, 2 at a squadmate's Heart,
+	 *              3 last life: your Heart is gone, 4 no respawns: Sudden Death or the Final Circle); bit 3: squads are on
+	 */
+	public record HudSync(int phase, int secondsLeft, boolean paused, int day, int heartHp, int heartMaxHp, int alive, boolean eliminated,
+			int flags) implements CustomPacketPayload {
+		public static final int RESPAWN_NONE = 0, RESPAWN_HEART = 1, RESPAWN_MATE = 2, LAST_LIFE = 3, NO_RESPAWNS = 4;
+
+		public int respawn() {
+			return flags & 7;
+		}
+
+		public boolean squads() {
+			return (flags & 8) != 0;
+		}
+
 		public static final Type<HudSync> TYPE = new Type<>(RubyMod.id("hud_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, HudSync> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, HudSync::phase,
@@ -297,6 +311,7 @@ public class Payloads {
 				ByteBufCodecs.VAR_INT, HudSync::heartMaxHp,
 				ByteBufCodecs.VAR_INT, HudSync::alive,
 				ByteBufCodecs.BOOL, HudSync::eliminated,
+				ByteBufCodecs.VAR_INT, HudSync::flags,
 				HudSync::new);
 
 		@Override

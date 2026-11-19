@@ -593,10 +593,57 @@ public class CoasterWorkshop extends PartyGame {
 		gates[plot] = t == null ? null : t.getUUID();
 	}
 
+	private boolean nearStation(ServerPlayer player, Coaster c) {
+		return c != null && player.position().distanceTo(rel(c.plot, 3, 0, 0)) < 8;
+	}
+
+	/** Every coaster in the park, each with a [Ride] button: it takes you to that station and sits you in the train. */
+	private void showPicker(ServerPlayer player) {
+		int n = 0;
+		player.sendSystemMessage(Component.literal("Pick a coaster to ride:").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+		for (int i = 0; i < PLOTS; i++) {
+			Coaster o = atPlot(i);
+			if (o == null || o.pieces.isEmpty()) {
+				continue;
+			}
+			n++;
+			final int spot = i + 1;
+			player.sendSystemMessage(Component.literal("  [Ride] ").withStyle(s -> s.withColor(ChatFormatting.GREEN).withBold(true)
+					.withClickEvent(new net.minecraft.network.chat.ClickEvent.RunCommand("/rubywars ride " + spot))
+					.withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(Component.literal("Go to spot " + spot + " and ride"))))
+					.append(Component.literal(nameOf(o)).withStyle(ChatFormatting.GOLD))
+					.append(Component.literal(" by " + ownerOf(o) + " (spot " + (i + 1) + ", " + o.pieces.size() + " pieces)").withStyle(ChatFormatting.GRAY)));
+		}
+		if (n == 0) {
+			player.sendSystemMessage(Component.literal("  No coasters built yet. Be the first!").withStyle(ChatFormatting.GRAY));
+		} else {
+			player.sendSystemMessage(Component.literal("  (Click one. Or walk to a station on the main street and press Ride! there.)")
+					.withStyle(ChatFormatting.DARK_GRAY));
+		}
+	}
+
+	/** /rubywars ride <spot>: go to that coaster's station and get on. */
+	public String rideSpot(ServerPlayer player, int spot) {
+		if (!contains(player)) {
+			return "Join the Coaster Park first (H, then Coaster Park).";
+		}
+		if (rides.containsKey(player.getUUID())) {
+			return "You're already on a ride. Crouch to get off first.";
+		}
+		Coaster o = spot < 1 || spot > PLOTS ? null : atPlot(spot - 1);
+		if (o == null || o.pieces.isEmpty()) {
+			return "There's no coaster at spot " + spot + " yet.";
+		}
+		Vec3 at = rel(o.plot, 3, 0, 2);
+		teleport(player, at.x, at.y, at.z, lookOf(o.plot));
+		ride(player, o);
+		return null;
+	}
+
 	/** The park board at the entrance: every spot, its coaster and who built it. */
 	private void board(ServerLevel level) {
 		MutableComponent text = Component.literal("RUBY COASTER PARK").withStyle(ChatFormatting.RED, ChatFormatting.BOLD)
-				.append(Component.literal("\nEveryone builds a coaster of their own.\nPress Ride! at any station to ride it.\n").withStyle(ChatFormatting.GRAY));
+				.append(Component.literal("\nEveryone builds a coaster of their own.\nPress Ride! here to pick any coaster,\nor at a station to ride that one.\n").withStyle(ChatFormatting.GRAY));
 		for (int i = 0; i < PLOTS; i++) {
 			Coaster c = atPlot(i);
 			text.append(Component.literal("\n" + (i + 1) + ". " + (east(i) ? "(east) " : "(west) ")).withStyle(ChatFormatting.WHITE));
@@ -734,8 +781,10 @@ public class CoasterWorkshop extends PartyGame {
 					which = o;
 				}
 			}
-			if (which == null) {
-				player.sendOverlayMessage(Component.literal("Go to a station on the main street, then press Ride!").withStyle(ChatFormatting.YELLOW));
+			// In the plaza (or with no coaster of your own): pick any coaster in the park.
+			boolean plaza = Math.abs(player.getZ() - (center().getZ() + PLAZA_Z)) < 22 && !nearStation(player, which);
+			if (which == null || which == c && plaza) {
+				showPicker(player);
 				return false;
 			}
 			ride(player, which);
@@ -1641,6 +1690,7 @@ public class CoasterWorkshop extends PartyGame {
 		p.startRiding(seat, true, true);
 		r.riders[k] = p.getUUID();
 		rides.put(p.getUUID(), r);
+		dev.rubymod.game.Goals.add(p.level().getServer(), p.getUUID(), "coaster", 1);
 		Alerts.title(p, nameOf(c), "by " + ownerOf(c) + (r.laps == 0 ? "  (round and round: crouch to get off)" : r.laps > 1 ? "  (" + r.laps + " laps)" : ""),
 				ChatFormatting.GOLD);
 		p.sendOverlayMessage(Component.literal(k == 0 ? "Front seat! Hold on (crouch to get off)" : "All aboard! (crouch to get off)").withStyle(ChatFormatting.GOLD));
@@ -2247,6 +2297,25 @@ public class CoasterWorkshop extends PartyGame {
 				p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, tool(q.icon, q.label, q.color));
 			}
 		}
+	}
+
+	/** As if pressing Ride! where you stand; true if that put you on a train. */
+	public boolean testPressRide(ServerPlayer p) {
+		allowsItemUse(p, tool(Items.MINECART, RIDE, ChatFormatting.GOLD));
+		return rides.containsKey(p.getUUID());
+	}
+
+	public boolean testRiding(ServerPlayer p) {
+		return rides.containsKey(p.getUUID());
+	}
+
+	public int testSpot(ServerPlayer p) {
+		Coaster c = mine(p);
+		return c == null ? -1 : c.plot + 1;
+	}
+
+	public net.minecraft.world.phys.Vec3 testPlaza() {
+		return new net.minecraft.world.phys.Vec3(center().getX() + 0.5, center().getY(), center().getZ() + PLAZA_Z + 10.5);
 	}
 
 	public BlockPos testCenter() {

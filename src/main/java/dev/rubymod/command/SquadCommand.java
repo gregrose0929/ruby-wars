@@ -75,6 +75,10 @@ public final class SquadCommand {
 	}
 
 	private static int list(CommandContext<CommandSourceStack> c) {
+		if (!Squads.enabled()) {
+			c.getSource().sendSuccess(() -> Component.literal(Squads.OFF), false);
+			return 1;
+		}
 		var squads = SeasonData.get().squads.values();
 		if (squads.isEmpty()) {
 			c.getSource().sendSuccess(() -> Component.literal("No squads yet. Make one: /squad create <name>"), false);

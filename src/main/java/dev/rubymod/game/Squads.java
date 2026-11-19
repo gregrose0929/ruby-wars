@@ -37,7 +37,17 @@ public final class Squads {
 		return SeasonData.get().squads;
 	}
 
+	/** Squads are off unless the admin turns them on (/rubywars squads on): everyone plays on their own. */
+	public static boolean enabled() {
+		return GameConfig.get().squadsEnabled;
+	}
+
+	public static final String OFF = "Squads are turned off: everyone plays on their own.";
+
 	public static Squad of(UUID player) {
+		if (!enabled()) {
+			return null;
+		}
 		String id = player.toString();
 		for (Squad squad : all().values()) {
 			if (squad.members.contains(id)) {
@@ -69,6 +79,9 @@ public final class Squads {
 	}
 
 	public static String create(ServerPlayer player, String name) {
+		if (!enabled()) {
+			return OFF;
+		}
 		if (of(player.getUUID()) != null) {
 			return "You're already in a squad. Leave it first (/squad leave).";
 		}
@@ -91,7 +104,7 @@ public final class Squads {
 	public static String invite(ServerPlayer from, ServerPlayer to) {
 		Squad squad = of(from.getUUID());
 		if (squad == null) {
-			return "Make a squad first: /squad create <name>.";
+			return enabled() ? "Make a squad first: /squad create <name>." : OFF;
 		}
 		if (squad.members.size() >= GameConfig.get().squadMaxSize) {
 			return "Your squad is full (" + GameConfig.get().squadMaxSize + " players).";
@@ -106,6 +119,9 @@ public final class Squads {
 	}
 
 	public static String join(ServerPlayer player, String name) {
+		if (!enabled()) {
+			return OFF;
+		}
 		Squad squad = all().get(name.toLowerCase());
 		if (squad == null) {
 			return "No squad called " + name + ".";
@@ -133,7 +149,7 @@ public final class Squads {
 	public static String leave(ServerPlayer player) {
 		Squad squad = of(player.getUUID());
 		if (squad == null) {
-			return "You're not in a squad.";
+			return enabled() ? "You're not in a squad." : OFF;
 		}
 		if (SeasonData.get().phase.isBattle()) {
 			return "You can't leave your squad during Battle Day.";
@@ -186,7 +202,7 @@ public final class Squads {
 	public static String chat(ServerPlayer from, String text) {
 		Squad squad = of(from.getUUID());
 		if (squad == null) {
-			return "You're not in a squad.";
+			return enabled() ? "You're not in a squad." : OFF;
 		}
 		tell(from.level().getServer(), squad, from.getName().getString() + ": " + text);
 		return null;

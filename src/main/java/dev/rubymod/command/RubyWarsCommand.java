@@ -89,6 +89,29 @@ public final class RubyWarsCommand {
 						.then(Commands.literal("days").then(Commands.argument("days", IntegerArgumentType.integer(1, 60))
 								.executes(c -> schedule(c, IntegerArgumentType.getInteger(c, "days") * 1440L)))))
 				.then(Commands.literal("admin").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::admin))
+				.then(Commands.literal("recap").executes(c -> {
+					String error = dev.rubymod.game.BattleDirector.sendRecap(c.getSource().getPlayerOrException());
+					if (error != null) {
+						c.getSource().sendFailure(Component.literal(error));
+						return 0;
+					}
+					return 1;
+				}))
+				.then(Commands.literal("watch")
+						.then(Commands.literal("next").executes(c -> watch(c, 1)))
+						.then(Commands.literal("prev").executes(c -> watch(c, -1)))
+						.then(Commands.literal("free").executes(c -> watch(c, 0))))
+				.then(Commands.literal("ride").then(Commands.argument("spot", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 10))
+						.executes(c -> {
+							var game = (dev.rubymod.game.party.CoasterWorkshop) dev.rubymod.game.party.PartyGames.byId("coasters");
+							String error = game.rideSpot(c.getSource().getPlayerOrException(),
+									com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "spot"));
+							if (error != null) {
+								c.getSource().sendFailure(Component.literal(error));
+								return 0;
+							}
+							return 1;
+						})))
 				.then(Commands.literal("coasters").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
 					var game = (dev.rubymod.game.party.CoasterWorkshop) dev.rubymod.game.party.PartyGames.byId("coasters");
 					for (String line : game.spots()) {
@@ -153,6 +176,9 @@ public final class RubyWarsCommand {
 					dev.rubymod.game.TrainingGround.build(c.getSource().getLevel(), net.minecraft.core.BlockPos.containing(c.getSource().getPosition()));
 					return ok(c, "Training ground built: gun range to the west, vehicle yard to the east, airfield to the south.");
 				}))
+				.then(Commands.literal("squads").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.then(Commands.literal("on").executes(c -> squads(c, true)))
+						.then(Commands.literal("off").executes(c -> squads(c, false))))
 				.then(Commands.literal("nightbattle").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.literal("on").executes(c -> nightBattle(c, true)))
 						.then(Commands.literal("off").executes(c -> nightBattle(c, false))))
@@ -223,6 +249,24 @@ public final class RubyWarsCommand {
 		return 1;
 	}
 
+
+	private static int watch(CommandContext<CommandSourceStack> c, int dir) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		String error = dev.rubymod.game.BattleDirector.watch(c.getSource().getPlayerOrException(), dir);
+		if (error != null) {
+			c.getSource().sendFailure(Component.literal(error));
+			return 0;
+		}
+		return 1;
+	}
+
+	/** Squads on or off (saved). Off, everyone plays on their own. */
+	private static int squads(CommandContext<CommandSourceStack> c, boolean on) {
+		dev.rubymod.game.GameConfig.get().squadsEnabled = on;
+		dev.rubymod.game.GameConfig.save();
+		c.getSource().sendSystemMessage(Component.literal(on ? "Squads are on: players can team up with /squad create and /squad invite."
+				: "Squads are off: everyone plays on their own.").withStyle(ChatFormatting.GOLD));
+		return 1;
+	}
 
 	/** Night Battle on or off (saved): Battle Day fought at night, with searchlights and flares. */
 	private static int nightBattle(CommandContext<CommandSourceStack> c, boolean on) {

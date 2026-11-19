@@ -110,6 +110,8 @@ public class SeasonData {
 		/** Got the ready-made base around their first Heart this season (StarterBase). */
 		public boolean starterBase;
 		public int bestKillstreak;
+		/** Where you finished if you were knocked out (2 = runner-up); 0 if you were still standing. */
+		public int finished;
 		public int lastHeartMoveDay = -1;
 		public int bountyDay = -1;
 		public int researchPoints;

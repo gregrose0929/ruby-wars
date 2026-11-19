@@ -3,7 +3,7 @@
 **Ruby Wars** is a big, friendly Minecraft mod (Fabric, Minecraft Java **26.3**) for
 playing together on one server. Its main game is a **season**: everyone claims land,
 builds a base and an economy, and gets ready for **Battle Day**, one big fight with
-guns, tanks, jets, mortars and missiles where the last player (or squad) standing
+guns, tanks, jets, mortars and missiles where the last player standing
 wins. Around that sits a whole amusement-park **hub** and a dozen other games: co-op
 modes, quick party games, and a roller coaster builder.
 
@@ -77,18 +77,24 @@ saves your inventory and position, and coming back puts it all back.
    it: nobody else can build, break or open things there, and nobody can be hurt inside a
    claim. Mine **Ruby Ore** (rarer than diamonds, deep underground) and spend rubies at an
    **Armory**: its tabs sort everything by kind (Guns, Ammo, Defenses, Vehicles, Machines…),
-   each card shows its name and price, and the panel beside it says what it does. Team up in
-   a **squad** of up to four.
+   each card shows its name and price, and the panel beside it says what it does. Everyone
+   plays on their own.
 2. **Battle Day** starts when the admin says so (or on a date they set). Everyone in the
    season is called back to Ruby Wars:
    - **Lockdown (15 minutes):** claims open and defenses switch on, but no fighting yet.
    - **Open War (60 minutes):** PvP is on. Breaching Charges can destroy a Heart. While
      your Heart stands you respawn at it; once it's gone, your next death knocks you out.
+     A line under the timer always says whether you'll respawn.
      Supply drops land every 15 minutes.
    - **Sudden Death (20 minutes):** every Heart shatters, no more respawns, and the world
      border closes in.
    - **Final Circle:** everyone glows and artillery shells random spots, so nobody can hide.
-     The last player or squad standing is the champion.
+     The last player standing is the champion.
+   - **Knocked out?** Watch the rest: click to follow the next player still in, right-click
+     for the one before, crouch to fly free. Or press **H** and play party games in the hub.
+   - **The wrap-up:** when the season ends, everyone gets a card with the winner, a few
+     awards (top fighter, richest base, biggest Heart…) and how their own season went.
+     `/rubywars recap` shows it again.
 
 There are no hostile mobs and no hunger by default: the game is building and battling.
 
@@ -155,8 +161,7 @@ gear where you fell; and a kill feed, hit markers and kill-cam.
 
 Press **J** for goals (place your Heart, build a drill, repel a raid, fly 1,000 blocks…).
 Each earns stars to spend on unlocking advanced gear in four branches (Arms, Vehicles,
-Defense, Support). Upgrades come from doing things, never from how long you play, and
-squadmates share them.
+Defense, Support). Upgrades come from doing things, never from how long you play.
 
 ### Other games
 
@@ -165,7 +170,7 @@ squadmates share them.
 | **Co-op Horde** | green portal, `/play horde` | Everyone builds one base around the Ruby Core and holds off bigger and bigger waves of monsters and soldiers. Shared team bank, an Armory, Easy/Normal/Hard. |
 | **Ruby Rift** | pink portal, `/play rift` | Co-op roguelike for 1-4: fight down through three acts of rooms, pick a relic after each one that changes how you play, beat the bosses. |
 | **Ruby Convoy** | orange portal, `/play convoy` | Co-op for 1-4: escort the ruby truck through five stages of enemy country to the vault, picking a job and convoy upgrades on the way. |
-| **Coaster Workshop** | `/play coasters` | **Ruby Coaster Park**: everyone gets their own spot (up to ten) along one themed main street and builds a roller coaster there, piece by piece: loops, corkscrews, banked turns, launches, splashdowns. Change any piece later, preview it before it goes in, name it, set laps, and ride everyone's coasters in three-car trains. |
+| **Coaster Workshop** | `/play coasters` | **Ruby Coaster Park**: everyone gets their own spot (up to ten) along one themed main street and builds a roller coaster there, piece by piece: loops, corkscrews, banked turns, launches, splashdowns. Change any piece later, preview it before it goes in, name it, set laps, and ride everyone's coasters in three-car trains (press Ride! in the plaza to pick one). |
 | **Free Roam** | `/play freeroam` | Try every gun, vehicle and aircraft, no rules. |
 | **Party Board** | `/play board` | A board game: roll the dice, collect coins, buy stars, a minigame every round. Computer players fill empty seats. |
 | **Pie Mystery** | `/play pie` | Someone is secretly pieing people: find the clues and catch the Prankster. |
@@ -202,7 +207,6 @@ every mode and cosmetic hats, trails and effects you earn by playing.
 | Ping / spot an enemy | B |
 | Map | K (the minimap is top right; U hides it) |
 | Goals & upgrades | J |
-| Squad | O |
 | Field Manual (in-game guide) | Y |
 | Game picker | H |
 | Profile | I |

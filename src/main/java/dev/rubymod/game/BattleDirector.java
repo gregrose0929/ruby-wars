@@ -348,8 +348,9 @@ public final class BattleDirector {
 		record.eliminated = true;
 		SeasonData.markDirty();
 		int left = aliveCount();
+		record.finished = left + 1;
 		String why = reason == null ? "" : " (" + reason + ")";
-		Alerts.broadcast(server, Component.literal(record.name + " has been eliminated" + why + "! " + left + " player" + (left == 1 ? "" : "s") + " remain.")
+		Alerts.broadcast(server, Component.literal(record.name + " has been eliminated" + why + "! " + left + (left == 1 ? " player remains." : " players remain."))
 				.withStyle(ChatFormatting.RED));
 		ServerPlayer player = server.getPlayerList().getPlayer(id);
 		if (player != null && player.isAlive()) {
@@ -393,6 +394,7 @@ public final class BattleDirector {
 		SeasonData data = SeasonData.get();
 		if (data.winner.isEmpty()) {
 			Alerts.broadcastTitle(server, "NO SURVIVORS", "Season " + data.season + " ends in a draw", ChatFormatting.GRAY);
+			sendRecapToAll(server);
 			return;
 		}
 		data.pastChampions.add("Season " + data.season + ": " + data.winner);
@@ -411,6 +413,129 @@ public final class BattleDirector {
 				.forEach(r -> Alerts.broadcast(server, Component.literal(r.name + ": " + r.kills + " kills, " + r.heartsDestroyed
 						+ " Hearts destroyed, best streak " + r.bestKillstreak).withStyle(ChatFormatting.YELLOW)));
 		SeasonData.save();
+		sendRecapToAll(server);
+	}
+
+	// ----- The season wrap-up card -----
+
+	private static void sendRecapToAll(MinecraftServer server) {
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			if (SeasonData.get().players.containsKey(player.getUUID().toString())) {
+				sendRecap(player);
+			}
+		}
+		Alerts.broadcast(server, Component.literal("See the season's wrap-up again any time: /rubywars recap").withStyle(ChatFormatting.GRAY));
+	}
+
+	/** The wrap-up card: the winner, a few friendly awards, and how your own season went. */
+	public static String sendRecap(ServerPlayer player) {
+		SeasonData data = SeasonData.get();
+		if (data.phase != Phase.ENDED || data.players.isEmpty()) {
+			return "The wrap-up shows once a season is over.";
+		}
+		List<String> awards = new ArrayList<>();
+		award(awards, "Top fighter", data, r -> r.kills, n -> n + (n == 1 ? " knockdown" : " knockdowns"), "minecraft:iron_sword");
+		award(awards, "Heart breaker", data, r -> r.heartsDestroyed, n -> n + (n == 1 ? " Heart" : " Hearts"), "minecraft:tnt");
+		award(awards, "Best streak", data, r -> r.bestKillstreak >= 2 ? r.bestKillstreak : 0, n -> n + " in a row", "minecraft:blaze_powder");
+		award(awards, "Star collector", data, r -> r.goalsDone.size(), n -> n + (n == 1 ? " goal done" : " goals done"), "minecraft:nether_star");
+		// Richest bank and the biggest Heart.
+		String rich = null;
+		long richest = 0;
+		String big = null;
+		int bigTier = 0;
+		for (Map.Entry<String, SeasonData.PlayerRecord> e : data.players.entrySet()) {
+			UUID id = UUID.fromString(e.getKey());
+			long bank = dev.rubymod.industry.Grid.milliRubies(id) / 1000;
+			if (bank > richest) {
+				richest = bank;
+				rich = e.getValue().name;
+			}
+			SeasonData.Claim claim = data.claimOf(id);
+			if (claim != null && claim.tier > bigTier) {
+				bigTier = claim.tier;
+				big = e.getValue().name;
+			}
+		}
+		if (rich != null) {
+			awards.add("Richest base|" + rich + "|" + String.format(java.util.Locale.ROOT, "%,d", richest) + " rubies|rubymod:ruby");
+		}
+		if (big != null && bigTier > 1) {
+			awards.add("Biggest Heart|" + big + "|Tier " + bigTier + "|minecraft:beacon");
+		}
+		data.players.values().stream().filter(r -> r.finished == 2).findFirst()
+				.ifPresent(r -> awards.add("Runner-up|" + r.name + "|So close!|minecraft:iron_ingot"));
+
+		List<String> mine = new ArrayList<>();
+		SeasonData.PlayerRecord me = data.players.get(player.getUUID().toString());
+		if (me != null) {
+			int count = data.players.size();
+			String place = !me.eliminated ? (data.winner.isEmpty() ? "Still standing" : "Winner!") : ordinal(me.finished) + " of " + count;
+			mine.add("Finished|" + place);
+			mine.add("Knockdowns|" + me.kills);
+			mine.add("Times knocked down|" + me.deaths);
+			mine.add("Hearts destroyed|" + me.heartsDestroyed);
+			mine.add("Best streak|" + me.bestKillstreak);
+			mine.add("Goals done|" + me.goalsDone.size());
+			mine.add("Rubies in the bank|" + String.format(java.util.Locale.ROOT, "%,d", dev.rubymod.industry.Grid.milliRubies(player.getUUID()) / 1000));
+			SeasonData.Claim claim = data.claimOf(player.getUUID());
+			mine.add("Your Heart|" + (claim == null ? "Never placed" : "Tier " + claim.tier + (claim.destroyed ? " (destroyed)" : " (standing)")));
+		}
+		Net.send(player, new dev.rubymod.net.MorePayloads.SeasonRecap("Season " + data.season + " is over!", data.winner, awards, mine));
+		return null;
+	}
+
+	private static void award(List<String> out, String title, SeasonData data, java.util.function.ToIntFunction<SeasonData.PlayerRecord> score,
+			java.util.function.IntFunction<String> detail, String item) {
+		SeasonData.PlayerRecord best = null;
+		for (SeasonData.PlayerRecord r : data.players.values()) {
+			if (score.applyAsInt(r) > 0 && (best == null || score.applyAsInt(r) > score.applyAsInt(best))) {
+				best = r;
+			}
+		}
+		if (best != null) {
+			out.add(title + "|" + best.name + "|" + detail.apply(score.applyAsInt(best)) + "|" + item);
+		}
+	}
+
+	private static String ordinal(int n) {
+		int t = n % 100;
+		String suffix = t >= 11 && t <= 13 ? "th" : n % 10 == 1 ? "st" : n % 10 == 2 ? "nd" : n % 10 == 3 ? "rd" : "th";
+		return n + suffix;
+	}
+
+	// ----- Watching when you're out -----
+
+	/** Knocked-out players: watch the next (dir 1) or previous (dir -1) player still in, or fly free (dir 0). */
+	public static String watch(ServerPlayer player, int dir) {
+		if (!Rules.isEliminated(player.getUUID()) || !player.isSpectator() || !Hub.inRubyWarsWorld(player)) {
+			return "Only knocked-out players can watch the battle.";
+		}
+		if (dir == 0) {
+			player.setCamera(player);
+			player.sendOverlayMessage(Component.literal("Flying free. Click to watch a player.").withStyle(ChatFormatting.GRAY));
+			return null;
+		}
+		List<ServerPlayer> alive = new ArrayList<>();
+		for (ServerPlayer p : player.level().getServer().getPlayerList().getPlayers()) {
+			if (p != player && !Rules.isEliminated(p.getUUID()) && !p.isSpectator() && Hub.inRubyWarsWorld(p)) {
+				alive.add(p);
+			}
+		}
+		if (alive.isEmpty()) {
+			return "Nobody left out there to watch.";
+		}
+		alive.sort(java.util.Comparator.comparing(p -> p.getName().getString().toLowerCase()));
+		int at = alive.indexOf(player.getCamera());
+		int next = at < 0 ? (dir > 0 ? 0 : alive.size() - 1) : Math.floorMod(at + dir, alive.size());
+		ServerPlayer target = alive.get(next);
+		if (player.level() != target.level() || player.distanceTo(target) > 64) {
+			player.teleportTo((ServerLevel) target.level(), target.getX(), target.getY() + 2, target.getZ(), Set.<Relative>of(),
+					target.getYRot(), target.getXRot(), true);
+		}
+		player.setCamera(target);
+		player.sendOverlayMessage(Component.literal("Watching " + target.getName().getString() + " (" + (next + 1) + " of " + alive.size()
+				+ ")  -  click: next  -  right-click: back  -  crouch: fly free").withStyle(ChatFormatting.AQUA));
+		return null;
 	}
 
 	/** What a kill was made with, for the kill feed, the death card and duel stats. */

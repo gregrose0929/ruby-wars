@@ -199,8 +199,17 @@ public final class SeasonTicker {
 			if (!ServerPlayNetworking.canSend(player, Payloads.HudSync.TYPE)) {
 				continue;
 			}
+			boolean out = Rules.isEliminated(player.getUUID());
+			int respawn = Payloads.HudSync.RESPAWN_NONE;
+			if (data.phase.isBattle() && !out) {
+				SeasonData.Claim at = BattleDirector.respawnHeart(player.getUUID());
+				respawn = !data.phase.heartsGiveRespawns() ? Payloads.HudSync.NO_RESPAWNS
+						: at == null ? Payloads.HudSync.LAST_LIFE
+						: at == claim ? Payloads.HudSync.RESPAWN_HEART : Payloads.HudSync.RESPAWN_MATE;
+			}
+			int flags = respawn | (Squads.enabled() ? 8 : 0);
 			ServerPlayNetworking.send(player, new Payloads.HudSync(data.phase.ordinal(), seconds, data.pausedRemaining >= 0, currentDay(), hp, max,
-					alive, Rules.isEliminated(player.getUUID())));
+					alive, out, flags));
 		}
 	}
 

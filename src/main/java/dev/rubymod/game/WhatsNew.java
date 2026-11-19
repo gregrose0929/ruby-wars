@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-18-armory";
+	private static final String VERSION = "2026-11-18-solo";
 	private static final List<String> LINES = List.of(
-			"rubymod:armory|A new Armory: tabs for each kind of thing, cards with names and prices, and a panel that says what each does. Then Buy.",
-			"rubymod:ruby_drill|The Ruby Drill keeps what it digs; conveyor belts (follow the yellow arrows) carry it to a chest. The Trade Depot buys anything.",
-			"rubymod:sentry_turret|Base defenses all follow one rule: raiders, monsters, and enemy players from Open War. Look at things to see how they're doing.");
+			"minecraft:totem_of_undying|Everyone plays on their own now. On Battle Day a line under the timer says if you'll respawn, or if it's your last life.",
+			"minecraft:ender_eye|Knocked out? Click to watch the next player, right-click for the one before, or press H for party games in the hub.",
+			"minecraft:minecart|Coaster Park: press Ride! in the plaza to pick anyone's coaster. And a wrap-up card with awards when a season ends.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

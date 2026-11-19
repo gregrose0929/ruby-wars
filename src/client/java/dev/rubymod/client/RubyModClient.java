@@ -68,6 +68,16 @@ public class RubyModClient implements ClientModInitializer {
 
 		// In the Rift the swap-hands key (F, right by WASD) is your ability: taken before the game would swap your hands.
 		ClientTickEvents.START_CLIENT_TICK.register(client -> {
+			// Knocked out on Battle Day: click watches the next player still in, right-click the one before.
+			if (client.player != null && client.gui.screen() == null && ClientState.hud != null && ClientState.hud.eliminated()
+					&& client.player.isSpectator() && ClientState.inRubyWarsWorld() && ClientState.phase().isBattle()) {
+				while (client.options.keyAttack.consumeClick()) {
+					client.player.connection.sendCommand("rubywars watch next");
+				}
+				while (client.options.keyUse.consumeClick()) {
+					client.player.connection.sendCommand("rubywars watch prev");
+				}
+			}
 			if (client.player != null && dev.rubymod.client.rift.RiftClient.active() && client.gui.screen() == null) {
 				while (client.options.keySwapOffhand.consumeClick()) {
 					ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.RiftChoice("ability", "active"));
@@ -132,6 +142,10 @@ public class RubyModClient implements ClientModInitializer {
 			}
 			while (squadKey.consumeClick()) {
 				if (client.player != null && client.gui.screen() == null) {
+					if (ClientState.hud != null && !ClientState.hud.squads()) {
+						client.player.sendOverlayMessage(net.minecraft.network.chat.Component.literal("Squads are off: everyone plays on their own."));
+						continue;
+					}
 					client.gui.setScreen(new SquadScreen());
 				}
 			}
@@ -313,6 +327,7 @@ public class RubyModClient implements ClientModInitializer {
 		dev.rubymod.client.PhotoClient.register();
 		dev.rubymod.client.BookScreen.register();
 		dev.rubymod.client.HostScreen.register();
+		dev.rubymod.client.SeasonRecapScreen.register();
 		// In a vehicle the vehicle HUD replaces the hotbar, hearts, hunger, armor, air and XP.
 		for (var element : java.util.List.of(VanillaHudElements.HOTBAR, VanillaHudElements.HEALTH_BAR, VanillaHudElements.FOOD_BAR,
 				VanillaHudElements.ARMOR_BAR, VanillaHudElements.AIR_BAR, VanillaHudElements.EXPERIENCE_LEVEL, VanillaHudElements.INFO_BAR,

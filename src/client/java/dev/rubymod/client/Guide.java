@@ -25,8 +25,7 @@ public final class Guide {
 					"defense", false),
 			new Step("Spend stars on an upgrade", "Goals give stars. Press J, open UPGRADES and pick one: it unlocks tanks, jets and more "
 					+ "in the Armory.", "#research", false),
-			new Step("Repel a raid", "Beat the raiders on a raid day, or call a practice raid any time with /rubywars raid.", "raid", false),
-			new Step("Join a squad", "Press O to team up: you share a base, respawns and upgrades.", "squad", true));
+			new Step("Repel a raid", "Beat the raiders on a raid day, or call a practice raid any time with /rubywars raid.", "raid", false));
 
 	private Guide() {
 	}
@@ -85,7 +84,7 @@ public final class Guide {
 		}
 		if (phase == Phase.BUILD) {
 			int day = ClientState.hud == null ? 0 : ClientState.hud.day();
-			return "Build day " + day + ". Raids on days 3, 6, 9 and 12. Battle Day comes when the admin calls it (or on the date they set): last squad standing wins.";
+			return "Build day " + day + ". Raids on days 3, 6, 9 and 12. Battle Day comes when the admin calls it (or on the date they set): last player standing wins.";
 		}
 		if (phase == Phase.ENDED) {
 			return "The season is over. A new one starts soon.";
