@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "minecraft:item/paper"
+		"type": "minecraft:special",
+		"base": "rubymod:item/gear_icon",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:keycard",
+			"texture": "rubymod:textures/entity/vehicle/keycard.png"
+		}
 	}
 }

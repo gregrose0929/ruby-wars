@@ -1,0 +1,7 @@
+{
+	"parent": "minecraft:block/door_bottom_left_open",
+	"textures": {
+		"bottom": "rubymod:block/keycard_door_bottom",
+		"top": "rubymod:block/keycard_door_top"
+	}
+}

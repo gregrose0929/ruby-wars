@@ -1,6 +1,6 @@
 {
 	"model": {
 		"type": "minecraft:model",
-		"model": "minecraft:block/piston_inventory"
+		"model": "rubymod:block/ruby_piston_inventory"
 	}
 }

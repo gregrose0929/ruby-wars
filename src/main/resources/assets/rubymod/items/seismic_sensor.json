@@ -1,6 +1,6 @@
 {
 	"model": {
 		"type": "minecraft:model",
-		"model": "minecraft:block/sculk_sensor_inactive"
+		"model": "rubymod:block/seismic_sensor"
 	}
 }

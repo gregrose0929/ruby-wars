@@ -1,7 +1,7 @@
 {
 	"variants": {
 		"": {
-			"model": "minecraft:block/heavy_core"
+			"model": "rubymod:block/security_camera"
 		}
 	}
 }

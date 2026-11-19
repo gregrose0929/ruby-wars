@@ -1,26 +1,26 @@
 {
 	"variants": {
 		"facing=down": {
-			"model": "minecraft:block/observer",
+			"model": "rubymod:block/laser_tripwire",
 			"x": 90
 		},
 		"facing=east": {
-			"model": "minecraft:block/observer",
+			"model": "rubymod:block/laser_tripwire",
 			"y": 90
 		},
 		"facing=north": {
-			"model": "minecraft:block/observer"
+			"model": "rubymod:block/laser_tripwire"
 		},
 		"facing=south": {
-			"model": "minecraft:block/observer",
+			"model": "rubymod:block/laser_tripwire",
 			"y": 180
 		},
 		"facing=up": {
-			"model": "minecraft:block/observer",
+			"model": "rubymod:block/laser_tripwire",
 			"x": 270
 		},
 		"facing=west": {
-			"model": "minecraft:block/observer",
+			"model": "rubymod:block/laser_tripwire",
 			"y": 270
 		}
 	}

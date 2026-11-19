@@ -1,25 +1,25 @@
 {
 	"variants": {
 		"facing=down": {
-			"model": "minecraft:block/dropper_vertical",
+			"model": "rubymod:block/ruby_bearing_vertical",
 			"x": 180
 		},
 		"facing=up": {
-			"model": "minecraft:block/dropper_vertical"
+			"model": "rubymod:block/ruby_bearing_vertical"
 		},
 		"facing=north": {
-			"model": "minecraft:block/dropper"
+			"model": "rubymod:block/ruby_bearing"
 		},
 		"facing=east": {
-			"model": "minecraft:block/dropper",
+			"model": "rubymod:block/ruby_bearing",
 			"y": 90
 		},
 		"facing=south": {
-			"model": "minecraft:block/dropper",
+			"model": "rubymod:block/ruby_bearing",
 			"y": 180
 		},
 		"facing=west": {
-			"model": "minecraft:block/dropper",
+			"model": "rubymod:block/ruby_bearing",
 			"y": 270
 		}
 	}

@@ -335,6 +335,8 @@ def bounds(part, origin=(0.0, 0.0, 0.0), lo=None, hi=None):
     return lo, hi
 
 
+from more_vehicles import DESIGNS as MORE, GEAR
+
 # Paint schemes (Paint Kit): name -> (paint, camo, camo2). The first is the default texture.
 SCHEMES = {
     "desert": ((186, 160, 112), (150, 124, 84), (206, 186, 140)),
@@ -356,6 +358,9 @@ VEHICLES = {
     "dreadnought": (dreadnought, {"paint": (52, 54, 62), "camo": (34, 36, 42), "camo2": (74, 76, 86)}, {}),
     "legion_tank": (legion_tank, {"paint": (44, 46, 52), "camo": (128, 20, 34), "camo2": (28, 30, 34)}, {}),
 }
+# The Tunnel Borer, Dirt Bike, Quad and the boats (more_vehicles.py).
+for _name, (_design, _pal) in list(MORE.items()) + list(GEAR.items()):
+    VEHICLES[_name] = (_design, _pal, {})
 # How many times bigger than its design each set piece is drawn.
 DRAWN = {"convoy_truck": 1.0, "dreadnought": 2.0, "legion_tank": 0.9}
 
@@ -368,6 +373,9 @@ MATERIALS = {
     "smoke_tube": (62, 70, 48), "ammo_can": (84, 96, 58), "canvas": (150, 136, 98), "seat": (46, 44, 40), "tire": (30, 30, 32),
     "tire_spare": (30, 30, 32), "headlight": (255, 248, 220), "taillight": (255, 40, 30), "flash": (255, 220, 140),
     "plate": (96, 100, 108), "steel": (170, 174, 182), "ruby": (212, 30, 64), "legion": (164, 22, 38),
+    "chrome": (196, 202, 210), "number": (230, 228, 220), "antifoul": (126, 38, 36), "deck": (132, 104, 72), "buoy": (236, 96, 40),
+    "beacon": (255, 150, 30), "hazard": (240, 190, 40), "rope": (176, 152, 104), "lens": (90, 255, 140), "brass": (214, 172, 70),
+    "bottle": (70, 120, 80),
 }
 
 DIGITS = {
@@ -401,6 +409,26 @@ def pixel(b, face, px, py, fw, fh, pal, rnd):
         r = math.hypot(px + 0.5 - fw / 2, py + 0.5 - fh / 2) / max(1.0, max(fw, fh) / 2)
         c = mix((255, 250, 220), (255, 110, 20), min(1.0, r * 1.3))
         return mul(c, max(0.0, 1.0 - r)), "only"
+    if mat in ("beacon", "lens"):
+        return MATERIALS[mat] if not edge else (40, 40, 30), not edge
+    if mat == "rope" and (px + py) % 3 == 0:
+        return mul(MATERIALS[mat], shade * 0.8), False
+    if mat == "bottle":
+        c = mul(MATERIALS[mat], shade)
+        if px == 1 and face in ("side_a", "side_b", "front", "back"):
+            c = (190, 230, 200)                                     # glint
+        return c, False
+    if mat == "hazard":
+        c = (236, 186, 36) if ((px + py) // 2) % 2 == 0 else (30, 30, 32)
+        return mul(c, shade), False
+    if mat == "deck":
+        c = mul(MATERIALS[mat], shade)
+        along = px if face == "top" else py
+        if (py if face == "top" else px) % 4 == 0:
+            c = mul(c, 0.78)                                        # plank seams
+        if (along + (py // 4) * 7) % 13 == 0:
+            c = mul(c, 0.85)
+        return (c[0] + n, c[1] + n, c[2] + n), False
     if mat in ("headlight", "taillight"):
         c = MATERIALS[mat]
         if edge:
@@ -599,6 +627,16 @@ def main(root_dir):
     with open(os.path.join(root_dir, "src/main/java/dev/rubymod/game/convoy/ConvoyModels.java"), "w", newline="\n") as fh:
         fh.write("\n".join(java) + "\n")
     items = os.path.join(root_dir, "src/main/resources/assets/rubymod/items")
+    for name in GEAR:
+        with open(os.path.join(items, name + ".json"), "w", newline="\n") as fh:
+            json.dump({"model": {"type": "minecraft:special", "base": "rubymod:item/gear_icon", "model": {
+                "type": "rubymod:model_icon", "layer": "rubymod:" + name, "texture": f"rubymod:textures/entity/vehicle/{name}.png"}}}, fh, indent="\t")
+            fh.write("\n")
+    for name in MORE:
+        with open(os.path.join(items, name + ".json"), "w", newline="\n") as fh:
+            json.dump({"model": {"type": "minecraft:special", "base": "rubymod:item/tank", "model": {
+                "type": "rubymod:model_icon", "layer": "rubymod:" + name, "texture": f"rubymod:textures/entity/vehicle/{name}.png"}}}, fh, indent="\t")
+            fh.write("\n")
     for name, texture in (("convoy_truck_red", "convoy_truck"), ("convoy_truck_blue", "convoy_truck_blue"), ("convoy_truck_black", "convoy_truck_black"),
                           ("convoy_truck_gold", "convoy_truck_gold"), ("convoy_truck_green", "convoy_truck_green"),
                           ("convoy_truck_white", "convoy_truck_white"), ("convoy_truck_purple", "convoy_truck_purple"),

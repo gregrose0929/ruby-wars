@@ -1,0 +1,185 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"body": "rubymod:block/security_camera_body",
+		"lens": "rubymod:block/security_camera_lens",
+		"dark": "rubymod:block/security_dark",
+		"particle": "rubymod:block/security_camera_body"
+	},
+	"elements": [
+		{
+			"from": [
+				4,
+				11,
+				4
+			],
+			"to": [
+				12,
+				12,
+				12
+			],
+			"faces": {
+				"north": {
+					"texture": "#dark"
+				},
+				"south": {
+					"texture": "#dark"
+				},
+				"east": {
+					"texture": "#dark"
+				},
+				"west": {
+					"texture": "#dark"
+				},
+				"up": {
+					"texture": "#dark"
+				},
+				"down": {
+					"texture": "#dark"
+				}
+			}
+		},
+		{
+			"from": [
+				7.5,
+				9.5,
+				7.5
+			],
+			"to": [
+				8.5,
+				11,
+				8.5
+			],
+			"faces": {
+				"north": {
+					"texture": "#dark"
+				},
+				"south": {
+					"texture": "#dark"
+				},
+				"east": {
+					"texture": "#dark"
+				},
+				"west": {
+					"texture": "#dark"
+				},
+				"up": {
+					"texture": "#dark"
+				},
+				"down": {
+					"texture": "#dark"
+				}
+			}
+		},
+		{
+			"from": [
+				5.5,
+				6,
+				5
+			],
+			"to": [
+				10.5,
+				9.5,
+				12
+			],
+			"faces": {
+				"north": {
+					"texture": "#body"
+				},
+				"south": {
+					"texture": "#body"
+				},
+				"east": {
+					"texture": "#body"
+				},
+				"west": {
+					"texture": "#body"
+				},
+				"up": {
+					"texture": "#body"
+				},
+				"down": {
+					"texture": "#body"
+				}
+			}
+		},
+		{
+			"from": [
+				6,
+				6.4,
+				4
+			],
+			"to": [
+				10,
+				9.1,
+				5
+			],
+			"faces": {
+				"north": {
+					"texture": "#lens"
+				},
+				"south": {
+					"texture": "#dark"
+				},
+				"east": {
+					"texture": "#dark"
+				},
+				"west": {
+					"texture": "#dark"
+				},
+				"up": {
+					"texture": "#dark"
+				},
+				"down": {
+					"texture": "#dark"
+				}
+			}
+		},
+		{
+			"from": [
+				6.5,
+				9.5,
+				6
+			],
+			"to": [
+				9.5,
+				10,
+				11
+			],
+			"faces": {
+				"north": {
+					"texture": "#dark"
+				},
+				"south": {
+					"texture": "#dark"
+				},
+				"east": {
+					"texture": "#dark"
+				},
+				"west": {
+					"texture": "#dark"
+				},
+				"up": {
+					"texture": "#dark"
+				},
+				"down": {
+					"texture": "#dark"
+				}
+			}
+		}
+	],
+	"display": {
+		"gui": {
+			"rotation": [
+				30,
+				225,
+				0
+			],
+			"scale": [
+				1.1,
+				1.1,
+				1.1
+			]
+		}
+	}
+}

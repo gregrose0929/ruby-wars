@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/template_piston",
+	"textures": {
+		"bottom": "rubymod:block/ruby_piston_bottom",
+		"platform": "rubymod:block/ruby_piston_top",
+		"side": "rubymod:block/ruby_piston_side"
+	}
+}

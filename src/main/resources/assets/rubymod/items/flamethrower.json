@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "minecraft:item/blaze_rod"
+		"type": "minecraft:special",
+		"base": "rubymod:item/gear_icon",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:flamethrower",
+			"texture": "rubymod:textures/entity/vehicle/flamethrower.png"
+		}
 	}
 }

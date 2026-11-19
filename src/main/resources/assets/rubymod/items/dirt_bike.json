@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "minecraft:item/saddle"
+		"type": "minecraft:special",
+		"base": "rubymod:item/tank",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:dirt_bike",
+			"texture": "rubymod:textures/entity/vehicle/dirt_bike.png"
+		}
 	}
 }

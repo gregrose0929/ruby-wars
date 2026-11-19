@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "minecraft:item/spyglass"
+		"type": "minecraft:special",
+		"base": "rubymod:item/gear_icon",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:night_goggles",
+			"texture": "rubymod:textures/entity/vehicle/night_goggles.png"
+		}
 	}
 }

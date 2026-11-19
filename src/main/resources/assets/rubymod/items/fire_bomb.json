@@ -1,6 +1,11 @@
 {
 	"model": {
-		"type": "minecraft:model",
-		"model": "minecraft:item/fire_charge"
+		"type": "minecraft:special",
+		"base": "rubymod:item/gear_icon",
+		"model": {
+			"type": "rubymod:model_icon",
+			"layer": "rubymod:fire_bomb",
+			"texture": "rubymod:textures/entity/vehicle/fire_bomb.png"
+		}
 	}
 }

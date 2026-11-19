@@ -4593,6 +4593,7 @@ public final class AutoTest {
 			case "freshseason" -> freshScript();
 			case "veterans" -> veteransScript();
 			case "goldline" -> goldLineScript();
+			case "showroom" -> showroomScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9770,6 +9771,91 @@ public final class AutoTest {
 			me(server).teleportTo(hub, -3.5, dev.rubymod.game.Hub.FLOOR + 1, 5.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 145, 5, true);
 		}));
 		then(260, mc -> shot(mc, "vet-hall"));
+	}
+
+	/** Every vehicle model side by side (the tank for comparison), boats on a pool, then the Armory's vehicle icons. */
+	private static void showroomScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "gamemode creative @a");
+			command(mc, "time set 1000");
+		});
+		then(40, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			int x = p.getBlockX();
+			int z = p.getBlockZ();
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			lineAt = new net.minecraft.core.BlockPos(x, y, z);
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 14, y - 2, z - 4, x + 14, y - 1, z + 22)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+			}
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 14, y, z - 4, x + 14, y + 8, z + 22)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			// A pool for the boats.
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 14, y - 1, z + 10, x + 14, y - 1, z + 22)) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+			}
+			String[][] land = {{"rubymod:tank", "-9"}, {"rubymod:tunnel_borer", "-3"}, {"rubymod:dirt_bike", "2"}, {"rubymod:quad", "5"}, {"rubymod:jeep", "9"}};
+			for (String[] v : land) {
+				server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(),
+						"summon " + v[0] + " " + (x + Integer.parseInt(v[1])) + " " + y + " " + (z + 4) + " {Rotation:[200f,0f]}");
+			}
+			String[][] sea = {{"rubymod:patrol_boat", "-8"}, {"rubymod:gunboat", "0"}, {"rubymod:landing_craft", "9"}};
+			for (String[] v : sea) {
+				server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(),
+						"summon " + v[0] + " " + (x + Integer.parseInt(v[1])) + " " + (y - 0.4) + " " + (z + 16) + " {Rotation:[160f,0f]}");
+			}
+			p.teleportTo(level, x + 0.5, y + 3, z - 3.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 18, true);
+			p.getAbilities().flying = true;
+			p.onUpdateAbilities();
+		}));
+		then(80, mc -> shot(mc, "show-land"));
+		then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), lineAt.getX() + 0.5, lineAt.getY() + 7, lineAt.getZ() + 2.5,
+				java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 30, true)));
+		then(40, mc -> shot(mc, "show-sea"));
+		then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), lineAt.getX() - 2.5, lineAt.getY() + 1.6, lineAt.getZ() + 8.5,
+				java.util.Set.<net.minecraft.world.entity.Relative>of(), 160, 12, true)));
+		then(40, mc -> shot(mc, "show-close"));
+		// The security blocks in a row (after a pause: the world's busy saving just now).
+		then(400, mc -> onServer(mc, server -> {
+			var level = server.overworld();
+			String[] blocks = {"keycard_reader", "laser_tripwire", "monitor", "security_camera", "seismic_sensor", "ruby_bearing", "ruby_piston"};
+			for (int i = 0; i < blocks.length; i++) {
+				level.setBlockAndUpdate(lineAt.offset(-7 + i * 2, 0, 0), net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(
+						dev.rubymod.RubyMod.id(blocks[i])).defaultBlockState());
+			}
+			var door = dev.rubymod.registry.ModBlocks.KEYCARD_DOOR.defaultBlockState();
+			level.setBlockAndUpdate(lineAt.offset(7, 0, 0), door);
+			level.setBlockAndUpdate(lineAt.offset(7, 1, 0), door.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+					net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+			me(server).teleportTo(level, lineAt.getX() + 0.5, lineAt.getY() + 1.2, lineAt.getZ() - 4.5,
+					java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 12, true);
+		}));
+		then(120, mc -> shot(mc, "show-security"));
+		// Icons, in survival so the hotbar shows them, and the flamethrower in hand.
+		then(5, mc -> command(mc, "gamemode survival @a"));
+		then(10, mc -> onServer(mc, server -> {
+			String[] icons = {"flamethrower", "grappling_hook", "night_goggles", "keycard", "fire_bomb", "tunnel_borer", "dirt_bike", "quad", "gunboat"};
+			for (int i = 0; i < icons.length; i++) {
+				me(server).getInventory().setItem(i, new net.minecraft.world.item.ItemStack(
+						net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(dev.rubymod.RubyMod.id(icons[i]))));
+			}
+			String[] more = {"patrol_boat", "landing_craft", "keycard_door", "keycard_reader", "laser_tripwire", "monitor", "security_camera", "seismic_sensor",
+					"ruby_bearing", "ruby_piston", "belt_loader", "belt_sorter"};
+			for (int i = 0; i < more.length; i++) {
+				me(server).getInventory().setItem(9 + i, new net.minecraft.world.item.ItemStack(
+						net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(dev.rubymod.RubyMod.id(more[i]))));
+			}
+			me(server).getInventory().setSelectedSlot(0);
+		}));
+		then(120, mc -> shot(mc, "show-hand"));
+		then(5, mc -> mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)));
+		then(30, mc -> shot(mc, "show-icons"));
 	}
 
 	private static net.minecraft.core.BlockPos lineAt;

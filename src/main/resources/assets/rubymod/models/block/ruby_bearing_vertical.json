@@ -1,0 +1,7 @@
+{
+	"parent": "minecraft:block/orientable_vertical",
+	"textures": {
+		"front": "rubymod:block/ruby_bearing_front",
+		"side": "rubymod:block/ruby_bearing_side"
+	}
+}

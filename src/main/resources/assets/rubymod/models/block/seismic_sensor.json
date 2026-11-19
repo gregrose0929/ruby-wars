@@ -1,0 +1,171 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"base": "rubymod:block/seismic_sensor_base",
+		"dome": "rubymod:block/seismic_sensor_dome",
+		"dark": "rubymod:block/security_dark",
+		"particle": "rubymod:block/seismic_sensor_base"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				3,
+				16
+			],
+			"faces": {
+				"north": {
+					"texture": "#dark"
+				},
+				"south": {
+					"texture": "#dark"
+				},
+				"east": {
+					"texture": "#dark"
+				},
+				"west": {
+					"texture": "#dark"
+				},
+				"up": {
+					"texture": "#base"
+				},
+				"down": {
+					"texture": "#base"
+				}
+			}
+		},
+		{
+			"from": [
+				4,
+				3,
+				4
+			],
+			"to": [
+				12,
+				6.5,
+				12
+			],
+			"faces": {
+				"north": {
+					"texture": "#dome"
+				},
+				"south": {
+					"texture": "#dome"
+				},
+				"east": {
+					"texture": "#dome"
+				},
+				"west": {
+					"texture": "#dome"
+				},
+				"up": {
+					"texture": "#dome"
+				},
+				"down": {
+					"texture": "#dome"
+				}
+			}
+		},
+		{
+			"from": [
+				5,
+				6.5,
+				5
+			],
+			"to": [
+				11,
+				7.5,
+				11
+			],
+			"faces": {
+				"north": {
+					"texture": "#dark"
+				},
+				"south": {
+					"texture": "#dark"
+				},
+				"east": {
+					"texture": "#dark"
+				},
+				"west": {
+					"texture": "#dark"
+				},
+				"up": {
+					"texture": "#dark"
+				},
+				"down": {
+					"texture": "#dark"
+				}
+			}
+		},
+		{
+			"from": [
+				7.5,
+				7.5,
+				7.5
+			],
+			"to": [
+				8.5,
+				13,
+				8.5
+			],
+			"faces": {
+				"north": {
+					"texture": "#dark"
+				},
+				"south": {
+					"texture": "#dark"
+				},
+				"east": {
+					"texture": "#dark"
+				},
+				"west": {
+					"texture": "#dark"
+				},
+				"up": {
+					"texture": "#dark"
+				},
+				"down": {
+					"texture": "#dark"
+				}
+			}
+		},
+		{
+			"from": [
+				6.5,
+				12.5,
+				6.5
+			],
+			"to": [
+				9.5,
+				13.5,
+				9.5
+			],
+			"faces": {
+				"north": {
+					"texture": "#dome"
+				},
+				"south": {
+					"texture": "#dome"
+				},
+				"east": {
+					"texture": "#dome"
+				},
+				"west": {
+					"texture": "#dome"
+				},
+				"up": {
+					"texture": "#dome"
+				},
+				"down": {
+					"texture": "#dome"
+				}
+			}
+		}
+	]
+}

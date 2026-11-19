@@ -1,0 +1,52 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"north": "rubymod:block/laser_tripwire_front",
+		"south": "rubymod:block/security_vents",
+		"east": "rubymod:block/laser_tripwire_side",
+		"west": "rubymod:block/laser_tripwire_side",
+		"up": "rubymod:block/laser_tripwire_side",
+		"down": "rubymod:block/laser_tripwire_side",
+		"particle": "rubymod:block/laser_tripwire_side"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				16,
+				16
+			],
+			"faces": {
+				"north": {
+					"texture": "#north",
+					"cullface": "north"
+				},
+				"south": {
+					"texture": "#south",
+					"cullface": "south"
+				},
+				"east": {
+					"texture": "#east",
+					"cullface": "east"
+				},
+				"west": {
+					"texture": "#west",
+					"cullface": "west"
+				},
+				"up": {
+					"texture": "#up",
+					"cullface": "up"
+				},
+				"down": {
+					"texture": "#down",
+					"cullface": "down"
+				}
+			}
+		}
+	]
+}

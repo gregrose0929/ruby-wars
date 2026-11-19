@@ -1,6 +1,6 @@
 {
 	"model": {
 		"type": "minecraft:model",
-		"model": "minecraft:block/observer"
+		"model": "rubymod:block/laser_tripwire"
 	}
 }

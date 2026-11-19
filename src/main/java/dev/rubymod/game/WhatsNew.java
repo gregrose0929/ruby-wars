@@ -24,11 +24,11 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-19-belts";
+	private static final String VERSION = "2026-11-19-models";
 	private static final List<String> LINES = List.of(
-			"rubymod:belt_loader|Belt Loaders take things out of chests, furnaces and machines (set one to an item to sort); Belt Sorters turn one item off to the side.",
-			"minecraft:furnace|Belts now feed furnaces properly (ore in the top, fuel below), and the Trade Depot sells whatever a belt brings it.",
-			"rubymod:trade_depot|A new Trade Depot screen: a bar to your next ruby, and a preview of what you're about to sell.");
+			"rubymod:tunnel_borer|New models: the Tunnel Borer, Dirt Bike, Quad and all three boats are built like the tank now, with moving drills, wheels and ramps.",
+			"rubymod:flamethrower|The flamethrower, grappling hook, night goggles, keycard and fire bomb got real 3D models, and the security blocks their own looks.",
+			"rubymod:belt_loader|Belt Loaders and Sorters sort chests onto belts, belts feed furnaces, and the Trade Depot shows a bar to your next ruby.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;
