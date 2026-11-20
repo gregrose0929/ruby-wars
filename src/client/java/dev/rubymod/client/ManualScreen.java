@@ -221,16 +221,44 @@ public class ManualScreen extends Screen {
 		int tw = x + w - 10 - tx;
 		Ui.heading(g, p.title(), tx + Math.round((1 - turn) * 6), ty, Ui.alpha(Ui.GOLD, turn), 1.0F, false);
 		ty += 15;
+		// The text scrolls (mouse wheel) when a page is longer than the panel.
+		int top = ty;
+		int bottom = y + h - 14;
+		int total = 0;
+		for (String line : p.lines()) {
+			total += font.split(Component.literal(line), tw).size() * 10 + 4;
+		}
+		scrollMax = Math.max(0, total - 4 - (bottom - top));
+		scroll = Math.max(0, Math.min(scroll, scrollMax));
+		g.enableScissor(tx - 2, top - 1, x + w - 6, bottom);
+		ty = top - scroll;
 		for (String line : p.lines()) {
 			for (FormattedCharSequence seq : font.split(Component.literal(line), tw)) {
-				if (ty > y + h - 12) {
-					break;
+				if (ty >= top - 1 && ty <= bottom - 8) { // whole lines only
+					g.text(font, seq, tx, ty, Ui.alpha(Ui.DIM, turn), false);
 				}
-				g.text(font, seq, tx, ty, Ui.alpha(Ui.DIM, turn), false);
 				ty += 10;
 			}
 			ty += 4;
 		}
+		g.disableScissor();
+		if (scrollMax > 0) {
+			String hint = scroll < scrollMax ? "Scroll for more" : "Scroll back up";
+			Ui.text(g, hint, x + w - 10 - font.width(hint), y + h - 12, Ui.MUTED);
+		}
+	}
+
+	/** How far this page's text is scrolled, and how far it can go. */
+	private int scroll;
+	private int scrollMax;
+
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+		if (scrollMax > 0) {
+			scroll = Math.max(0, Math.min(scrollMax, scroll - (int) (scrollY * 20)));
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
 	}
 
 	@Override
@@ -245,6 +273,7 @@ public class ManualScreen extends Screen {
 			if (Ui.inside(event.x(), event.y(), x + 8, ty, navW() - 4, rowH)) {
 				if (page != i) {
 					page = i;
+					scroll = 0;
 					turned = System.currentTimeMillis();
 				}
 				return true;
@@ -256,5 +285,11 @@ public class ManualScreen extends Screen {
 	/** Test hook. */
 	public void showPage(int page) {
 		this.page = Math.max(0, Math.min(PAGES.size() - 1, page));
+		scroll = 0;
+	}
+
+	/** Test hook. */
+	public void scrollToEnd() {
+		scroll = Integer.MAX_VALUE;
 	}
 }

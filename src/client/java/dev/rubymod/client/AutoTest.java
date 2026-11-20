@@ -4598,6 +4598,27 @@ public final class AutoTest {
 			case "goalsview" -> goalsViewScript();
 			case "hudcheck" -> hudCheckScript();
 			case "beltyard" -> beltYardScript();
+			case "manualbelts" -> {
+				// The Field Manual's belt page, at two GUI scales (does it all fit?).
+				then(40, mc -> {
+					ManualScreen m = new ManualScreen();
+					mc.gui.setScreen(m);
+					m.showPage(9);
+				});
+				then(20, mc -> shot(mc, "manual-belts"));
+				then(5, mc -> ((ManualScreen) mc.gui.screen()).scrollToEnd());
+				then(20, mc -> shot(mc, "manual-belts-end"));
+				then(5, mc -> {
+					((ManualScreen) mc.gui.screen()).showPage(4);
+					((ManualScreen) mc.gui.screen()).scrollToEnd();
+				});
+				then(20, mc -> shot(mc, "manual-rift-end"));
+				then(5, mc -> mc.options.guiScale().set(0));
+				then(10, mc -> {
+					log("done");
+					mc.stop();
+				});
+			}
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
