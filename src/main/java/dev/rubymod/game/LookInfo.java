@@ -121,20 +121,62 @@ public final class LookInfo {
 				lines.add(what == null ? "Turns nothing yet: right-click it with an item"
 						: what + " turns " + (state.getValue(dev.rubymod.industry.BeltSorterBlock.RIGHT) ? "right" : "left") + ", the rest goes straight on");
 				color = what == null ? AMBER : GREEN;
+			} else if (state.getBlock() instanceof dev.rubymod.industry.BeltTunnelBlock) {
+				boolean exit = state.getValue(dev.rubymod.industry.BeltTunnelBlock.EXIT);
+				net.minecraft.core.Direction facing = state.getValue(dev.rubymod.industry.BeltTunnelBlock.FACING);
+				BlockPos other = exit ? dev.rubymod.industry.BeltTunnelBlock.entranceFor(player.level(), pos, state)
+						: dev.rubymod.industry.BeltTunnelBlock.exitFor(player.level(), pos, state);
+				lines.add(exit ? "Belt Tunnel exit" : "Belt Tunnel entrance");
+				if (other == null) {
+					lines.add(exit ? "No entrance: place one behind it, facing the same way (up to 7 blocks)"
+							: "No exit: place one ahead of it, facing the same way (up to 7 blocks)");
+				} else {
+					lines.add((exit ? "From the entrance " : "To the exit ") + pos.distManhattan(other) + " blocks " + (exit ? "back" : "on"));
+					if (!exit && be instanceof dev.rubymod.industry.BeltTunnelBlockEntity t && t.carrying() > 0) {
+						lines.add("Carrying " + t.carrying());
+					}
+					if (exit) {
+						BlockPos out = pos.relative(facing);
+						boolean takes = player.level().getBlockState(out).getBlock() instanceof dev.rubymod.industry.ConveyorBlock
+								|| dev.rubymod.industry.Belts.containerAt(player.level(), out) != null;
+						if (!takes) {
+							lines.add("Put a belt (or a chest) in front of it");
+						}
+					}
+				}
+				color = other == null ? AMBER : GREEN;
 			} else if (state.getBlock() instanceof dev.rubymod.industry.ConveyorBlock) {
 				net.minecraft.core.Direction facing = state.getValue(dev.rubymod.industry.ConveyorBlock.FACING);
-				lines.add("Conveyor Belt, running " + facing.getName());
-				var front = player.level().getBlockEntity(pos.relative(facing));
-				BlockState frontState = player.level().getBlockState(pos.relative(facing));
-				boolean feeds = dev.rubymod.industry.Belts.containerAt(player.level(), pos.relative(facing)) != null;
-				lines.add(feeds ? "Feeds the " + frontState.getBlock().getName().getString()
-						: frontState.getBlock() instanceof dev.rubymod.industry.ConveyorBlock ? "Feeds the next belt" : "Nothing at the end: items stop there");
+				boolean stopped = state.getValue(dev.rubymod.industry.ConveyorBlock.POWERED);
+				String name = state.getBlock().getName().getString();
+				if (state.getBlock() instanceof dev.rubymod.industry.BeltRampBlock) {
+					lines.add(name + ", carrying things " + (state.getValue(dev.rubymod.industry.BeltRampBlock.DOWN) ? "down" : "up") + " " + facing.getName());
+				} else if (state.getBlock() instanceof dev.rubymod.industry.BeltSplitterBlock) {
+					lines.add(name + ": shares things left and right");
+				} else {
+					var turn = dev.rubymod.industry.ConveyorBlock.turnOf(state);
+					lines.add(name + (turn == dev.rubymod.industry.ConveyorBlock.Turn.NONE ? ", running " : ", curving " + turn.getSerializedName() + " to run ")
+							+ facing.getName());
+				}
+				BlockPos ahead = state.getBlock() instanceof dev.rubymod.industry.BeltRampBlock && !state.getValue(dev.rubymod.industry.BeltRampBlock.DOWN)
+						? pos.relative(facing).above() : pos.relative(facing);
+				BlockState frontState = player.level().getBlockState(ahead);
+				boolean feeds = dev.rubymod.industry.Belts.containerAt(player.level(), ahead) != null;
+				boolean belt = frontState.getBlock() instanceof dev.rubymod.industry.ConveyorBlock;
+				if (stopped) {
+					lines.add("Stopped by redstone");
+				} else if (!(state.getBlock() instanceof dev.rubymod.industry.BeltSplitterBlock)) {
+					lines.add(feeds ? "Feeds the " + frontState.getBlock().getName().getString()
+							: belt ? "Feeds the next belt"
+									: frontState.isFaceSturdy(player.level(), ahead, facing.getOpposite()) ? "Nothing at the end: items stop there"
+											: "Nothing at the end: items fall off");
+				}
 				int carried = 0;
 				for (var item : player.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(pos).inflate(0.1))) {
 					carried += item.getItem().getCount();
 				}
 				lines.add(carried > 0 ? "Carrying " + carried : "Nothing on it");
-				color = feeds || frontState.getBlock() instanceof dev.rubymod.industry.ConveyorBlock ? GREEN : AMBER;
+				color = stopped ? AMBER : feeds || belt || state.getBlock() instanceof dev.rubymod.industry.BeltSplitterBlock ? GREEN : AMBER;
 			} else if (be instanceof net.minecraft.world.Container chest && !(be instanceof DefenseBlockEntity) && !(be instanceof GraveBlockEntity)
 					&& (state.is(net.minecraft.world.level.block.Blocks.CHEST) || state.is(net.minecraft.world.level.block.Blocks.BARREL)
 							|| state.is(net.minecraft.world.level.block.Blocks.TRAPPED_CHEST) || state.is(net.minecraft.world.level.block.Blocks.HOPPER))) {

@@ -113,6 +113,145 @@ public final class SelfTest {
 		}
 	}
 
+	/** Belts: curves, merges, turning, redstone, waiting when full, items nobody can grab, people stepping off, tunnels. */
+	private void beltChecks(ServerLevel level, net.minecraft.core.BlockPos at, FakePlayer alpha) {
+		var N = net.minecraft.core.Direction.NORTH;
+		var W = net.minecraft.core.Direction.WEST;
+		var E = net.minecraft.core.Direction.EAST;
+		var S = net.minecraft.core.Direction.SOUTH;
+		var NONE = dev.rubymod.industry.ConveyorBlock.Turn.NONE;
+		var belt = ModBlocks.CONVEYOR.defaultBlockState();
+		var F = dev.rubymod.industry.ConveyorBlock.FACING;
+		var AIR = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+		java.util.List<net.minecraft.core.BlockPos> placed = new java.util.ArrayList<>();
+		java.util.function.BiConsumer<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState> put = (p, st) -> {
+			level.setBlockAndUpdate(p, st);
+			placed.add(p.immutable());
+		};
+		for (var p : net.minecraft.core.BlockPos.betweenClosed(at.offset(-1, -1, -6), at.offset(12, -1, 2))) {
+			level.setBlockAndUpdate(p, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+		}
+		for (var p : net.minecraft.core.BlockPos.betweenClosed(at.offset(-1, 0, -6), at.offset(12, 3, 2))) {
+			level.setBlockAndUpdate(p, AIR);
+		}
+		// A belt running north, then one turning west where it ends: the second bends left.
+		var a = at;
+		var b = at.north();
+		put.accept(a, belt.setValue(F, N));
+		put.accept(b, belt.setValue(F, W));
+		var turnB = dev.rubymod.industry.ConveyorBlock.turnOf(level.getBlockState(b));
+		check("belts: a belt fed from its side curves (" + turnB + ")", turnB == dev.rubymod.industry.ConveyorBlock.Turn.LEFT);
+		check("belts: the belt feeding it stays straight", dev.rubymod.industry.ConveyorBlock.turnOf(level.getBlockState(a)) == NONE);
+		// A belt behind it too: a merge, so straight again; take it away and it curves back.
+		put.accept(b.east(), belt.setValue(F, W));
+		var merged = dev.rubymod.industry.ConveyorBlock.turnOf(level.getBlockState(b));
+		level.setBlockAndUpdate(b.east(), AIR);
+		var again = dev.rubymod.industry.ConveyorBlock.turnOf(level.getBlockState(b));
+		check("belts: a belt joining a line that runs on stays straight (" + merged + "), and curves once it is alone (" + again + ")",
+				merged == NONE && again == dev.rubymod.industry.ConveyorBlock.Turn.LEFT);
+		// The mirror image curves right.
+		var c = at.offset(4, 0, 0);
+		put.accept(c, belt.setValue(F, N));
+		put.accept(c.north(), belt.setValue(F, E));
+		check("belts: fed from the other side it curves right",
+				dev.rubymod.industry.ConveyorBlock.turnOf(level.getBlockState(c.north())) == dev.rubymod.industry.ConveyorBlock.Turn.RIGHT);
+		// Ramps and sorters never curve; a Constructor turning a blueprint turns belts with it.
+		check("belts: only plain belts curve", !ModBlocks.BELT_RAMP.defaultBlockState().hasProperty(dev.rubymod.industry.ConveyorBlock.TURN)
+				&& !ModBlocks.BELT_SORTER.defaultBlockState().hasProperty(dev.rubymod.industry.ConveyorBlock.TURN));
+		check("belts: a turned blueprint turns its belts and ramps too",
+				belt.setValue(F, N).rotate(net.minecraft.world.level.block.Rotation.CLOCKWISE_90).getValue(F) == E
+						&& ModBlocks.BELT_RAMP.defaultBlockState().setValue(F, N).rotate(net.minecraft.world.level.block.Rotation.CLOCKWISE_180).getValue(F) == S);
+
+		// Things riding a belt: nobody walking past picks them up; and the curve carries them round.
+		var item = new net.minecraft.world.entity.item.ItemEntity(level, b.getX() + 0.5, b.getY() + 0.25, b.getZ() + 0.95,
+				new ItemStack(net.minecraft.world.item.Items.RAW_IRON));
+		item.setPickUpDelay(0);
+		level.getBlockState(b).getBlock().stepOn(level, b, level.getBlockState(b), item);
+		var inMove = item.getDeltaMovement();
+		check("belts: nobody can grab what is riding a belt", item.hasPickUpDelay());
+		item.setPos(b.getX() + 0.05, b.getY() + 0.25, b.getZ() + 0.5);
+		level.getBlockState(b).getBlock().stepOn(level, b, level.getBlockState(b), item);
+		var outMove = item.getDeltaMovement();
+		check("belts: round a curve things come in from the side and go out the end (in " + inMove + ", out " + outMove + ")",
+				inMove.z < -0.05 && Math.abs(inMove.x) < 0.05 && outMove.x < -0.05 && Math.abs(outMove.z) < 0.05);
+
+		// People get a nudge on top of their own walking (so they can walk and jump off); vehicles are not carried.
+		alpha.setPos(a.getX() + 0.5, a.getY() + 0.25, a.getZ() + 0.5);
+		alpha.setOnGround(true);
+		alpha.setDeltaMovement(0.2, 0, 0);
+		level.getBlockState(a).getBlock().stepOn(level, a, level.getBlockState(a), alpha);
+		var walk = alpha.getDeltaMovement();
+		check("belts: a belt nudges people along without stopping them walking off sideways (" + walk + ")", walk.x > 0.19 && walk.z < -0.01);
+		alpha.setDeltaMovement(0, 0.42, 0);
+		alpha.setOnGround(false);
+		level.getBlockState(a).entityInside(level, a, alpha, net.minecraft.world.entity.InsideBlockEffectApplier.NOOP, true);
+		check("belts: jumping off a belt is not held back (" + alpha.getDeltaMovement() + ")", alpha.getDeltaMovement().y > 0.4
+				&& alpha.getDeltaMovement().horizontalDistance() < 0.001);
+		alpha.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+		var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+		if (jeep != null) {
+			jeep.setPos(a.getX() + 0.5, a.getY() + 0.25, a.getZ() + 0.5);
+			jeep.setOnGround(true);
+			jeep.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+			level.getBlockState(a).getBlock().stepOn(level, a, level.getBlockState(a), jeep);
+			check("belts: vehicles are not carried", jeep.getDeltaMovement().lengthSqr() < 1.0E-6);
+		}
+
+		// Redstone stops a belt; a stopped or crowded belt makes machines and Loaders wait.
+		var stopper = a.west();
+		put.accept(stopper, net.minecraft.world.level.block.Blocks.REDSTONE_BLOCK.defaultBlockState());
+		boolean stopped = level.getBlockState(a).getValue(dev.rubymod.industry.ConveyorBlock.POWERED);
+		boolean waits = dev.rubymod.industry.ConveyorBlock.busy(level, a);
+		level.setBlockAndUpdate(stopper, AIR);
+		boolean restarted = !level.getBlockState(a).getValue(dev.rubymod.industry.ConveyorBlock.POWERED);
+		check("belts: redstone stops a belt (and starts it again): " + stopped + ", " + restarted, stopped && waits && restarted);
+		var crowd = new net.minecraft.world.entity.item.ItemEntity(level, c.getX() + 0.5, c.getY() + 0.3, c.getZ() + 0.5,
+				new ItemStack(net.minecraft.world.item.Items.COAL));
+		level.addFreshEntity(crowd);
+		boolean busy = dev.rubymod.industry.ConveyorBlock.busy(level, c);
+		crowd.discard();
+		check("belts: machines wait while things still sit where they would drop theirs", busy && !dev.rubymod.industry.ConveyorBlock.busy(level, c));
+
+		// Belt Tunnel: an entrance with an exit ahead takes things from behind (only), and nothing comes back out.
+		var tin = at.offset(8, 0, 0);
+		var tout = at.offset(8, 0, -4);
+		var tunnel = ModBlocks.BELT_TUNNEL.defaultBlockState().setValue(dev.rubymod.industry.BeltTunnelBlock.FACING, N);
+		put.accept(tin, tunnel);
+		boolean refusedAlone = !dev.rubymod.industry.Belts.insert(level, tin, S, new ItemStack(net.minecraft.world.item.Items.COAL, 4)).isEmpty();
+		put.accept(tout, tunnel.setValue(dev.rubymod.industry.BeltTunnelBlock.EXIT, true));
+		ItemStack sideRest = dev.rubymod.industry.Belts.insert(level, tin, E, new ItemStack(net.minecraft.world.item.Items.COAL, 4));
+		ItemStack backRest = dev.rubymod.industry.Belts.insert(level, tin, S, new ItemStack(net.minecraft.world.item.Items.COAL, 4));
+		ItemStack pulled = dev.rubymod.industry.Belts.extract(level, tin, S, ItemStack.EMPTY, 8);
+		check("belts: a Belt Tunnel needs its exit, takes things from behind only, and will not give them back (" + refusedAlone + ", " + sideRest
+				+ ", " + backRest + ", " + pulled + ")", refusedAlone && sideRest.getCount() == 4 && backRest.isEmpty() && pulled.isEmpty()
+						&& dev.rubymod.industry.BeltTunnelBlock.exitFor(level, tin, level.getBlockState(tin)) != null);
+		check("belts: the tunnel exit feeds a curve like a belt does", dev.rubymod.industry.ConveyorBlock.feeds(level, tout, N));
+		// Broken, a tunnel drops what it was carrying.
+		level.setBlockAndUpdate(tin, AIR);
+		int dropped = 0;
+		for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(tin).inflate(1.5))) {
+			dropped += e.getItem().getCount();
+			e.discard();
+		}
+		check("belts: a broken Belt Tunnel drops what was inside (" + dropped + ")", dropped == 4);
+
+		// Down ramps feed the belt below; up ramps do not (they let off a level higher).
+		var ramp = ModBlocks.BELT_RAMP.defaultBlockState().setValue(F, N);
+		check("belts: a down ramp feeds a belt at its foot, an up ramp does not",
+				!feedsState(level, at.offset(11, 0, 0), ramp) && feedsState(level, at.offset(11, 0, 0), ramp.setValue(dev.rubymod.industry.BeltRampBlock.DOWN, true)));
+
+		for (var p : placed) {
+			level.setBlockAndUpdate(p, AIR);
+		}
+	}
+
+	private static boolean feedsState(ServerLevel level, net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+		level.setBlockAndUpdate(pos, state);
+		boolean feeds = dev.rubymod.industry.ConveyorBlock.feeds(level, pos, state.getValue(dev.rubymod.industry.ConveyorBlock.FACING));
+		level.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		return feeds;
+	}
+
 	private void check(String name, boolean ok) {
 		if (ok) {
 			results.add("PASS " + name);
@@ -926,6 +1065,8 @@ public final class SelfTest {
 		check("belts: an unset Belt Loader takes anything", anything.is(net.minecraft.world.item.Items.COBBLESTONE) && anything.getCount() == 8);
 		level.setBlockAndUpdate(beltFurnacePos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 		level.setBlockAndUpdate(sortChestPos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+
+		beltChecks(level, at.offset(-12, 0, 14), alpha);
 
 		// Vault: rubies in, interest-free withdraw out.
 		var vault = machine(level, at.offset(6, 0, 0), ModBlocks.VAULT, alpha);

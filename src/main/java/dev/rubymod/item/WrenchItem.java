@@ -35,7 +35,8 @@ public class WrenchItem extends Item {
 	}
 
 	private static boolean ours(Block block) {
-		return block instanceof MachineBlock || block instanceof dev.rubymod.industry.ConveyorBlock || block instanceof dev.rubymod.industry.BeltLoaderBlock;
+		return block instanceof MachineBlock || block instanceof dev.rubymod.industry.ConveyorBlock || block instanceof dev.rubymod.industry.BeltLoaderBlock
+				|| block instanceof dev.rubymod.industry.BeltTunnelBlock;
 	}
 
 	@Override

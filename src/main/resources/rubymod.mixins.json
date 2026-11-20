@@ -9,6 +9,7 @@
 		"FireBlockMixin",
 		"FlowingFluidMixin",
 		"InteractionAccessor",
+		"ItemEntityAccessor",
 		"ItemFrameAccessor",
 		"ItemDisplayAccessor",
 		"MannequinAccessor",

@@ -24,8 +24,10 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-19-hud";
+	private static final String VERSION = "2026-11-20-belts";
 	private static final List<String> LINES = List.of(
+			"rubymod:conveyor|Belts curve by themselves, you can walk and jump off them, nobody grabs what's riding them, and redstone stops them.",
+			"rubymod:belt_tunnel|New at the Armory: the Belt Splitter (shares things left and right) and the Belt Tunnel (carries things under walls). Ramps can go down too.",
 			"minecraft:spyglass|A smaller, tidier HUD: one slim panel for your Heart, rubies and power, and a one-line guide. Settings (M) has HUD size.",
 			"rubymod:ruby_heart|New goals for stars (J): Heart to tier 3, a Vault, 5 defenses, sell at a Trade Depot, Belt Loaders, Battle Day, sailing and the Tunnel Borer.",
 			"minecraft:compass|Press M for the new Ruby Wars menu: map, guide, profile, manual, games and Settings (choose what your HUD shows).",

@@ -659,6 +659,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	/** A few items at a time onto a conveyor belt. */
 	private void dropOnBelt(ServerLevel level, BlockPos belt) {
+		if (ConveyorBlock.busy(level, belt)) {
+			return; // the line's backed up (or stopped): keep it in here until there's room
+		}
 		for (int i = firstOutput(); i < items.size(); i++) {
 			ItemStack s = items.get(i);
 			if (!s.isEmpty()) {

@@ -60,7 +60,7 @@ public class FilterBlockEntity extends BlockEntity {
 		if (!belt && !container) {
 			return;
 		}
-		if (belt && !level.getEntitiesOfClass(ItemEntity.class, new net.minecraft.world.phys.AABB(to).inflate(-0.2, 0, -0.2)).isEmpty()) {
+		if (belt && ConveyorBlock.busy(level, to)) {
 			// Wait for the belt to clear a little, so nothing piles up.
 			return;
 		}

@@ -4597,6 +4597,7 @@ public final class AutoTest {
 			case "smooth" -> polishScript();
 			case "goalsview" -> goalsViewScript();
 			case "hudcheck" -> hudCheckScript();
+			case "beltyard" -> beltYardScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9777,6 +9778,163 @@ public final class AutoTest {
 	}
 
 	/** Toasts, the compact guide, the Ruby Wars menu, Settings, Admin, machines at work, a belt ramp, the trip fade, goal advancements. */
+	private static net.minecraft.core.BlockPos yard;
+
+	/**
+	 * A belt yard: Loaders feeding a curve and a Splitter (two chests), a Belt Tunnel under a wall, a down ramp off a
+	 * ledge, and a line stopped by redstone; a player stands right beside the belts. Logs what reached each chest
+	 * (and that the player picked nothing up), with screenshots from above and close up.
+	 */
+	private static void beltYardScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode creative @a");
+			command(mc, "time set 1000");
+			command(mc, "gamerule doMobSpawning false");
+		});
+		then(60, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			int x0 = p.getBlockX() + 3;
+			int z0 = p.getBlockZ() + 14;
+			int y0 = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x0, z0);
+			yard = new net.minecraft.core.BlockPos(x0, y0, z0);
+			var Y = yard;
+			var stone = net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState();
+			var air = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(Y.offset(-6, -1, -10), Y.offset(16, -1, 3))) {
+				level.setBlockAndUpdate(q, stone);
+			}
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(Y.offset(-6, 0, -10), Y.offset(16, 4, 3))) {
+				level.setBlockAndUpdate(q, air);
+			}
+			var F = dev.rubymod.industry.ConveyorBlock.FACING;
+			var N = net.minecraft.core.Direction.NORTH;
+			var S = net.minecraft.core.Direction.SOUTH;
+			var W = net.minecraft.core.Direction.WEST;
+			var belt = dev.rubymod.registry.ModBlocks.CONVEYOR.defaultBlockState();
+			var loader = dev.rubymod.registry.ModBlocks.BELT_LOADER.defaultBlockState();
+			java.util.function.BiConsumer<net.minecraft.core.BlockPos, net.minecraft.world.item.Item> source = (at, item) -> {
+				level.setBlockAndUpdate(at, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+				if (level.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest) {
+					chest.setItem(0, new net.minecraft.world.item.ItemStack(item, 64));
+				}
+				level.setBlockAndUpdate(at.north(), loader.setValue(dev.rubymod.industry.BeltLoaderBlock.FACING, N));
+			};
+			java.util.function.Consumer<net.minecraft.core.BlockPos> sink = at -> level.setBlockAndUpdate(at, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+			// 1. North, a curve to the west, a Splitter sharing between two chests.
+			source.accept(Y, net.minecraft.world.item.Items.COBBLESTONE);
+			level.setBlockAndUpdate(Y.offset(0, 0, -2), belt.setValue(F, N));
+			level.setBlockAndUpdate(Y.offset(0, 0, -3), belt.setValue(F, N));
+			level.setBlockAndUpdate(Y.offset(0, 0, -4), belt.setValue(F, W));
+			level.setBlockAndUpdate(Y.offset(-1, 0, -4), belt.setValue(F, W));
+			level.setBlockAndUpdate(Y.offset(-2, 0, -4), belt.setValue(F, W));
+			level.setBlockAndUpdate(Y.offset(-3, 0, -4), dev.rubymod.registry.ModBlocks.BELT_SPLITTER.defaultBlockState().setValue(F, W));
+			level.setBlockAndUpdate(Y.offset(-3, 0, -3), belt.setValue(F, S));
+			sink.accept(Y.offset(-3, 0, -2));
+			level.setBlockAndUpdate(Y.offset(-3, 0, -5), belt.setValue(F, N));
+			sink.accept(Y.offset(-3, 0, -6));
+			// 2. A Belt Tunnel under a wall.
+			source.accept(Y.offset(4, 0, 0), net.minecraft.world.item.Items.RAW_GOLD);
+			level.setBlockAndUpdate(Y.offset(4, 0, -2), belt.setValue(F, N));
+			var tunnel = dev.rubymod.registry.ModBlocks.BELT_TUNNEL.defaultBlockState().setValue(dev.rubymod.industry.BeltTunnelBlock.FACING, N);
+			level.setBlockAndUpdate(Y.offset(4, 0, -3), tunnel);
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(Y.offset(3, 0, -5), Y.offset(5, 2, -4))) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState());
+			}
+			level.setBlockAndUpdate(Y.offset(4, 0, -6), tunnel.setValue(dev.rubymod.industry.BeltTunnelBlock.EXIT, true));
+			level.setBlockAndUpdate(Y.offset(4, 0, -7), belt.setValue(F, N));
+			sink.accept(Y.offset(4, 0, -8));
+			// 3. Off a ledge and down a ramp.
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(Y.offset(8, 0, -2), Y.offset(8, 0, 0))) {
+				level.setBlockAndUpdate(q, stone);
+			}
+			source.accept(Y.offset(8, 1, 0), net.minecraft.world.item.Items.RAW_IRON);
+			level.setBlockAndUpdate(Y.offset(8, 1, -2), belt.setValue(F, N));
+			level.setBlockAndUpdate(Y.offset(8, 0, -3), dev.rubymod.registry.ModBlocks.BELT_RAMP.defaultBlockState().setValue(F, N)
+					.setValue(dev.rubymod.industry.BeltRampBlock.DOWN, true));
+			level.setBlockAndUpdate(Y.offset(8, 0, -4), belt.setValue(F, N));
+			sink.accept(Y.offset(8, 0, -5));
+			// 4. A line stopped by redstone.
+			source.accept(Y.offset(12, 0, 0), net.minecraft.world.item.Items.COAL);
+			for (int i = 2; i <= 4; i++) {
+				level.setBlockAndUpdate(Y.offset(12, 0, -i), belt.setValue(F, N));
+			}
+			sink.accept(Y.offset(12, 0, -5));
+			level.setBlockAndUpdate(Y.offset(13, 0, -3), net.minecraft.world.level.block.Blocks.REDSTONE_BLOCK.defaultBlockState());
+			// Stand right beside the first line (close enough to pick things up, if belts let you).
+			p.getInventory().clearContent();
+			p.teleportTo(level, Y.getX() + 1.5, Y.getY(), Y.getZ() - 2.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 90, 30, true);
+		}));
+		then(30, mc -> {
+			command(mc, "gamemode survival @a");
+		});
+		then(120, mc -> shot(mc, "belts-beside"));
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.teleportTo(server.overworld(), yard.getX() + 4.5, yard.getY() + 9, yard.getZ() + 3.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 180, 62, true);
+			p.getAbilities().flying = true;
+			p.onUpdateAbilities();
+		}));
+		then(5, mc -> command(mc, "gamemode creative @a"));
+		then(60, mc -> shot(mc, "belts-above"));
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.teleportTo(server.overworld(), yard.getX() - 0.5, yard.getY() + 2.2, yard.getZ() - 1.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 200, 55, true);
+		}));
+		then(40, mc -> shot(mc, "belts-curve"));
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.teleportTo(server.overworld(), yard.getX() + 11.5, yard.getY() + 2.4, yard.getZ() - 2.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 110, 35, true);
+		}));
+		then(40, mc -> shot(mc, "belts-ramp"));
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.teleportTo(server.overworld(), yard.getX() + 6.5, yard.getY() + 2.2, yard.getZ() - 1.0, java.util.Set.<net.minecraft.world.entity.Relative>of(), 150, 40, true);
+		}));
+		then(40, mc -> shot(mc, "belts-tunnel"));
+		then(200, mc -> onServer(mc, server -> {
+			var level = server.overworld();
+			java.util.function.Function<net.minecraft.core.BlockPos, String> in = at -> {
+				if (!(level.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest)) {
+					return "no chest";
+				}
+				int n = 0;
+				for (int i = 0; i < chest.getContainerSize(); i++) {
+					n += chest.getItem(i).getCount();
+				}
+				return String.valueOf(n);
+			};
+			var p = me(server);
+			int grabbed = p.getInventory().countItem(net.minecraft.world.item.Items.COBBLESTONE);
+			log("belts: splitter left chest {}, right chest {}; tunnel chest {}; ramp chest {}; stopped line chest {}; player picked up {}",
+					in.apply(yard.offset(-3, 0, -2)), in.apply(yard.offset(-3, 0, -6)), in.apply(yard.offset(4, 0, -8)), in.apply(yard.offset(8, 0, -5)),
+					in.apply(yard.offset(12, 0, -5)), grabbed);
+			int onBelts = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(yard).inflate(20)).size();
+			log("belts: {} item entities in the yard", onBelts);
+			level.setBlockAndUpdate(yard.offset(13, 0, -3), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		}));
+		then(200, mc -> onServer(mc, server -> {
+			var level = server.overworld();
+			int n = 0;
+			if (level.getBlockEntity(yard.offset(12, 0, -5)) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest) {
+				for (int i = 0; i < chest.getContainerSize(); i++) {
+					n += chest.getItem(i).getCount();
+				}
+			}
+			log("belts: after the redstone came off, the stopped line delivered {}", n);
+		}));
+		then(5, mc -> shot(mc, "belts-end"));
+		then(10, mc -> {
+			log("done");
+			mc.stop();
+		});
+	}
+
 	/** The corner panels with big numbers, at a few GUI scales (text inside its panel, nothing squeezed). */
 	private static void hudCheckScript() {
 		then(5, mc -> {

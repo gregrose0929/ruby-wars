@@ -87,7 +87,7 @@
 	"item.rubymod.ruby_wrench": "Ruby Wrench",
 	"block.rubymod.belt_sorter": "Belt Sorter",
 	"block.rubymod.belt_ramp": "Belt Ramp",
-	"block.rubymod.belt_ramp.desc": "A belt that climbs one block the way it faces: things go up a level onto the next belt.",
+	"block.rubymod.belt_ramp.desc": "A belt that carries things up a level (right-click with an empty hand to make it carry them down).",
 	"block.rubymod.tesla_coil": "Tesla Coil",
 	"block.rubymod.elevator": "Elevator",
 	"block.rubymod.camo_net": "Camo Netting",
@@ -238,12 +238,16 @@
 	"block.rubymod.mortar.desc": "Lobs shells at a spot you mark with the Rangefinder.",
 	"block.rubymod.missile_silo.desc": "Fires a cruise missile at a spot you choose.",
 	"block.rubymod.reinforced_glass.desc": "Bulletproof glass: stops small arms, takes two blasts.",
-	"block.rubymod.conveyor.desc": "Carries items the way its yellow arrows point, into whatever's at the end: a chest, a furnace, a machine.",
+	"block.rubymod.conveyor.desc": "Carries things the way it points, into whatever is at the end. Curves by itself where a belt joins its side. Redstone stops it.",
 	"block.rubymod.belt_loader.desc": "Takes things out of the chest, furnace or machine behind it, onto the belt in front. Right-click with an item to take only that.",
 	"block.rubymod.belt_sorter.desc": "A belt piece that turns one kind of item off to the side. Right-click with an item to choose; empty hand swaps sides.",
 	"block.rubymod.floodlight.desc": "A bright light for your base.",
 	"block.rubymod.elevator.desc": "Stand on it and jump to go up to the next one; crouch to go down.",
 	"block.rubymod.camo_net.desc": "Hides what's under it from the air.",
 	"block.rubymod.holo_camo.desc": "Copies any block's look. You walk through it; enemies hit a wall.",
-	"item.rubymod.night_goggles.desc": "Wear them to see in the dark."
+	"item.rubymod.night_goggles.desc": "Wear them to see in the dark.",
+	"block.rubymod.belt_splitter": "Belt Splitter",
+	"block.rubymod.belt_splitter.desc": "A belt piece that shares what comes in between its left and its right, turn about.",
+	"block.rubymod.belt_tunnel": "Belt Tunnel",
+	"block.rubymod.belt_tunnel.desc": "Place two facing the same way, up to 7 blocks apart: things go in one and out the other, under walls and floors."
 }

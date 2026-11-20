@@ -55,7 +55,7 @@ public final class Research {
 		node("railgun", "Railgun", "Defense", 5, "shields", "railgun", "The Railgun Emplacement", "railgun");
 		// Engineering & support
 		node("logistics", "Logistics", "Support", 2, null, "conveyor", "Conveyors, Belt Loaders and Sorters, Constructor and Elevators", "conveyor", "belt_loader",
-				"belt_sorter", "belt_ramp", "constructor", "elevator");
+				"belt_sorter", "belt_ramp", "belt_splitter", "belt_tunnel", "constructor", "elevator");
 		node("guards", "Hired Guards", "Support", 3, null, "guard_contract", "Guard Contracts (riflemen and AT gunners)",
 				"guard_contract", "at_guard_contract");
 		node("recon", "Recon", "Support", 2, null, "recon_drone", "Recon and Scout Drones, and the Mortar", "recon_drone", "scout_drone", "mortar", "mortar_shell");

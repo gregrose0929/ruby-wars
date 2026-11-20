@@ -1,19 +1,99 @@
 {
 	"variants": {
-		"facing=north": {
+		"facing=north,powered=false,turn=none": {
 			"model": "rubymod:block/conveyor",
 			"y": 0
 		},
-		"facing=east": {
+		"facing=north,powered=true,turn=none": {
+			"model": "rubymod:block/conveyor_still",
+			"y": 0
+		},
+		"facing=north,powered=false,turn=left": {
+			"model": "rubymod:block/conveyor_curve_left",
+			"y": 0
+		},
+		"facing=north,powered=true,turn=left": {
+			"model": "rubymod:block/conveyor_curve_left_still",
+			"y": 0
+		},
+		"facing=north,powered=false,turn=right": {
+			"model": "rubymod:block/conveyor_curve_right",
+			"y": 0
+		},
+		"facing=north,powered=true,turn=right": {
+			"model": "rubymod:block/conveyor_curve_right_still",
+			"y": 0
+		},
+		"facing=east,powered=false,turn=none": {
 			"model": "rubymod:block/conveyor",
 			"y": 90
 		},
-		"facing=south": {
+		"facing=east,powered=true,turn=none": {
+			"model": "rubymod:block/conveyor_still",
+			"y": 90
+		},
+		"facing=east,powered=false,turn=left": {
+			"model": "rubymod:block/conveyor_curve_left",
+			"y": 90
+		},
+		"facing=east,powered=true,turn=left": {
+			"model": "rubymod:block/conveyor_curve_left_still",
+			"y": 90
+		},
+		"facing=east,powered=false,turn=right": {
+			"model": "rubymod:block/conveyor_curve_right",
+			"y": 90
+		},
+		"facing=east,powered=true,turn=right": {
+			"model": "rubymod:block/conveyor_curve_right_still",
+			"y": 90
+		},
+		"facing=south,powered=false,turn=none": {
 			"model": "rubymod:block/conveyor",
 			"y": 180
 		},
-		"facing=west": {
+		"facing=south,powered=true,turn=none": {
+			"model": "rubymod:block/conveyor_still",
+			"y": 180
+		},
+		"facing=south,powered=false,turn=left": {
+			"model": "rubymod:block/conveyor_curve_left",
+			"y": 180
+		},
+		"facing=south,powered=true,turn=left": {
+			"model": "rubymod:block/conveyor_curve_left_still",
+			"y": 180
+		},
+		"facing=south,powered=false,turn=right": {
+			"model": "rubymod:block/conveyor_curve_right",
+			"y": 180
+		},
+		"facing=south,powered=true,turn=right": {
+			"model": "rubymod:block/conveyor_curve_right_still",
+			"y": 180
+		},
+		"facing=west,powered=false,turn=none": {
 			"model": "rubymod:block/conveyor",
+			"y": 270
+		},
+		"facing=west,powered=true,turn=none": {
+			"model": "rubymod:block/conveyor_still",
+			"y": 270
+		},
+		"facing=west,powered=false,turn=left": {
+			"model": "rubymod:block/conveyor_curve_left",
+			"y": 270
+		},
+		"facing=west,powered=true,turn=left": {
+			"model": "rubymod:block/conveyor_curve_left_still",
+			"y": 270
+		},
+		"facing=west,powered=false,turn=right": {
+			"model": "rubymod:block/conveyor_curve_right",
+			"y": 270
+		},
+		"facing=west,powered=true,turn=right": {
+			"model": "rubymod:block/conveyor_curve_right_still",
 			"y": 270
 		}
 	}

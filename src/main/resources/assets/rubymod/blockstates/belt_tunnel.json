@@ -1,0 +1,36 @@
+{
+	"variants": {
+		"facing=north,exit=false": {
+			"model": "rubymod:block/belt_tunnel_entrance",
+			"y": 0
+		},
+		"facing=north,exit=true": {
+			"model": "rubymod:block/belt_tunnel_exit",
+			"y": 0
+		},
+		"facing=east,exit=false": {
+			"model": "rubymod:block/belt_tunnel_entrance",
+			"y": 90
+		},
+		"facing=east,exit=true": {
+			"model": "rubymod:block/belt_tunnel_exit",
+			"y": 90
+		},
+		"facing=south,exit=false": {
+			"model": "rubymod:block/belt_tunnel_entrance",
+			"y": 180
+		},
+		"facing=south,exit=true": {
+			"model": "rubymod:block/belt_tunnel_exit",
+			"y": 180
+		},
+		"facing=west,exit=false": {
+			"model": "rubymod:block/belt_tunnel_entrance",
+			"y": 270
+		},
+		"facing=west,exit=true": {
+			"model": "rubymod:block/belt_tunnel_exit",
+			"y": 270
+		}
+	}
+}

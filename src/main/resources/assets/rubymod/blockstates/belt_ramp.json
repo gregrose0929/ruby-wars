@@ -1,20 +1,36 @@
 {
 	"variants": {
-		"facing=north": {
+		"down=false,facing=north": {
 			"model": "rubymod:block/belt_ramp",
 			"y": 0
 		},
-		"facing=east": {
+		"down=true,facing=north": {
+			"model": "rubymod:block/belt_ramp_down",
+			"y": 180
+		},
+		"down=false,facing=east": {
 			"model": "rubymod:block/belt_ramp",
 			"y": 90
 		},
-		"facing=south": {
+		"down=true,facing=east": {
+			"model": "rubymod:block/belt_ramp_down",
+			"y": 270
+		},
+		"down=false,facing=south": {
 			"model": "rubymod:block/belt_ramp",
 			"y": 180
 		},
-		"facing=west": {
+		"down=true,facing=south": {
+			"model": "rubymod:block/belt_ramp_down",
+			"y": 0
+		},
+		"down=false,facing=west": {
 			"model": "rubymod:block/belt_ramp",
 			"y": 270
+		},
+		"down=true,facing=west": {
+			"model": "rubymod:block/belt_ramp_down",
+			"y": 90
 		}
 	}
 }

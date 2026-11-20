@@ -1,0 +1,173 @@
+{
+	"parent": "minecraft:block/block",
+	"textures": {
+		"particle": "rubymod:block/conveyor_frame",
+		"frame": "rubymod:block/conveyor_frame",
+		"belt": "rubymod:block/conveyor_belt"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				0
+			],
+			"to": [
+				16,
+				4,
+				16
+			],
+			"faces": {
+				"north": {
+					"texture": "#frame"
+				},
+				"south": {
+					"texture": "#frame"
+				},
+				"east": {
+					"texture": "#frame"
+				},
+				"west": {
+					"texture": "#frame"
+				},
+				"down": {
+					"texture": "#frame"
+				},
+				"up": {
+					"texture": "#frame"
+				}
+			}
+		},
+		{
+			"from": [
+				0,
+				7.5,
+				-3.3
+			],
+			"to": [
+				16,
+				8.5,
+				19.3
+			],
+			"rotation": {
+				"origin": [
+					8,
+					8,
+					8
+				],
+				"axis": "x",
+				"angle": -45
+			},
+			"faces": {
+				"up": {
+					"texture": "#belt",
+					"uv": [
+						16,
+						16,
+						0,
+						0
+					]
+				},
+				"down": {
+					"texture": "#frame"
+				},
+				"north": {
+					"texture": "#frame"
+				},
+				"south": {
+					"texture": "#frame"
+				},
+				"east": {
+					"texture": "#frame"
+				},
+				"west": {
+					"texture": "#frame"
+				}
+			}
+		},
+		{
+			"from": [
+				0,
+				4,
+				8
+			],
+			"to": [
+				16,
+				12,
+				16
+			],
+			"faces": {
+				"south": {
+					"texture": "#frame"
+				},
+				"east": {
+					"texture": "#frame"
+				},
+				"west": {
+					"texture": "#frame"
+				},
+				"up": {
+					"texture": "#frame"
+				}
+			}
+		},
+		{
+			"from": [
+				0,
+				4,
+				0
+			],
+			"to": [
+				1,
+				16,
+				4
+			],
+			"faces": {
+				"north": {
+					"texture": "#frame"
+				},
+				"south": {
+					"texture": "#frame"
+				},
+				"east": {
+					"texture": "#frame"
+				},
+				"west": {
+					"texture": "#frame"
+				},
+				"up": {
+					"texture": "#frame"
+				}
+			}
+		},
+		{
+			"from": [
+				15,
+				4,
+				0
+			],
+			"to": [
+				16,
+				16,
+				4
+			],
+			"faces": {
+				"north": {
+					"texture": "#frame"
+				},
+				"south": {
+					"texture": "#frame"
+				},
+				"east": {
+					"texture": "#frame"
+				},
+				"west": {
+					"texture": "#frame"
+				},
+				"up": {
+					"texture": "#frame"
+				}
+			}
+		}
+	]
+}

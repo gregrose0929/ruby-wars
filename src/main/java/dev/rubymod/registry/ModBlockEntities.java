@@ -36,6 +36,10 @@ public class ModBlockEntities {
 			BuiltInRegistries.BLOCK_ENTITY_TYPE,
 			RubyMod.id("belt_filter"),
 			new BlockEntityType<>(dev.rubymod.industry.FilterBlockEntity::new, Set.of(ModBlocks.BELT_LOADER, ModBlocks.BELT_SORTER)));
+	public static final BlockEntityType<dev.rubymod.industry.BeltTunnelBlockEntity> BELT_TUNNEL = Registry.register(
+			BuiltInRegistries.BLOCK_ENTITY_TYPE,
+			RubyMod.id("belt_tunnel"),
+			new BlockEntityType<>(dev.rubymod.industry.BeltTunnelBlockEntity::new, Set.of(ModBlocks.BELT_TUNNEL)));
 
 	public static void initialize() {
 	}

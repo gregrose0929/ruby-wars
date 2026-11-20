@@ -190,6 +190,8 @@ public final class Shop {
 			item(ModBlocks.BELT_LOADER, 1, 3);
 			item(ModBlocks.BELT_SORTER, 1, 3);
 			item(ModBlocks.BELT_RAMP, 4, 2);
+			item(ModBlocks.BELT_SPLITTER, 1, 3);
+			item(ModBlocks.BELT_TUNNEL, 2, 4);
 			item(ModItems.RUBY_WRENCH, 1, 4);
 			item(ModBlocks.ELEVATOR, 2, 2);
 

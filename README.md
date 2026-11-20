@@ -131,8 +131,10 @@ run a conveyor belt from it to a chest), an **Ore Refinery** that doubles your o
 Factory, a **Trade Depot** that buys anything you put in it, and a **Ruby Vault** that holds
 your bank (and pays a little interest). Every machine upgrades from Mk I to Mk V; conveyor
 belts carry things from one to the next. **Belt Loaders** take things out of chests, furnaces
-and machines (set one to an item to take only that), and **Belt Sorters** turn one kind of
-item off to the side, so you can automate a whole line: a chest of ore, sorted onto belts,
+and machines (set one to an item to take only that), **Belt Sorters** turn one kind of
+item off to the side, **Belt Splitters** share things left and right, **Belt Tunnels** carry
+things under walls, and belts curve by themselves where one feeds the side of another (redstone
+stops a belt; nobody can grab what's riding one), so you can automate a whole line: a chest of ore, sorted onto belts,
 smelted in furnaces (belts put ore in the top and fuel below), and sold at the Trade Depot. Upgrade your **Ruby Heart** at the Armory (the
 Your Heart tab) for a bigger claim, more health and room for more drills.
 `/rubywars leaderboard` shows the top tycoons.

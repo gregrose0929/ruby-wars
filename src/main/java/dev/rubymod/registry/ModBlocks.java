@@ -152,7 +152,13 @@ public class ModBlocks {
 	/** A belt piece that turns one kind of item off to the side. */
 	public static final Block BELT_SORTER = register("belt_sorter", dev.rubymod.industry.BeltSorterBlock::new,
 			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
-	/** A belt that climbs a block. */
+	/** Shares what comes in between its left and its right. */
+	public static final Block BELT_SPLITTER = register("belt_splitter", dev.rubymod.industry.BeltSplitterBlock::new,
+			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
+	/** A pair carries things under a wall or a floor. */
+	public static final Block BELT_TUNNEL = register("belt_tunnel", dev.rubymod.industry.BeltTunnelBlock::new,
+			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
+	/** A belt that climbs a block (or comes down one). */
 	public static final Block BELT_RAMP = register("belt_ramp", dev.rubymod.industry.BeltRampBlock::new,
 			props().mapColor(MapColor.COLOR_BLACK).strength(1.5F, 4.0F).sound(SoundType.METAL).noOcclusion());
 	/** A bright base light. */
