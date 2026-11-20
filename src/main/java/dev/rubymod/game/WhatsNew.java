@@ -24,15 +24,15 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-20-belts";
+	private static final String VERSION = "2026-11-20-power";
 	private static final List<String> LINES = List.of(
+			"rubymod:battery|Everyone building in one base now shares its power. My Base (in the M menu) lists every machine and how long your power lasts.",
+			"rubymod:ruby_drill|Stopped machines show as amber dots on the minimap; drills count what they've dug; the power bar is back at the top left.",
+			"rubymod:ruby_wrench|Crouch + right-click two belts in a row with the Ruby Wrench to pick up the whole line. Look at a belt to see what's riding it.",
 			"rubymod:conveyor|Belts curve by themselves, you can walk and jump off them, nobody grabs what's riding them, and redstone stops them.",
 			"rubymod:belt_tunnel|New at the Armory: the Belt Splitter (shares things left and right) and the Belt Tunnel (carries things under walls). Ramps can go down too.",
 			"minecraft:spyglass|A smaller, tidier HUD: one slim panel for your Heart, rubies and power, and a one-line guide. Settings (M) has HUD size.",
-			"rubymod:ruby_heart|New goals for stars (J): Heart to tier 3, a Vault, 5 defenses, sell at a Trade Depot, Belt Loaders, Battle Day, sailing and the Tunnel Borer.",
-			"minecraft:compass|Press M for the new Ruby Wars menu: map, guide, profile, manual, games and Settings (choose what your HUD shows).",
-			"minecraft:nether_star|Goals, unlocks and news now pop up as toasts in the corner instead of filling chat. Goals show in the advancements screen too.",
-			"rubymod:ruby_wrench|Machines glow and hum while they work; the Ruby Wrench turns and picks them up; Belt Ramps carry things up a level.");
+			"rubymod:ruby_heart|New goals for stars (J): Heart to tier 3, a Vault, 5 defenses, sell at a Trade Depot, Belt Loaders, Battle Day, sailing and the Tunnel Borer.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

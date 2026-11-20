@@ -218,9 +218,14 @@ public final class GameEvents {
 				for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 					safeZoneNotice(player);
 					var id = Horde.playing(player) ? Horde.TEAM : dev.rubymod.game.rift.Rift.playing(player) ? new java.util.UUID(0, 1) : player.getUUID();
-					Net.send(player, new Payloads.Economy(dev.rubymod.industry.Grid.rubies(id), dev.rubymod.industry.Grid.charge(id),
-							dev.rubymod.industry.Grid.capacity(id), dev.rubymod.industry.Grid.producedPerSecond(id),
-							dev.rubymod.industry.Grid.consumedPerSecond(id)));
+					// Power is the base's (shared by everyone who builds there); the bank is your own.
+					var grid = id.equals(player.getUUID()) ? dev.rubymod.industry.Grid.homeOf(id) : id;
+					Net.send(player, new Payloads.Economy(dev.rubymod.industry.Grid.rubies(id), dev.rubymod.industry.Grid.charge(grid),
+							dev.rubymod.industry.Grid.capacity(grid), dev.rubymod.industry.Grid.producedPerSecond(grid),
+							dev.rubymod.industry.Grid.consumedPerSecond(grid)));
+					if (server.getTickCount() % 40 == 0) {
+						Net.send(player, new dev.rubymod.net.MorePayloads.BaseSync(dev.rubymod.industry.BaseMachines.rows(server, player.getUUID())));
+					}
 				}
 				TrainingGround.tick();
 				Waypoints.sync(server);

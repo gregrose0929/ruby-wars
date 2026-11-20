@@ -71,6 +71,45 @@ public final class Grid {
 
 	// ----- Power -----
 
+	/** Grids that aren't a player's: nobody's (the training ground), the Rift's and the Horde team's. */
+	public static boolean special(UUID id) {
+		return id.getMostSignificantBits() == 0 && id.getLeastSignificantBits() >= 0 && id.getLeastSignificantBits() <= 1
+				|| id.equals(dev.rubymod.game.Horde.TEAM);
+	}
+
+	/**
+	 * Whose grid a player's power is: their own base's, or (without a base of their own) the base they're trusted
+	 * in, so a family building in one base shares one supply.
+	 */
+	public static UUID homeOf(UUID player) {
+		if (player == null || special(player)) {
+			return player;
+		}
+		var season = dev.rubymod.game.SeasonData.get();
+		var own = season.claimOf(player);
+		if (own != null && !own.destroyed) {
+			return player;
+		}
+		for (var claim : season.claims.values()) {
+			if (!claim.destroyed && !claim.owner.equals(player.toString()) && claim.canUse(player)) {
+				return UUID.fromString(claim.owner);
+			}
+		}
+		return player;
+	}
+
+	/** The grid a machine owned by {@code owner} at {@code pos} runs on: the base it stands in if they may use it, else their home's. */
+	public static UUID gridFor(UUID owner, String dimension, net.minecraft.core.BlockPos pos) {
+		if (owner == null || special(owner)) {
+			return owner;
+		}
+		var claim = dev.rubymod.game.SeasonData.get().claimAt(dimension, pos);
+		if (claim != null && claim.canUse(owner)) {
+			return UUID.fromString(claim.owner);
+		}
+		return homeOf(owner);
+	}
+
 	public static long capacity(UUID owner) {
 		return BASE_CAPACITY + rates(owner).lastBatteryCapacity;
 	}
@@ -207,6 +246,7 @@ public final class Grid {
 	public static void reset() {
 		accounts.clear();
 		RATES.clear();
+		BaseMachines.reset();
 		dirty = true;
 	}
 }

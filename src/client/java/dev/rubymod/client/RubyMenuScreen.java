@@ -33,6 +33,9 @@ public class RubyMenuScreen extends Screen {
 		super(Component.literal("Ruby Wars"));
 		tiles.add(new Tile("Map", "K", "The island, your base, pings", "minecraft:filled_map", dev.rubymod.client.map.MapScreen::new));
 		tiles.add(new Tile("Guide & Goals", "J", "What to do next, stars, upgrades", "minecraft:nether_star", ResearchScreen::new));
+		if (ClientState.inRubyWarsWorld()) {
+			tiles.add(new Tile("My Base", "", "Your power and every machine", "rubymod:ruby_drill", BaseScreen::new));
+		}
 		tiles.add(new Tile("Profile", "I", "Your stats and cosmetics", "minecraft:player_head", ProfileScreen::new));
 		tiles.add(new Tile("Field Manual", "Y", "How everything works", "minecraft:book", ManualScreen::new));
 		tiles.add(new Tile("Games", "H", "The hub, Ruby Wars, party games", "minecraft:compass", ModeScreen::new));

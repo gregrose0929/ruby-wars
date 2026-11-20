@@ -121,6 +121,18 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 				g.text(font, "x2 deep", 24, 50, MUTED, false);
 				g.text(font, "(Y<0)", 24, 60, MUTED, false);
 				g.text(font, String.format(java.util.Locale.ROOT, "%.1fs", kind.cycle(tier) / 20.0), 66, 58, MUTED, false);
+				// What it has found so far.
+				long loads = menu.wide(31, 32);
+				if (loads > 0) {
+					long rubies = menu.wide(33, 34);
+					g.pose().pushMatrix();
+					g.pose().translate(24, 71);
+					g.pose().scale(0.75F, 0.75F);
+					// Two short lines, clear of the output slots.
+					g.text(font, String.format(java.util.Locale.ROOT, "%,d loads dug", loads), 0, 0, MUTED, false);
+					g.text(font, String.format(java.util.Locale.ROOT, "%,d %s found", rubies, rubies == 1 ? "ruby" : "rubies"), 0, 10, 0xFFFF5A82, false);
+					g.pose().popMatrix();
+				}
 			}
 			case ORE_REFINERY -> drawArrow(g, 66, 44, true);
 			case AMMO_FACTORY -> drawAmmo(g);
@@ -231,12 +243,23 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			g.fill(x + 7, y + i * h / 6, x + 10, y + i * h / 6 + 1, 0x66000000);
 		}
 		if (mx >= x && mx < x + 10 && my >= y && my < y + h) {
-			List<Component> lines = List.of(
-					Component.literal("Power grid").withStyle(net.minecraft.ChatFormatting.YELLOW),
+			long made = menu.wide(9, 16);
+			long used = menu.wide(10, 17);
+			List<Component> lines = new java.util.ArrayList<>(List.of(
+					Component.literal("Your base's power").withStyle(net.minecraft.ChatFormatting.YELLOW),
 					Component.literal(String.format(Locale.ROOT, "%,d / %,d charge", charge, capacity)),
-					Component.literal(String.format(Locale.ROOT, "+%,d/s made  -%,d/s used", menu.wide(9, 16), menu.wide(10, 17)))
+					Component.literal(String.format(Locale.ROOT, "+%,d/s made  -%,d/s used", made, used))
 							.withStyle(net.minecraft.ChatFormatting.GRAY),
-					Component.literal("Shared by all your machines").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+					Component.literal(PowerText.forecast(charge, capacity, made, used))
+							.withStyle(made >= used ? net.minecraft.ChatFormatting.GREEN : net.minecraft.ChatFormatting.GOLD)));
+			String night = PowerText.night(charge, made, used);
+			if (!night.isEmpty()) {
+				lines.add(Component.literal(night).withStyle(net.minecraft.ChatFormatting.GRAY));
+			}
+			for (String part : PowerText.breakdown().stream().limit(4).toList()) {
+				lines.add(Component.literal("  " + part).withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+			}
+			lines.add(Component.literal("Shared by everyone building in this base").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
 			g.setComponentTooltipForNextFrame(font, lines, mx + leftPos, my + topPos);
 		}
 	}

@@ -108,6 +108,18 @@ public class Minimap implements HudElement {
 				g.fill(mx - 2, mz - 2, mx + 2, mz + 2, 0xFF101010);
 				g.fill(mx - 1, mz - 1, mx + 1, mz + 1, 0xFF5BE37D);
 			}
+			// Your machines that have stopped (no power, full, out of fuel): a small amber dot where they are.
+			String here = dev.rubymod.game.Rules.dim(mc.level);
+			for (dev.rubymod.client.ClientState.BaseMachine m : dev.rubymod.client.ClientState.base) {
+				if (!m.stopped() || !m.dim().equals(here)) {
+					continue;
+				}
+				int mx = x0 + Math.round((m.pos().getX() + 0.5F - px) * scale + SIZE / 2.0F);
+				int mz = y0 + Math.round((m.pos().getZ() + 0.5F - pz) * scale + SIZE / 2.0F);
+				if (mx >= x0 + 2 && mx < x0 + SIZE - 2 && mz >= y0 + 2 && mz < y0 + SIZE - 2) {
+					dot(g, mx, mz, 0xFFF2A93B);
+				}
+			}
 		}
 		g.disableScissor();
 		arrow(g, x0 + SIZE / 2, y0 + SIZE / 2, mc.player.getYRot());

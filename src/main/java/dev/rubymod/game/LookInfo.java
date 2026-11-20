@@ -97,7 +97,7 @@ public final class LookInfo {
 					lines.add(holds.isEmpty() ? "Empty" : "Holds " + holds);
 				}
 				if (kind == MachineKind.BATTERY || kind.output(m.tier()) > 0 || kind.draw(m.tier()) > 0) {
-					UUID owner = m.owner();
+					UUID owner = m.power();
 					long cap = Grid.capacity(owner);
 					bar = cap > 0 ? (float) Grid.charge(owner) / cap : -1;
 					lines.add(String.format(java.util.Locale.ROOT, "Grid: %,d / %,d charge", Grid.charge(owner), cap));
@@ -171,11 +171,50 @@ public final class LookInfo {
 									: frontState.isFaceSturdy(player.level(), ahead, facing.getOpposite()) ? "Nothing at the end: items stop there (anyone can take them)"
 											: "Nothing at the end: items fall off");
 				}
-				int carried = 0;
+				// What's riding on it, by name (most first), and how much is on the rest of the line ahead.
+				java.util.Map<String, Integer> riding = new java.util.LinkedHashMap<>();
 				for (var item : player.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(pos).inflate(0.1))) {
-					carried += item.getItem().getCount();
+					riding.merge(item.getItem().getHoverName().getString(), item.getItem().getCount(), Integer::sum);
 				}
-				lines.add(carried > 0 ? "Carrying " + carried : "Nothing on it");
+				if (riding.isEmpty()) {
+					lines.add("Nothing on it");
+				} else {
+					var sorted = riding.entrySet().stream().sorted((x, y) -> y.getValue() - x.getValue()).toList();
+					StringBuilder sb = new StringBuilder("Carrying ");
+					for (int i = 0; i < Math.min(3, sorted.size()); i++) {
+						sb.append(i == 0 ? "" : ", ").append(sorted.get(i).getValue()).append(" ").append(sorted.get(i).getKey());
+					}
+					if (sorted.size() > 3) {
+						sb.append(" and more");
+					}
+					lines.add(sb.toString());
+				}
+				int ahead2 = 0;
+				BlockPos walk = pos;
+				for (int i = 0; i < 32; i++) {
+					BlockState ws = player.level().getBlockState(walk);
+					if (!(ws.getBlock() instanceof dev.rubymod.industry.ConveyorBlock)) {
+						break;
+					}
+					net.minecraft.core.Direction wf = ws.getValue(dev.rubymod.industry.ConveyorBlock.FACING);
+					BlockPos next = ws.getBlock() instanceof dev.rubymod.industry.BeltRampBlock
+							? (ws.getValue(dev.rubymod.industry.BeltRampBlock.DOWN) ? walk.relative(wf).below() : walk.relative(wf).above())
+							: walk.relative(wf);
+					if (!(player.level().getBlockState(next).getBlock() instanceof dev.rubymod.industry.ConveyorBlock)) {
+						// maybe the ramp's top or bottom is level with the next belt
+						next = walk.relative(wf);
+						if (!(player.level().getBlockState(next).getBlock() instanceof dev.rubymod.industry.ConveyorBlock)) {
+							break;
+						}
+					}
+					walk = next;
+					for (var item : player.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(walk).inflate(0.1))) {
+						ahead2 += item.getItem().getCount();
+					}
+				}
+				if (ahead2 > 0) {
+					lines.add(ahead2 + " more on the belts ahead");
+				}
 				color = stopped ? AMBER : feeds || belt || state.getBlock() instanceof dev.rubymod.industry.BeltSplitterBlock ? GREEN : AMBER;
 			} else if (be instanceof net.minecraft.world.Container chest && !(be instanceof DefenseBlockEntity) && !(be instanceof GraveBlockEntity)
 					&& (state.is(net.minecraft.world.level.block.Blocks.CHEST) || state.is(net.minecraft.world.level.block.Blocks.BARREL)

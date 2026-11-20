@@ -114,6 +114,88 @@ public final class SelfTest {
 	}
 
 	/** Belts: curves, merges, turning, redstone, waiting when full, items nobody can grab, people stepping off, tunnels. */
+	/** One base, one power supply; the base list; a drill's finds; the wrench taking a whole belt line. */
+	private void powerChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo, SeasonData.Claim claim, BlockPos base) {
+		var A = alpha.getUUID();
+		var B = bravo.getUUID();
+		BlockPos spot = base.offset(-6, 1, 6);
+		for (BlockPos p : BlockPos.betweenClosed(spot.offset(-1, -1, -1), spot.offset(9, 2, 4))) {
+			level.setBlock(p, p.getY() < spot.getY() ? net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()
+					: net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+		}
+		long chargeBefore = dev.rubymod.industry.Grid.charge(A);
+		// Bravo, not trusted: their drill in Alpha's base runs on their own power.
+		var drillB = machine(level, spot, ModBlocks.RUBY_DRILL, bravo);
+		check("power: a stranger's machine runs on their own power", drillB.power().equals(B));
+		level.setBlockAndUpdate(spot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		// Trusted: Bravo's machines in Alpha's base share Alpha's power, and so does Bravo's HUD (no base of their own).
+		claim.trusted.add(B.toString());
+		var drill = machine(level, spot, ModBlocks.RUBY_DRILL, bravo);
+		var battery = machine(level, spot.east(2), ModBlocks.BATTERY, bravo);
+		var solar = machine(level, spot.east(4), ModBlocks.SOLAR_PANEL, alpha);
+		check("power: everyone building in one base shares its power", drill.power().equals(A) && battery.power().equals(A)
+				&& dev.rubymod.industry.Grid.homeOf(B).equals(A) && dev.rubymod.industry.Grid.homeOf(A).equals(A));
+		runMachines(level, 2, battery);
+		check("power: a family member's Battery Bank adds to the base's capacity ("
+				+ dev.rubymod.industry.Grid.capacity(A) + ")", dev.rubymod.industry.Grid.capacity(A) == dev.rubymod.industry.Grid.BASE_CAPACITY + 20_000);
+		// The drill digs with the base's power, counts its finds, and shows on the base list.
+		dev.rubymod.industry.Grid.account(A).charge = 5_000;
+		runMachines(level, 2 * dev.rubymod.industry.MachineKind.RUBY_DRILL.cycle(1) + 5, drill, battery, solar);
+		check("power: a drill counts what it digs (" + drill.loads() + " loads)", drill.loads() >= 2);
+		var listA = dev.rubymod.industry.BaseMachines.forPlayer(A);
+		var listB = dev.rubymod.industry.BaseMachines.forPlayer(B);
+		check("power: My Base lists the base's machines for everyone in it (" + listA.size() + ", " + listB.size() + ")",
+				listA.size() >= 3 && listB.size() >= 3 && listA.get(0).kind() == dev.rubymod.industry.MachineKind.RUBY_DRILL
+						&& listA.stream().anyMatch(e -> e.loads() >= 2));
+		// Out of power: it says so (stopped), and the list knows.
+		dev.rubymod.industry.Grid.account(A).charge = 0;
+		level.setBlockAndUpdate(spot.east(4), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		runMachines(level, 21, drill);
+		var mine = dev.rubymod.industry.BaseMachines.forPlayer(A).stream().filter(e -> e.pos().equals(spot)).findFirst();
+		check("power: a drill with no power shows as stopped on the base list", mine.isPresent() && mine.get().stopped());
+		// Gone from the world, gone from the list.
+		level.setBlockAndUpdate(spot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		level.setBlockAndUpdate(spot.east(2), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		check("power: broken machines leave the base list",
+				dev.rubymod.industry.BaseMachines.forPlayer(A).stream().noneMatch(e -> e.pos().equals(spot) || e.pos().equals(spot.east(2))));
+		claim.trusted.clear();
+		dev.rubymod.industry.Grid.account(A).charge = chargeBefore;
+
+		// The wrench: two crouch-clicks in a row take a whole line (and not the belt running alongside it).
+		BlockPos line = spot.south(2);
+		var east = ModBlocks.CONVEYOR.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, net.minecraft.core.Direction.EAST);
+		for (int x = 0; x < 6; x++) {
+			level.setBlockAndUpdate(line.east(x), east);
+		}
+		for (int x = 0; x < 3; x++) {
+			level.setBlockAndUpdate(line.east(x).north(), east);
+		}
+		alpha.getInventory().clearContent();
+		alpha.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.RUBY_WRENCH));
+		alpha.setShiftKeyDown(true);
+		java.util.function.Consumer<BlockPos> click = at -> ModItems.RUBY_WRENCH.useOn(new net.minecraft.world.item.context.UseOnContext(alpha, net.minecraft.world.InteractionHand.MAIN_HAND,
+						new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(at), net.minecraft.core.Direction.UP, at, false)));
+		click.accept(line.east(2));
+		boolean oneGone = level.getBlockState(line.east(2)).isAir() && level.getBlockState(line.east(3)).getBlock() instanceof dev.rubymod.industry.ConveyorBlock;
+		click.accept(line.east(3));
+		boolean lineGone = true;
+		for (int x = 0; x < 6; x++) {
+			lineGone &= level.getBlockState(line.east(x)).isAir();
+		}
+		boolean besideKept = true;
+		for (int x = 0; x < 3; x++) {
+			besideKept &= level.getBlockState(line.east(x).north()).getBlock() instanceof dev.rubymod.industry.ConveyorBlock;
+		}
+		int belts = alpha.getInventory().countItem(ModBlocks.CONVEYOR.asItem());
+		check("belts: the wrench takes one piece, then the whole line (" + belts + " belts back)", oneGone && lineGone && belts == 6);
+		check("belts: taking a whole line leaves the belt beside it", besideKept);
+		alpha.setShiftKeyDown(false);
+		alpha.getInventory().clearContent();
+		for (int x = 0; x < 3; x++) {
+			level.setBlockAndUpdate(line.east(x).north(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		}
+	}
+
 	private void beltChecks(ServerLevel level, net.minecraft.core.BlockPos at, FakePlayer alpha) {
 		var N = net.minecraft.core.Direction.NORTH;
 		var W = net.minecraft.core.Direction.WEST;
@@ -327,6 +409,7 @@ public final class SelfTest {
 		claim.trusted.add(bravo.getUUID().toString());
 		check("protection: trusted player can build", Rules.canBuild(bravo, level, inside));
 		claim.trusted.clear();
+		powerChecks(level, alpha, bravo, claim, base);
 
 		// ----- Tunnel Borer and Seismic Sensor -----
 		{

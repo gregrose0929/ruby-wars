@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** The machine screen's server/client half: machine slots, the player's inventory, and live numbers. */
 public class MachineMenu extends AbstractContainerMenu {
-	public static final int DATA_SLOTS = 31;
+	public static final int DATA_SLOTS = 35;
 	public static final int WIDTH = 176;
 	public static final int HEIGHT = 190;
 	public static final int INVENTORY_Y = 108;

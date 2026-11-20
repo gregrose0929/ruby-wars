@@ -190,7 +190,7 @@ public final class Blueprints {
 		}
 		BlockState want = data.at(index).rotate(rotation(facing));
 		Item item = itemFor(want);
-		if (!Grid.consume(be.owner(), be.kind().draw(be.tier()) * 10L)) {
+		if (!Grid.consume(be.power(), be.kind().draw(be.tier()) * 10L)) {
 			be.setStatus(MachineBlockEntity.NO_POWER);
 			return;
 		}

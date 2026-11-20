@@ -108,6 +108,19 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client: your base's machines, one row each (see BaseMachines.rows). */
+	public record BaseSync(List<String> rows) implements CustomPacketPayload {
+		public static final Type<BaseSync> TYPE = new Type<>(RubyMod.id("base_sync"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BaseSync> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), BaseSync::rows,
+				BaseSync::new);
+
+		@Override
+		public Type<BaseSync> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: research points to spend and what's unlocked. */
 	/** Stars to spend, unlocked nodes, and goals as "id|title|progress|target|stars|done". */
 	public record ResearchSync(int points, List<String> unlocked, List<String> goals) implements CustomPacketPayload {
@@ -744,6 +757,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.serverboundPlay().register(ResearchUnlock.TYPE, ResearchUnlock.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(MapSync.TYPE, MapSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(LookInfo.TYPE, LookInfo.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(BaseSync.TYPE, BaseSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ResearchSync.TYPE, ResearchSync.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ModeSelect.TYPE, ModeSelect.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ModeInfo.TYPE, ModeInfo.CODEC);

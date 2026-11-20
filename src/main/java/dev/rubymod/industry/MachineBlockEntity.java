@@ -78,6 +78,12 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	private int missing;
 	/** This machine's own tick counter (schedules don't depend on the world clock). */
 	private long ticks;
+	/** Ruby Drill: loads dug up, and how many of them were rubies. */
+	private long loads;
+	private long rubiesFound;
+	/** Whose power this machine runs on (the base it stands in), worked out now and then. */
+	private UUID power;
+	private long powerAt;
 
 	public MachineBlockEntity(BlockPos pos, BlockState state) {
 		super(ModBlockEntities.MACHINE, pos, state);
@@ -94,6 +100,35 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	public UUID owner() {
 		return owner;
+	}
+
+	/**
+	 * The power grid this machine uses: the base it stands in (if its owner may use that base), so everyone
+	 * building in one base shares one supply; otherwise its owner's home base.
+	 */
+	public UUID power() {
+		long now = level == null ? 0 : level.getGameTime();
+		if (power == null || now - powerAt > 100 || now < powerAt) {
+			power = level == null ? owner : Grid.gridFor(owner, Rules.dim(level), worldPosition);
+			powerAt = now;
+		}
+		return power;
+	}
+
+	public long loads() {
+		return loads;
+	}
+
+	public long rubiesFound() {
+		return rubiesFound;
+	}
+
+	private void found(ItemStack stack) {
+		loads++;
+		if (stack.is(ModItems.RUBY)) {
+			rubiesFound += stack.getCount();
+		}
+		setChanged();
 	}
 
 	public int tier() {
@@ -127,6 +162,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	public void setOwner(UUID owner) {
 		this.owner = owner;
+		this.power = null;
 		setChanged();
 	}
 
@@ -169,7 +205,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			case COMBUSTION_GENERATOR -> tickGenerator(level);
 			case SOLAR_PANEL -> tickSolar(level);
 			case BATTERY -> {
-				Grid.addBattery(owner, kind.batteryCapacity(tier));
+				Grid.addBattery(power(), kind.batteryCapacity(tier));
 				status = WORKING;
 			}
 			case RUBY_DRILL -> tickDrill(level);
@@ -186,6 +222,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			pushOutputs(level);
 		}
 		showWorking(level);
+		if (ticks % 20 == 0) {
+			BaseMachines.report(level, this);
+		}
 	}
 
 	/** When it last worked; it shows as working for a couple of seconds after (so it doesn't flicker between jobs). */
@@ -218,9 +257,12 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		long cycles = (long) (Math.min(elapsed, 24000) * OFFLINE_RATE / kind().cycle(tier));
 		int made = 0;
 		for (long i = 0; i < cycles; i++) {
-			if (!insertOutput(Recipes.drill(level.getRandom(), tier, worldPosition.getY() < 0))) {
+			ItemStack dug = Recipes.drill(level.getRandom(), tier, worldPosition.getY() < 0);
+			ItemStack copy = dug.copy();
+			if (!insertOutput(dug)) {
 				break;
 			}
+			found(copy);
 			made++;
 		}
 		if (made > 0 && level.getServer().getPlayerList().getPlayer(owner) instanceof ServerPlayer player) {
@@ -232,7 +274,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		MachineKind kind = kind();
 		if (burn > 0) {
 			burn--;
-			Grid.produce(owner, kind.output(tier));
+			Grid.produce(power(), kind.output(tier));
 			status = WORKING;
 			if (level.getGameTime() % 8 == 0) {
 				level.sendParticles(ParticleTypes.SMOKE, worldPosition.getX() + 0.5, worldPosition.getY() + 1.05, worldPosition.getZ() + 0.5,
@@ -242,7 +284,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		}
 		ItemStack fuel = items.get(0);
 		int ticks = Recipes.burnTicks(fuel);
-		if (ticks > 0 && Grid.charge(owner) < Grid.capacity(owner)) {
+		if (ticks > 0 && Grid.charge(power()) < Grid.capacity(power())) {
 			burn = burnMax = ticks;
 			if (fuel.is(Items.LAVA_BUCKET)) {
 				items.set(0, new ItemStack(Items.BUCKET));
@@ -259,7 +301,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		long time = level.getOverworldClockTime() % 24000;
 		boolean day = time < 12500 && !level.isRaining() && level.canSeeSky(worldPosition.above());
 		if (day) {
-			Grid.produce(owner, kind().output(tier));
+			Grid.produce(power(), kind().output(tier));
 			status = WORKING;
 		} else {
 			status = NIGHT;
@@ -271,14 +313,19 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			status = OUTPUT_FULL;
 			return;
 		}
-		if (!Grid.consume(owner, kind().draw(tier))) {
+		if (!Grid.consume(power(), kind().draw(tier))) {
 			status = NO_POWER;
+			BaseMachines.outOfPower(level, this);
 			return;
 		}
 		status = WORKING;
 		if (++progress >= kind().cycle(tier)) {
 			progress = 0;
-			insertOutput(Recipes.drill(level.getRandom(), tier, worldPosition.getY() < 0));
+			ItemStack dug = Recipes.drill(level.getRandom(), tier, worldPosition.getY() < 0);
+			ItemStack copy = dug.copy();
+			if (insertOutput(dug)) {
+				found(copy);
+			}
 		}
 		if (level.getGameTime() % 4 == 0) {
 			level.sendParticles(ParticleTypes.CRIT, worldPosition.getX() + 0.5, worldPosition.getY() + 0.1, worldPosition.getZ() + 0.5,
@@ -298,7 +345,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			status = OUTPUT_FULL;
 			return;
 		}
-		if (!Grid.consume(owner, kind().draw(tier))) {
+		if (!Grid.consume(power(), kind().draw(tier))) {
 			status = NO_POWER;
 			return;
 		}
@@ -324,7 +371,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			status = OUTPUT_FULL;
 			return;
 		}
-		if (!Grid.consume(owner, kind().draw(tier))) {
+		if (!Grid.consume(power(), kind().draw(tier))) {
 			status = NO_POWER;
 			return;
 		}
@@ -426,7 +473,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	private void tickShield(ServerLevel level) {
 		MachineKind kind = kind();
-		if (!Grid.consume(owner, kind.draw(tier))) {
+		if (!Grid.consume(power(), kind.draw(tier))) {
 			status = NO_POWER;
 			return;
 		}
@@ -437,7 +484,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			for (ModProjectile p : level.getEntitiesOfClass(ModProjectile.class, new AABB(center, center).inflate(r + 4),
 					p -> p.isAlive() && p.position().distanceTo(center) <= r && !friendly(p.getOwner()))) {
 				long cost = p instanceof CruiseMissileEntity ? 6000 : 1500;
-				if (!Grid.consume(owner, cost)) {
+				if (!Grid.consume(power(), cost)) {
 					break;
 				}
 				Vec3 at = p.position();
@@ -481,7 +528,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			status = IDLE;
 			return;
 		}
-		if (!Grid.consume(owner, 200)) {
+		if (!Grid.consume(power(), 200)) {
 			status = NO_POWER;
 			return;
 		}
@@ -528,7 +575,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			status = IDLE;
 			return;
 		}
-		if (!Grid.consume(owner, 400)) {
+		if (!Grid.consume(power(), 400)) {
 			status = NO_POWER;
 			return;
 		}
@@ -749,21 +796,26 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 				case 2 -> kind() == MachineKind.CONSTRUCTOR ? constructorTotal() : Math.max(1, kind().cycle(tier));
 				case 3 -> burn;
 				case 4 -> Math.max(1, burnMax);
-				case 5 -> lo(Grid.charge(owner));
-				case 6 -> hi(Grid.charge(owner));
-				case 7 -> lo(Grid.capacity(owner));
-				case 8 -> hi(Grid.capacity(owner));
-				case 9 -> lo(Grid.producedPerSecond(owner));
-				case 10 -> lo(Grid.consumedPerSecond(owner));
+				case 5 -> lo(Grid.charge(power()));
+				case 6 -> hi(Grid.charge(power()));
+				case 7 -> lo(Grid.capacity(power()));
+				case 8 -> hi(Grid.capacity(power()));
+				case 9 -> lo(Grid.producedPerSecond(power()));
+				case 10 -> lo(Grid.consumedPerSecond(power()));
 				case 11 -> recipe;
 				case 12 -> lo(Grid.rubies(owner));
 				case 13 -> hi(Grid.rubies(owner));
 				case 14 -> status;
 				case 15 -> kind() == MachineKind.CONSTRUCTOR ? missing : lo(aux / 1000);
-				case 16 -> hi(Grid.producedPerSecond(owner));
-				case 17 -> hi(Grid.consumedPerSecond(owner));
+				case 16 -> hi(Grid.producedPerSecond(power()));
+				case 17 -> hi(Grid.consumedPerSecond(power()));
 				// The bank's part-way ruby (0-999), for the Trade Depot's "next ruby" bar.
 				case 18 -> (int) Math.floorMod(Grid.milliRubies(owner), 1000L);
+				// 31-34: a drill's finds so far (loads, rubies).
+				case 31 -> lo(loads);
+				case 32 -> hi(loads);
+				case 33 -> lo(rubiesFound);
+				case 34 -> hi(rubiesFound);
 				default -> {
 					// 19-30: the Trade Depot's last four sales, newest first: item id + 1, how many, what it paid (milli-rubies, capped).
 					int k = index - 19;
@@ -814,6 +866,15 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		return new MachineMenu(id, inventory, this, data, kind(), worldPosition);
 	}
 
+	/** Gone from the world: off the base list (the block's own code drops the contents). */
+	@Override
+	public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+		super.preRemoveSideEffects(pos, state);
+		if (level instanceof ServerLevel server) {
+			BaseMachines.removed(server, pos);
+		}
+	}
+
 	// ----- Saving -----
 
 	@Override
@@ -829,6 +890,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		recipe = input.getIntOr("recipe", 0);
 		lastTick = input.getLongOr("last_tick", -1L);
 		aux = input.getIntOr("aux", 0);
+		loads = input.getLongOr("loads", 0L);
+		rubiesFound = input.getLongOr("rubies_found", 0L);
+		power = null;
 		Blueprints.load(this, input);
 	}
 
@@ -844,6 +908,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		output.putInt("recipe", recipe);
 		output.putLong("last_tick", lastTick);
 		output.putInt("aux", aux);
+		output.putLong("loads", loads);
+		output.putLong("rubies_found", rubiesFound);
 		Blueprints.save(this, output);
 	}
 

@@ -240,6 +240,7 @@ public class RubyModClient implements ClientModInitializer {
 				context.client().gui.setScreen(new ModeScreen());
 			}
 		});
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.BaseSync.TYPE, (payload, context) -> ClientState.base(payload.rows()));
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.LookInfo.TYPE, (payload, context) -> {
 			ClientState.look = payload;
 			ClientState.lookAt = System.currentTimeMillis();

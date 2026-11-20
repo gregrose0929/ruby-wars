@@ -4604,7 +4604,7 @@ public final class AutoTest {
 				then(40, mc -> {
 					ManualScreen m = new ManualScreen();
 					mc.gui.setScreen(m);
-					m.showPage(9);
+					m.showPage(10);
 				});
 				then(20, mc -> shot(mc, "manual-belts"));
 				then(5, mc -> ((ManualScreen) mc.gui.screen()).scrollToEnd());
@@ -10050,6 +10050,64 @@ public final class AutoTest {
 		});
 		then(5, mc -> clickBlock(mc, heartAt.offset(0, 0, -3)));
 		then(20, mc -> shot(mc, "battery-screen"));
+		then(5, mc -> mc.player.closeContainer());
+		// A full drill (stopped), and a belt with things on it.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			var at = heartAt.offset(6, 0, -3);
+			level.setBlockAndUpdate(at, dev.rubymod.registry.ModBlocks.RUBY_DRILL.defaultBlockState());
+			dev.rubymod.registry.ModBlocks.RUBY_DRILL.setPlacedBy(level, at, level.getBlockState(at), p, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModBlocks.RUBY_DRILL));
+			if (level.getBlockEntity(at) instanceof dev.rubymod.industry.MachineBlockEntity be) {
+				for (int i = 0; i < be.getContainerSize(); i++) {
+					be.setItem(i, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64));
+				}
+			}
+			for (int x = -6; x <= -3; x++) {
+				level.setBlockAndUpdate(heartAt.offset(x, 0, -6), dev.rubymod.registry.ModBlocks.CONVEYOR.defaultBlockState()
+						.setValue(dev.rubymod.industry.ConveyorBlock.FACING, net.minecraft.core.Direction.EAST));
+			}
+			level.setBlockAndUpdate(heartAt.offset(-2, 0, -6), net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+			for (int i = 0; i < 4; i++) {
+				var it = new net.minecraft.world.entity.item.ItemEntity(level, heartAt.getX() - 5.5 + i * 0.2, heartAt.getY() + 0.2, heartAt.getZ() - 5.5,
+						new net.minecraft.world.item.ItemStack(i % 2 == 0 ? net.minecraft.world.item.Items.RAW_IRON : net.minecraft.world.item.Items.COAL, 3));
+				level.addFreshEntity(it);
+			}
+		}));
+		then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), heartAt.getX() - 4.5, heartAt.getY(), heartAt.getZ() - 8.5,
+				java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 40, true)));
+		then(10, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(-5, 0, -6)).add(0, -0.4, 0)));
+		then(25, mc -> {
+			var look = ClientState.look;
+			log("look panel (belt): {}", look == null ? "nothing" : look.lines());
+			shot(mc, "belt-look");
+		});
+		then(60, mc -> {
+			log("base list: {} machines, stopped: {}", ClientState.base.size(), ClientState.base.stream().filter(ClientState.BaseMachine::stopped).count());
+			var e = ClientState.economy;
+			if (e != null) {
+				log("forecast: {} | night: {} | parts: {}", PowerText.forecast(e.charge(), e.capacity(), e.produced(), e.consumed()),
+						PowerText.night(e.charge(), e.produced(), e.consumed()), PowerText.breakdown());
+			}
+			shot(mc, "minimap-dot");
+			mc.gui.setScreen(new RubyMenuScreen());
+		});
+		then(15, mc -> shot(mc, "ruby-menu"));
+		then(5, mc -> mc.gui.setScreen(new BaseScreen()));
+		then(15, mc -> shot(mc, "my-base"));
+		then(5, mc -> {
+			ManualScreen m = new ManualScreen();
+			mc.gui.setScreen(m);
+			m.showPage(9);
+		});
+		then(15, mc -> shot(mc, "manual-power"));
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			onServer(mc, server -> me(server).teleportTo(server.overworld(), heartAt.getX() + 2.5, heartAt.getY(), heartAt.getZ() - 5.5,
+					java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true));
+		});
+		then(10, mc -> clickBlock(mc, heartAt.offset(2, 0, -3)));
+		then(20, mc -> shot(mc, "drill-screen-finds"));
 		then(5, mc -> {
 			log("done");
 			mc.stop();

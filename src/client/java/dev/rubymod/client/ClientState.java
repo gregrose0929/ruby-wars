@@ -58,6 +58,35 @@ public final class ClientState {
 	public static long hitMarkerAt;
 	/** Bank and power grid (see Payloads.Economy). */
 	public static Payloads.Economy economy;
+	/** Your base's machines (from BaseMachines.rows), refreshed every couple of seconds. */
+	public static java.util.List<BaseMachine> base = java.util.List.of();
+
+	public record BaseMachine(String dim, net.minecraft.core.BlockPos pos, dev.rubymod.industry.MachineKind kind, int tier, int status,
+			String owner, long loads, long rubies, boolean shared) {
+		public boolean stopped() {
+			return dev.rubymod.industry.BaseMachines.stoppedFor(kind, status);
+		}
+
+		static BaseMachine parse(String row) {
+			String[] p = row.split("\\|", -1);
+			var kinds = dev.rubymod.industry.MachineKind.values();
+			return new BaseMachine(p[0], new net.minecraft.core.BlockPos(Integer.parseInt(p[1]), Integer.parseInt(p[2]), Integer.parseInt(p[3])),
+					kinds[Math.min(kinds.length - 1, Integer.parseInt(p[4]))], Integer.parseInt(p[5]), Integer.parseInt(p[6]), p[7],
+					Long.parseLong(p[8]), Long.parseLong(p[9]), "1".equals(p[10]));
+		}
+	}
+
+	public static void base(java.util.List<String> rows) {
+		var list = new java.util.ArrayList<BaseMachine>();
+		for (String row : rows) {
+			try {
+				list.add(BaseMachine.parse(row));
+			} catch (RuntimeException e) {
+				// a row from a newer or older server: skip it
+			}
+		}
+		base = list;
+	}
 	/** Last warhead hit on a vehicle or aircraft (shown under the crosshair). */
 	public static Payloads.HitConfirm hitConfirm;
 	public static long hitConfirmAt;
