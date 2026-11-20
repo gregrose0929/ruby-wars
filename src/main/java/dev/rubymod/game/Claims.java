@@ -113,6 +113,9 @@ public final class Claims {
 		}
 		claim.hp = Math.max(0, claim.hp - damage);
 		SeasonData.markDirty();
+		if (attacker != null && !attacker.getUUID().toString().equals(claim.owner)) {
+			Goals.add(level.getServer(), attacker.getUUID(), "heartkill", 1);
+		}
 		// The owner and their squad (who respawn at this Heart too) all get the alert.
 		java.util.List<UUID> side = new java.util.ArrayList<>(Squads.mates(UUID.fromString(claim.owner)));
 		side.add(UUID.fromString(claim.owner));

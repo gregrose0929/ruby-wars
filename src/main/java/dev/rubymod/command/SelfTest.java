@@ -335,8 +335,11 @@ public final class SelfTest {
 		level.setBlockAndUpdate(tin, AIR);
 		int dropped = 0;
 		for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(tin).inflate(1.5))) {
-			dropped += e.getItem().getCount();
-			e.discard();
+			// Only the tunnel's coal (things from the belt tests next door can roll in).
+			if (e.getItem().is(net.minecraft.world.item.Items.COAL)) {
+				dropped += e.getItem().getCount();
+				e.discard();
+			}
 		}
 		check("belts: a broken Belt Tunnel drops what was inside (" + dropped + ")", dropped == 4);
 
@@ -930,6 +933,26 @@ public final class SelfTest {
 		check("research: points unlock it", dev.rubymod.game.Research.unlock(bravo, "motor_pool") == null
 				&& dev.rubymod.game.Research.unlocked(bravo, "tank"));
 		check("research: someone else's unlocks aren't yours", !dev.rubymod.game.Research.unlocked(alpha, "jeep"));
+		{
+			// Goals fit in an evening or two: a goal whose target came down counts progress already made.
+			dev.rubymod.game.Goals.describe(alpha.getUUID());
+			var rec = data.player(alpha.getUUID(), "TestAlpha");
+			boolean had = rec.goalsDone.contains("ruby50");
+			rec.goalsDone.remove("ruby50");
+			rec.goalProgress.put("ruby50", 30);
+			int pointsBefore = rec.researchPoints;
+			dev.rubymod.game.Goals.syncAdvancements(alpha);
+			check("goals: progress past a lowered target counts on joining", rec.goalsDone.contains("ruby50"));
+			check("goals: the big ones are within reach (bank " + dev.rubymod.game.Goals.byId("bank2000").target() + ", fly "
+					+ dev.rubymod.game.Goals.byId("fly").target() + ", ruby ore " + dev.rubymod.game.Goals.byId("ruby50").target() + ")",
+					dev.rubymod.game.Goals.byId("bank2000").target() <= 200 && dev.rubymod.game.Goals.byId("fly").target() <= 500
+							&& dev.rubymod.game.Goals.byId("ruby50").target() <= 25);
+			rec.researchPoints = pointsBefore;
+			rec.goalProgress.remove("ruby50");
+			if (!had) {
+				rec.goalsDone.remove("ruby50");
+			}
+		}
 		check("research: basic guns never need research", dev.rubymod.game.Research.unlocked(alpha, "arr_rifle"));
 
 		BlockPos graveSpot = surface(level, base.offset(30, 0, 30));

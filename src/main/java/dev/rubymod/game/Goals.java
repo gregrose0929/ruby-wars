@@ -42,7 +42,7 @@ public final class Goals {
 			new Goal("vault", "Build a Vault", 1, 1),
 			// Making rubies
 			new Goal("ruby10", "Mine 10 Ruby Ore", 10, 1),
-			new Goal("ruby50", "Mine 50 Ruby Ore", 50, 2),
+			new Goal("ruby50", "Mine 25 Ruby Ore", 25, 2),
 			new Goal("power", "Build a generator", 1, 1),
 			new Goal("drill", "Build a Ruby Drill", 1, 1),
 			new Goal("depot", "Build a Trade Depot", 1, 1),
@@ -50,17 +50,17 @@ public final class Goals {
 			new Goal("loader100", "Belt Loaders move items", 100, 1),
 			new Goal("busy3", "3 machines busy at once", 3, 2),
 			new Goal("mk3", "Machine to Mk III", 3, 2),
-			new Goal("bank500", "Bank 500 rubies", 500, 1),
-			new Goal("bank2000", "Bank 2,000 rubies", 2000, 2),
+			new Goal("bank500", "Bank 100 rubies", 100, 1),
+			new Goal("bank2000", "Bank 200 rubies", 200, 2),
 			// Raids and Battle Day
 			new Goal("raid", "Repel a raid", 1, 2),
 			new Goal("raidclean", "Repel a raid, lose nothing", 1, 2),
 			new Goal("knockout", "Battle Day knockout", 1, 1),
-			new Goal("heartkill", "Destroy an enemy Heart", 1, 2),
+			new Goal("heartkill", "Damage an enemy Heart", 1, 2),
 			new Goal("sudden", "Make it to Sudden Death", 1, 2),
 			// Getting around
 			new Goal("drive", "Drive 300 blocks", 300, 1),
-			new Goal("fly", "Fly 1,000 blocks", 1000, 2),
+			new Goal("fly", "Fly 500 blocks", 500, 2),
 			new Goal("sail", "Sail 500 blocks", 500, 1),
 			new Goal("dig", "Dig with a Tunnel Borer", 50, 1));
 
@@ -155,9 +155,16 @@ public final class Goals {
 		}
 	}
 
-	/** Joining: every goal done this season shows as an advancement too. */
+	/** Joining: every goal done this season shows as an advancement too (and any already past its target counts now). */
 	public static void syncAdvancements(ServerPlayer p) {
 		SeasonData.PlayerRecord r = record(p.getUUID());
+		if (r != null) {
+			for (Goal g : ALL) {
+				if (!r.goalsDone.contains(g.id()) && r.goalProgress.getOrDefault(g.id(), 0) >= g.target()) {
+					check(p.level().getServer(), p.getUUID(), g.id());
+				}
+			}
+		}
 		if (r != null && r.goalsDone != null) {
 			for (String id : r.goalsDone) {
 				advancement(p, id);
@@ -200,18 +207,20 @@ public final class Goals {
 				reach(server, id, "busy3", busy.size());
 			}
 			var vehicle = p.getVehicle();
-			boolean driving = vehicle instanceof VehicleEntity v && v.getControllingPassenger() == p;
-			boolean flying = vehicle instanceof AircraftEntity a && a.getControllingPassenger() == p && !a.onGround();
+			boolean boat = vehicle instanceof net.minecraft.world.entity.vehicle.boat.AbstractBoat b && b.getControllingPassenger() == p;
+			boolean driving = vehicle instanceof VehicleEntity v && v.getControllingPassenger() == p || boat;
+			boolean jetpack = vehicle == null && Jetpacks.wearing(p) && !p.onGround() && !p.isInWater() && !p.getAbilities().flying;
+			boolean flying = vehicle instanceof AircraftEntity a && a.getControllingPassenger() == p && !a.onGround() || jetpack;
 			if (!driving && !flying || !Hub.inRubyWarsWorld(p)) {
 				LAST_RIDE_POS.remove(id);
 				continue;
 			}
-			Vec3 now = vehicle.position();
+			Vec3 now = vehicle == null ? p.position() : vehicle.position();
 			Vec3 last = LAST_RIDE_POS.put(id, now);
 			if (last != null) {
 				double moved = Math.hypot(now.x - last.x, now.z - last.z);
 				if (moved < 200) { // not a teleport
-					add(server, id, flying ? "fly" : vehicle instanceof dev.rubymod.entity.BoatEntity ? "sail" : "drive", (int) Math.round(moved));
+					add(server, id, flying ? "fly" : boat || vehicle instanceof dev.rubymod.entity.BoatEntity ? "sail" : "drive", (int) Math.round(moved));
 				}
 			}
 		}

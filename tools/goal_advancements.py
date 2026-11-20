@@ -20,7 +20,7 @@ ICONS = {
     "defense": "rubymod:sentry_turret", "defense5": "rubymod:shield_generator", "vault": "rubymod:vault", "sell100": "minecraft:emerald",
     "loader100": "rubymod:belt_loader", "busy3": "rubymod:constructor", "raid": "minecraft:shield", "raidclean": "minecraft:totem_of_undying",
     "knockout": "minecraft:iron_sword", "heartkill": "minecraft:tnt", "sudden": "minecraft:wither_skeleton_skull",
-    "drive": "rubymod:jeep", "fly": "rubymod:fighter_jet", "sail": "minecraft:oak_boat", "dig": "rubymod:tunnel_borer",
+    "drive": "rubymod:jeep", "fly": "rubymod:jetpack", "sail": "minecraft:oak_boat", "dig": "rubymod:tunnel_borer",
 }
 
 

@@ -10,9 +10,9 @@
 		"show_toast": false,
 		"frame": "goal",
 		"icon": {
-			"id": "rubymod:fighter_jet"
+			"id": "rubymod:jetpack"
 		},
-		"title": "Fly 1,000 blocks",
+		"title": "Fly 500 blocks",
 		"description": "+2 stars to spend on upgrades"
 	},
 	"requirements": [
