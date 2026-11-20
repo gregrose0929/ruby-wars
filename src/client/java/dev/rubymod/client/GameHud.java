@@ -27,29 +27,43 @@ public class GameHud implements HudElement {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker deltaTracker) {
+		HudScale.push(g);
+		try {
+			draw(g, deltaTracker);
+		} finally {
+			HudScale.pop(g);
+		}
+	}
+
+	/** Drawn at the HUD's size (see HudScale). */
+	private void draw(GuiGraphicsExtractor g, DeltaTracker deltaTracker) {
 		Minecraft mc = Minecraft.getInstance();
 		Player player = mc.player;
 		if (player == null) {
 			return;
 		}
 		Font font = mc.font;
-		int w = g.guiWidth();
-		int h = g.guiHeight();
+		int w = HudScale.width(g);
+		int h = HudScale.height(g);
 
 		drawLowHealth(g, player, w, h);
 		// A menu open (the Armory, a machine...): the HUD panels step aside so nothing pokes out around it.
 		if (menuOpen()) {
 			return;
 		}
+		// The top centre stacks downward (phase, respawns, raid); the top-left column steps under it if they'd meet.
+		topBottom = 0;
+		topLeft = w;
 		drawPhaseBanner(g, font, w);
 		drawRespawnStatus(g, font, w);
-		if (ClientSettings.heartPanel) {
-			drawHeart(g, font);
+		var raid = ClientState.raid;
+		if (raid != null && raid.raiders() > 0 && System.currentTimeMillis() - ClientState.raidAt < 2500) {
+			String text = "RAID  " + raid.raiders() + " raider" + (raid.raiders() == 1 ? "" : "s") + " left  " + formatTime(raid.seconds())
+					+ (raid.looted() > 0 ? "  -" + raid.looted() + " rubies" : "");
+			boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
+			topBanner(g, font, text, w, blink ? RED : 0xFFFF8080);
 		}
-		if (ClientSettings.bankPanel) {
-			drawEconomy(g, font);
-		}
-		drawGuide(g, font);
+		drawCorner(g, font, w);
 		drawAmmo(g, font, player, w, h);
 		drawReload(g, w, h);
 		drawHitMarker(g, w, h);
@@ -60,32 +74,46 @@ public class GameHud implements HudElement {
 		}
 		drawHitConfirm(g, font, w, h);
 		drawDeathCard(g, font, w, h);
-		var raid = ClientState.raid;
-		if (raid != null && raid.raiders() > 0 && System.currentTimeMillis() - ClientState.raidAt < 2500) {
-			String text = "RAID  " + raid.raiders() + " raider" + (raid.raiders() == 1 ? "" : "s") + " left  " + formatTime(raid.seconds())
-					+ (raid.looted() > 0 ? "  -" + raid.looted() + " rubies" : "");
-			int tw = font.width(text) + 14;
-			panel(g, w / 2 - tw / 2, 18, w / 2 + tw / 2, 31);
-			boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
-			g.centeredText(font, text, w / 2, 21, blink ? RED : 0xFFFF8080);
-		}
 		long combat = ClientState.combatUntil - System.currentTimeMillis();
 		if (combat > 0) {
-			String text = "IN COMBAT " + (combat / 1000 + 1) + "s";
-			int tw = font.width(text) + 10;
-			panel(g, w / 2 - tw / 2, h - 72, w / 2 + tw / 2, h - 60);
-			g.centeredText(font, text, w / 2, h - 70, RED);
+			banner(g, font, "IN COMBAT " + (combat / 1000 + 1) + "s", w / 2, h - 76, w, RED);
 		}
 
 		// Only in the Ruby Wars world, during the battle, while watching: not in the hub or another game, and not after the season.
 		if (ClientState.hud != null && ClientState.hud.eliminated() && ClientState.inRubyWarsWorld() && ClientState.phase().isBattle() && player.isSpectator()) {
 			String a = "KNOCKED OUT - watching the battle";
 			String b = "Click: next player   Right-click: back   Crouch: fly free   H: party games in the hub";
-			int tw = Math.max(font.width(a), font.width(b)) + 12;
-			panel(g, w / 2 - tw / 2, h - 86, w / 2 + tw / 2, h - 60);
-			g.centeredText(font, Component.literal(a), w / 2, h - 83, RED);
-			g.centeredText(font, Component.literal(b), w / 2, h - 71, 0xFFCCCCCC);
+			int tw = Math.min(w - 8, Math.max(font.width(a), font.width(b)) + 16);
+			panel(g, w / 2 - tw / 2, h - 92, w / 2 + tw / 2, h - 62);
+			g.centeredText(font, Component.literal(dev.rubymod.client.ui.Ui.fit(a, tw - 16)), w / 2, h - 87, RED);
+			g.centeredText(font, Component.literal(dev.rubymod.client.ui.Ui.fit(b, tw - 16)), w / 2, h - 76, 0xFFCCCCCC);
 		}
+	}
+
+	/** Bottom of the top-centre stack this frame (phase banner, respawns, raid), and its left edge. */
+	private static int topBottom;
+	private static int topLeft;
+
+	/** Where the next thing at the top centre can go (the look-at panel uses it too). */
+	public static int topCentreBottom() {
+		return topBottom;
+	}
+
+	/** One line in a panel, centred on {@code cx}: 16 high, the text 4 down and 8 in, cut to fit the screen. Returns its left edge. */
+	private static int banner(GuiGraphicsExtractor g, Font font, String text, int cx, int y, int w, int color) {
+		String shown = dev.rubymod.client.ui.Ui.fit(text, w - 24);
+		int tw = font.width(shown) + 16;
+		int x = cx - tw / 2;
+		panel(g, x, y, x + tw, y + 16);
+		g.text(font, shown, x + 8, y + 4, color, true);
+		return x;
+	}
+
+	/** A banner under whatever's already at the top centre. */
+	private static void topBanner(GuiGraphicsExtractor g, Font font, String text, int w, int color) {
+		int y = topBottom == 0 ? 2 : topBottom + 2;
+		topLeft = Math.min(topLeft, banner(g, font, text, w / 2, y, w, color));
+		topBottom = y + 16;
 	}
 
 	/** A screen is open other than chat (which leaves the HUD showing). */
@@ -110,12 +138,10 @@ public class GameHud implements HudElement {
 		if (info == null || mc.gui.screen() != null || System.currentTimeMillis() - ClientState.deathInfoAt > 3500) {
 			return;
 		}
-		String line = deathLine(info);
-		int width = font.width(line) + 16;
-		panel(g, w / 2 - width / 2, 34, w / 2 + width / 2, 49);
-		g.centeredText(font, line, w / 2, 38, RED);
+		int y = Math.max(34, topBottom + 4);
+		banner(g, font, deathLine(info), w / 2, y, w, RED);
 		if (Killcam.active()) {
-			g.centeredText(font, "KILLCAM", w / 2, 52, GOLD);
+			g.centeredText(font, "KILLCAM", w / 2, y + 19, GOLD);
 		}
 	}
 
@@ -128,10 +154,7 @@ public class GameHud implements HudElement {
 		}
 		String text = hit.destroyed() ? (hit.percentLeft() < 0 ? "KILLED - " : "DESTROYED - ") + hit.target()
 				: "HIT - " + hit.target() + "  " + hit.percentLeft() + "%";
-		int col = hit.destroyed() ? GOLD : RED;
-		int width = font.width(text) + 10;
-		panel(g, w / 2 - width / 2, h / 2 + 50, w / 2 + width / 2, h / 2 + 63);
-		g.centeredText(font, text, w / 2, h / 2 + 53, col);
+		banner(g, font, text, w / 2, h / 2 + 48, w, hit.destroyed() ? GOLD : RED);
 	}
 
 	private void drawPhaseBanner(GuiGraphicsExtractor g, Font font, int w) {
@@ -155,11 +178,8 @@ public class GameHud implements HudElement {
 		if (phase.isBattle()) {
 			text.append("  |  ").append(ClientState.hud.alive()).append(" alive");
 		}
-		String s = text.toString();
-		int width = font.width(s) + 12;
 		int color = phase.pvp() ? RED : phase.isBattle() ? GOLD : WHITE;
-		panel(g, w / 2 - width / 2, 2, w / 2 + width / 2, 15);
-		g.centeredText(font, s, w / 2, 5, color);
+		topBanner(g, font, text.toString(), w, color);
 	}
 
 	/** Under the phase banner on Battle Day: whether dying sends you back to a Heart, or knocks you out. */
@@ -192,51 +212,89 @@ public class GameHud implements HudElement {
 				return;
 			}
 		}
-		int width = font.width(text) + 10;
-		panel(g, w / 2 - width / 2, 17, w / 2 + width / 2, 29);
-		g.centeredText(font, text, w / 2, 19, color);
+		topBanner(g, font, text, w, color);
 	}
 
-	private void drawHeart(GuiGraphicsExtractor g, Font font) {
-		if (ClientState.hud == null || ClientState.phase() == Phase.LOBBY || !ClientState.inRubyWarsWorld()) {
+	private static String num(long n) {
+		return String.format(java.util.Locale.ROOT, "%,d", n);
+	}
+
+	/**
+	 * Top left, kept small: one slim panel with your Heart (a bar and its HP) over your rubies (bank, what you carry)
+	 * and power (what it's making or using); then the guide's next step on one line. Nothing runs into the minimap or
+	 * the banner at the top centre (on a narrow screen it starts under the banner).
+	 */
+	private void drawCorner(GuiGraphicsExtractor g, Font font, int w) {
+		if (!ClientState.inRubyWarsWorld()) {
 			return;
 		}
-		int hp = ClientState.hud.heartHp();
-		int max = Math.max(1, ClientState.hud.heartMaxHp());
-		String label = hp < 0 ? (ClientState.phase().isBattle() ? "Heart destroyed" : "Heart not placed") : "Heart " + hp + " / " + max;
-		panel(g, 4, 4, 100, 24);
-		dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.HEART, 8, 7);
-		g.text(font, label, 20, 8, hp < 0 ? RED : WHITE, false);
-		if (hp >= 0) {
-			dev.rubymod.client.ui.Ui.bar(g, 8, 17, 88, 4, dev.rubymod.client.ui.Ui.glide("heart", hp / (float) max), RED);
-		}
-	}
-
-	/** Bank and power, under the Heart panel, once you have either. */
-	private void drawEconomy(GuiGraphicsExtractor g, Font font) {
+		Phase phase = ClientState.phase();
+		var hud = ClientState.hud;
+		boolean heart = ClientSettings.heartPanel && hud != null && phase != Phase.LOBBY;
 		var e = ClientState.economy;
-		// Only in the Ruby Wars world (the hub and the other modes don't need it).
-		if (e == null || !ClientState.inRubyWarsWorld()
-				|| e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY) {
-			return;
+		boolean bank = ClientSettings.bankPanel && e != null
+				&& !(e.bank() == 0 && e.charge() == 0 && e.produced() == 0 && e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY);
+		int maxW = Math.max(90, w - dev.rubymod.client.map.Minimap.SIZE - 16 - 4);
+
+		int hp = heart ? hud.heartHp() : 0;
+		int max = heart ? Math.max(1, hud.heartMaxHp()) : 1;
+		String hpText = hp < 0 ? (phase.isBattle() ? "Heart destroyed" : "No Heart yet") : num(hp);
+		int need = heart ? 22 + (hp < 0 ? 0 : 44 + 5) + font.width(hpText) + 6 : 0;
+		String bankText = "";
+		String carriedText = "";
+		String rate = "";
+		if (bank) {
+			bankText = num(e.bank());
+			var me = Minecraft.getInstance().player;
+			int carried = me == null ? 0 : me.getInventory().countItem(dev.rubymod.registry.ModItems.RUBY);
+			carriedText = carried > 0 ? "+" + num(carried) : "";
+			long net = e.produced() - e.consumed();
+			rate = (net >= 0 ? "+" : "") + num(net) + "/s";
+			need = Math.max(need, 21 + font.width(bankText) + (carriedText.isEmpty() ? 0 : 4 + font.width(carriedText)) + 10 + 11
+					+ font.width(rate) + 6);
 		}
-		int y = ClientState.hud != null && ClientState.phase() != Phase.LOBBY && ClientState.inRubyWarsWorld() && ClientSettings.heartPanel ? 24 : 4;
-		panel(g, 4, y, 100, y + 30);
-		g.item(new ItemStack(dev.rubymod.registry.ModItems.RUBY), 7, y + 3);
-		// What you can spend: the bank, plus the rubies you're carrying (the Armory takes those first).
-		String bank = String.format(java.util.Locale.ROOT, "%,d", e.bank());
-		g.text(font, bank, 26, y + 7, 0xFFFF6A84, false);
-		var me = Minecraft.getInstance().player;
-		int carried = me == null ? 0 : me.getInventory().countItem(dev.rubymod.registry.ModItems.RUBY);
-		if (carried > 0) {
-			g.text(font, "+" + carried, 28 + font.width(bank), y + 7, 0xFFFFB0C0, false);
+		int colW = Math.min(maxW, Math.max(104, need));
+		int y = 4;
+		if (topBottom > 0 && 4 + colW + 4 > topLeft) {
+			y = topBottom + 3;
 		}
-		long cap = Math.max(1, e.capacity());
-		dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.BOLT, 7, y + 18);
-		dev.rubymod.client.ui.Ui.bar(g, 18, y + 20, 78, 5, (float) Math.min(1.0, e.charge() / (double) cap), 0xFFF5C542);
-		long net = e.produced() - e.consumed();
-		String rate = (net >= 0 ? "+" : "") + net + "/s";
-		g.text(font, rate, 96 - font.width(rate), y + 7, net >= 0 ? 0xFF5BD27A : RED, false);
+		if (heart || bank) {
+			int rows = (heart ? 1 : 0) + (bank ? 1 : 0);
+			int h = 6 + rows * 11;
+			panel(g, 4, y, 4 + colW, y + h);
+			int right = 4 + colW - 6;
+			int ry = y + 5;
+			if (heart) {
+				dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.HEART, 9, ry - 1);
+				if (hp < 0) {
+					g.text(font, dev.rubymod.client.ui.Ui.fit(hpText, right - 21), 21, ry, RED, true);
+				} else {
+					float frac = hp / (float) max;
+					g.text(font, hpText, right - font.width(hpText), ry, frac < 0.35F ? RED : 0xFFC8CDD6, true);
+					dev.rubymod.client.ui.Ui.bar(g, 21, ry + 1, right - font.width(hpText) - 5 - 21, 6,
+							dev.rubymod.client.ui.Ui.glide("heart", frac), RED);
+				}
+				ry += 11;
+			}
+			if (bank) {
+				g.pose().pushMatrix();
+				g.pose().translate(9, ry - 1);
+				g.pose().scale(0.5625F, 0.5625F);
+				g.item(new ItemStack(dev.rubymod.registry.ModItems.RUBY), 0, 0);
+				g.pose().popMatrix();
+				g.text(font, bankText, 21, ry, 0xFFFF6A84, true);
+				if (!carriedText.isEmpty()) {
+					g.text(font, carriedText, 21 + font.width(bankText) + 4, ry, 0xFFB98C96, true);
+				}
+				// Power: what it's making (green) or using (red); the bolt dims when the batteries are empty.
+				int rx = right - font.width(rate);
+				boolean gaining = e.produced() >= e.consumed();
+				g.text(font, rate, rx, ry, gaining ? 0xFF5BD27A : RED, true);
+				dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.BOLT, rx - 11, ry - 1);
+			}
+			y += h + 2;
+		}
+		drawGuide(g, font, y, colW, maxW);
 	}
 
 	/**
@@ -278,69 +336,82 @@ public class GameHud implements HudElement {
 	private static int guideStep = -1;
 	private static long guideChangedAt;
 
-	private void drawGuide(GuiGraphicsExtractor g, Font font) {
+	/** The guide step showing in the corner, or -1 (not building, guide off, a how-to card in the way). */
+	private static int guideShown() {
 		Phase phase = ClientState.phase();
-		if (!ClientState.inRubyWarsWorld() || phase != Phase.LOBBY && phase != Phase.BUILD) {
-			return;
+		if (phase != Phase.LOBBY && phase != Phase.BUILD || "off".equals(ClientSettings.guide)
+				|| HowToCard.covers(Minecraft.getInstance().getWindow().getGuiScaledWidth())) {
+			return -1;
 		}
-		if (HowToCard.covers(Minecraft.getInstance().getWindow().getGuiScaledWidth())) {
-			return;
-		}
-		int step = ClientState.research == null ? -1 : Guide.current();
-		if (step < 0 || "off".equals(ClientSettings.guide)) {
+		return ClientState.research == null ? -1 : Guide.current();
+	}
+
+	/** The guide's one-line form: "Next: ..." and the step's count ("" if none). */
+	private static String[] guideLine(int step) {
+		Guide.Step s = Guide.STEPS.get(step);
+		int[] progress = Guide.progress(s);
+		return new String[] {"Next: " + s.title(), progress != null && progress[1] > 1 ? progress[0] + "/" + progress[1] : ""};
+	}
+
+	private void drawGuide(GuiGraphicsExtractor g, Font font, int y, int colW, int maxW) {
+		int step = guideShown();
+		if (step < 0) {
 			return;
 		}
 		if (step != guideStep) {
 			guideStep = step;
 			guideChangedAt = System.currentTimeMillis();
 		}
-		int y = ClientState.hud != null && phase != Phase.LOBBY && ClientSettings.heartPanel ? 24 : 4;
-		var e = ClientState.economy;
-		if (ClientSettings.bankPanel && !(e == null || e.bank() == 0 && e.charge() == 0 && e.produced() == 0
-				&& e.capacity() <= dev.rubymod.industry.Grid.BASE_CAPACITY)) {
-			y += 34;
-		}
-		boolean open = "full".equals(ClientSettings.guide) || System.currentTimeMillis() - guideChangedAt < 15_000;
+		Guide.Step s = Guide.STEPS.get(step);
+		int[] progress = Guide.progress(s);
+		boolean counted = progress != null && progress[1] > 1;
+		String count = counted ? progress[0] + "/" + progress[1] : "";
+		// One line unless Settings asks for the full card (J has the whole guide); a new step glows gold for a moment.
+		boolean open = "full".equals(ClientSettings.guide);
+		float fresh = Math.max(0.0F, 1.0F - (System.currentTimeMillis() - guideChangedAt) / 4000.0F);
+		// A gold stripe down the left (inside the frame), the text 8 past it.
+		int x = 4;
+		int tx = x + 9;
 		if (!open) {
 			// One line: the next step, and its count if it has one.
-			Guide.Step one = Guide.STEPS.get(step);
-			int[] p1 = Guide.progress(one);
-			String text = "Next: " + one.title() + (p1 != null && p1[1] > 1 ? "  " + p1[0] + "/" + p1[1] : "");
-			int tw = Math.min(g.guiWidth() - dev.rubymod.client.map.Minimap.SIZE - 20, font.width(text) + 16);
-			panel(g, 4, y, 4 + tw, y + 13);
-			g.fill(6, y + 2, 8, y + 11, GOLD);
-			g.text(font, font.plainSubstrByWidth(text, tw - 14), 12, y + 3, WHITE, false);
+			String text = guideLine(step)[0];
+			int pw = Math.min(maxW, Math.max(colW, 9 + font.width(text) + (counted ? 8 + font.width(count) : 0) + 7));
+			int right = x + pw - 7;
+			panel(g, x, y, x + pw, y + 17);
+			g.fill(x + 2, y + 2, x + 4, y + 15, GOLD);
+			g.text(font, dev.rubymod.client.ui.Ui.fit(text, right - tx - (counted ? font.width(count) + 8 : 0)), tx, y + 5,
+					dev.rubymod.client.ui.Ui.mix(WHITE, GOLD, fresh), true);
+			if (counted) {
+				g.text(font, count, right - font.width(count), y + 5, GOLD, true);
+			}
 			return;
 		}
-		Guide.Step s = step < 0 ? null : Guide.STEPS.get(step);
-		int[] progress = s == null ? null : Guide.progress(s);
-		var hint = s == null ? java.util.List.<net.minecraft.util.FormattedCharSequence>of() : font.split(Component.literal(s.hint()), 180);
-		int lines = Math.min(3, hint.size());
-		boolean bar = progress != null && progress[1] > 1;
-		int height = (s == null ? 0 : 26 + lines * 9 + (bar ? 5 : 0)) + (s == null ? 2 : 11);
-		panel(g, 4, y, 190, y + height + 2);
-		g.fill(6, y + 2, 8, y + height, GOLD);
-		int ly = y + 4;
-		if (s != null) {
-			g.text(font, "Next step, " + (step + 1) + " of " + Guide.STEPS.stream().filter(st -> !st.optional()).count(), 12, ly, GOLD, false);
-			String count = bar ? progress[0] + "/" + progress[1] : "";
-			g.text(font, font.plainSubstrByWidth(s.title(), 172 - font.width(count)), 12, ly + 11, WHITE, false);
-			if (bar) {
-				g.text(font, count, 186 - font.width(count), ly + 11, GOLD, false);
-			}
-			ly += 23;
-			for (int i = 0; i < lines; i++) {
-				g.text(font, hint.get(i), 12, ly, 0xFFAAB0BA, false);
-				ly += 9;
-			}
-			if (bar) {
-				dev.rubymod.client.ui.Ui.bar(g, 12, ly + 1, 174, 4, Math.min(1.0F, progress[0] / (float) progress[1]), GOLD);
-				ly += 6;
-			}
+		int pw = colW;
+		int right = x + pw - 7;
+		int inner = right - tx;
+		var hint = font.split(Component.literal(s.hint()), inner);
+		int lines = Math.min(6, hint.size());
+		int ly = y + 5;
+		int height = 5 + 11 + 12 + lines * 10 + (counted ? 7 : 0) + 2 + 9 + 4;
+		panel(g, x, y, x + pw, y + height);
+		g.fill(x + 2, y + 2, x + 4, y + height - 2, GOLD);
+		g.text(font, dev.rubymod.client.ui.Ui.fit("Next step, " + (step + 1) + " of " + Guide.STEPS.stream().filter(st -> !st.optional()).count(), inner),
+				tx, ly, GOLD, true);
+		ly += 11;
+		g.text(font, dev.rubymod.client.ui.Ui.fit(s.title(), inner - (counted ? font.width(count) + 8 : 0)), tx, ly, WHITE, true);
+		if (counted) {
+			g.text(font, count, right - font.width(count), ly, GOLD, true);
 		}
-		if (s != null) {
-			g.text(font, "J for the full guide", 12, ly + 1, 0xFF6E7480, false);
+		ly += 12;
+		for (int i = 0; i < lines; i++) {
+			g.text(font, hint.get(i), tx, ly, 0xFFB4BAC4, false);
+			ly += 10;
 		}
+		if (counted) {
+			dev.rubymod.client.ui.Ui.bar(g, tx, ly + 1, inner, 4, Math.min(1.0F, progress[0] / (float) progress[1]), GOLD);
+			ly += 7;
+		}
+		g.text(font, "J for the full guide", tx, ly + 2, 0xFF7A808C, false);
 	}
 
 	private void drawAmmo(GuiGraphicsExtractor g, Font font, Player player, int w, int h) {
@@ -491,9 +562,9 @@ public class GameHud implements HudElement {
 			return;
 		}
 		var radar = ClientState.radar;
-		int x = w - 110;
-		int y = dev.rubymod.client.map.Minimap.SIZE + 26;
-		panel(g, x - 4, y - 4, w - 4, y + 34);
+		int x = w - 112;
+		int y = dev.rubymod.client.map.Minimap.SIZE + 27;
+		panel(g, x - 7, y - 5, w - 4, y + 32);
 		g.text(font, "RADAR", x, y, GOLD);
 		String contacts = radar.contacts() == 0 ? "No contacts" : radar.contacts() + " contact" + (radar.contacts() == 1 ? "" : "s");
 		g.text(font, contacts, x, y + 10, radar.contacts() > 0 ? RED : GRAY);
@@ -501,11 +572,12 @@ public class GameHud implements HudElement {
 			g.text(font, "Nearest " + radar.nearest() + "m " + compass(radar.bearing()), x, y + 20, WHITE);
 		}
 		boolean blink = (System.currentTimeMillis() / 400) % 2 == 0;
+		int ay = Math.max(40, topBottom + 22);
 		if (radar.missileAlert() && blink) {
-			g.centeredText(font, Component.literal("!! INCOMING MISSILE !!"), w / 2, 40, RED);
+			g.centeredText(font, Component.literal("!! INCOMING MISSILE !!"), w / 2, ay, RED);
 		}
 		if (radar.intruder() && blink) {
-			g.centeredText(font, Component.literal("INTRUDER IN YOUR BASE"), w / 2, 52, GOLD);
+			g.centeredText(font, Component.literal("INTRUDER IN YOUR BASE"), w / 2, ay + 12, GOLD);
 		}
 	}
 
@@ -536,15 +608,15 @@ public class GameHud implements HudElement {
 			String middle = icon.isEmpty() ? "  [" + info.weapon() + "]  " : "        ";
 			String tag = info.headshot() ? " HS" : "";
 			int width = font.width(info.killer()) + font.width(middle) + font.width(tag) + font.width(info.victim());
-			int x = w - width - 10;
-			panel(g, x - 3, y - 2, w - 4, y + 10);
+			int x = w - width - 11;
+			panel(g, x - 7, y - 4, w - 4, y + 12);
 			int killerColor = info.killer().equals(me) ? GOLD : 0xFFFF7A7A;
 			int victimColor = info.victim().equals(me) ? GOLD : 0xFF9CC9FF;
 			g.text(font, info.killer(), x, y, killerColor);
 			int mx = x + font.width(info.killer());
 			if (!icon.isEmpty()) {
 				g.pose().pushMatrix();
-				g.pose().translate(mx + 8, y - 2);
+				g.pose().translate(mx + 8, y - 1);
 				g.pose().scale(0.75F, 0.75F);
 				g.item(icon, 0, 0);
 				g.pose().popMatrix();
@@ -557,7 +629,7 @@ public class GameHud implements HudElement {
 				mx += font.width(tag);
 			}
 			g.text(font, info.victim(), mx, y, victimColor);
-			y += 13;
+			y += 18;
 		}
 	}
 

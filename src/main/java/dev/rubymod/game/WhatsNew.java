@@ -24,8 +24,9 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-19-goals";
+	private static final String VERSION = "2026-11-19-hud";
 	private static final List<String> LINES = List.of(
+			"minecraft:spyglass|A smaller, tidier HUD: one slim panel for your Heart, rubies and power, and a one-line guide. Settings (M) has HUD size.",
 			"rubymod:ruby_heart|New goals for stars (J): Heart to tier 3, a Vault, 5 defenses, sell at a Trade Depot, Belt Loaders, Battle Day, sailing and the Tunnel Borer.",
 			"minecraft:compass|Press M for the new Ruby Wars menu: map, guide, profile, manual, games and Settings (choose what your HUD shows).",
 			"minecraft:nether_star|Goals, unlocks and news now pop up as toasts in the corner instead of filling chat. Goals show in the advancements screen too.",

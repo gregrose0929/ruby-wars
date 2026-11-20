@@ -4596,6 +4596,7 @@ public final class AutoTest {
 			case "showroom" -> showroomScript();
 			case "smooth" -> polishScript();
 			case "goalsview" -> goalsViewScript();
+			case "hudcheck" -> hudCheckScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9776,6 +9777,63 @@ public final class AutoTest {
 	}
 
 	/** Toasts, the compact guide, the Ruby Wars menu, Settings, Admin, machines at work, a belt ramp, the trip fade, goal advancements. */
+	/** The corner panels with big numbers, at a few GUI scales (text inside its panel, nothing squeezed). */
+	private static void hudCheckScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "time set 1000");
+		});
+		then(60, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			int x = p.getBlockX();
+			int z = p.getBlockZ() + 5;
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			heartAt = new net.minecraft.core.BlockPos(x, y, z);
+			level.setBlockAndUpdate(heartAt, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heartAt);
+			dev.rubymod.industry.Grid.deposit(p.getUUID(), 123_456_000L);
+			p.getInventory().add(new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.RUBY, 64));
+			p.getInventory().add(new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.RUBY, 64));
+			p.teleportTo(level, x + 0.5, y, z - 4.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true);
+		}));
+		then(200, mc -> shot(mc, "hud-auto"));
+		then(5, mc -> mc.options.guiScale().set(2));
+		then(20, mc -> shot(mc, "hud-scale2"));
+		then(5, mc -> mc.options.guiScale().set(4));
+		then(20, mc -> shot(mc, "hud-scale4"));
+		then(5, mc -> {
+			ClientSettings.guide = "full";
+			mc.options.guiScale().set(3);
+		});
+		then(20, mc -> shot(mc, "hud-scale3-full"));
+		then(5, mc -> mc.options.guiScale().set(2));
+		then(20, mc -> shot(mc, "hud-scale2-full"));
+		// Battle Day: the banners stack, the column steps under them if it has to.
+		then(5, mc -> {
+			ClientSettings.guide = "compact";
+			onServer(mc, server -> dev.rubymod.game.BattleDirector.enterPhase(server, dev.rubymod.game.Phase.WAR));
+		});
+		then(80, mc -> {
+			long now = System.currentTimeMillis();
+			ClientState.KILLS.addFirst(new ClientState.Kill(new Payloads.KillFeed("Raven", mc.player.getName().getString(), "Longshot Sniper", true), now));
+			ClientState.KILLS.addFirst(new ClientState.Kill(new Payloads.KillFeed(mc.player.getName().getString(), "Ghost", "AR-R Rifle", false), now));
+		});
+		then(10, mc -> shot(mc, "hud-battle-scale2"));
+		then(5, mc -> mc.options.guiScale().set(4));
+		then(20, mc -> shot(mc, "hud-battle-scale4"));
+		then(5, mc -> mc.options.guiScale().set(0));
+		then(10, mc -> {
+			log("done");
+			mc.stop();
+		});
+	}
+
 	/** The J screen's Goals tab: headings, progress bars, scrolling. */
 	private static void goalsViewScript() {
 		then(5, mc -> {

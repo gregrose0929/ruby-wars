@@ -55,7 +55,7 @@ public class Markers implements HudElement {
 			if (!edge || m.kind() == 2) {
 				String label = m.name() + "  " + Math.round(dist) + "m";
 				int tw = font.width(label);
-				g.fill(x - tw / 2 - 3, y - 17, x + tw / 2 + 3, y - 7, 0x90000000);
+				g.fill(x - tw / 2 - 4, y - 19, x + tw / 2 + 4, y - 6, 0x90000000);
 				g.centeredText(font, label, x, y - 16, color);
 			}
 		}
@@ -69,7 +69,7 @@ public class Markers implements HudElement {
 			int y = Math.round(s[1]);
 			String label = mate.name() + "  " + Math.round(at.distanceTo(eye)) + "m";
 			int tw = font.width(label);
-			g.fill(x - tw / 2 - 3, y - 12, x + tw / 2 + 3, y + 2, 0x90000000);
+			g.fill(x - tw / 2 - 4, y - 14, x + tw / 2 + 4, y + 2, 0x90000000);
 			g.centeredText(font, label, x, y - 11, 0xFF7CF59A);
 			int bar = Math.max(1, Math.round((tw + 4) * Mth.clamp(mate.health(), 0, 1)));
 			g.fill(x - tw / 2 - 2, y - 1, x - tw / 2 - 2 + bar, y + 1, mate.health() > 0.5F ? 0xFF5BE37D : mate.health() > 0.25F ? 0xFFFFB040 : 0xFFFF4040);

@@ -28,9 +28,9 @@ public class SettingsScreen extends Screen {
 
 	public SettingsScreen() {
 		super(Component.literal("Settings"));
-		rows.add(new Row("Guide", "The next-step panel in the corner: one line (opens when the step changes), always open, or hidden",
+		rows.add(new Row("Guide", "The next step, top left: one line, the full card, or hidden (J always has the full guide)",
 				() -> switch (ClientSettings.guide) {
-					case "full" -> "Always open";
+					case "full" -> "Full card";
 					case "off" -> "Hidden";
 					default -> "One line";
 				}, () -> ClientSettings.guide = switch (ClientSettings.guide) {
@@ -38,6 +38,9 @@ public class SettingsScreen extends Screen {
 					case "full" -> "off";
 					default -> "compact";
 				}));
+		rows.add(new Row("HUD size", "How big the Ruby Wars HUD is: small (a step smaller than Minecraft's GUI scale) or the same as the GUI",
+				() -> "small".equals(ClientSettings.hudSize) ? "Small" : "Normal",
+				() -> ClientSettings.hudSize = "small".equals(ClientSettings.hudSize) ? "normal" : "small"));
 		rows.add(new Row("Minimap", "The map in the top right (U turns it on and off too)", () -> onOff(dev.rubymod.client.map.Minimap.enabled),
 				() -> dev.rubymod.client.map.Minimap.enabled = !dev.rubymod.client.map.Minimap.enabled));
 		rows.add(new Row("Minimap size", "Normal or big", () -> ClientSettings.bigMinimap ? "Big" : "Normal",

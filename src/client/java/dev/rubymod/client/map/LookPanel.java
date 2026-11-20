@@ -55,6 +55,16 @@ public class LookPanel implements HudElement {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker delta) {
+		dev.rubymod.client.HudScale.push(g);
+		try {
+			draw(g, delta);
+		} finally {
+			dev.rubymod.client.HudScale.pop(g);
+		}
+	}
+
+	/** Drawn at the HUD's size (see HudScale). */
+	private void draw(GuiGraphicsExtractor g, DeltaTracker delta) {
 		Minecraft mc = Minecraft.getInstance();
 		MorePayloads.LookInfo info = ClientState.look;
 		if (info == null || !dev.rubymod.client.ClientSettings.lookInfo || System.currentTimeMillis() - ClientState.lookAt > 900 || lastEntity == -2
@@ -70,17 +80,18 @@ public class LookPanel implements HudElement {
 		for (String line : info.lines()) {
 			width = Math.max(width, font.width(line));
 		}
-		width += 14;
+		width = Math.min(width + 16, dev.rubymod.client.HudScale.width(g) - 8);
 		int lines = info.lines().size();
 		int height = lines * 10 + 6 + (info.bar() >= 0 ? 5 : 0);
-		int x = g.guiWidth() / 2 - width / 2;
-		int y = 20;
+		int x = dev.rubymod.client.HudScale.width(g) / 2 - width / 2;
+		// Under whatever is at the top centre (the phase banner, respawns, a raid).
+		int y = Math.max(20, dev.rubymod.client.GameHud.topCentreBottom() + 3);
 		g.fill(x, y, x + width, y + height, 0xD0101418);
 		g.fill(x, y, x + 2, y + height, 0xFF000000 | info.color());
 		g.outline(x, y, width, height, 0xFF2C333B);
 		int ty = y + 4;
 		for (int i = 0; i < lines; i++) {
-			g.text(font, info.lines().get(i), x + 8, ty, i == 0 ? 0xFF000000 | info.color() : 0xFFC8D0D8, true);
+			g.text(font, dev.rubymod.client.ui.Ui.fit(info.lines().get(i), width - 14), x + 8, ty, i == 0 ? 0xFF000000 | info.color() : 0xFFC8D0D8, true);
 			ty += 10;
 		}
 		if (info.bar() >= 0) {

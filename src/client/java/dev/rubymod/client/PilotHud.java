@@ -624,15 +624,16 @@ public class PilotHud implements HudElement {
 	// ----- Drawing helpers -----
 
 	private static void box(GuiGraphicsExtractor g, Font font, String text, int x, int y, int width, int col) {
-		g.fill(x, y, x + width, y + 12, 0xC0000000);
-		g.outline(x, y, width, 12, col);
-		g.text(font, text, x + (width - font.width(text)) / 2, y + 2, col, false);
+		g.fill(x, y, x + width, y + 13, 0xC0000000);
+		g.outline(x, y, width, 13, col);
+		String shown = dev.rubymod.client.ui.Ui.fit(text, width - 6);
+		g.text(font, shown, x + (width - font.width(shown)) / 2, y + 3, col, false);
 	}
 
 	private static void warning(GuiGraphicsExtractor g, Font font, String text, int x, int y, int col) {
-		int half = font.width(text) / 2 + 4;
-		g.fill(x - half, y - 2, x + half, y + 10, 0xC0000000);
-		g.outline(x - half, y - 2, half * 2, 12, col);
+		int half = font.width(text) / 2 + 5;
+		g.fill(x - half, y - 3, x + half, y + 10, 0xC0000000);
+		g.outline(x - half, y - 3, half * 2, 13, col);
 		center(g, font, text, x, y, col);
 	}
 

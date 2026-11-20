@@ -14,8 +14,10 @@ import net.fabricmc.loader.api.FabricLoader;
  * minimap's size, toasts, the look-at panel. Changed on the Settings screen (Ruby Wars menu, M).
  */
 public final class ClientSettings {
-	/** The guide panel: "full" (always open), "compact" (one line, opening up when the step changes), or "off". */
+	/** The guide panel: "full" (always open), "compact" (one line), or "off". */
 	public static String guide = "compact";
+	/** "small" (the default: one step smaller than the GUI scale) or "normal" (see HudScale). */
+	public static String hudSize = "small";
 	public static boolean minimap = true;
 	public static boolean bigMinimap = false;
 	public static boolean heartPanel = true;
@@ -47,6 +49,7 @@ public final class ClientSettings {
 			}
 		}
 		guide = p.getProperty("guide", guide);
+		hudSize = p.getProperty("hudSize", hudSize);
 		minimap = bool(p, "minimap", minimap);
 		bigMinimap = bool(p, "bigMinimap", bigMinimap);
 		heartPanel = bool(p, "heartPanel", heartPanel);
@@ -66,6 +69,7 @@ public final class ClientSettings {
 		minimap = dev.rubymod.client.map.Minimap.enabled;
 		Properties p = new Properties();
 		p.setProperty("guide", guide);
+		p.setProperty("hudSize", hudSize);
 		p.setProperty("minimap", String.valueOf(minimap));
 		p.setProperty("bigMinimap", String.valueOf(bigMinimap));
 		p.setProperty("heartPanel", String.valueOf(heartPanel));

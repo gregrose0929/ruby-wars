@@ -19,8 +19,10 @@ import net.minecraft.world.item.ItemStack;
  * icon, a title and a line under it, in the game's own dark-and-ruby style. They stack and slide away by themselves.
  */
 public class RubyToast implements Toast {
-	private static final int WIDTH = 176;
-	private static final int HEIGHT = 32;
+	/** The toast manager stacks toasts in 32-pixel slots: a toast is one slot, or two when its message wraps. */
+	private static final int SLOT = 32;
+	private static final int MIN_WIDTH = 176;
+	private static final int MAX_WIDTH = 250;
 	private static final long SHOW_MS = 5000;
 
 	private final ItemStack icon;
@@ -28,6 +30,10 @@ public class RubyToast implements Toast {
 	private final String body;
 	private final int color;
 	private Visibility visibility = Visibility.SHOW;
+	/** Sized to what it says: wider for a longer line, then a second line for the message (and a second slot). */
+	private final int width;
+	private final java.util.List<net.minecraft.util.FormattedCharSequence> lines;
+	private final int cardHeight;
 
 	public RubyToast(String icon, String title, String body, int color) {
 		ItemStack stack;
@@ -40,6 +46,15 @@ public class RubyToast implements Toast {
 		this.title = title;
 		this.body = body;
 		this.color = 0xFF000000 | color;
+		Font font = Minecraft.getInstance().font;
+		int tx = stack.isEmpty() ? 10 : 30;
+		int need = tx + Math.max(font.width(title), font.width(body)) + 8;
+		this.width = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, need));
+		int room = width - tx - 8;
+		var split = body.isEmpty() ? java.util.List.<net.minecraft.util.FormattedCharSequence>of()
+				: font.split(net.minecraft.network.chat.Component.literal(body), room);
+		this.lines = split.size() > 2 ? split.subList(0, 2) : split;
+		this.cardHeight = lines.size() > 1 ? 43 : SLOT;
 	}
 
 	public static void register() {
@@ -68,31 +83,43 @@ public class RubyToast implements Toast {
 	@Override
 	public float yPos(int slot) {
 		boolean map = dev.rubymod.client.map.Minimap.enabled && ClientState.inRubyWarsWorld();
-		return slot * HEIGHT + (map ? dev.rubymod.client.map.Minimap.SIZE + 28 : 0);
+		return HudScale.toGui(slot * SLOT + (map ? dev.rubymod.client.map.Minimap.SIZE + 20 : 0));
 	}
 
 	@Override
 	public int width() {
-		return WIDTH;
+		return HudScale.toGui(width);
 	}
 
 	@Override
 	public int height() {
-		return HEIGHT;
+		return cardHeight > SLOT ? SLOT * 2 : SLOT;
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, Font font, long visibleTime) {
-		Ui.panel(g, 0, 0, WIDTH, HEIGHT);
-		g.fill(0, 2, 2, HEIGHT - 2, color);
+		HudScale.push(g);
+		try {
+			drawCard(g, font);
+		} finally {
+			HudScale.pop(g);
+		}
+	}
+
+	private void drawCard(GuiGraphicsExtractor g, Font font) {
+		int h = cardHeight;
+		Ui.panel(g, 0, 0, width, h);
+		g.fill(2, 2, 4, h - 2, color);
 		if (!icon.isEmpty()) {
-			g.item(icon, 8, 8);
+			g.item(icon, 9, (h - 16) / 2);
 		}
 		int tx = icon.isEmpty() ? 10 : 30;
-		int room = WIDTH - tx - 6;
-		g.text(font, Ui.fit(title, room), tx, body.isEmpty() ? 12 : 7, color, false);
-		if (!body.isEmpty()) {
-			g.text(font, Ui.fit(body, room), tx, 18, Ui.DIM, false);
+		int room = width - tx - 8;
+		g.text(font, Ui.fit(title, room), tx, lines.isEmpty() ? 12 : 7, color, false);
+		int ly = 18;
+		for (var line : lines) {
+			g.text(font, line, tx, ly, Ui.DIM, false);
+			ly += 10;
 		}
 	}
 }
