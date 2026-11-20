@@ -249,11 +249,11 @@ public class ConveyorBlock extends Block {
 
 	private void carryItem(Level level, BlockPos pos, BlockState state, ItemEntity item) {
 		Vec3 v = item.getDeltaMovement();
-		if (!level.isClientSide()) {
-			keep(level, pos, item);
-		}
 		if (state.getValue(POWERED)) {
-			// Stopped: things stay where they are.
+			// Stopped: things stay where they are (and stay the belt's).
+			if (!level.isClientSide()) {
+				keep(level, pos, item);
+			}
 			item.setDeltaMovement(0, Math.min(v.y, 0), 0);
 			return;
 		}
@@ -277,10 +277,18 @@ public class ConveyorBlock extends Block {
 		// At the end of the belt: into a container or machine, if there's one.
 		Vec3 center = Vec3.atBottomCenterOf(pos);
 		double along = item.position().subtract(center).dot(dir);
+		boolean container = along >= 0.3 && Belts.containerAt(level, pos.relative(facing)) != null;
+		// Things on their way, or waiting their turn at a full chest or machine, are the belt's. At a dead end (nothing
+		// to go into, no belt on) they're just lying there: anyone can pick them up, and they vanish in time as usual.
+		boolean deadEnd = along >= 0.3 && !container && lift(pos, item) == Double.NEGATIVE_INFINITY
+				&& !(level.getBlockState(pos.relative(facing)).getBlock() instanceof ConveyorBlock);
+		if (!deadEnd) {
+			keep(level, pos, item);
+		}
 		if (along < 0.3) {
 			return;
 		}
-		if (Belts.containerAt(level, pos.relative(facing)) != null) {
+		if (container) {
 			// Furnaces get things to cook in the top and fuel underneath, whichever side the belt comes in.
 			ItemStack rest = Belts.insert(level, pos.relative(facing), facing.getOpposite(), item.getItem());
 			if (rest.isEmpty()) {

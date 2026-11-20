@@ -182,6 +182,14 @@ public final class SelfTest {
 		check("belts: round a curve things come in from the side and go out the end (in " + inMove + ", out " + outMove + ")",
 				inMove.z < -0.05 && Math.abs(inMove.x) < 0.05 && outMove.x < -0.05 && Math.abs(outMove.z) < 0.05);
 
+		// At a dead end (nothing to go into) things are just lying there: anyone can take them.
+		var end = c.north();
+		var loose = new net.minecraft.world.entity.item.ItemEntity(level, end.getX() + 0.9, end.getY() + 0.25, end.getZ() + 0.5,
+				new ItemStack(net.minecraft.world.item.Items.RAW_IRON));
+		loose.setPickUpDelay(0);
+		level.getBlockState(end).getBlock().stepOn(level, end, level.getBlockState(end), loose);
+		check("belts: things stopped at a dead end can be picked up", !loose.hasPickUpDelay());
+
 		// People get a nudge on top of their own walking (so they can walk and jump off); vehicles are not carried.
 		alpha.setPos(a.getX() + 0.5, a.getY() + 0.25, a.getZ() + 0.5);
 		alpha.setOnGround(true);

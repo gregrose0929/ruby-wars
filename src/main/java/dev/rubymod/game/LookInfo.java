@@ -168,7 +168,7 @@ public final class LookInfo {
 				} else if (!(state.getBlock() instanceof dev.rubymod.industry.BeltSplitterBlock)) {
 					lines.add(feeds ? "Feeds the " + frontState.getBlock().getName().getString()
 							: belt ? "Feeds the next belt"
-									: frontState.isFaceSturdy(player.level(), ahead, facing.getOpposite()) ? "Nothing at the end: items stop there"
+									: frontState.isFaceSturdy(player.level(), ahead, facing.getOpposite()) ? "Nothing at the end: items stop there (anyone can take them)"
 											: "Nothing at the end: items fall off");
 				}
 				int carried = 0;
