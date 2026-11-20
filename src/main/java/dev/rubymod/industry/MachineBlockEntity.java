@@ -191,7 +191,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	/** When it last worked; it shows as working for a couple of seconds after (so it doesn't flicker between jobs). */
 	private long workedAt = -1000;
 
-	/** Lit (glowing, with particles) while working, and a quiet working sound now and then. */
+	/** Lit (glowing, with particles) while working. Machines work silently (no grinding or clanking at your base). */
 	private void showWorking(ServerLevel level) {
 		long now = level.getGameTime();
 		if (status == WORKING) {
@@ -207,19 +207,6 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		BlockState state = getBlockState();
 		if (state.hasProperty(MachineBlock.LIT) && state.getValue(MachineBlock.LIT) != working) {
 			level.setBlock(worldPosition, state.setValue(MachineBlock.LIT, working), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
-		}
-		if (working && now % 60 == Math.floorMod(worldPosition.asLong(), 60)) {
-			net.minecraft.sounds.SoundEvent hum = switch (kind()) {
-				case RUBY_DRILL -> SoundEvents.GRINDSTONE_USE;
-				case ORE_REFINERY -> SoundEvents.BLASTFURNACE_FIRE_CRACKLE;
-				case AMMO_FACTORY -> SoundEvents.SMITHING_TABLE_USE;
-				case COMBUSTION_GENERATOR -> SoundEvents.FURNACE_FIRE_CRACKLE;
-				case CONSTRUCTOR -> SoundEvents.SCAFFOLDING_PLACE;
-				default -> null;
-			};
-			if (hum != null) {
-				level.playSound(null, worldPosition, hum, SoundSource.BLOCKS, 0.18F, 0.9F + level.getRandom().nextFloat() * 0.2F);
-			}
 		}
 	}
 
@@ -292,7 +279,6 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (++progress >= kind().cycle(tier)) {
 			progress = 0;
 			insertOutput(Recipes.drill(level.getRandom(), tier, worldPosition.getY() < 0));
-			level.playSound(null, worldPosition, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 0.6F, 0.8F);
 		}
 		if (level.getGameTime() % 4 == 0) {
 			level.sendParticles(ParticleTypes.CRIT, worldPosition.getX() + 0.5, worldPosition.getY() + 0.1, worldPosition.getZ() + 0.5,
@@ -321,7 +307,6 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			progress = 0;
 			input.shrink(1);
 			insertOutput(result);
-			level.playSound(null, worldPosition, SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 0.4F, 1.2F);
 		}
 	}
 
@@ -349,7 +334,6 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			metal.shrink(r.metalCount());
 			extra.shrink(r.extraCount());
 			insertOutput(result);
-			level.playSound(null, worldPosition, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 0.3F, 1.6F);
 		}
 	}
 
