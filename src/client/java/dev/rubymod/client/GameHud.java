@@ -250,8 +250,8 @@ public class GameHud implements HudElement {
 			carriedText = carried > 0 ? "+" + num(carried) : "";
 			long net = e.produced() - e.consumed();
 			rate = (net >= 0 ? "+" : "") + num(net) + "/s";
-			need = Math.max(need, 21 + font.width(bankText) + (carriedText.isEmpty() ? 0 : 4 + font.width(carriedText)) + 10 + 11
-					+ font.width(rate) + 6);
+			need = Math.max(need, 21 + font.width(bankText) + (carriedText.isEmpty() ? 0 : 4 + font.width(carriedText)) + 6);
+			need = Math.max(need, 21 + 44 + 5 + font.width(rate) + 6);
 		}
 		int colW = Math.min(maxW, Math.max(104, need));
 		int y = 4;
@@ -259,7 +259,7 @@ public class GameHud implements HudElement {
 			y = topBottom + 3;
 		}
 		if (heart || bank) {
-			int rows = (heart ? 1 : 0) + (bank ? 1 : 0);
+			int rows = (heart ? 1 : 0) + (bank ? 2 : 0);
 			int h = 6 + rows * 11;
 			panel(g, 4, y, 4 + colW, y + h);
 			int right = 4 + colW - 6;
@@ -286,11 +286,14 @@ public class GameHud implements HudElement {
 				if (!carriedText.isEmpty()) {
 					g.text(font, carriedText, 21 + font.width(bankText) + 4, ry, 0xFFB98C96, true);
 				}
-				// Power: what it's making (green) or using (red); the bolt dims when the batteries are empty.
-				int rx = right - font.width(rate);
+				ry += 11;
+				// Power: how full your grid (and its Battery Banks) is, and what it's gaining (green) or losing (red).
+				float full = (float) Math.min(1.0, e.charge() / (double) Math.max(1, e.capacity()));
 				boolean gaining = e.produced() >= e.consumed();
-				g.text(font, rate, rx, ry, gaining ? 0xFF5BD27A : RED, true);
-				dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.BOLT, rx - 11, ry - 1);
+				dev.rubymod.client.ui.Ui.icon(g, dev.rubymod.client.ui.Ui.Icon.BOLT, 9, ry - 1);
+				g.text(font, rate, right - font.width(rate), ry, gaining ? 0xFF5BD27A : RED, true);
+				dev.rubymod.client.ui.Ui.bar(g, 21, ry + 1, right - font.width(rate) - 5 - 21, 6,
+						dev.rubymod.client.ui.Ui.glide("charge", full), 0xFFF5C542);
 			}
 			y += h + 2;
 		}

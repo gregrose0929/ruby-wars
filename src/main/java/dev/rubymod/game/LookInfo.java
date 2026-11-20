@@ -100,7 +100,7 @@ public final class LookInfo {
 					UUID owner = m.owner();
 					long cap = Grid.capacity(owner);
 					bar = cap > 0 ? (float) Grid.charge(owner) / cap : -1;
-					lines.add("Grid: " + Grid.charge(owner) + " / " + cap + " charge");
+					lines.add(String.format(java.util.Locale.ROOT, "Grid: %,d / %,d charge", Grid.charge(owner), cap));
 				}
 				color = m.status() == MachineBlockEntity.WORKING ? GREEN : m.status() == MachineBlockEntity.IDLE ? BLUE : AMBER;
 			} else if (state.getBlock() instanceof dev.rubymod.industry.BeltLoaderBlock) {

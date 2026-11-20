@@ -4598,6 +4598,7 @@ public final class AutoTest {
 			case "goalsview" -> goalsViewScript();
 			case "hudcheck" -> hudCheckScript();
 			case "beltyard" -> beltYardScript();
+			case "drillgauge" -> drillGaugeScript();
 			case "manualbelts" -> {
 				// The Field Manual's belt page, at two GUI scales (does it all fit?).
 				then(40, mc -> {
@@ -9985,6 +9986,76 @@ public final class AutoTest {
 	}
 
 	/** The corner panels with big numbers, at a few GUI scales (text inside its panel, nothing squeezed). */
+	/** A powered drill as a player builds it: does its screen and the look-at panel show the grid? */
+	private static void drillGaugeScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "time set 1000");
+		});
+		then(60, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			int x = p.getBlockX();
+			int z = p.getBlockZ() + 5;
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			heartAt = new net.minecraft.core.BlockPos(x, y, z);
+			level.setBlockAndUpdate(heartAt, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heartAt);
+			var kinds = new net.minecraft.world.level.block.Block[] {dev.rubymod.registry.ModBlocks.COMBUSTION_GENERATOR,
+					dev.rubymod.registry.ModBlocks.BATTERY, dev.rubymod.registry.ModBlocks.RUBY_DRILL};
+			for (int i = 0; i < kinds.length; i++) {
+				var at = heartAt.offset(-2 + i * 2, 0, -3);
+				level.setBlockAndUpdate(at, kinds[i].defaultBlockState());
+				kinds[i].setPlacedBy(level, at, level.getBlockState(at), p, new net.minecraft.world.item.ItemStack(kinds[i]));
+				if (i == 0 && level.getBlockEntity(at) instanceof dev.rubymod.industry.MachineBlockEntity be) {
+					be.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 32));
+				}
+			}
+			p.teleportTo(level, heartAt.getX() + 2.5, heartAt.getY(), heartAt.getZ() - 5.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true);
+		}));
+		then(200, mc -> onServer(mc, server -> {
+			var id = me(server).getUUID();
+			log("grid on the server: {} / {} charge, +{}/s -{}/s", dev.rubymod.industry.Grid.charge(id), dev.rubymod.industry.Grid.capacity(id),
+					dev.rubymod.industry.Grid.producedPerSecond(id), dev.rubymod.industry.Grid.consumedPerSecond(id));
+			if (server.overworld().getBlockEntity(heartAt.offset(2, 0, -3)) instanceof dev.rubymod.industry.MachineBlockEntity be) {
+				log("drill: owner is me {}, status {}", be.owner().equals(id), be.status());
+			}
+		}));
+		then(5, mc -> clickBlock(mc, heartAt.offset(2, 0, -3)));
+		then(20, mc -> {
+			if (mc.player.containerMenu instanceof dev.rubymod.industry.MachineMenu m) {
+				log("drill screen: {} / {} charge, status {}", m.wide(5, 6), m.wide(7, 8), m.get(14));
+			} else {
+				log("drill screen: didn't open ({})", mc.gui.screen());
+			}
+			shot(mc, "drill-screen");
+		});
+		then(5, mc -> mc.player.closeContainer());
+		then(5, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(2, 0, -3))));
+		then(30, mc -> {
+			var look = ClientState.look;
+			log("look panel: {}", look == null ? "nothing" : look.lines() + " bar " + look.bar());
+			shot(mc, "drill-look");
+		});
+		then(5, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(0, 0, -3))));
+		then(30, mc -> {
+			var look = ClientState.look;
+			log("look panel (battery): {}", look == null ? "nothing" : look.lines() + " bar " + look.bar());
+			shot(mc, "battery-look");
+		});
+		then(5, mc -> clickBlock(mc, heartAt.offset(0, 0, -3)));
+		then(20, mc -> shot(mc, "battery-screen"));
+		then(5, mc -> {
+			log("done");
+			mc.stop();
+		});
+	}
+
 	private static void hudCheckScript() {
 		then(5, mc -> {
 			command(mc, "rubywars reset everything confirm");
