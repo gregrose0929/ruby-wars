@@ -63,12 +63,11 @@ public final class BaseMachines {
 		ALL.remove(key(Rules.dim(level), pos));
 	}
 
-	/** The machines a player cares about: everything on their base's power, plus any of their own elsewhere. Drills first. */
+	/** A player's machines, wherever they are. Drills first. */
 	public static List<Entry> forPlayer(UUID player) {
-		UUID home = Grid.homeOf(player);
 		List<Entry> out = new ArrayList<>();
 		for (Entry e : ALL.values()) {
-			if (e.grid().equals(home) || e.owner().equals(player)) {
+			if (e.owner().equals(player)) {
 				out.add(e);
 			}
 		}
@@ -108,7 +107,7 @@ public final class BaseMachines {
 				? "Solar panels rest at night: a Battery Bank stores daytime power, or burn coal in a generator"
 				: "They use everything your base makes: a Combustion Generator or more solar panels will help";
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-			if (Grid.homeOf(player.getUUID()).equals(grid) || player.getUUID().equals(be.owner())) {
+			if (player.getUUID().equals(be.owner())) {
 				dev.rubymod.game.Alerts.toast(player, "rubymod:ruby_drill", "Your drills are out of power", body, dev.rubymod.game.Alerts.GOLD);
 			}
 		}
@@ -121,7 +120,7 @@ public final class BaseMachines {
 
 	/** One line per machine for the client: dim|x|y|z|kind|tier|status|owner name|loads|rubies|shares my power. */
 	public static List<String> rows(MinecraftServer server, UUID player) {
-		UUID home = Grid.homeOf(player);
+		UUID home = player;
 		List<String> rows = new ArrayList<>();
 		for (Entry e : forPlayer(player)) {
 			var record = dev.rubymod.game.SeasonData.get().players.get(e.owner().toString());

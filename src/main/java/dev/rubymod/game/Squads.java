@@ -37,12 +37,12 @@ public final class Squads {
 		return SeasonData.get().squads;
 	}
 
-	/** Squads are off unless the admin turns them on (/rubywars squads on): everyone plays on their own. */
+	/** Ruby Wars has no squads: everyone plays on their own, and nobody shares a base. (The old squad code stays asleep.) */
 	public static boolean enabled() {
-		return GameConfig.get().squadsEnabled;
+		return false;
 	}
 
-	public static final String OFF = "Squads are turned off: everyone plays on their own.";
+	public static final String OFF = "Ruby Wars has no squads: everyone plays on their own.";
 
 	public static Squad of(UUID player) {
 		if (!enabled()) {

@@ -26,7 +26,8 @@ public final class WhatsNew {
 
 	private static final String VERSION = "2026-11-20-power";
 	private static final List<String> LINES = List.of(
-			"rubymod:battery|Everyone building in one base now shares its power. My Base (in the M menu) lists every machine and how long your power lasts.",
+			"rubymod:battery|My Base (in the M menu) lists every machine you own and how long your power lasts.",
+			"rubymod:ruby_heart|Everyone plays on their own (no squads), and only you can put Ruby Wars equipment in your base.",
 			"rubymod:ruby_drill|Stopped machines show as amber dots on the minimap; drills count what they've dug; the power bar is back at the top left.",
 			"rubymod:ruby_wrench|Crouch + right-click two belts in a row with the Ruby Wrench to pick up the whole line. Look at a belt to see what's riding it.",
 			"rubymod:conveyor|Belts curve by themselves, you can walk and jump off them, nobody grabs what's riding them, and redstone stops them.",

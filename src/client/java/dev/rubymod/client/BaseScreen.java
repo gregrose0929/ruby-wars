@@ -18,7 +18,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * My Base (from the Ruby Wars menu): your base's power (how full, what makes and uses it, how long it lasts) and
- * every machine on it, the stopped ones first with what they need. Everyone building in one base shares its power.
+ * every machine you own, the stopped ones first with what they need.
  */
 public class BaseScreen extends Screen {
 	private final long opened = System.currentTimeMillis();
@@ -147,7 +147,7 @@ public class BaseScreen extends Screen {
 		}
 		g.disableScissor();
 		String foot = scrollMax > 0 ? (scroll < scrollMax ? "Scroll for more" : "Scroll back up")
-				: "Everyone building in your base shares its power";
+				: "All your machines share your power";
 		g.centeredText(font, Ui.fit(foot, w - 20), x + w / 2, y + h - 13, Ui.MUTED);
 	}
 

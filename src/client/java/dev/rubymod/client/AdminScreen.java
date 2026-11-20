@@ -14,7 +14,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * The admin panel (M, then Admin; admins only): the season at a glance, and buttons for what /rubywars admin does in
- * chat: start a season, call Battle Day, pause, squads, Night Battle, a new season. Anything that can't be undone
+ * chat: start a season, call Battle Day, pause, Night Battle, a new season. Anything that can't be undone
  * asks for a second click. Each button runs the same /rubywars command you could type.
  */
 public class AdminScreen extends Screen {
@@ -38,8 +38,6 @@ public class AdminScreen extends Screen {
 		actions.add(new Action("Battle Day", "Call it off", "rubywars battle cancel", false, "Stop a Battle Day countdown"));
 		actions.add(new Action("Battle Day", "Pause timer", "rubywars pause", false, "Stop the clock"));
 		actions.add(new Action("Battle Day", "Resume timer", "rubywars resume", false, "Start the clock again"));
-		actions.add(new Action("Options", "Squads on", "rubywars squads on", false, "Players can team up"));
-		actions.add(new Action("Options", "Squads off", "rubywars squads off", false, "Everyone on their own"));
 		actions.add(new Action("Options", "Night Battle on", "rubywars nightbattle on", false, "Battle Day fought at night"));
 		actions.add(new Action("Options", "Night Battle off", "rubywars nightbattle off", false, "Battle Day by daylight"));
 		actions.add(new Action("New season", "New season", "rubywars reset confirm", true,

@@ -88,8 +88,6 @@ public class GameConfig {
 	public int maxGuards = 4;
 	/** Squads: players per squad, and whether squadmates can hurt each other. */
 	public int squadMaxSize = 4;
-	/** Off: everyone plays on their own. The admin can turn squads on with /rubywars squads on. */
-	public boolean squadsEnabled = false;
 	public boolean friendlyFire = false;
 	/** Battle Day at night: searchlights, flares, and night-vision goggles worth having (/rubywars nightbattle on). */
 	public boolean nightBattle = false;

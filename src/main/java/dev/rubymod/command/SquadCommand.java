@@ -16,38 +16,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * /squad create|invite|join|leave|kick|list, /sc <message> (squad chat), and
- * /waypoint add|remove|list.
+ * /waypoint add|at|remove|list. (Ruby Wars has no squads, so /squad and /sc are gone.)
  */
 public final class SquadCommand {
 	private SquadCommand() {
 	}
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-		dispatcher.register(Commands.literal("squad")
-				.executes(SquadCommand::list)
-				.then(Commands.literal("create").then(Commands.argument("name", StringArgumentType.greedyString())
-						.executes(c -> reply(c, Squads.create(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "name")),
-								"Squad created. Invite players with /squad invite <player>."))))
-				.then(Commands.literal("invite").then(Commands.argument("player", EntityArgument.player())
-						.executes(c -> reply(c, Squads.invite(c.getSource().getPlayerOrException(), EntityArgument.getPlayer(c, "player")),
-								"Invite sent."))))
-				.then(Commands.literal("join").then(Commands.argument("name", StringArgumentType.greedyString())
-						.executes(c -> reply(c, Squads.join(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "name")),
-								"You joined the squad."))))
-				.then(Commands.literal("leave").executes(c -> reply(c, Squads.leave(c.getSource().getPlayerOrException()), "You left your squad.")))
-				.then(Commands.literal("kick").then(Commands.argument("name", StringArgumentType.word())
-						.executes(c -> reply(c, Squads.kick(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "name")), "Done."))))
-				.then(Commands.literal("list").executes(SquadCommand::list)));
-		dispatcher.register(Commands.literal("sc").then(Commands.argument("message", StringArgumentType.greedyString())
-				.executes(c -> {
-					String error = Squads.chat(c.getSource().getPlayerOrException(), StringArgumentType.getString(c, "message"));
-					if (error != null) {
-						c.getSource().sendFailure(Component.literal(error));
-						return 0;
-					}
-					return 1;
-				})));
 		dispatcher.register(Commands.literal("waypoint")
 				.executes(SquadCommand::waypoints)
 				.then(Commands.literal("add").then(Commands.argument("name", StringArgumentType.greedyString())

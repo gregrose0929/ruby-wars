@@ -105,6 +105,9 @@ villages, rivers to the sea, and ruins to explore.
 
 ### Building a base
 
+- **Your base is yours:** everyone plays on their own (no squads), and only you can put Ruby
+  Wars equipment (machines, defenses, belts, mines, security) in your base, even on Battle
+  Day. Plain building blocks follow the usual claim rules.
 - **Defenses:** sandbags, concrete walls, reinforced concrete and glass, blast doors,
   barbed wire, landmines, claymores, anti-tank mines, Sentry Turrets, Tesla Coils, Flak
   Cannons, SAM Sites, Missile Interceptors, Shield Generators, Point Defense Guns, Heavy AA
@@ -250,7 +253,7 @@ Make yourself an operator (`op <yourname>` in the server console), then type
 
 Other admin commands (all start with `/rubywars`): `status`, `phase <name>`, `timer <minutes>`,
 `pause`, `resume`, `reload` (re-read the config), `backup`, `revive <player>`,
-`nightbattle on|off`, `squads on|off` (off by default: everyone plays on their own), `raidnow <player>`, `research <player> <stars>`, `kit` (every item, for
+`nightbattle on|off`, `raidnow <player>`, `research <player> <stars>`, `kit` (every item, for
 testing), `training` (build a practice ground here), `rearm` (refill your aircraft),
 `coasters` (who has which Coaster Park spot; `coasters free <name>` gives one up), and
 `selftest` (rule checks, on a test world only).

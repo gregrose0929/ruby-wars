@@ -218,8 +218,7 @@ public final class GameEvents {
 				for (ServerPlayer player : server.getPlayerList().getPlayers()) {
 					safeZoneNotice(player);
 					var id = Horde.playing(player) ? Horde.TEAM : dev.rubymod.game.rift.Rift.playing(player) ? new java.util.UUID(0, 1) : player.getUUID();
-					// Power is the base's (shared by everyone who builds there); the bank is your own.
-					var grid = id.equals(player.getUUID()) ? dev.rubymod.industry.Grid.homeOf(id) : id;
+					var grid = id;
 					Net.send(player, new Payloads.Economy(dev.rubymod.industry.Grid.rubies(id), dev.rubymod.industry.Grid.charge(grid),
 							dev.rubymod.industry.Grid.capacity(grid), dev.rubymod.industry.Grid.producedPerSecond(grid),
 							dev.rubymod.industry.Grid.consumedPerSecond(grid)));
@@ -572,6 +571,11 @@ public final class GameEvents {
 				BlockPos placeAt = state.canBeReplaced() ? pos : pos.relative(hit.getDirection());
 				if (!Rules.canBuild(player, level, placeAt)) {
 					deny(player, "This land is claimed by " + ownerName(level, placeAt) + ".");
+					return InteractionResult.FAIL;
+				}
+				if (held.getItem() instanceof BlockItem bi && !Rules.canPlace(player, level, placeAt, bi.getBlock())) {
+					SeasonData.Claim theirs = Rules.baseAt(level, placeAt);
+					deny(player, "That's " + (theirs == null ? "someone" : theirs.ownerName) + "'s base: only they can put Ruby Wars equipment there.");
 					return InteractionResult.FAIL;
 				}
 			}

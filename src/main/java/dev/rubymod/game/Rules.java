@@ -46,6 +46,36 @@ public final class Rules {
 		return claim == null || claim.canUse(player.getUUID());
 	}
 
+	/** Ruby Wars blocks that are plain building material (anyone allowed to build somewhere may use them there). */
+	private static final java.util.Set<String> MATERIALS = java.util.Set.of("ruby_block", "ruby_ore", "deepslate_ruby_ore", "sandbags",
+			"concrete_wall", "reinforced_concrete", "reinforced_glass", "camo_net", "rift_stone", "rift_magma", "rift_frost", "rift_verdant");
+
+	/** Ruby Wars equipment: machines, defenses, belts, mines, security and the rest (not building material). */
+	public static boolean isEquipment(net.minecraft.world.level.block.Block block) {
+		var id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
+		return id.getNamespace().equals(dev.rubymod.RubyMod.MOD_ID) && !MATERIALS.contains(id.getPath());
+	}
+
+	/** Whose base this is (the whole column, top to bottom), or null outside every base. */
+	public static SeasonData.Claim baseAt(Level level, BlockPos pos) {
+		return SeasonData.get().claimAt(dim(level), pos.getX(), pos.getZ());
+	}
+
+	/**
+	 * Can this player put {@code block} at pos? As {@link #canBuild}, and equipment only ever goes in your own base:
+	 * nobody (trusted, or an attacker on Battle Day) puts their machines, defenses, belts or mines in someone else's.
+	 */
+	public static boolean canPlace(Player player, Level level, BlockPos pos, net.minecraft.world.level.block.Block block) {
+		if (!canBuild(player, level, pos)) {
+			return false;
+		}
+		if (!isEquipment(block) || isAdminBypass(player)) {
+			return true;
+		}
+		SeasonData.Claim claim = baseAt(level, pos);
+		return claim == null || claim.owner.equals(player.getUUID().toString());
+	}
+
 	/** Can this player open doors, chests, and machines at pos? */
 	public static boolean canInteract(Player player, Level level, BlockPos pos, BlockState state) {
 		if (isEliminated(player.getUUID())) {

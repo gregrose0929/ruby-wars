@@ -124,41 +124,49 @@ public final class SelfTest {
 					: net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
 		}
 		long chargeBefore = dev.rubymod.industry.Grid.charge(A);
-		// Bravo, not trusted: their drill in Alpha's base runs on their own power.
-		var drillB = machine(level, spot, ModBlocks.RUBY_DRILL, bravo);
-		check("power: a stranger's machine runs on their own power", drillB.power().equals(B));
-		level.setBlockAndUpdate(spot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
-		// Trusted: Bravo's machines in Alpha's base share Alpha's power, and so does Bravo's HUD (no base of their own).
+		// Equipment only goes in your own base: not by a trusted player, not by an attacker on Battle Day. Building blocks are fine.
 		claim.trusted.add(B.toString());
-		var drill = machine(level, spot, ModBlocks.RUBY_DRILL, bravo);
-		var battery = machine(level, spot.east(2), ModBlocks.BATTERY, bravo);
+		check("equipment: only the owner can put a machine in their base", Rules.canPlace(alpha, level, spot, ModBlocks.RUBY_DRILL)
+				&& !Rules.canPlace(bravo, level, spot, ModBlocks.RUBY_DRILL));
+		check("equipment: even trusted players can't bring belts or defenses", !Rules.canPlace(bravo, level, spot, ModBlocks.CONVEYOR)
+				&& !Rules.canPlace(bravo, level, spot, ModBlocks.SENTRY_TURRET));
+		check("equipment: trusted players can still build with plain blocks", Rules.canPlace(bravo, level, spot, ModBlocks.SANDBAGS)
+				&& Rules.canPlace(bravo, level, spot, Blocks.STONE));
+		claim.trusted.clear();
+		check("equipment: no mines in someone else's base on Battle Day", runAs(Phase.WAR, () -> !Rules.canPlace(bravo, level, spot, ModBlocks.LANDMINE)
+				&& Rules.canBuild(bravo, level, spot)));
+		check("equipment: deep under someone's base still counts as their base",
+				!Rules.canPlace(bravo, level, base.below(SeasonData.CLAIM_DEPTH + 4), ModBlocks.RUBY_DRILL));
+		check("equipment: anyone can put equipment outside bases", Rules.canPlace(bravo, level, base.offset(150, 1, 0), ModBlocks.RUBY_DRILL));
+		// Power is each player's own.
+		var drillB = machine(level, spot, ModBlocks.RUBY_DRILL, bravo);
+		check("power: a machine runs on its owner's power", drillB.power().equals(B));
+		level.setBlockAndUpdate(spot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		var drill = machine(level, spot, ModBlocks.RUBY_DRILL, alpha);
+		var battery = machine(level, spot.east(2), ModBlocks.BATTERY, alpha);
 		var solar = machine(level, spot.east(4), ModBlocks.SOLAR_PANEL, alpha);
-		check("power: everyone building in one base shares its power", drill.power().equals(A) && battery.power().equals(A)
-				&& dev.rubymod.industry.Grid.homeOf(B).equals(A) && dev.rubymod.industry.Grid.homeOf(A).equals(A));
 		runMachines(level, 2, battery);
-		check("power: a family member's Battery Bank adds to the base's capacity ("
-				+ dev.rubymod.industry.Grid.capacity(A) + ")", dev.rubymod.industry.Grid.capacity(A) == dev.rubymod.industry.Grid.BASE_CAPACITY + 20_000);
-		// The drill digs with the base's power, counts its finds, and shows on the base list.
+		check("power: a Battery Bank adds to its owner's capacity (" + dev.rubymod.industry.Grid.capacity(A) + ")",
+				dev.rubymod.industry.Grid.capacity(A) == dev.rubymod.industry.Grid.BASE_CAPACITY + 20_000);
+		// The drill digs, counts its finds, and shows on My Base.
 		dev.rubymod.industry.Grid.account(A).charge = 5_000;
 		runMachines(level, 2 * dev.rubymod.industry.MachineKind.RUBY_DRILL.cycle(1) + 5, drill, battery, solar);
 		check("power: a drill counts what it digs (" + drill.loads() + " loads)", drill.loads() >= 2);
 		var listA = dev.rubymod.industry.BaseMachines.forPlayer(A);
-		var listB = dev.rubymod.industry.BaseMachines.forPlayer(B);
-		check("power: My Base lists the base's machines for everyone in it (" + listA.size() + ", " + listB.size() + ")",
-				listA.size() >= 3 && listB.size() >= 3 && listA.get(0).kind() == dev.rubymod.industry.MachineKind.RUBY_DRILL
-						&& listA.stream().anyMatch(e -> e.loads() >= 2));
-		// Out of power: it says so (stopped), and the list knows.
+		check("power: My Base lists your machines, drills first (" + listA.size() + ")",
+				listA.size() >= 3 && listA.get(0).kind() == dev.rubymod.industry.MachineKind.RUBY_DRILL && listA.stream().anyMatch(e -> e.loads() >= 2)
+						&& dev.rubymod.industry.BaseMachines.forPlayer(B).stream().noneMatch(e -> e.owner().equals(A)));
+		// Out of power: it shows as stopped.
 		dev.rubymod.industry.Grid.account(A).charge = 0;
 		level.setBlockAndUpdate(spot.east(4), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 		runMachines(level, 21, drill);
 		var mine = dev.rubymod.industry.BaseMachines.forPlayer(A).stream().filter(e -> e.pos().equals(spot)).findFirst();
-		check("power: a drill with no power shows as stopped on the base list", mine.isPresent() && mine.get().stopped());
+		check("power: a drill with no power shows as stopped on My Base", mine.isPresent() && mine.get().stopped());
 		// Gone from the world, gone from the list.
 		level.setBlockAndUpdate(spot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 		level.setBlockAndUpdate(spot.east(2), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
-		check("power: broken machines leave the base list",
+		check("power: broken machines leave My Base",
 				dev.rubymod.industry.BaseMachines.forPlayer(A).stream().noneMatch(e -> e.pos().equals(spot) || e.pos().equals(spot.east(2))));
-		claim.trusted.clear();
 		dev.rubymod.industry.Grid.account(A).charge = chargeBefore;
 
 		// The wrench: two crouch-clicks in a row take a whole line (and not the belt running alongside it).
@@ -913,21 +921,15 @@ public final class SelfTest {
 		// ----- Squads, research, graves, guards, raids, waypoints -----
 		data.player(bravo.getUUID(), "TestBravo").eliminated = false;
 		claim.trusted.remove(bravo.getUUID().toString());
-		boolean squadsWere = dev.rubymod.game.GameConfig.get().squadsEnabled;
-		dev.rubymod.game.GameConfig.get().squadsEnabled = false;
-		check("squads: off means everyone plays solo", dev.rubymod.game.Squads.create(alpha, "Test Squad") != null
-				&& dev.rubymod.game.Squads.of(alpha.getUUID()) == null);
-		dev.rubymod.game.GameConfig.get().squadsEnabled = true;
-		check("squads: make a squad", dev.rubymod.game.Squads.create(alpha, "Test Squad") == null);
-		dev.rubymod.game.Squads.invite(alpha, bravo);
-		check("squads: an invited player can join", dev.rubymod.game.Squads.join(bravo, "Test Squad") == null);
-		check("squads: no friendly fire on Battle Day", runAs(Phase.WAR, () -> !Rules.canHurt(alpha, bravo)));
-		check("squads: squadmates share claims", claim.canUse(bravo.getUUID()));
+		check("squads: Ruby Wars has none (everyone plays on their own)", dev.rubymod.game.Squads.create(alpha, "Test Squad") != null
+				&& dev.rubymod.game.Squads.of(alpha.getUUID()) == null && !dev.rubymod.game.Squads.enabled() && data.squads.isEmpty());
+		check("squads: other players are fair game on Battle Day", runAs(Phase.WAR, () -> Rules.canHurt(alpha, bravo)));
+		check("squads: nobody else shares your base", !claim.canUse(bravo.getUUID()));
 		check("research: advanced gear starts locked", !dev.rubymod.game.Research.unlocked(bravo, "tank"));
 		dev.rubymod.game.Research.addPoints(bravo.getUUID(), 5);
 		check("research: points unlock it", dev.rubymod.game.Research.unlock(bravo, "motor_pool") == null
 				&& dev.rubymod.game.Research.unlocked(bravo, "tank"));
-		check("research: squadmates share research", dev.rubymod.game.Research.unlocked(alpha, "jeep"));
+		check("research: someone else's unlocks aren't yours", !dev.rubymod.game.Research.unlocked(alpha, "jeep"));
 		check("research: basic guns never need research", dev.rubymod.game.Research.unlocked(alpha, "arr_rifle"));
 
 		BlockPos graveSpot = surface(level, base.offset(30, 0, 30));
@@ -955,7 +957,7 @@ public final class SelfTest {
 		if (guard != null && zombie != null && raider != null) {
 			zombie.snapTo(post.getX() + 2, post.getY(), post.getZ(), 0, 0);
 			check("guards: guards fight monsters", guard.isHostileTo(zombie));
-			check("guards: guards never shoot squadmates", runAs(Phase.WAR, () -> !guard.isHostileTo(bravo)));
+			check("guards: guards never shoot their owner", runAs(Phase.WAR, () -> !guard.isHostileTo(alpha)));
 			check("raids: raiders are enemies of every base and its guards", raider.isEnemyOfClaim(claim) && guard.isHostileTo(raider)
 					&& raider.isHostileTo(guard));
 		} else {
@@ -964,10 +966,6 @@ public final class SelfTest {
 		check("waypoints: add a waypoint", dev.rubymod.game.Waypoints.add(alpha, "Base") == null
 				&& dev.rubymod.game.Waypoints.list(alpha).stream().anyMatch(w -> w.name.equals("Base")));
 		dev.rubymod.game.Waypoints.remove(alpha, "Base");
-		dev.rubymod.game.Squads.leave(bravo);
-		dev.rubymod.game.Squads.leave(alpha);
-		check("squads: leaving the last member disbands the squad", data.squads.isEmpty());
-		dev.rubymod.game.GameConfig.get().squadsEnabled = squadsWere;
 		check("combat: a PvP hit tags both players on Battle Day", runAs(Phase.WAR, () -> {
 			dev.rubymod.game.CombatTag.tag(alpha, bravo);
 			return dev.rubymod.game.CombatTag.tagged(alpha.getUUID()) && dev.rubymod.game.CombatTag.tagged(bravo.getUUID());

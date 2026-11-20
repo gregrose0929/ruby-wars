@@ -81,9 +81,6 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	/** Ruby Drill: loads dug up, and how many of them were rubies. */
 	private long loads;
 	private long rubiesFound;
-	/** Whose power this machine runs on (the base it stands in), worked out now and then. */
-	private UUID power;
-	private long powerAt;
 
 	public MachineBlockEntity(BlockPos pos, BlockState state) {
 		super(ModBlockEntities.MACHINE, pos, state);
@@ -102,17 +99,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		return owner;
 	}
 
-	/**
-	 * The power grid this machine uses: the base it stands in (if its owner may use that base), so everyone
-	 * building in one base shares one supply; otherwise its owner's home base.
-	 */
+	/** The power grid this machine uses: its owner's (only you put equipment in your base). */
 	public UUID power() {
-		long now = level == null ? 0 : level.getGameTime();
-		if (power == null || now - powerAt > 100 || now < powerAt) {
-			power = level == null ? owner : Grid.gridFor(owner, Rules.dim(level), worldPosition);
-			powerAt = now;
-		}
-		return power;
+		return owner;
 	}
 
 	public long loads() {
@@ -162,7 +151,6 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	public void setOwner(UUID owner) {
 		this.owner = owner;
-		this.power = null;
 		setChanged();
 	}
 
@@ -892,7 +880,6 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		aux = input.getIntOr("aux", 0);
 		loads = input.getLongOr("loads", 0L);
 		rubiesFound = input.getLongOr("rubies_found", 0L);
-		power = null;
 		Blueprints.load(this, input);
 	}
 

@@ -49,7 +49,7 @@ public class BuildersWandItem extends Item {
 		BlockPos pos = origin;
 		for (int i = 0; i < MAX; i++) {
 			pos = pos.relative(direction);
-			if (!level.getBlockState(pos).canBeReplaced() || !Rules.canBuild(player, level, pos) || !level.getWorldBorder().isWithinBounds(pos)) {
+			if (!level.getBlockState(pos).canBeReplaced() || !Rules.canPlace(player, level, pos, state.getBlock()) || !level.getWorldBorder().isWithinBounds(pos)) {
 				break;
 			}
 			if (!player.isCreative() && !take(player.getInventory(), blockItem)) {

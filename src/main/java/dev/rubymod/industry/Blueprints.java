@@ -178,7 +178,7 @@ public final class Blueprints {
 		while (index < data.cells().size()) {
 			BlockState want = data.at(index);
 			BlockPos at = target(be.getBlockPos(), facing, data.local(index));
-			if (want != null && level.getBlockState(at).canBeReplaced() && mayBuild(level, be, at)) {
+			if (want != null && level.getBlockState(at).canBeReplaced() && mayBuild(level, be, at, want.getBlock())) {
 				break;
 			}
 			index++;
@@ -212,9 +212,13 @@ public final class Blueprints {
 		be.setProgress(index + 1);
 	}
 
-	private static boolean mayBuild(ServerLevel level, MachineBlockEntity be, BlockPos at) {
+	/** Only where its owner may build, and equipment only in its owner's own base. */
+	private static boolean mayBuild(ServerLevel level, MachineBlockEntity be, BlockPos at, net.minecraft.world.level.block.Block block) {
 		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), at.getX(), at.getZ());
-		return claim == null || claim.canUse(be.owner());
+		if (claim == null) {
+			return true;
+		}
+		return Rules.isEquipment(block) ? claim.owner.equals(be.owner().toString()) : claim.canUse(be.owner());
 	}
 
 	/** Take one of {@code item} from a container next to the Constructor. */

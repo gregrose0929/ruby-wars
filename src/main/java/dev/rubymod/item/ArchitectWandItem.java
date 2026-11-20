@@ -119,7 +119,7 @@ public class ArchitectWandItem extends Item {
 		List<Placed> placed = new ArrayList<>();
 		int blocked = 0;
 		for (BlockPos p : BuildShapes.shape(mode, a, b)) {
-			if (!level.getBlockState(p).canBeReplaced() || !Rules.canBuild(player, level, p) || !level.getWorldBorder().isWithinBounds(p)) {
+			if (!level.getBlockState(p).canBeReplaced() || !Rules.canPlace(player, level, p, blockItem.getBlock()) || !level.getWorldBorder().isWithinBounds(p)) {
 				blocked++;
 				continue;
 			}

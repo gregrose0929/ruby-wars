@@ -246,7 +246,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			long made = menu.wide(9, 16);
 			long used = menu.wide(10, 17);
 			List<Component> lines = new java.util.ArrayList<>(List.of(
-					Component.literal("Your base's power").withStyle(net.minecraft.ChatFormatting.YELLOW),
+					Component.literal("Your power").withStyle(net.minecraft.ChatFormatting.YELLOW),
 					Component.literal(String.format(Locale.ROOT, "%,d / %,d charge", charge, capacity)),
 					Component.literal(String.format(Locale.ROOT, "+%,d/s made  -%,d/s used", made, used))
 							.withStyle(net.minecraft.ChatFormatting.GRAY),
@@ -259,7 +259,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			for (String part : PowerText.breakdown().stream().limit(4).toList()) {
 				lines.add(Component.literal("  " + part).withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
 			}
-			lines.add(Component.literal("Shared by everyone building in this base").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+			lines.add(Component.literal("Shared by all your machines").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
 			g.setComponentTooltipForNextFrame(font, lines, mx + leftPos, my + topPos);
 		}
 	}

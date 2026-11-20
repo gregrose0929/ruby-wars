@@ -70,8 +70,8 @@ public class RailgunEntity extends HeavyAAGunEntity {
 		if (gunner != getControllingPassenger() || reloadLeft() > 0) {
 			return;
 		}
-		if (!gunner.isCreative() && !dev.rubymod.game.Duels.inDuel(gunner) && !Grid.consume(Grid.homeOf(gunner.getUUID()), CHARGE_PER_SHOT)) {
-			gunner.sendOverlayMessage(Component.literal("Railgun needs 4,000 charge from your power grid (you have " + Grid.charge(Grid.homeOf(gunner.getUUID())) + ")."));
+		if (!gunner.isCreative() && !dev.rubymod.game.Duels.inDuel(gunner) && !Grid.consume(gunner.getUUID(), CHARGE_PER_SHOT)) {
+			gunner.sendOverlayMessage(Component.literal("Railgun needs 4,000 charge from your power grid (you have " + Grid.charge(gunner.getUUID()) + ")."));
 			return;
 		}
 		setReloadLeft(RECHARGE);

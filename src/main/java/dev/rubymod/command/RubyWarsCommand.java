@@ -176,9 +176,6 @@ public final class RubyWarsCommand {
 					dev.rubymod.game.TrainingGround.build(c.getSource().getLevel(), net.minecraft.core.BlockPos.containing(c.getSource().getPosition()));
 					return ok(c, "Training ground built: gun range to the west, vehicle yard to the east, airfield to the south.");
 				}))
-				.then(Commands.literal("squads").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-						.then(Commands.literal("on").executes(c -> squads(c, true)))
-						.then(Commands.literal("off").executes(c -> squads(c, false))))
 				.then(Commands.literal("nightbattle").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.literal("on").executes(c -> nightBattle(c, true)))
 						.then(Commands.literal("off").executes(c -> nightBattle(c, false))))
@@ -261,15 +258,6 @@ public final class RubyWarsCommand {
 			c.getSource().sendFailure(Component.literal(error));
 			return 0;
 		}
-		return 1;
-	}
-
-	/** Squads on or off (saved). Off, everyone plays on their own. */
-	private static int squads(CommandContext<CommandSourceStack> c, boolean on) {
-		dev.rubymod.game.GameConfig.get().squadsEnabled = on;
-		dev.rubymod.game.GameConfig.save();
-		c.getSource().sendSystemMessage(Component.literal(on ? "Squads are on: players can team up with /squad create and /squad invite."
-				: "Squads are off: everyone plays on their own.").withStyle(ChatFormatting.GOLD));
 		return 1;
 	}
 
