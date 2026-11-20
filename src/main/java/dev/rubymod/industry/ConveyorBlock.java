@@ -163,6 +163,17 @@ public class ConveyorBlock extends Block {
 		}
 	}
 
+	/** Now and then (about once a minute), each belt checks its curve and power: belts built before curves catch up by themselves. */
+	@Override
+	protected boolean isRandomlyTicking(BlockState state) {
+		return true;
+	}
+
+	@Override
+	protected void randomTick(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos, RandomSource random) {
+		onPlace(state, level, pos, state, false);
+	}
+
 	@Override
 	protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, Orientation orientation, boolean movedByPiston) {
 		boolean powered = level.hasNeighborSignal(pos);

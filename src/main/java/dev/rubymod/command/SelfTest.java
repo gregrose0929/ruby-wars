@@ -149,6 +149,13 @@ public final class SelfTest {
 		var again = dev.rubymod.industry.ConveyorBlock.turnOf(level.getBlockState(b));
 		check("belts: a belt joining a line that runs on stays straight (" + merged + "), and curves once it is alone (" + again + ")",
 				merged == NONE && again == dev.rubymod.industry.ConveyorBlock.Turn.LEFT);
+		// A belt built before curves (its shape never set) catches up by itself.
+		level.setBlock(b, belt.setValue(F, W), 2 | 16 | 512);
+		var stale = dev.rubymod.industry.ConveyorBlock.turnOf(level.getBlockState(b));
+		level.getBlockState(b).randomTick(level, b, level.getRandom());
+		var caught = dev.rubymod.industry.ConveyorBlock.turnOf(level.getBlockState(b));
+		check("belts: an old belt corner curves by itself after a while (" + stale + " -> " + caught + ")",
+				stale == NONE && caught == dev.rubymod.industry.ConveyorBlock.Turn.LEFT);
 		// The mirror image curves right.
 		var c = at.offset(4, 0, 0);
 		put.accept(c, belt.setValue(F, N));

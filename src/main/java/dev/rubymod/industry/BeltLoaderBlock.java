@@ -109,10 +109,20 @@ public class BeltLoaderBlock extends BaseEntityBlock {
 		return InteractionResult.SUCCESS;
 	}
 
+	/** A conveyor belt, ramp, sorter, splitter, Belt Loader or Belt Tunnel. */
+	static boolean beltPiece(ItemStack stack) {
+		return stack.getItem() instanceof net.minecraft.world.item.BlockItem bi && (bi.getBlock() instanceof ConveyorBlock
+				|| bi.getBlock() instanceof BeltLoaderBlock || bi.getBlock() instanceof BeltTunnelBlock);
+	}
+
 	/** Right-click with an item: that's all it handles now. (Shared with the Belt Sorter.) */
 	static InteractionResult setFilter(Level level, BlockPos pos, Player player, ItemStack stack, String what) {
 		if (stack.isEmpty() || !(level.getBlockEntity(pos) instanceof FilterBlockEntity be)) {
 			return InteractionResult.TRY_WITH_EMPTY_HAND;
+		}
+		// Holding another belt piece: you're building the line, so it's placed rather than chosen.
+		if (beltPiece(stack)) {
+			return InteractionResult.PASS;
 		}
 		if (!level.isClientSide()) {
 			be.setFilter(stack);

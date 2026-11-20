@@ -9779,6 +9779,7 @@ public final class AutoTest {
 
 	/** Toasts, the compact guide, the Ruby Wars menu, Settings, Admin, machines at work, a belt ramp, the trip fade, goal advancements. */
 	private static net.minecraft.core.BlockPos yard;
+	private static net.minecraft.world.phys.Vec3 rideFrom = net.minecraft.world.phys.Vec3.ZERO;
 
 	/**
 	 * A belt yard: Loaders feeding a curve and a Splitter (two chests), a Belt Tunnel under a wall, a down ramp off a
@@ -9927,8 +9928,35 @@ public final class AutoTest {
 				}
 			}
 			log("belts: after the redstone came off, the stopped line delivered {}", n);
+			// A long belt to ride (east), for the stepping-off check.
+			for (int x = -5; x <= 12; x++) {
+				level.setBlockAndUpdate(yard.offset(x, 0, 2), dev.rubymod.registry.ModBlocks.CONVEYOR.defaultBlockState()
+						.setValue(dev.rubymod.industry.ConveyorBlock.FACING, net.minecraft.core.Direction.EAST));
+			}
 		}));
 		then(5, mc -> shot(mc, "belts-end"));
+		then(5, mc -> command(mc, "gamemode survival @a"));
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.getAbilities().flying = false;
+			p.onUpdateAbilities();
+			p.teleportTo(server.overworld(), yard.getX() - 4.5, yard.getY() + 0.3, yard.getZ() + 2.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), -90, 10, true);
+		}));
+		then(20, mc -> rideFrom = mc.player.position());
+		then(40, mc -> {
+			var now = mc.player.position();
+			log("belts: standing still on a belt for 2 seconds carried the player {} blocks east ({} sideways)",
+					String.format("%.2f", now.x - rideFrom.x), String.format("%.2f", now.z - rideFrom.z));
+			rideFrom = now;
+			// Jump off to the side (south).
+			mc.player.setDeltaMovement(0, 0.42, 0.3);
+		});
+		then(3, mc -> mc.player.setDeltaMovement(mc.player.getDeltaMovement().x, mc.player.getDeltaMovement().y, 0.3));
+		then(20, mc -> {
+			var now = mc.player.position();
+			double offBy = now.z - (yard.getZ() + 3.0);
+			log("belts: jumping sideways took the player {} blocks off the belt ({})", String.format("%.2f", offBy), offBy > 0 ? "off it" : "still on it");
+		});
 		then(10, mc -> {
 			log("done");
 			mc.stop();

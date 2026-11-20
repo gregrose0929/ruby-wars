@@ -79,6 +79,14 @@ public class WrenchItem extends Item {
 				item.set(dev.rubymod.registry.ModComponents.MACHINE_TIER, be.tier());
 			}
 		}
+		if (level.getBlockEntity(pos) instanceof net.minecraft.world.Container box && !(level.getBlockEntity(pos) instanceof MachineBlockEntity)) {
+			// A Belt Tunnel (or anything else with things inside): those come with it.
+			for (int i = 0; i < box.getContainerSize(); i++) {
+				if (!box.getItem(i).isEmpty()) {
+					give(player, box.removeItemNoUpdate(i));
+				}
+			}
+		}
 		level.removeBlockEntity(pos);
 		level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 		give(player, item);
