@@ -68,6 +68,10 @@ public class FilterBlockEntity extends BlockEntity {
 		if (taken.isEmpty()) {
 			return;
 		}
+		var claim = dev.rubymod.game.SeasonData.get().claimAt(dev.rubymod.game.Rules.dim(level), pos);
+		if (claim != null && level.getServer() != null) {
+			dev.rubymod.game.Goals.add(level.getServer(), java.util.UUID.fromString(claim.owner), "loader100", taken.getCount());
+		}
 		if (belt) {
 			ItemEntity drop = new ItemEntity(level, to.getX() + 0.5, to.getY() + 0.3, to.getZ() + 0.5, taken);
 			drop.setDeltaMovement(Vec3.ZERO);

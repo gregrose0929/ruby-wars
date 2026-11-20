@@ -198,6 +198,12 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			workedAt = now;
 		}
 		boolean working = now - workedAt < 40 && kind() != MachineKind.BATTERY;
+		if (status == WORKING && switch (kind()) {
+			case RUBY_DRILL, ORE_REFINERY, AMMO_FACTORY, TRADE_DEPOT, CONSTRUCTOR -> true;
+			default -> false;
+		}) {
+			dev.rubymod.game.Goals.working(owner, worldPosition.asLong(), now);
+		}
 		BlockState state = getBlockState();
 		if (state.hasProperty(MachineBlock.LIT) && state.getValue(MachineBlock.LIT) != working) {
 			level.setBlock(worldPosition, state.setValue(MachineBlock.LIT, working), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
@@ -380,6 +386,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		}
 		status = earned > 0 ? WORKING : IDLE;
 		if (earned > 0) {
+			dev.rubymod.game.Goals.add(level.getServer(), owner, "sell100", 8 * tier - budget);
 			long before = Grid.rubies(owner);
 			Grid.deposit(owner, earned);
 			aux = (int) Math.min(Integer.MAX_VALUE, aux + earned);

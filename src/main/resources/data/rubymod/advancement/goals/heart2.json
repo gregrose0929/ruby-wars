@@ -10,9 +10,9 @@
 		"show_toast": false,
 		"frame": "goal",
 		"icon": {
-			"id": "rubymod:armory"
+			"id": "rubymod:ruby_heart"
 		},
-		"title": "Upgrade your Heart",
+		"title": "Heart to tier 2",
 		"description": "+2 stars to spend on upgrades"
 	},
 	"requirements": [

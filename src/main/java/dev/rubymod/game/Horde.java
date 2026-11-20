@@ -1140,9 +1140,6 @@ public final class Horde {
 				player.sendSystemMessage(Component.literal("An enemy gunship and no anti-air! Here's a Skyhammer: aim at it and hold right-click to lock on.")
 						.withStyle(ChatFormatting.GOLD));
 			}
-			if (n == 5) {
-				Goals.add(server, player.getUUID(), "horde5", 1);
-			}
 		}
 		if (airRaid(n)) {
 			spawnGunship(arena);

@@ -20,11 +20,11 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Goals: a short checklist of things to do, each worth stars (research points).
+ * Goals: a checklist of things to do in Ruby Wars, each worth stars (research points).
  * Upgrades come from doing things, never from how long or how often you play:
- * place your Heart, mine ruby, build machines, repel a raid, win a duel...
+ * build up your base, make rubies, hold off raids, fight on Battle Day, get around.
  * Each goal counts once per season. There are fewer stars than the whole tree
- * costs, so squads still split the research.
+ * costs, so you still pick what to research.
  */
 public final class Goals {
 	/** One goal: reach {@code target} (a count, or a value like your bank) for {@code stars}. */
@@ -32,24 +32,49 @@ public final class Goals {
 	}
 
 	public static final List<Goal> ALL = List.of(
+			// Your base
 			new Goal("heart", "Place your Ruby Heart", 1, 1),
+			new Goal("heart2", "Heart to tier 2", 2, 2),
+			new Goal("heart3", "Heart to tier 3", 3, 3),
+			new Goal("armory", "Buy from the Armory", 1, 1),
+			new Goal("defense", "Place a base defense", 1, 1),
+			new Goal("defense5", "Place 5 base defenses", 5, 2),
+			new Goal("vault", "Build a Vault", 1, 1),
+			// Making rubies
 			new Goal("ruby10", "Mine 10 Ruby Ore", 10, 1),
 			new Goal("ruby50", "Mine 50 Ruby Ore", 50, 2),
 			new Goal("power", "Build a generator", 1, 1),
 			new Goal("drill", "Build a Ruby Drill", 1, 1),
 			new Goal("depot", "Build a Trade Depot", 1, 1),
+			new Goal("sell100", "Sell at a Trade Depot", 100, 1),
+			new Goal("loader100", "Belt Loaders move items", 100, 1),
+			new Goal("busy3", "3 machines busy at once", 3, 2),
 			new Goal("mk3", "Machine to Mk III", 3, 2),
 			new Goal("bank500", "Bank 500 rubies", 500, 1),
 			new Goal("bank2000", "Bank 2,000 rubies", 2000, 2),
-			new Goal("heart2", "Upgrade your Heart", 1, 2),
-			new Goal("armory", "Buy from the Armory", 1, 1),
-			new Goal("defense", "Place a base defense", 1, 1),
-			new Goal("coaster", "Ride a coaster in the Coaster Park", 1, 1),
+			// Raids and Battle Day
 			new Goal("raid", "Repel a raid", 1, 2),
-			new Goal("duel", "Win a duel (bot counts)", 1, 1),
-			new Goal("horde5", "Reach wave 5 in Co-op Horde", 1, 1),
+			new Goal("raidclean", "Repel a raid, lose nothing", 1, 2),
+			new Goal("knockout", "Battle Day knockout", 1, 1),
+			new Goal("heartkill", "Destroy an enemy Heart", 1, 2),
+			new Goal("sudden", "Make it to Sudden Death", 1, 2),
+			// Getting around
 			new Goal("drive", "Drive 300 blocks", 300, 1),
-			new Goal("fly", "Fly 1,000 blocks", 1000, 2));
+			new Goal("fly", "Fly 1,000 blocks", 1000, 2),
+			new Goal("sail", "Sail 500 blocks", 500, 1),
+			new Goal("dig", "Dig with a Tunnel Borer", 50, 1));
+
+	/** The J screen's headings: each starts just before its first goal. */
+	private static final Map<String, String> SECTIONS = Map.of("heart", "Your base", "ruby10", "Making rubies", "raid", "Raids and Battle Day",
+			"drive", "Getting around");
+
+	/** Machines that count as "working" for busy3 (makers, not power or defenses). */
+	private static final Map<UUID, Map<Long, Long>> WORKING = new HashMap<>();
+
+	/** A machine of this owner's worked just now (MachineBlockEntity). */
+	public static void working(UUID owner, long pos, long gameTime) {
+		WORKING.computeIfAbsent(owner, k -> new HashMap<>()).put(pos, gameTime);
+	}
 
 	private static final Map<UUID, Vec3> LAST_RIDE_POS = new HashMap<>();
 
@@ -147,11 +172,14 @@ public final class Goals {
 		}
 	}
 
-	/** For the research screen: "id|title|progress|target|stars|done" per goal. */
+	/** For the research screen: "id|title|progress|target|stars|done" per goal, and "#Heading" before each group. */
 	public static List<String> describe(UUID player) {
 		SeasonData.PlayerRecord r = record(player);
 		List<String> out = new ArrayList<>();
 		for (Goal g : ALL) {
+			if (SECTIONS.containsKey(g.id())) {
+				out.add("#" + SECTIONS.get(g.id()));
+			}
 			boolean done = r != null && r.goalsDone.contains(g.id());
 			int progress = done ? g.target() : r == null ? 0 : Math.min(g.target(), r.goalProgress.getOrDefault(g.id(), 0));
 			out.add(g.id() + "|" + g.title() + "|" + progress + "|" + g.target() + "|" + g.stars() + "|" + done);
@@ -159,12 +187,18 @@ public final class Goals {
 		return out;
 	}
 
-	/** Every second: bank goals, and distance driven or flown. */
+	/** Every second: bank goals, machines working at once, and distance driven, flown or sailed. */
 	public static void tickSecond(MinecraftServer server) {
+		long time = server.overworld().getGameTime();
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
 			UUID id = p.getUUID();
 			reach(server, id, "bank500", (int) Math.min(Integer.MAX_VALUE, Grid.rubies(id)));
 			reach(server, id, "bank2000", (int) Math.min(Integer.MAX_VALUE, Grid.rubies(id)));
+			Map<Long, Long> busy = WORKING.get(id);
+			if (busy != null) {
+				busy.values().removeIf(t -> time - t > 40);
+				reach(server, id, "busy3", busy.size());
+			}
 			var vehicle = p.getVehicle();
 			boolean driving = vehicle instanceof VehicleEntity v && v.getControllingPassenger() == p;
 			boolean flying = vehicle instanceof AircraftEntity a && a.getControllingPassenger() == p && !a.onGround();
@@ -177,7 +211,7 @@ public final class Goals {
 			if (last != null) {
 				double moved = Math.hypot(now.x - last.x, now.z - last.z);
 				if (moved < 200) { // not a teleport
-					add(server, id, flying ? "fly" : "drive", (int) Math.round(moved));
+					add(server, id, flying ? "fly" : vehicle instanceof dev.rubymod.entity.BoatEntity ? "sail" : "drive", (int) Math.round(moved));
 				}
 			}
 		}

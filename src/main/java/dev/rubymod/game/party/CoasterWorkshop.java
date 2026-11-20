@@ -1690,7 +1690,6 @@ public class CoasterWorkshop extends PartyGame {
 		p.startRiding(seat, true, true);
 		r.riders[k] = p.getUUID();
 		rides.put(p.getUUID(), r);
-		dev.rubymod.game.Goals.add(p.level().getServer(), p.getUUID(), "coaster", 1);
 		Alerts.title(p, nameOf(c), "by " + ownerOf(c) + (r.laps == 0 ? "  (round and round: crouch to get off)" : r.laps > 1 ? "  (" + r.laps + " laps)" : ""),
 				ChatFormatting.GOLD);
 		p.sendOverlayMessage(Component.literal(k == 0 ? "Front seat! Hold on (crouch to get off)" : "All aboard! (crouch to get off)").withStyle(ChatFormatting.GOLD));

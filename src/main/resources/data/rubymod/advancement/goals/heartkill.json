@@ -8,12 +8,12 @@
 	"display": {
 		"announce_to_chat": false,
 		"show_toast": false,
-		"frame": "task",
+		"frame": "goal",
 		"icon": {
-			"id": "minecraft:minecart"
+			"id": "minecraft:tnt"
 		},
-		"title": "Ride a coaster in the Coaster Park",
-		"description": "+1 star to spend on upgrades"
+		"title": "Destroy an enemy Heart",
+		"description": "+2 stars to spend on upgrades"
 	},
 	"requirements": [
 		[

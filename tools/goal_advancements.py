@@ -16,9 +16,11 @@ OUT = "src/main/resources/data/rubymod/advancement/goals"
 ICONS = {
     "heart": "rubymod:ruby_heart", "ruby10": "rubymod:ruby_ore", "ruby50": "rubymod:ruby_block", "power": "rubymod:solar_panel",
     "drill": "rubymod:ruby_drill", "depot": "rubymod:trade_depot", "mk3": "rubymod:ore_refinery", "bank500": "rubymod:ruby",
-    "bank2000": "rubymod:vault", "heart2": "rubymod:armory", "armory": "rubymod:armory", "defense": "rubymod:sentry_turret",
-    "coaster": "minecraft:minecart", "raid": "minecraft:shield", "duel": "minecraft:iron_sword", "horde5": "minecraft:zombie_head",
-    "drive": "rubymod:jeep", "fly": "rubymod:fighter_jet",
+    "bank2000": "minecraft:gold_block", "heart2": "rubymod:ruby_heart", "heart3": "rubymod:ruby_heart", "armory": "rubymod:armory",
+    "defense": "rubymod:sentry_turret", "defense5": "rubymod:shield_generator", "vault": "rubymod:vault", "sell100": "minecraft:emerald",
+    "loader100": "rubymod:belt_loader", "busy3": "rubymod:constructor", "raid": "minecraft:shield", "raidclean": "minecraft:totem_of_undying",
+    "knockout": "minecraft:iron_sword", "heartkill": "minecraft:tnt", "sudden": "minecraft:wither_skeleton_skull",
+    "drive": "rubymod:jeep", "fly": "rubymod:fighter_jet", "sail": "minecraft:oak_boat", "dig": "rubymod:tunnel_borer",
 }
 
 

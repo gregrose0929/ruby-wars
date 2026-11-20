@@ -147,6 +147,7 @@ public final class Claims {
 				.withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
 		if (attacker != null) {
 			SeasonData.get().player(attacker.getUUID(), attacker.getName().getString()).heartsDestroyed++;
+			Goals.add(level.getServer(), attacker.getUUID(), "heartkill", 1);
 			// Raiding reward.
 			ItemEntity loot = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, new ItemStack(ModItems.RUBY, 10));
 			level.addFreshEntity(loot);
@@ -177,7 +178,8 @@ public final class Claims {
 		claim.tier++;
 		claim.hp = claim.maxHp();
 		SeasonData.markDirty();
-		Goals.add(player.level().getServer(), player.getUUID(), "heart2", 1);
+		Goals.reach(player.level().getServer(), player.getUUID(), "heart2", claim.tier);
+		Goals.reach(player.level().getServer(), player.getUUID(), "heart3", claim.tier);
 		return "Heart upgraded to tier " + claim.tier + "! Claim radius is now " + claim.radius() + ", HP " + claim.maxHp() + ".";
 	}
 }

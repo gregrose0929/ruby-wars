@@ -103,10 +103,15 @@ public class MachineBlock extends BaseEntityBlock {
 				case RUBY_DRILL -> "drill";
 				case TRADE_DEPOT -> "depot";
 				case COMBUSTION_GENERATOR, SOLAR_PANEL -> "power";
+				case VAULT -> "vault";
+				case SHIELD_GENERATOR, POINT_DEFENSE, TESLA_COIL -> "defense";
 				default -> null;
 			};
 			if (goal != null) {
 				dev.rubymod.game.Goals.add(level.getServer(), player.getUUID(), goal, 1);
+			}
+			if ("defense".equals(goal)) {
+				dev.rubymod.game.Goals.add(level.getServer(), player.getUUID(), "defense5", 1);
 			}
 			if (kind == MachineKind.RUBY_DRILL) {
 				Grid.account(player.getUUID()).drills++;

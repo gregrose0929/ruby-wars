@@ -10,9 +10,9 @@
 		"show_toast": false,
 		"frame": "task",
 		"icon": {
-			"id": "minecraft:zombie_head"
+			"id": "rubymod:belt_loader"
 		},
-		"title": "Reach wave 5 in Co-op Horde",
+		"title": "Belt Loaders move items",
 		"description": "+1 star to spend on upgrades"
 	},
 	"requirements": [

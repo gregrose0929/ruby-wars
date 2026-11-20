@@ -40,6 +40,12 @@ public class ResearchScreen extends Screen {
 		super(Component.literal("Research"));
 	}
 
+	/** Opens on the Goals tab. */
+	public static ResearchScreen goalsTab() {
+		tab = 1;
+		return new ResearchScreen();
+	}
+
 	@Override
 	public boolean isPauseScreen() {
 		return false;
@@ -239,6 +245,11 @@ public class ResearchScreen extends Screen {
 	}
 
 	/** The goals checklist: what to do next, with progress and the stars each one gives. */
+	/** How far the goals list is scrolled (pixels), and how far it can go. */
+	private int goalScroll;
+	private int goalScrollMax;
+
+	/** Goals in groups ("#Heading" lines from the server), two columns under each heading; scrolls with the wheel. */
 	private void drawGoals(GuiGraphicsExtractor g, float fade) {
 		List<String> goals = ClientState.research == null ? List.of() : ClientState.research.goals();
 		int px = px();
@@ -246,45 +257,89 @@ public class ResearchScreen extends Screen {
 		int cols = pw >= 380 ? 2 : 1;
 		int colW = (pw - 20 - (cols - 1) * 8) / cols;
 		int x0 = px + 10;
-		int rowH = 17;
-		int rows = (goals.size() + cols - 1) / cols;
-		int y0 = py() + 12;
-		int end = py() + panelH();
-		for (int i = 0; i < goals.size(); i++) {
-			String[] f = goals.get(i).split("\\|");
+		int rowH = 16;
+		int top = py() + 6;
+		int end = py() + panelH() - 16;
+		// Group the lines: a heading, then its goals.
+		List<String> headings = new ArrayList<>();
+		List<List<String[]>> groups = new ArrayList<>();
+		for (String line : goals) {
+			if (line.startsWith("#")) {
+				headings.add(line.substring(1));
+				groups.add(new ArrayList<>());
+				continue;
+			}
+			String[] f = line.split("\\|");
 			if (f.length < 6) {
 				continue;
 			}
-			int progress = Integer.parseInt(f[2]);
-			int target = Integer.parseInt(f[3]);
-			int stars = Integer.parseInt(f[4]);
-			boolean done = Boolean.parseBoolean(f[5]);
-			int x = x0 + (i / rows) * (colW + 8);
-			int y = y0 + (i % rows) * rowH;
-			if (y + rowH > end - 16) {
-				continue;
+			if (groups.isEmpty()) {
+				headings.add("Goals");
+				groups.add(new ArrayList<>());
 			}
-			if (i % rows % 2 == 0) {
-				g.fill(x, y - 1, x + colW, y + rowH - 3, 0x12FFFFFF);
-			}
-			if (done) {
-				Ui.icon(g, Ui.Icon.CHECK, x + 3, y + 1);
-			} else {
-				g.fill(x + 4, y + 2, x + 11, y + 9, 0xFF0E1014);
-				g.outline(x + 4, y + 2, 7, 7, Ui.MUTED);
-			}
-			int starW = stars * 10;
-			String count = !done && target > 1 ? progress + "/" + target : "";
-			Ui.text(g, f[1], x + 16, y + 2, colW - 26 - starW - font.width(count), done ? Ui.MUTED : Ui.TEXT);
-			Ui.text(g, count, x + colW - starW - 6 - font.width(count), y + 2, Ui.DIM);
-			for (int k = 0; k < stars; k++) {
-				Ui.icon(g, Ui.Icon.STAR, x + colW - 10 * (k + 1), y + 1);
-			}
-			if (!done && target > 1) {
-				Ui.bar(g, x + 16, y + 11, colW - 26 - starW, 3, Math.min(1.0F, progress / (float) target), Ui.GOLD);
-			}
+			groups.get(groups.size() - 1).add(f);
 		}
-		g.centeredText(font, "Each goal counts once a season.", width / 2, end - 13, Ui.MUTED);
+		int total = 0;
+		for (List<String[]> group : groups) {
+			total += 14 + (group.size() + cols - 1) / cols * rowH + 4;
+		}
+		goalScrollMax = Math.max(0, total - (end - top));
+		goalScroll = Math.max(0, Math.min(goalScroll, goalScrollMax));
+		g.enableScissor(px + 1, top - 2, px + pw - 1, end);
+		int y = top - goalScroll;
+		for (int s = 0; s < groups.size(); s++) {
+			List<String[]> group = groups.get(s);
+			int done = 0;
+			for (String[] f : group) {
+				done += Boolean.parseBoolean(f[5]) ? 1 : 0;
+			}
+			Ui.section(g, headings.get(s) + "  " + done + "/" + group.size(), x0, y + 2, pw - 20);
+			y += 14;
+			int rows = (group.size() + cols - 1) / cols;
+			for (int i = 0; i < group.size(); i++) {
+				drawGoal(g, group.get(i), x0 + (i / rows) * (colW + 8), y + (i % rows) * rowH, colW, i % rows % 2 == 0);
+			}
+			y += rows * rowH + 4;
+		}
+		g.disableScissor();
+		String foot = goalScrollMax > 0 && goalScroll < goalScrollMax ? "Scroll for more  -  each goal counts once a season"
+				: "Each goal counts once a season.";
+		g.centeredText(font, foot, width / 2, end + 3, Ui.MUTED);
+	}
+
+	private void drawGoal(GuiGraphicsExtractor g, String[] f, int x, int y, int colW, boolean shade) {
+		int progress = Integer.parseInt(f[2]);
+		int target = Integer.parseInt(f[3]);
+		int stars = Integer.parseInt(f[4]);
+		boolean done = Boolean.parseBoolean(f[5]);
+		if (shade) {
+			g.fill(x, y - 1, x + colW, y + 13, 0x12FFFFFF);
+		}
+		if (done) {
+			Ui.icon(g, Ui.Icon.CHECK, x + 3, y + 1);
+		} else {
+			g.fill(x + 4, y + 2, x + 11, y + 9, 0xFF0E1014);
+			g.outline(x + 4, y + 2, 7, 7, Ui.MUTED);
+		}
+		int starW = stars * 10;
+		String count = !done && target > 1 ? progress + "/" + target : "";
+		Ui.text(g, f[1], x + 16, y + 2, colW - 26 - starW - font.width(count), done ? Ui.MUTED : Ui.TEXT);
+		Ui.text(g, count, x + colW - starW - 6 - font.width(count), y + 2, Ui.DIM);
+		for (int k = 0; k < stars; k++) {
+			Ui.icon(g, Ui.Icon.STAR, x + colW - 10 * (k + 1), y + 1);
+		}
+		if (!done && target > 1) {
+			Ui.bar(g, x + 16, y + 11, colW - 26 - starW, 2, Math.min(1.0F, progress / (float) target), Ui.GOLD);
+		}
+	}
+
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+		if (tab == 1) {
+			goalScroll = Math.max(0, Math.min(goalScrollMax, goalScroll - (int) (scrollY * 16)));
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
 	}
 
 	@Override

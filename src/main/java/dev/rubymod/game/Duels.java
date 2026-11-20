@@ -477,7 +477,6 @@ public final class Duels {
 	private static void win(MinecraftServer server, Duel duel, int winner) {
 		duel.endIn = 100;
 		if (!(duel.bot && winner == 1)) {
-			Goals.add(server, duel.players[winner], "duel", 1);
 			if (!TEST_PLAYERS.containsKey(duel.players[winner])) {
 				dev.rubymod.game.Stats.duelWon(duel.players[winner], duel.names[winner]);
 			}

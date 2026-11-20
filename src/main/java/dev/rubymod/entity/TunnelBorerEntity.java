@@ -150,6 +150,7 @@ public class TunnelBorerEntity extends VehicleEntity {
 			}
 		}
 		if (cut > 0) {
+			dev.rubymod.game.Goals.add(level.getServer(), driver.getUUID(), "dig", cut);
 			lastDrill = level.getGameTime();
 			if (tickCount % 8 == 0) {
 				level.playSound(null, getX(), getY(), getZ(), SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 2.5F, 0.5F);

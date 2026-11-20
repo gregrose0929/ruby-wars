@@ -4595,6 +4595,7 @@ public final class AutoTest {
 			case "goldline" -> goldLineScript();
 			case "showroom" -> showroomScript();
 			case "smooth" -> polishScript();
+			case "goalsview" -> goalsViewScript();
 			case "dronecheck" -> droneCheckScript();
 			case "altarcheck" -> altarCheckScript();
 			case "homesgone" -> homesGoneScript();
@@ -9775,6 +9776,31 @@ public final class AutoTest {
 	}
 
 	/** Toasts, the compact guide, the Ruby Wars menu, Settings, Admin, machines at work, a belt ramp, the trip fade, goal advancements. */
+	/** The J screen's Goals tab: headings, progress bars, scrolling. */
+	private static void goalsViewScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> command(mc, "rubywars start"));
+		then(60, mc -> onServer(mc, server -> {
+			var id = me(server).getUUID();
+			dev.rubymod.game.Goals.add(server, id, "heart", 1);
+			dev.rubymod.game.Goals.add(server, id, "ruby10", 6);
+			dev.rubymod.game.Goals.add(server, id, "sell100", 40);
+			dev.rubymod.game.Goals.add(server, id, "defense5", 2);
+			dev.rubymod.game.Goals.add(server, id, "sail", 120);
+		}));
+		then(40, mc -> mc.gui.setScreen(ResearchScreen.goalsTab()));
+		then(30, mc -> shot(mc, "goals-top"));
+		then(5, mc -> mc.gui.screen().mouseScrolled(mc.getWindow().getGuiScaledWidth() / 2.0, mc.getWindow().getGuiScaledHeight() / 2.0, 0, -30));
+		then(20, mc -> shot(mc, "goals-bottom"));
+		then(10, mc -> {
+			log("done");
+			mc.stop();
+		});
+	}
+
 	private static void polishScript() {
 		then(5, mc -> {
 			command(mc, "rubywars reset everything confirm");

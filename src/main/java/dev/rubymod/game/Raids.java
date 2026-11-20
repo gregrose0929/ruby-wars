@@ -272,6 +272,9 @@ public final class Raids {
 		int bonus = GameConfig.get().raidVictoryBonus;
 		Grid.deposit(raid.owner, bonus * 1000L);
 		Goals.add(server, raid.owner, "raid", 1);
+		if (raid.looted == 0) {
+			Goals.add(server, raid.owner, "raidclean", 1);
+		}
 		tellSide(server, raid.owner, Component.literal("Raid repelled! " + raid.killed + " raiders down. +" + bonus + " rubies"
 				+ (raid.looted > 0 ? " (they got " + raid.looted / 1000 + " rubies)" : "") + ".").withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
 		for (ServerPlayer p : sidePlayers(server, raid.owner)) {

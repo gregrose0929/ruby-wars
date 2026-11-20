@@ -100,6 +100,11 @@ public final class BattleDirector {
 						eliminate(server, UUID.fromString(entry.getKey()), entry.getValue(), "didn't show up for Sudden Death");
 					}
 				}
+				for (Map.Entry<String, SeasonData.PlayerRecord> entry : new java.util.ArrayList<>(data.players.entrySet())) {
+					if (!entry.getValue().eliminated) {
+						Goals.add(server, UUID.fromString(entry.getKey()), "sudden", 1);
+					}
+				}
 				WorldBorder border = overworld.getWorldBorder();
 				border.setCenter(config.borderCenterX, config.borderCenterZ);
 				border.lerpSizeBetween(border.getSize(), config.borderEndSize, config.suddenDeathMinutes * 60L * 20L, overworld.getGameTime());
@@ -254,6 +259,7 @@ public final class BattleDirector {
 		if (source.getEntity() instanceof ServerPlayer killer && killer != victim && data.phase.pvp()) {
 			SeasonData.PlayerRecord k = data.player(killer.getUUID(), killer.getName().getString());
 			k.kills++;
+			Goals.add(server, killer.getUUID(), "knockout", 1);
 			k.killstreak++;
 			k.bestKillstreak = Math.max(k.bestKillstreak, k.killstreak);
 			String streak = switch (k.killstreak) {

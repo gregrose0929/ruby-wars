@@ -162,7 +162,7 @@ gear where you fell; and a kill feed, hit markers and kill-cam.
 
 ### Goals and upgrades
 
-Press **J** for goals (place your Heart, build a drill, repel a raid, fly 1,000 blocks…).
+Press **J** for goals (upgrade your Heart, sell at a Trade Depot, repel a raid, make it to Sudden Death, sail 500 blocks…).
 Each earns stars to spend on unlocking advanced gear in four branches (Arms, Vehicles,
 Defense, Support). Upgrades come from doing things, never from how long you play.
 
