@@ -70,7 +70,7 @@ public class ManualScreen extends Screen {
 			new Page("The Season",
 					"Build until everyone's ready, then survive one Battle Day. Everyone plays on their own: the last player standing wins.",
 					"Place your Ruby Heart to claim land: nobody else can build there, and you're safe inside it until Battle Day. Outside the bases you can fight.",
-					"Battle Day: Lockdown (defenses arm), Open War (PvP, Hearts can be breached, you respawn at your Heart), "
+					"Battle Day: Lockdown (defenses arm), Open War (PvP, Hearts can be breached, you respawn at your Heart, and a supply drop every 15 minutes: told 30 seconds ahead, with a beam over the spot), "
 							+ "Sudden Death (Hearts shatter, the border shrinks), Final Circle.",
 					"Respawns: in Lockdown and Open War you come back at your Heart while it stands (the line under the timer says so). "
 							+ "Heart gone, or Sudden Death: your next death knocks you out.",
@@ -174,7 +174,7 @@ public class ManualScreen extends Screen {
 			new Page("World Events",
 					"While you build, something worth having turns up out between the bases every so often (when at least two of you are on). Everyone is told two minutes ahead (in the hub too, with a button to go back), it's on your map (K) with its time left, and a beacon's beam in its colour marks the spot.",
 					"Supply Cache: a ring of chests full of Armory gear and rubies round a glass case. The case opens into a big chest 2 minutes later, and fresh supplies land 5 minutes in, so it's worth staying (or coming late). After 8 minutes it crumbles and what's left spills out.",
-					"Ruby Shrine: stand in its ring alone and a ruby goes into your bank every 5 seconds (everyone in it glows). Anyone else in it and it's contested. Whoever holds it longest gets 15 more (the banner shows who's ahead).",
+					"Ruby Shrine: stand inside its ring of magenta carpet alone and a ruby goes into your bank every 5 seconds (everyone in it glows). Anyone else in it and it's contested. Whoever holds it longest gets 15 more (the banner shows who's ahead).",
 					"Ruby Meteor: comes down on the spot, full of ruby ore and blocks.",
 					"You can fight out there (only bases are safe in the build phase), and what you carry waits in your War Grave if you fall."),
 			new Page("Gear",

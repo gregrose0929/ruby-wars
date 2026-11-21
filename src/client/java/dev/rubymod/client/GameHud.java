@@ -58,7 +58,10 @@ public class GameHud implements HudElement {
 		drawRespawnStatus(g, font, w);
 		var event = ClientState.event;
 		if (event != null && !event.text().isEmpty() && System.currentTimeMillis() - ClientState.eventAt < 2500) {
-			topBanner(g, font, event.text(), w, event.color());
+			// A line or two, each kept clear of the minimap.
+			for (String line : event.text().split("\n")) {
+				topBanner(g, font, dev.rubymod.client.ui.Ui.fit(line, w - 190), w, event.color());
+			}
 		}
 		drawCorner(g, font, w);
 		drawAmmo(g, font, player, w, h);

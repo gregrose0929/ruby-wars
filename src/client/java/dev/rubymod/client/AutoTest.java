@@ -9322,6 +9322,38 @@ public final class AutoTest {
 		then(10, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(0, 1, -6))));
 		then(80, mc -> shot(mc, "practice-firing"));
 		then(1200, mc -> shot(mc, "practice-report"));
+		// The Ruby Shrine's carpet ring, from a little above.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var spot = server.overworld().getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+					p.blockPosition().offset(0, 0, 24));
+			dev.rubymod.game.WorldEvents.begin(server, java.util.List.of(p), dev.rubymod.game.WorldEvents.Kind.SHRINE, spot, 2000);
+			p.teleportTo(server.overworld(), spot.getX() + 0.5, spot.getY() + 7, spot.getZ() - 11.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 32, true);
+		}));
+		then(100, mc -> shot(mc, "shrine-ring"));
+		then(5, mc -> onServer(mc, server -> {
+			var at = dev.rubymod.game.WorldEvents.at();
+			me(server).teleportTo(server.overworld(), at.getX() + 2.5, at.getY(), at.getZ() + 0.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 10, true);
+		}));
+		then(80, mc -> shot(mc, "shrine-holding"));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.WorldEvents.stop(server)));
+		// A Battle Day supply drop: told, then landed.
+		then(5, mc -> command(mc, "rubywars phase war"));
+		then(40, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var spot = server.overworld().getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+					p.blockPosition().offset(0, 0, 30));
+			dev.rubymod.game.SupplyDrops.incomingAt(server.overworld(), spot, 6000);
+			p.teleportTo(server.overworld(), spot.getX() + 0.5, spot.getY(), spot.getZ() - 14.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, -15, true);
+		}));
+		then(60, mc -> shot(mc, "drop-told"));
+		then(140, mc -> shot(mc, "drop-landed"));
+		then(5, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));
+		then(30, mc -> shot(mc, "drop-map"));
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			onServer(mc, server -> dev.rubymod.game.SupplyDrops.clear(server));
+		});
 	}
 
 	/** The Armory's pages (do they fit?), turning a page in the same screen, the Drill keeping its finds and a belt to a chest. */

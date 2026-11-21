@@ -538,6 +538,37 @@ public final class WorldEvents {
 		put(level, at.offset(-2, 0, 2), Blocks.AMETHYST_CLUSTER.defaultBlockState());
 		put(level, at.offset(2, 0, -2), Blocks.AMETHYST_CLUSTER.defaultBlockState());
 		put(level, at.offset(-2, 0, -2), Blocks.AMETHYST_CLUSTER.defaultBlockState());
+		ring(level);
+	}
+
+	/** The shrine's edge, laid on the ground in magenta carpet, so it's plain where you have to stand (put back after). */
+	private static void ring(ServerLevel level) {
+		Set<BlockPos> done = new HashSet<>();
+		int steps = 96;
+		for (int i = 0; i < steps; i++) {
+			double a = i * Math.PI * 2 / steps;
+			int x = at.getX() + (int) Math.round(Math.cos(a) * SHRINE_RADIUS);
+			int z = at.getZ() + (int) Math.round(Math.sin(a) * SHRINE_RADIUS);
+			BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
+			if (!done.add(top) || Math.abs(top.getY() - at.getY()) > 3) {
+				continue;
+			}
+			BlockState here = level.getBlockState(top);
+			BlockState under = level.getBlockState(top.below());
+			if ((here.isAir() || here.canBeReplaced()) && here.getFluidState().isEmpty() && under.isFaceSturdy(level, top.below(), net.minecraft.core.Direction.UP)) {
+				put(level, top, Blocks.CARPET.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
+			}
+		}
+	}
+
+	public static int ringForTest(ServerLevel level) {
+		int n = 0;
+		for (var e : PLACED.entrySet()) {
+			if (e.getValue().getBlock() == Blocks.CARPET.pick(net.minecraft.world.item.DyeColor.MAGENTA) && level.getBlockState(e.getKey()) == e.getValue()) {
+				n++;
+			}
+		}
+		return n;
 	}
 
 	/** Over: put the ground back as it was (what's left in the cache goes with it). */
@@ -726,11 +757,13 @@ public final class WorldEvents {
 						: left + (left == 1 ? " chest" : " chests") + " left";
 				text = "SUPPLY CACHE   " + next + "   " + where + "   " + clock(endsAt - t);
 			} else {
-				String who = contested ? "CONTESTED" : holder == null ? "nobody holds it" : holder.equals(p.getUUID()) ? "you hold it"
+				String who = contested ? "CONTESTED" : holder == null ? "nobody holds it" : holder.equals(p.getUUID())
+						? "yours, ruby in " + (SHRINE_EVERY - HELD.getOrDefault(holder, 0) % SHRINE_EVERY) + "s"
 						: "held by " + name(p.level().getServer(), holder);
 				// Close by, who's held it longest (the race for the bonus); further off, how to get there.
-				text = "RUBY SHRINE   " + who + "   " + (dist < 40 && !leaders.isEmpty() ? clock(endsAt - t) + "   " + leaders
-						: where + "   " + clock(endsAt - t));
+				// Close by, a second line: who's held it longest (the race for the bonus).
+				text = "RUBY SHRINE  " + who + "  " + (dist < 40 ? clock(endsAt - t) : where + "  " + clock(endsAt - t))
+						+ (dist < 40 && !leaders.isEmpty() ? "\nLongest: " + leaders : "");
 			}
 			dev.rubymod.net.Net.send(p, new dev.rubymod.net.MorePayloads.EventStatus(text, kind.color));
 		}

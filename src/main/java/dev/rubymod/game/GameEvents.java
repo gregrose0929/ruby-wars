@@ -151,6 +151,8 @@ public final class GameEvents {
 			Hub.reset();
 			WorldEvents.reset();
 			WorldEvents.recover(server);
+			SupplyDrops.reset();
+			SupplyDrops.recover(server);
 			Practice.reset();
 			dev.rubymod.industry.AwayTime.load(server);
 			if (server.getLevel(Hub.HUB) != null) {
@@ -165,6 +167,7 @@ public final class GameEvents {
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			// A world event going on: tidy it away (else its beacon and iron would be left behind, for anyone to mine).
 			WorldEvents.stop(server);
+			SupplyDrops.clear(server);
 			Collapse.clear();
 			Movers.finishAll();
 			NightBattle.clear();
@@ -530,6 +533,10 @@ public final class GameEvents {
 			}
 			if (WorldEvents.protects(level, pos)) {
 				deny(player, "That's part of the world event: it goes when the event does.");
+				return false;
+			}
+			if (SupplyDrops.protects(level, pos)) {
+				deny(player, "That's the supply drop's beacon: it goes when the drop does.");
 				return false;
 			}
 			if (state.is(ModBlocks.RUBY_HEART)) {

@@ -109,7 +109,16 @@ public class MapScreen extends Screen {
 		if (lx + 92 < w) {
 			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 52);
 			for (int i = 0; i < names.length; i++) {
-				g.fill(lx + 2, y0 + i * 12 + 2, lx + 7, y0 + i * 12 + 7, Markers.color((byte) i));
+				var icon = Markers.icon((byte) i);
+				if (icon.isEmpty()) {
+					g.fill(lx + 2, y0 + i * 12 + 2, lx + 7, y0 + i * 12 + 7, Markers.color((byte) i));
+				} else {
+					g.pose().pushMatrix();
+					g.pose().translate(lx + 1, y0 + i * 12);
+					g.pose().scale(0.5F, 0.5F);
+					g.item(icon, 0, 0);
+					g.pose().popMatrix();
+				}
 				g.text(font, names[i], lx + 11, y0 + i * 12, dev.rubymod.client.ui.Ui.DIM, false);
 			}
 			// World events: a chest, a crystal or ruby ore.

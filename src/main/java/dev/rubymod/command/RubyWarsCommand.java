@@ -54,6 +54,10 @@ public final class RubyWarsCommand {
 							dev.rubymod.game.WorldEvents.stop(c.getSource().getServer());
 							return ok(c, "World event stopped.");
 						}))
+						.then(Commands.literal("supplydrop").executes(c -> {
+							var spot = dev.rubymod.game.SupplyDrops.incoming(c.getSource().getServer().overworld());
+							return spot == null ? 0 : ok(c, "Supply drop coming down at " + spot.toShortString() + " (it only stays on Battle Day).");
+						}))
 						.then(Commands.literal("cache").executes(c -> worldEvent(c, dev.rubymod.game.WorldEvents.Kind.CACHE)))
 						.then(Commands.literal("shrine").executes(c -> worldEvent(c, dev.rubymod.game.WorldEvents.Kind.SHRINE)))
 						.then(Commands.literal("meteor").executes(c -> worldEvent(c, dev.rubymod.game.WorldEvents.Kind.METEOR))))

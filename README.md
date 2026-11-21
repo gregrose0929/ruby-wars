@@ -85,7 +85,8 @@ saves your inventory and position, and coming back puts it all back.
    - **Open War (60 minutes):** PvP is on. Breaching Charges can destroy a Heart. While
      your Heart stands you respawn at it; once it's gone, your next death knocks you out.
      A line under the timer always says whether you'll respawn.
-     Supply drops land every 15 minutes.
+     Supply drops land every 15 minutes: everyone's told 30 seconds ahead, a beacon's beam marks
+     the spot, and the chest stays (on the map) until it's emptied.
    - **Sudden Death (20 minutes):** every Heart shatters, no more respawns, and the world
      border closes in.
    - **Final Circle:** everyone glows and artillery shells random spots, so nobody can hide.

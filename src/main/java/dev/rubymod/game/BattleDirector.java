@@ -160,8 +160,9 @@ public final class BattleDirector {
 		SeasonData data = SeasonData.get();
 		if (data.phase == Phase.WAR && SeasonTicker.now() >= data.nextSupplyDropAt && data.pausedRemaining < 0) {
 			data.nextSupplyDropAt = SeasonTicker.now() + GameConfig.get().supplyDropIntervalMinutes * 60_000L;
-			supplyDrop(server.overworld());
+			SupplyDrops.incoming(server.overworld());
 		}
+		SupplyDrops.tick(server);
 		// The build phase's world event: a ruby meteor, somewhere nobody has claimed. Worth racing for (and fighting over, come Battle Day).
 		if (data.phase == Phase.BUILD && data.pausedRemaining < 0 && GameConfig.get().meteorIntervalHours > 0) {
 			if (data.nextMeteorAt == 0) {
@@ -727,29 +728,6 @@ public final class BattleDirector {
 	}
 
 	// ----- Supply drops -----
-
-	private static void supplyDrop(ServerLevel level) {
-		RandomSource random = level.getRandom();
-		WorldBorder border = level.getWorldBorder();
-		double half = border.getSize() * 0.4;
-		int x = (int) (border.getCenterX() + (random.nextDouble() * 2 - 1) * half);
-		int z = (int) (border.getCenterZ() + (random.nextDouble() * 2 - 1) * half);
-		level.getChunk(x >> 4, z >> 4); // Load (or generate) the chunk so the heightmap is real.
-		BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
-		level.setBlockAndUpdate(top, Blocks.CHEST.defaultBlockState());
-		if (level.getBlockEntity(top) instanceof ChestBlockEntity chest) {
-			List<ItemStack> loot = supplyLoot(random);
-			for (int i = 0; i < loot.size() && i < chest.getContainerSize(); i++) {
-				chest.setItem(random.nextInt(chest.getContainerSize()), loot.get(i));
-			}
-		}
-		ACTIVE_DROPS.add(top);
-		Waypoints.global("Supply drop", top, 3, 180);
-		dropsVisibleUntil = SeasonTicker.now() + 3 * 60_000L;
-		Alerts.broadcast(level.getServer(), Component.literal("SUPPLY DROP landed at " + top.getX() + ", " + top.getY() + ", " + top.getZ() + "!")
-				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
-		playToAll(level.getServer(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST_FAR, 0.8F);
-	}
 
 	static List<ItemStack> supplyLoot(RandomSource random) {
 		List<ItemStack> loot = new ArrayList<>();

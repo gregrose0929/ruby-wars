@@ -1433,6 +1433,7 @@ public final class SelfTest {
 		// ----- World events -----
 		worldEventChecks(level, alpha, bravo, surface(level, base.offset(-160, 0, -160)));
 		practiceChecks(level, alpha, bravo);
+		supplyDropChecks(level, surface(level, base.offset(-220, 0, 160)));
 
 		// ----- Ore -----
 		int ore = 0;
@@ -1448,6 +1449,50 @@ public final class SelfTest {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
 		}
 		Explosions.clearHits();
+	}
+
+	/** Battle Day supply drops: told with a beam before they land, a chest of loot, then the ground put back. */
+	private void supplyDropChecks(ServerLevel level, BlockPos spot) {
+		var server = level.getServer();
+		Phase before = SeasonData.get().phase;
+		SeasonData.get().phase = Phase.WAR;
+		dev.rubymod.game.SupplyDrops.reset();
+		var ground = level.getBlockState(spot.below());
+		var iron = level.getBlockState(spot.offset(1, -2, 1));
+		try {
+			dev.rubymod.game.SupplyDrops.incomingAt(level, spot, 30_000L);
+			dev.rubymod.game.SupplyDrops.tick(server);
+			check("supply drops: told 30 seconds ahead with a beacon's beam over the spot, which nobody can mine",
+					!dev.rubymod.game.SupplyDrops.landed(spot) && level.getBlockState(spot.below()).is(Blocks.BEACON)
+							&& dev.rubymod.game.SupplyDrops.protects(level, spot.offset(1, -2, 1)) && !level.getBlockState(spot).is(Blocks.CHEST));
+			dev.rubymod.game.SupplyDrops.advance(31_000L);
+			dev.rubymod.game.SupplyDrops.tick(server);
+			var chest = level.getBlockEntity(spot) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity c ? c : null;
+			int rubies = 0;
+			for (int i = 0; chest != null && i < chest.getContainerSize(); i++) {
+				rubies += chest.getItem(i).is(ModItems.RUBY) ? chest.getItem(i).getCount() : 0;
+			}
+			check("supply drops: then it lands, a chest of loot (" + rubies + " rubies)", dev.rubymod.game.SupplyDrops.landed(spot) && rubies >= 10);
+			// Emptied: gone half a minute later, the ground as it was.
+			if (chest != null) {
+				chest.clearContent();
+			}
+			dev.rubymod.game.SupplyDrops.tick(server);
+			boolean stays = dev.rubymod.game.SupplyDrops.count() == 1;
+			dev.rubymod.game.SupplyDrops.advance(31_000L);
+			dev.rubymod.game.SupplyDrops.tick(server);
+			check("supply drops: emptied, it goes half a minute later and the ground is put back", stays && dev.rubymod.game.SupplyDrops.count() == 0
+					&& level.getBlockState(spot.below()) == ground && level.getBlockState(spot.offset(1, -2, 1)) == iron && !level.getBlockState(spot).is(Blocks.CHEST));
+			// Battle Day over: any still standing go.
+			dev.rubymod.game.SupplyDrops.incomingAt(level, spot, 0);
+			SeasonData.get().phase = Phase.ENDED;
+			dev.rubymod.game.SupplyDrops.tick(server);
+			check("supply drops: when Battle Day ends they're tidied away", dev.rubymod.game.SupplyDrops.count() == 0 && level.getBlockState(spot.below()) == ground);
+		} finally {
+			dev.rubymod.game.SupplyDrops.clear(server);
+			dev.rubymod.game.SupplyDrops.reset();
+			SeasonData.get().phase = before;
+		}
 	}
 
 	/** The Practice Dummy: your turrets and Tesla Coils fire on it in your own base, for free; it goes after a minute. */
@@ -1629,6 +1674,8 @@ public final class SelfTest {
 				dev.rubymod.game.WorldEvents.tickSecond(server, both);
 			}
 			long bank1 = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
+			int carpet = dev.rubymod.game.WorldEvents.ringForTest(level);
+			check("events: the shrine's edge is laid on the ground in carpet (" + carpet + " pieces)", carpet >= 20);
 			check("events: holding the Ruby Shrine alone puts rubies in your bank (+" + (bank1 - bank0) + " in 10 s)", bank1 - bank0 == 2);
 			bravo.teleportTo(level, shrine.getX() - 1.5, shrine.getY(), shrine.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
 			for (int i = 0; i < 10; i++) {
