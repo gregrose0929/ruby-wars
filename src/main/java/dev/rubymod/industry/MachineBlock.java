@@ -97,6 +97,7 @@ public class MachineBlock extends BaseEntityBlock {
 			if (tier != null) {
 				be.setTier(tier);
 			}
+			be.applySettings(stack);
 		} else if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MachineBlockEntity be && by instanceof Player player) {
 			be.setOwner(player.getUUID());
 			String goal = switch (kind) {
@@ -120,6 +121,7 @@ public class MachineBlock extends BaseEntityBlock {
 			if (tier != null) {
 				be.setTier(tier);
 			}
+			be.applySettings(stack);
 		}
 	}
 
@@ -213,6 +215,7 @@ public class MachineBlock extends BaseEntityBlock {
 				if (be.tier() > 1) {
 					drop.set(ModComponents.MACHINE_TIER, be.tier());
 				}
+				be.keepSettings(drop);
 				Block.popResource(level, pos, drop);
 			}
 		}

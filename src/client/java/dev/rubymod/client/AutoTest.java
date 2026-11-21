@@ -10247,8 +10247,18 @@ public final class AutoTest {
 			p.setShiftKeyDown(false);
 		}));
 		then(6, mc -> shot(mc, "pick-mode"));
+		// Back from being away: what the machines made, told once.
+		then(10, mc -> onServer(mc, server -> {
+			var id = me(server).getUUID();
+			dev.rubymod.industry.AwayTime.made(id, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RAW_IRON, 41));
+			dev.rubymod.industry.AwayTime.made(id, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 12));
+			dev.rubymod.industry.AwayTime.made(id, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 8));
+			dev.rubymod.industry.AwayTime.made(id, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GUNPOWDER, 6));
+			dev.rubymod.industry.AwayTime.sold(id, 5000);
+		}));
+		then(70, mc -> shot(mc, "away-note"));
 		then(60, mc -> {
-			log("made: {} | silos: {} | rocks: {}", ClientState.made, ClientState.silos, ClientState.rocks);
+			log("made: {} | silos: {} | rocks: {} | away: {}", ClientState.made, ClientState.silos, ClientState.rocks, ClientState.away);
 			mc.gui.setScreen(new BaseScreen());
 		});
 		then(15, mc -> shot(mc, "my-base-made"));

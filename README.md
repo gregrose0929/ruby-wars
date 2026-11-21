@@ -156,6 +156,12 @@ the whole stack), and the Field Manual has a **Rock Collection** that fills in a
 each mineral; find all 16 for the Geode Glitter firework. My Base shows what your machines
 made this season and what's in your silos.
 
+While you're away, drills, Refineries, Assemblers, Ammo Factories and Trade Depots keep
+working at half speed (for up to a day); when you're back one note says what they all made,
+and My Base shows it too. A drill fills the **Ore Silos** touching it (each takes one kind, so
+a few round a drill sort what it digs), and a Refinery or Assembler takes what it needs from a
+silo touching it, with no belts needed. Machines picked up with the Wrench keep their settings.
+
 ### Weapons and vehicles
 
 - **Guns:** pistol, six-shooter, rifle, shotgun, sniper, minigun, flamethrower, the Ruby

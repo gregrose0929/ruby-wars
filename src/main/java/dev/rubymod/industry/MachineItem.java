@@ -43,6 +43,9 @@ public class MachineItem extends BlockItem {
 		int tier = stack.getOrDefault(ModComponents.MACHINE_TIER, 1);
 		builder.accept(Component.literal(MachineKind.TIER_NAMES[tier - 1]).withStyle(ChatFormatting.LIGHT_PURPLE));
 		builder.accept(Component.literal(kind.description).withStyle(ChatFormatting.GRAY));
+		for (String line : MachineBlockEntity.settingsText(kind, stack)) {
+			builder.accept(Component.literal(line).withStyle(ChatFormatting.AQUA));
+		}
 		if (kind.output(tier) > 0) {
 			builder.accept(Component.literal("Makes " + kind.output(tier) * 20 + " charge/s").withStyle(ChatFormatting.DARK_GRAY));
 		}

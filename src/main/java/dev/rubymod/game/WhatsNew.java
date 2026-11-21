@@ -24,15 +24,13 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-21-mining";
+	private static final String VERSION = "2026-11-21-away";
 	private static final List<String> LINES = List.of(
-			"rubymod:prospector_pick|New at the Armory: the Prospector's Pick chimes and sparkles toward the nearest Ruby Ore (crouch-click it to look for Diamonds or any ore).",
-			"rubymod:ruby_drill|Drills have Find (All, Metals or Gems) and Stone (leave plain rock in the hole) buttons, and dig more of the ore around them. Crouch-click one to collect.",
-			"rubymod:ore_refinery|The Ore Refinery cooks anything a furnace can, and makes gunpowder from coal and sand.",
-			"rubymod:assembler|New: the Assembler crafts ingots into blocks, torches, rails, TNT and more: click its recipe to pick from a grid.",
-			"rubymod:ore_silo|New: the Ore Silo holds 128 stacks of one thing and shows it in its window. Belts and hoppers work with it.",
-			"rubymod:geode|Geodes turn up from drills and mining: right-click to crack one open (crouch: the whole stack). The Field Manual has your Rock Collection: find all 16 for a firework.",
-			"rubymod:battery|My Base (M menu) shows what your machines made this season and what's in your silos.",
+			"rubymod:ore_refinery|While you're away, Refineries, Assemblers and Trade Depots keep working (at half speed, like drills), not just drills.",
+			"rubymod:battery|When you're back, one note says what all your machines made, and My Base shows it too.",
+			"rubymod:ore_silo|Ore Silos touching a drill fill up with what it digs, one kind each, so a few round a drill sort it. A silo against a Refinery or Assembler feeds it: no belts needed.",
+			"rubymod:ruby_wrench|Machines picked up with the Wrench keep their settings: a drill's Find and Stone, an Assembler's recipe.",
+			"rubymod:prospector_pick|The Prospector's Pick, Assembler recipe grid, Ore Silo and Rock Collection from last time are all in the Field Manual.",
 			"minecraft:nether_star|Goals (J) fit in an evening or two: bank 100 and 200 rubies, mine 25 Ruby Ore, fly 500 blocks (jetpacks count), sail any boat, damage an enemy Heart.");
 
 	/** Who's seen this update's card. */

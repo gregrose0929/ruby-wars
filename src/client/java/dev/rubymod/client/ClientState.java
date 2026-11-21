@@ -79,6 +79,8 @@ public final class ClientState {
 	/** What your machines made this season, and what's in your silos (item id, count; most first). */
 	public static java.util.List<java.util.Map.Entry<String, Long>> made = java.util.List.of();
 	public static java.util.List<java.util.Map.Entry<String, Long>> silos = java.util.List.of();
+	/** What your machines made while you were away (the latest time; item id, count). */
+	public static java.util.List<java.util.Map.Entry<String, Long>> away = java.util.List.of();
 	/** Minerals found for the Rock Collection (item ids). */
 	public static java.util.Set<String> rocks = java.util.Set.of();
 
@@ -86,6 +88,7 @@ public final class ClientState {
 		var list = new java.util.ArrayList<BaseMachine>();
 		var madeList = new java.util.ArrayList<java.util.Map.Entry<String, Long>>();
 		var siloList = new java.util.ArrayList<java.util.Map.Entry<String, Long>>();
+		var awayList = new java.util.ArrayList<java.util.Map.Entry<String, Long>>();
 		for (String row : rows) {
 			try {
 				if (row.startsWith("#")) {
@@ -93,6 +96,7 @@ public final class ClientState {
 					switch (p[0]) {
 						case "#made" -> madeList.add(java.util.Map.entry(p[1], Long.parseLong(p[2])));
 						case "#silo" -> siloList.add(java.util.Map.entry(p[1], Long.parseLong(p[2])));
+						case "#away" -> awayList.add(java.util.Map.entry(p[1], Long.parseLong(p[2])));
 						case "#rocks" -> rocks = p[1].isEmpty() ? java.util.Set.of() : java.util.Set.of(p[1].split(","));
 						default -> {
 						}
@@ -107,6 +111,7 @@ public final class ClientState {
 		base = list;
 		made = madeList;
 		silos = siloList;
+		away = awayList;
 	}
 	/** Last warhead hit on a vehicle or aircraft (shown under the crosshair). */
 	public static Payloads.HitConfirm hitConfirm;

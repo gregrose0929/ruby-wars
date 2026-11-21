@@ -173,6 +173,7 @@ public class WrenchItem extends Item {
 			if (be.tier() > 1) {
 				item.set(dev.rubymod.registry.ModComponents.MACHINE_TIER, be.tier());
 			}
+			be.keepSettings(item);
 		}
 		if (level.getBlockEntity(pos) instanceof net.minecraft.world.Container box && !(level.getBlockEntity(pos) instanceof MachineBlockEntity)) {
 			// A Belt Tunnel (or anything else with things inside): those come with it.
@@ -197,7 +198,7 @@ public class WrenchItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
 		builder.accept(Component.literal("Right-click a machine or belt to turn it").withStyle(ChatFormatting.GRAY));
-		builder.accept(Component.literal("Crouch + right-click to pick it up (it keeps its tier)").withStyle(ChatFormatting.GRAY));
+		builder.accept(Component.literal("Crouch + right-click to pick it up (it keeps its tier and settings)").withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal("Do it again on the next belt to take the whole line").withStyle(ChatFormatting.GRAY));
 	}
 }

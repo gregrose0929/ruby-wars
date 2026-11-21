@@ -304,6 +304,89 @@ public final class SelfTest {
 		alpha.getInventory().clearContent();
 		level.setBlockAndUpdate(siloPos, Blocks.AIR.defaultBlockState());
 		level.setBlockAndUpdate(silo2Pos, Blocks.AIR.defaultBlockState());
+		// While you were away: more machines catch up, silos feed and fill them, and it's all told once.
+		BlockPos awayAt = spot.offset(0, 0, 4);
+		for (BlockPos p : BlockPos.betweenClosed(awayAt.offset(-1, 0, -1), awayAt.offset(10, 2, 1))) {
+			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+		}
+		dev.rubymod.industry.AwayTime.reset();
+		level.setBlockAndUpdate(awayAt, ModBlocks.ORE_SILO.defaultBlockState());
+		var ironSilo = (dev.rubymod.industry.SiloBlockEntity) level.getBlockEntity(awayAt);
+		ironSilo.setOwner(A);
+		ironSilo.put(new ItemStack(net.minecraft.world.item.Items.RAW_IRON, 64));
+		ironSilo.put(new ItemStack(net.minecraft.world.item.Items.RAW_IRON, 36));
+		var awayRefinery = machine(level, awayAt.east(), ModBlocks.ORE_REFINERY, alpha);
+		awayRefinery.catchUp(level, 24000);
+		int ingots = 0;
+		for (int i = 2; i < awayRefinery.getContainerSize(); i++) {
+			ingots += awayRefinery.getItem(i).is(net.minecraft.world.item.Items.IRON_INGOT) ? awayRefinery.getItem(i).getCount() : 0;
+		}
+		check("away: a Refinery works while you're away, taking raw iron from the silo touching it (" + ingots + " ingots, " + ironSilo.total() + " raw left)",
+				ingots >= 20 && ironSilo.total() < 100);
+		check("silo: a silo that feeds a machine isn't filled with what it makes once it's empty (" + ironSilo.type() + ")",
+				ironSilo.total() == 0 || ironSilo.type().is(net.minecraft.world.item.Items.RAW_IRON));
+		check("away: a Refinery doesn't take back what it makes", !awayRefinery.canPlaceItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT))
+				|| awayRefinery.getItem(0).isEmpty() || awayRefinery.getItem(0).is(net.minecraft.world.item.Items.RAW_IRON));
+		// Live too: a silo of coal against an Assembler on torches, sticks put in by hand.
+		level.setBlockAndUpdate(awayAt.east(9), ModBlocks.ORE_SILO.defaultBlockState());
+		var coalSilo = (dev.rubymod.industry.SiloBlockEntity) level.getBlockEntity(awayAt.east(9));
+		coalSilo.setOwner(A);
+		coalSilo.put(new ItemStack(net.minecraft.world.item.Items.COAL, 10));
+		var awayAssembler = machine(level, awayAt.east(8), ModBlocks.ASSEMBLER, alpha);
+		awayAssembler.setTier(5);
+		awayAssembler.setRecipe(torches, null);
+		awayAssembler.setItem(1, new ItemStack(net.minecraft.world.item.Items.STICK, 2));
+		dev.rubymod.industry.Grid.account(A).charge = 200_000;
+		runMachines(level, 2 * dev.rubymod.industry.MachineKind.ASSEMBLER.cycle(5) + 25, awayAssembler);
+		check("silo: an Assembler takes coal from the silo touching it (" + awayAssembler.getItem(2) + ", " + coalSilo.total() + " coal left)",
+				awayAssembler.getItem(2).is(net.minecraft.world.item.Items.TORCH) && awayAssembler.getItem(2).getCount() >= 8 && coalSilo.total() == 0);
+		// A drill fills the silos touching it, one kind each.
+		var awayDrill = machine(level, awayAt.east(4), ModBlocks.RUBY_DRILL, alpha);
+		awayDrill.setTier(5);
+		level.setBlockAndUpdate(awayAt.east(5), ModBlocks.ORE_SILO.defaultBlockState());
+		level.setBlockAndUpdate(awayAt.east(4).above(), ModBlocks.ORE_SILO.defaultBlockState());
+		var sortA = (dev.rubymod.industry.SiloBlockEntity) level.getBlockEntity(awayAt.east(5));
+		var sortB = (dev.rubymod.industry.SiloBlockEntity) level.getBlockEntity(awayAt.east(4).above());
+		sortA.setOwner(A);
+		sortB.setOwner(A);
+		awayDrill.catchUp(level, 24000);
+		check("away: a drill catching up fills the silos touching it, one kind each (" + sortA.total() + " " + sortA.type() + ", " + sortB.total() + " "
+				+ sortB.type() + ", " + awayDrill.loads() + " loads)", sortA.total() > 0 && sortB.total() > 0
+						&& !ItemStack.isSameItem(sortA.type(), sortB.type()) && awayDrill.loads() > 0);
+		// A Trade Depot sells what it has.
+		var awayDepot = machine(level, awayAt.east(7), ModBlocks.TRADE_DEPOT, alpha);
+		awayDepot.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64));
+		awayDepot.catchUp(level, 24000);
+		check("away: a Trade Depot sells while you're away (" + awayDepot.getItem(0) + " left)", awayDepot.getItem(0).getCount() < 64);
+		// One note for the lot.
+		for (int i = 0; i < 45; i++) {
+			dev.rubymod.industry.AwayTime.tick(level.getServer());
+		}
+		String note = dev.rubymod.industry.AwayTime.latest(A);
+		check("away: one note says what all your machines made (" + note + ")", note.startsWith("Your machines made") && note.contains("Iron Ingot")
+				&& note.contains("earned") && !dev.rubymod.industry.AwayTime.gathering(A));
+		var awayRows = dev.rubymod.industry.BaseMachines.rows(level.getServer(), alpha);
+		check("my base: it shows what was made while you were away", awayRows.stream().anyMatch(r -> r.startsWith("#away|minecraft:iron_ingot|")));
+		// Picked up and put down again: it keeps its settings.
+		awayDrill.cycleFocus(2);
+		awayDrill.toggleStone();
+		ItemStack drillItem = new ItemStack(ModBlocks.RUBY_DRILL);
+		awayDrill.keepSettings(drillItem);
+		ItemStack asmItem = new ItemStack(ModBlocks.ASSEMBLER);
+		awayAssembler.keepSettings(asmItem);
+		for (BlockPos p : BlockPos.betweenClosed(awayAt.offset(-1, 0, -1), awayAt.offset(10, 2, 1))) {
+			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+		}
+		var movedDrill = machine(level, awayAt, ModBlocks.RUBY_DRILL, alpha);
+		movedDrill.applySettings(drillItem);
+		var movedAsm = machine(level, awayAt.east(2), ModBlocks.ASSEMBLER, alpha);
+		movedAsm.applySettings(asmItem);
+		var asmLines = dev.rubymod.industry.MachineBlockEntity.settingsText(dev.rubymod.industry.MachineKind.ASSEMBLER, asmItem);
+		check("wrench: a machine moved keeps its settings (" + asmLines + ")", movedDrill.focus() == 2 && movedDrill.leavesStone()
+				&& movedAsm.recipe() == torches && asmLines.contains("Set to make " + dev.rubymod.industry.Recipes.ASSEMBLY.get(torches).name()));
+		level.setBlockAndUpdate(awayAt, Blocks.AIR.defaultBlockState());
+		level.setBlockAndUpdate(awayAt.east(2), Blocks.AIR.defaultBlockState());
+		dev.rubymod.industry.AwayTime.reset();
 		// Prospector's Pick: finds the nearest Ruby Ore.
 		BlockPos dig = spot.offset(3, -30, 2);
 		for (BlockPos p : BlockPos.betweenClosed(dig.offset(-17, -17, -17), dig.offset(17, 17, 17))) {

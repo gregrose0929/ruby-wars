@@ -85,7 +85,10 @@ public class GeodeItem extends Item {
 
 	/** "Ruby" to "Rubies", "Diamond" to "Diamonds" (Quartz and Lapis Lazuli stay as they are). */
 	public static String plural(String name, int n) {
-		if (n == 1 || name.endsWith("Quartz") || name.endsWith("Lazuli") || name.endsWith("s")) {
+		// Things you'd say "some of" (coal, raw iron, cobblestone, redstone dust, sand...) stay as they are.
+		if (n == 1 || name.endsWith("Quartz") || name.endsWith("Lazuli") || name.endsWith("s") || name.startsWith("Raw ")
+				|| name.endsWith("Coal") || name.endsWith("stone") || name.endsWith("Dust") || name.endsWith("Sand") || name.endsWith("Gravel")
+				|| name.endsWith("Glass") || name.endsWith("Gunpowder") || name.endsWith("Charcoal") || name.endsWith("Dirt")) {
 			return name;
 		}
 		return name.endsWith("y") ? name.substring(0, name.length() - 1) + "ies" : name + "s";

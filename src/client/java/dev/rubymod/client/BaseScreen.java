@@ -98,6 +98,7 @@ public class BaseScreen extends Screen {
 			}
 		}
 		// What your machines have made, and what's in your silos.
+		ty = strip(g, "While you were away", ClientState.away, x, ty, w, mouseX, mouseY);
 		ty = strip(g, "Made this season", ClientState.made, x, ty, w, mouseX, mouseY);
 		ty = strip(g, "In your silos", ClientState.silos, x, ty, w, mouseX, mouseY);
 		ty += 3;

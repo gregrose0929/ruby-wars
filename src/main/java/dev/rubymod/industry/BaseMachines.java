@@ -116,6 +116,7 @@ public final class BaseMachines {
 	public static void reset() {
 		ALL.clear();
 		NOTED.clear();
+		AwayTime.reset();
 	}
 
 	/** One line per machine for the client: dim|x|y|z|kind|tier|status|owner name|loads|rubies|shares my power. */
@@ -148,6 +149,7 @@ public final class BaseMachines {
 			rows.add("#silo|" + e.getKey() + "|" + e.getValue());
 		}
 		rows.add("#rocks|" + String.join(",", dev.rubymod.game.Minerals.found(player)));
+		rows.addAll(AwayTime.rows(player.getUUID()));
 		return rows;
 	}
 }

@@ -1,5 +1,6 @@
 package dev.rubymod.industry;
 
+import java.util.List;
 import java.util.UUID;
 
 import dev.rubymod.entity.AircraftEntity;
@@ -89,6 +90,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	/** Ruby Drill: what the ground round it is rich in (looked at now and then, not saved). */
 	private DrillSite site;
 	private long siteAt = -100_000;
+	/** Silos this machine takes its work from (block positions): once one runs dry it isn't filled with what this makes. */
+	private final java.util.Set<Long> fedBy = new java.util.HashSet<>();
 	/** Slot layout version (2: the Refinery has a sand slot). */
 	private static final int LAYOUT = 2;
 
@@ -133,6 +136,11 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	public int focus() {
 		return focus;
+	}
+
+	/** The Assembler's (or Ammo Factory's) recipe number. */
+	public int recipe() {
+		return recipe;
 	}
 
 	public boolean leavesStone() {
@@ -271,6 +279,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		}
 		if (kind.outputs > 0 && ticks % 10 == 0) {
 			pushOutputs(level);
+			pullFromSilos(level);
 		}
 		showWorking(level);
 		if (ticks % 20 == 0) {
@@ -300,25 +309,70 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		}
 	}
 
-	/** Back after being unloaded: a drill digs what it would have (at half speed, up to a day, until full). */
-	private void catchUp(ServerLevel level, long elapsed) {
-		if (kind() != MachineKind.RUBY_DRILL) {
-			return;
-		}
-		long cycles = (long) (Math.min(elapsed, 24000) * OFFLINE_RATE / kind().cycle(tier));
-		int made = 0;
-		for (long i = 0; i < cycles; i++) {
-			ItemStack dug = dig(level);
-			ItemStack copy = dug.copy();
-			if (!insertOutput(dug)) {
-				break;
+	/**
+	 * Back after being unloaded: drills, Refineries, Assemblers, Ammo Factories and Trade Depots do what they would
+	 * have (at half speed, up to a day), taking from silos touching them and filling silos (and, but for drills,
+	 * chests and machines) beside them, until they run out of work or room. What they made is told once, all
+	 * machines together ({@link AwayTime}).
+	 */
+	public void catchUp(ServerLevel level, long elapsed) {
+		MachineKind kind = kind();
+		switch (kind) {
+			case RUBY_DRILL, ORE_REFINERY, AMMO_FACTORY, ASSEMBLER, TRADE_DEPOT -> {
 			}
-			found(copy);
-			made++;
+			default -> {
+				return;
+			}
 		}
-		if (made > 0 && level.getServer().getPlayerList().getPlayer(owner) instanceof ServerPlayer player) {
-			dev.rubymod.game.Alerts.toast(player, "rubymod:ruby_drill", "While you were away", "Your Ruby Drill dug up " + made + " loads", dev.rubymod.game.Alerts.GREEN);
+		long cycles = (long) (Math.min(elapsed, 24000) * OFFLINE_RATE / Math.max(1, kind.cycle(tier)));
+		for (long i = 0; i < cycles; i++) {
+			if (kind == MachineKind.TRADE_DEPOT) {
+				long earned = sellOnce(level);
+				if (earned <= 0) {
+					break;
+				}
+				AwayTime.sold(owner, earned);
+				continue;
+			}
+			ItemStack made = workOnce(level);
+			if (made == null) {
+				// Room made, or something to work on brought in? Then once more; otherwise that's all it could do.
+				pushOutputs(level);
+				pullFromSilos(level);
+				made = workOnce(level);
+				if (made == null) {
+					break;
+				}
+			}
+			AwayTime.made(owner, made);
 		}
+		progress = 0;
+		setChanged();
+	}
+
+	/** One finished job while away (no power needed): what it made (empty for rock a drill leaves), or null when it couldn't. */
+	private ItemStack workOnce(ServerLevel level) {
+		return switch (kind()) {
+			case RUBY_DRILL -> {
+				ItemStack dug = dig(level);
+				if (!dug.isEmpty() && !canFit(dug)) {
+					yield null;
+				}
+				ItemStack copy = dug.copy();
+				insertOutput(dug);
+				found(copy);
+				yield copy;
+			}
+			case ORE_REFINERY -> {
+				ItemStack made = refineOnce(level);
+				yield made.isEmpty() ? null : made;
+			}
+			case AMMO_FACTORY, ASSEMBLER -> {
+				ItemStack made = assembleOnce();
+				yield made.isEmpty() ? null : made;
+			}
+			default -> null;
+		};
 	}
 
 	private void tickGenerator(ServerLevel level) {
@@ -406,13 +460,27 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		status = WORKING;
 		if (++progress >= kind().cycle(tier)) {
 			progress = 0;
-			input.shrink(1);
-			if (gunpowder) {
-				sand.shrink(1);
-			}
-			Production.add(owner, result);
-			insertOutput(result);
+			refineOnce(level);
 		}
+	}
+
+	/** The Refinery finishes one job: uses the input, puts the result out. Returns what it made (empty: it couldn't). */
+	private ItemStack refineOnce(ServerLevel level) {
+		ItemStack input = items.get(0);
+		ItemStack sand = items.get(1);
+		boolean gunpowder = Recipes.isGunpowderFuel(input) && Recipes.isSand(sand);
+		ItemStack result = gunpowder ? Recipes.gunpowder(tier) : Recipes.refine(level, input, tier);
+		if (result.isEmpty() || !canFit(result)) {
+			return ItemStack.EMPTY;
+		}
+		input.shrink(1);
+		if (gunpowder) {
+			sand.shrink(1);
+		}
+		Production.add(owner, result);
+		ItemStack made = result.copy();
+		insertOutput(result);
+		return made;
 	}
 
 	private void tickAmmo(ServerLevel level) {
@@ -437,13 +505,31 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		status = WORKING;
 		if (++progress >= kind().cycle(tier)) {
 			progress = 0;
-			metal.shrink(r.metalCount());
-			if (r.extra() != null) {
-				extra.shrink(r.extraCount());
-			}
-			Production.add(owner, result);
-			insertOutput(result);
+			assembleOnce();
 		}
+	}
+
+	/** The Assembler (or Ammo Factory) finishes one job. Returns what it made (empty: it couldn't). */
+	private ItemStack assembleOnce() {
+		Recipes.AmmoRecipe r = Recipes.recipe(kind(), recipe);
+		ItemStack metal = items.get(0);
+		ItemStack extra = items.get(1);
+		if (!Recipes.fits(r, r.metal(), metal) || metal.getCount() < r.metalCount()
+				|| r.extra() != null && (!Recipes.fits(r, r.extra(), extra) || extra.getCount() < r.extraCount())) {
+			return ItemStack.EMPTY;
+		}
+		ItemStack result = new ItemStack(r.result(), r.count());
+		if (!canFit(result)) {
+			return ItemStack.EMPTY;
+		}
+		metal.shrink(r.metalCount());
+		if (r.extra() != null) {
+			extra.shrink(r.extraCount());
+		}
+		Production.add(owner, result);
+		ItemStack made = result.copy();
+		insertOutput(result);
+		return made;
 	}
 
 	/** The Trade Depot's last four sales (item id + 1, count, milli-rubies), newest first. */
@@ -463,6 +549,16 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (ticks % kind().cycle(tier) != 0) {
 			return;
 		}
+		long before = Grid.rubies(owner);
+		long earned = sellOnce(level);
+		status = earned > 0 ? WORKING : IDLE;
+		if (earned > 0 && Grid.rubies(owner) > before) {
+			level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.7F, 1.4F);
+		}
+	}
+
+	/** One round of selling (up to 8 items a tier). Returns what it was paid, in milli-rubies. */
+	private long sellOnce(ServerLevel level) {
 		int budget = 8 * tier;
 		long earned = 0;
 		for (int i = 0; i < items.size() && budget > 0; i++) {
@@ -477,17 +573,13 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			stack.shrink(sell);
 			budget -= sell;
 		}
-		status = earned > 0 ? WORKING : IDLE;
 		if (earned > 0) {
 			dev.rubymod.game.Goals.add(level.getServer(), owner, "sell100", 8 * tier - budget);
-			long before = Grid.rubies(owner);
 			Grid.deposit(owner, earned);
 			aux = (int) Math.min(Integer.MAX_VALUE, aux + earned);
-			if (Grid.rubies(owner) > before) {
-				level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.7F, 1.4F);
-			}
 			setChanged();
 		}
+		return earned;
 	}
 
 	private void tickVault(ServerLevel level) {
@@ -734,8 +826,11 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	 * keeps flowing); plain chests next to the machine only catch what's left over.
 	 */
 	private void pushOutputs(ServerLevel level) {
-		// A drill keeps what it digs (come and collect it), unless a conveyor belt (or a hopper) carries it away.
+		// A drill keeps what it digs (come and collect it), unless a conveyor belt, a hopper or an Ore Silo touching it takes it.
 		boolean beltsOnly = kind() == MachineKind.RUBY_DRILL;
+		if (beltsOnly) {
+			pushToSilos(level);
+		}
 		for (int pass = 0; pass < 2; pass++) {
 			for (Direction dir : Direction.values()) {
 				BlockPos side = worldPosition.relative(dir);
@@ -747,6 +842,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 					continue;
 				}
 				BlockEntity neighbor = level.getBlockEntity(side);
+				if (neighbor instanceof SiloBlockEntity silo && fedBy.contains(side.asLong()) && silo.isEmpty()) {
+					continue; // it feeds this machine: keep it for more of the same
+				}
 				if (!(neighbor instanceof Container target) || neighbor instanceof net.minecraft.world.level.block.entity.HopperBlockEntity
 						|| (neighbor instanceof MachineBlockEntity) != (pass == 0)) {
 					continue;
@@ -764,6 +862,175 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 				}
 			}
 		}
+	}
+
+	/** Is this silo one this machine may use (yours, unowned, or a teammate's in your claim)? */
+	private boolean mayUse(SiloBlockEntity silo) {
+		UUID them = silo.owner();
+		if (them == null || them.equals(owner) || owner.equals(NOBODY)) {
+			return true;
+		}
+		SeasonData.Claim claim = SeasonData.get().claimOf(owner);
+		return claim != null && claim.canUse(them);
+	}
+
+	/** The Ore Silos touching this machine that it may use. */
+	private List<SiloBlockEntity> silos(ServerLevel level) {
+		List<SiloBlockEntity> out = new java.util.ArrayList<>(2);
+		for (Direction dir : Direction.values()) {
+			if (level.getBlockEntity(worldPosition.relative(dir)) instanceof SiloBlockEntity silo && mayUse(silo)) {
+				out.add(silo);
+			}
+		}
+		return out;
+	}
+
+	/** A drill: what it dug, into silos touching it (each takes one kind, so silos all round sort it). */
+	private void pushToSilos(ServerLevel level) {
+		List<SiloBlockEntity> silos = silos(level);
+		if (silos.isEmpty()) {
+			return;
+		}
+		boolean moved = false;
+		for (int i = firstOutput(); i < items.size(); i++) {
+			ItemStack s = items.get(i);
+			if (s.isEmpty()) {
+				continue;
+			}
+			// A silo that already holds it first, then an empty one.
+			for (int pass = 0; pass < 2 && !s.isEmpty(); pass++) {
+				for (SiloBlockEntity silo : silos) {
+					boolean holds = !silo.type().isEmpty();
+					if (holds == (pass == 0) && silo.put(s) > 0) {
+						moved = true;
+					}
+				}
+			}
+		}
+		if (moved) {
+			setChanged();
+		}
+	}
+
+	/**
+	 * Refineries, Assemblers and Ammo Factories take what they work on from Ore Silos touching them, so a silo of
+	 * raw iron against a Refinery needs no belt. Never something it makes itself (a silo it fills stays full).
+	 */
+	private void pullFromSilos(ServerLevel level) {
+		switch (kind()) {
+			case ORE_REFINERY, AMMO_FACTORY, ASSEMBLER -> {
+			}
+			default -> {
+				return;
+			}
+		}
+		List<SiloBlockEntity> silos = silos(level);
+		if (silos.isEmpty()) {
+			return;
+		}
+		for (int slot = kind().inputs - 1; slot >= 0; slot--) {
+			for (SiloBlockEntity silo : silos) {
+				ItemStack type = silo.type();
+				ItemStack in = items.get(slot);
+				if (type.isEmpty() || makes(type) || !canPlaceItem(slot, type)
+						|| !in.isEmpty() && !ItemStack.isSameItemSameComponents(in, type)) {
+					continue;
+				}
+				int room = type.getMaxStackSize() - in.getCount();
+				if (room <= 0) {
+					break;
+				}
+				ItemStack got = silo.take(room);
+				if (got.isEmpty()) {
+					continue;
+				}
+				fedBy.add(silo.getBlockPos().asLong());
+				if (in.isEmpty()) {
+					items.set(slot, got);
+				} else {
+					in.grow(got.getCount());
+				}
+				setChanged();
+			}
+		}
+	}
+
+	/** Is this something this machine has made (it's in an output slot, or it's the recipe's result)? */
+	private boolean makes(ItemStack stack) {
+		for (int i = firstOutput(); i < items.size(); i++) {
+			if (ItemStack.isSameItem(items.get(i), stack)) {
+				return true;
+			}
+		}
+		if (kind() == MachineKind.ORE_REFINERY) {
+			return ItemStack.isSameItem(refining, stack);
+		}
+		return Recipes.recipe(kind(), recipe).result() == stack.getItem();
+	}
+
+	// ----- Settings kept on the item (picked up with the Wrench, or broken) -----
+
+	/** Put this machine's settings (recipe, what a drill looks for, Stone: Leave it) on its item. */
+	public void keepSettings(ItemStack item) {
+		net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+		if (recipe != 0 && hasRecipes()) {
+			tag.putInt("recipe", recipe);
+		}
+		if (kind() == MachineKind.RUBY_DRILL) {
+			if (focus != 0) {
+				tag.putInt("focus", focus);
+			}
+			if (leaveStone) {
+				tag.putBoolean("leave_stone", true);
+			}
+		}
+		if (!tag.isEmpty()) {
+			item.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+		}
+	}
+
+	/** Placed from an item that kept its settings: set them again. */
+	public void applySettings(ItemStack item) {
+		var data = item.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+		if (data == null) {
+			return;
+		}
+		net.minecraft.nbt.CompoundTag tag = data.copyTag();
+		if (hasRecipes()) {
+			recipe = Math.floorMod(tag.getIntOr("recipe", 0), Recipes.recipes(kind()).size());
+		}
+		if (kind() == MachineKind.RUBY_DRILL) {
+			focus = Math.floorMod(tag.getIntOr("focus", 0), Recipes.FOCUS_NAMES.length);
+			leaveStone = tag.getBooleanOr("leave_stone", false);
+		}
+		setChanged();
+	}
+
+	private boolean hasRecipes() {
+		return kind() == MachineKind.ASSEMBLER || kind() == MachineKind.AMMO_FACTORY;
+	}
+
+	/** The settings an item kept, as tooltip lines (none when it has none). */
+	public static List<String> settingsText(MachineKind kind, ItemStack item) {
+		List<String> lines = new java.util.ArrayList<>();
+		var data = item.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+		if (data == null) {
+			return lines;
+		}
+		net.minecraft.nbt.CompoundTag tag = data.copyTag();
+		if ((kind == MachineKind.ASSEMBLER || kind == MachineKind.AMMO_FACTORY) && tag.contains("recipe")) {
+			lines.add("Set to make " + Recipes.recipe(kind, tag.getIntOr("recipe", 0)).name());
+		}
+		if (kind == MachineKind.RUBY_DRILL) {
+			int f = Math.floorMod(tag.getIntOr("focus", 0), Recipes.FOCUS_NAMES.length);
+			if (f != 0) {
+				lines.add("Looks for: " + Recipes.FOCUS_NAMES[f]);
+			}
+			if (tag.getBooleanOr("leave_stone", false)) {
+				lines.add("Leaves plain stone behind");
+			}
+		}
+		return lines;
 	}
 
 	/** A few items at a time onto a conveyor belt. */
@@ -996,6 +1263,16 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		rubiesFound = input.getLongOr("rubies_found", 0L);
 		focus = input.getIntOr("focus", 0);
 		leaveStone = input.getBooleanOr("leave_stone", false);
+		fedBy.clear();
+		for (String s : input.getString("fed_by").orElse("").split(",")) {
+			if (!s.isEmpty()) {
+				try {
+					fedBy.add(Long.parseLong(s));
+				} catch (NumberFormatException e) {
+					// skip it
+				}
+			}
+		}
 		// A Refinery saved before it had a sand slot: its outputs move up one.
 		if (input.getIntOr("layout", 1) < 2 && kind() == MachineKind.ORE_REFINERY && items.size() == 5) {
 			for (int i = 4; i >= 2; i--) {
@@ -1022,6 +1299,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		output.putLong("rubies_found", rubiesFound);
 		output.putInt("focus", focus);
 		output.putBoolean("leave_stone", leaveStone);
+		if (!fedBy.isEmpty()) {
+			output.putString("fed_by", fedBy.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
+		}
 		output.putInt("layout", LAYOUT);
 		Blueprints.save(this, output);
 	}

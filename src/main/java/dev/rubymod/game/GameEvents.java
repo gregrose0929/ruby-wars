@@ -170,6 +170,7 @@ public final class GameEvents {
 			}
 			LagCompensation.record(server);
 			WhatsNew.tick(server);
+			dev.rubymod.industry.AwayTime.tick(server);
 			BetweenSeasons.tick(server);
 			Celebrations.tick(server);
 			CannonRounds.tick();
