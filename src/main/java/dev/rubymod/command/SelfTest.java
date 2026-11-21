@@ -1134,6 +1134,17 @@ public final class SelfTest {
 			grenadeProof &= Explosions.filter(level, List.of(reinforced), 2.2F).isEmpty();
 		}
 		check("armor: Reinforced Concrete ignores grenades", grenadeProof);
+		int rhits = 0;
+		while (rhits < 12 && Explosions.filter(level, List.of(reinforced), 3.0F).isEmpty()) {
+			rhits++;
+			if (rhits == 2) {
+				check("armor: a wall knows how many blasts it's taken (" + Explosions.blastsTaken(level, reinforced) + " of "
+						+ Explosions.blastsToBreak(level.getBlockState(reinforced)) + ")", Explosions.blastsTaken(level, reinforced) == 2
+						&& Explosions.blastsToBreak(level.getBlockState(reinforced)) == 6);
+			}
+		}
+		check("armor: Reinforced Concrete is the toughest: survives 5 rockets, breaks on the 6th (broke on hit " + (rhits + 1) + ")", rhits == 5);
+		level.setBlockAndUpdate(reinforced, ModBlocks.REINFORCED_CONCRETE.defaultBlockState());
 		check("armor: cruise missile breaks Reinforced Concrete at once", !Explosions.filter(level, List.of(reinforced), 7.0F).isEmpty());
 
 		// ----- Missile Interceptor -----
@@ -1433,6 +1444,7 @@ public final class SelfTest {
 		// ----- World events -----
 		worldEventChecks(level, alpha, bravo, surface(level, base.offset(-160, 0, -160)));
 		practiceChecks(level, alpha, bravo);
+		buildingChecks(level, alpha);
 		supplyDropChecks(level, surface(level, base.offset(-220, 0, 160)));
 
 		// ----- Ore -----
@@ -1492,6 +1504,91 @@ public final class SelfTest {
 			dev.rubymod.game.SupplyDrops.clear(server);
 			dev.rubymod.game.SupplyDrops.reset();
 			SeasonData.get().phase = before;
+		}
+	}
+
+	/** Building: ready-made plans, the wand's new shapes, and a Constructor repairing a wall where it was copied. */
+	private void buildingChecks(ServerLevel level, FakePlayer alpha) {
+		// The plans: all fit a Blueprint, and each says what it needs.
+		boolean fit = true;
+		for (var d : dev.rubymod.industry.ReadyBlueprints.ALL) {
+			var data = d.data();
+			fit &= data.sx() <= dev.rubymod.industry.Blueprints.MAX_SIZE && data.sy() <= dev.rubymod.industry.Blueprints.MAX_SIZE
+					&& data.sz() <= dev.rubymod.industry.Blueprints.MAX_SIZE && data.blocks() > 20 && !data.bill().isEmpty();
+		}
+		check("blueprints: " + dev.rubymod.industry.ReadyBlueprints.ALL.size() + " ready-made plans, each with a list of what it needs", fit
+				&& dev.rubymod.industry.ReadyBlueprints.stack(dev.rubymod.industry.ReadyBlueprints.ALL.get(0)).has(ModComponents.BLUEPRINT));
+		// The wand: a round tower is a ring (nothing in the middle), a dome has a top, stairs climb.
+		BlockPos o = new BlockPos(0, 100, 0);
+		var tower = dev.rubymod.item.BuildShapes.shape(dev.rubymod.item.BuildShapes.Mode.TOWER, o, o.offset(6, 3, 6));
+		var dome = dev.rubymod.item.BuildShapes.shape(dev.rubymod.item.BuildShapes.Mode.DOME, o, o.offset(6, 0, 6));
+		var stairs = dev.rubymod.item.BuildShapes.shape(dev.rubymod.item.BuildShapes.Mode.STAIRS, o, o.offset(5, 0, 1));
+		check("wand: a round tower (" + tower.size() + " blocks, hollow), a dome (" + dome.size() + ", with a top) and stairs (" + stairs.size() + ", climbing)",
+				!tower.isEmpty() && !tower.contains(o.offset(3, 1, 3)) && tower.contains(o.offset(3, 1, 0)) && dome.contains(o.offset(3, 3, 3))
+						&& !dome.contains(o.offset(3, 1, 3)) && stairs.contains(o.offset(5, 5, 1)) && stairs.contains(o) && !stairs.contains(o.offset(5, 0, 0)));
+		var claim = SeasonData.get().claimOf(alpha.getUUID());
+		if (claim == null) {
+			return;
+		}
+		boolean wasDestroyed = claim.destroyed;
+		claim.destroyed = false;
+		BlockPos spot = surface(level, new BlockPos(claim.x + 10, 0, claim.z - 12));
+		try {
+			for (BlockPos q : BlockPos.betweenClosed(spot.offset(-12, 0, -12), spot.offset(12, 5, 12))) {
+				level.setBlockAndUpdate(q, Blocks.AIR.defaultBlockState());
+			}
+			dev.rubymod.industry.Grid.account(alpha.getUUID()).charge = 500_000;
+			// A ready-made Wall Section, built by a Constructor from the chest beside it.
+			var wallPlan = dev.rubymod.industry.ReadyBlueprints.ALL.stream().filter(d -> d.id().equals("wall_section")).findFirst().orElseThrow();
+			var constructor = machine(level, spot, ModBlocks.CONSTRUCTOR, alpha);
+			constructor.setTier(5);
+			constructor.setItem(0, dev.rubymod.industry.ReadyBlueprints.stack(wallPlan));
+			BlockPos chestPos = spot.offset(-1, 0, 0);
+			level.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
+			var chest = (net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chestPos);
+			chest.setItem(0, new ItemStack(ModBlocks.CONCRETE_WALL, 64));
+			chest.setItem(1, new ItemStack(ModBlocks.CONCRETE_WALL, 64));
+			chest.setItem(2, new ItemStack(ModBlocks.REINFORCED_GLASS, 16));
+			runMachines(level, 2000, constructor);
+			int built = 0;
+			for (BlockPos q : BlockPos.betweenClosed(spot.offset(-12, 0, -12), spot.offset(12, 5, 12))) {
+				built += level.getBlockState(q).is(ModBlocks.CONCRETE_WALL) || level.getBlockState(q).is(ModBlocks.REINFORCED_GLASS) ? 1 : 0;
+			}
+			check("blueprints: a Constructor builds the ready-made Wall Section (" + built + " of " + wallPlan.data().blocks() + " blocks)",
+					built == wallPlan.data().blocks());
+			// Repair: a little wall copied in place, a hole knocked in it, filled back where it was.
+			for (BlockPos q : BlockPos.betweenClosed(spot.offset(-12, 0, -12), spot.offset(12, 5, 12))) {
+				if (!q.equals(spot) && !q.equals(chestPos)) {
+					level.setBlockAndUpdate(q, Blocks.AIR.defaultBlockState());
+				}
+			}
+			BlockPos w0 = spot.offset(4, 0, 3);
+			for (BlockPos q : BlockPos.betweenClosed(w0, w0.offset(3, 2, 0))) {
+				level.setBlockAndUpdate(q, Blocks.STONE_BRICKS.defaultBlockState());
+			}
+			ItemStack copy = new ItemStack(ModItems.BLUEPRINT);
+			copy.set(ModComponents.BLUEPRINT, dev.rubymod.industry.Blueprints.capture(level, w0, w0.offset(3, 2, 0)));
+			copy.set(ModComponents.BLUEPRINT_AT, w0);
+			constructor.setItem(0, copy);
+			if (!constructor.repairs()) {
+				constructor.toggleRepair();
+			}
+			chest.clearContent();
+			chest.setItem(0, new ItemStack(Blocks.STONE_BRICKS, 16));
+			BlockPos hole = w0.offset(1, 1, 0);
+			level.setBlockAndUpdate(hole, Blocks.AIR.defaultBlockState());
+			runMachines(level, 400, constructor);
+			boolean mended = level.getBlockState(hole).is(Blocks.STONE_BRICKS);
+			boolean noCopy = !level.getBlockState(spot.relative(constructor.getBlockState().getValue(dev.rubymod.industry.MachineBlock.FACING), 2)).is(Blocks.STONE_BRICKS);
+			check("constructor: in repair mode it fills a hole back where it was copied (and builds no copy)", mended && noCopy);
+			level.setBlockAndUpdate(hole, Blocks.AIR.defaultBlockState());
+			runMachines(level, 400, constructor);
+			check("constructor: and keeps watching: a second hole is filled too", level.getBlockState(hole).is(Blocks.STONE_BRICKS));
+		} finally {
+			for (BlockPos q : BlockPos.betweenClosed(spot.offset(-12, 0, -12), spot.offset(12, 5, 12))) {
+				level.setBlockAndUpdate(q, Blocks.AIR.defaultBlockState());
+			}
+			claim.destroyed = wasDestroyed;
 		}
 	}
 
@@ -1666,6 +1763,10 @@ public final class SelfTest {
 			}
 			// Ruby Shrine: alone in it, rubies; someone else in it, contested; longest holder gets the bonus.
 			BlockPos shrine = surface(level, spot.offset(40, 0, 0));
+			// Level ground for it (a different world every run: no trees or hills muddling the ring check).
+			for (BlockPos q : BlockPos.betweenClosed(shrine.offset(-8, -1, -8), shrine.offset(8, 8, 8))) {
+				level.setBlockAndUpdate(q, q.getY() < shrine.getY() ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.AIR.defaultBlockState());
+			}
 			dev.rubymod.game.WorldEvents.begin(server, both, dev.rubymod.game.WorldEvents.Kind.SHRINE, shrine, 0);
 			alpha.teleportTo(level, shrine.getX() + 0.5, shrine.getY(), shrine.getZ() + 2.5, java.util.Set.of(), 0, 0, true);
 			bravo.teleportTo(level, shrine.getX() + 30.5, shrine.getY() + 1, shrine.getZ() + 0.5, java.util.Set.of(), 0, 0, true);

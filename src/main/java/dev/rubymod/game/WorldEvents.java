@@ -549,14 +549,18 @@ public final class WorldEvents {
 			double a = i * Math.PI * 2 / steps;
 			int x = at.getX() + (int) Math.round(Math.cos(a) * SHRINE_RADIUS);
 			int z = at.getZ() + (int) Math.round(Math.sin(a) * SHRINE_RADIUS);
-			BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
-			if (!done.add(top) || Math.abs(top.getY() - at.getY()) > 3) {
-				continue;
+			// The ground near the shrine's own height (not the top of a tree), within a few blocks up or down.
+			BlockPos spot = null;
+			for (int dy = 3; dy >= -3 && spot == null; dy--) {
+				BlockPos p = new BlockPos(x, at.getY() + dy, z);
+				BlockState here = level.getBlockState(p);
+				if ((here.isAir() || here.canBeReplaced()) && here.getFluidState().isEmpty() && !here.is(net.minecraft.tags.BlockTags.LEAVES)
+						&& level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)) {
+					spot = p;
+				}
 			}
-			BlockState here = level.getBlockState(top);
-			BlockState under = level.getBlockState(top.below());
-			if ((here.isAir() || here.canBeReplaced()) && here.getFluidState().isEmpty() && under.isFaceSturdy(level, top.below(), net.minecraft.core.Direction.UP)) {
-				put(level, top, Blocks.CARPET.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
+			if (spot != null && done.add(spot)) {
+				put(level, spot, Blocks.CARPET.pick(net.minecraft.world.item.DyeColor.MAGENTA).defaultBlockState());
 			}
 		}
 	}

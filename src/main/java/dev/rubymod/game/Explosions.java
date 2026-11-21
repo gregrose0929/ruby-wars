@@ -152,13 +152,13 @@ public final class Explosions {
 		return result;
 	}
 
-	/** How many explosion hits an armored block takes; 0 = not armored. */
+	/** How many explosion hits an armored block takes; 0 = not armored. Reinforced Concrete is the toughest (and grenades can't hurt it). */
 	private static int armor(BlockState state) {
 		if (state.is(ModBlocks.CONCRETE_WALL)) {
 			return 4;
 		}
 		if (state.is(ModBlocks.REINFORCED_CONCRETE)) {
-			return 3;
+			return 6;
 		}
 		if (state.is(ModBlocks.REINFORCED_GLASS)) {
 			return 2;
@@ -183,9 +183,61 @@ public final class Explosions {
 				12, 0.4, 0.4, 0.4, 0.1);
 		if (taken >= hp) {
 			hits.remove(pos.asLong());
+			level.destroyBlockProgress(crackId(pos), pos, -1);
 			return true;
 		}
+		crack(level, pos, taken, hp);
 		return false;
+	}
+
+	/** Cracks on an armored block, deeper the more blasts it's taken (like bullet damage shows). */
+	private static void crack(ServerLevel level, BlockPos pos, int taken, int hp) {
+		level.destroyBlockProgress(crackId(pos), pos, Math.min(9, 1 + taken * 9 / hp));
+	}
+
+	private static int crackId(BlockPos pos) {
+		return (int) (pos.asLong() ^ (pos.asLong() >>> 32) ^ 0x7A3D11);
+	}
+
+	/** How many blasts this block takes (0: it's not armored, one blast breaks it). */
+	public static int blastsToBreak(BlockState state) {
+		return armor(state);
+	}
+
+	/** How many blasts this block has taken so far. */
+	public static int blastsTaken(Level level, BlockPos pos) {
+		Map<Long, Integer> hits = HITS.get(Rules.dim(level));
+		return hits == null ? 0 : hits.getOrDefault(pos.asLong(), 0);
+	}
+
+	/**
+	 * Every 10 seconds: cracks are sent again (players' screens let them fade after a while), and forgotten for blocks
+	 * that are gone or changed.
+	 */
+	public static void tickCracks(net.minecraft.server.MinecraftServer server) {
+		if (HITS.isEmpty() || server.getTickCount() % 200 != 0) {
+			return;
+		}
+		for (ServerLevel level : server.getAllLevels()) {
+			Map<Long, Integer> hits = HITS.get(Rules.dim(level));
+			if (hits == null) {
+				continue;
+			}
+			for (var it = hits.entrySet().iterator(); it.hasNext();) {
+				var e = it.next();
+				BlockPos pos = BlockPos.of(e.getKey());
+				if (!level.isLoaded(pos)) {
+					continue;
+				}
+				int hp = armor(level.getBlockState(pos));
+				if (hp <= 0) {
+					it.remove();
+					level.destroyBlockProgress(crackId(pos), pos, -1);
+				} else {
+					crack(level, pos, e.getValue(), hp);
+				}
+			}
+		}
 	}
 
 	public static void clearHits() {

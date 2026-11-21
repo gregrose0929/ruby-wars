@@ -209,6 +209,10 @@ public final class Shop {
 			section("Copying buildings");
 			item(ModItems.BLUEPRINT, 1, 2);
 			item(ModBlocks.CONSTRUCTOR, 1, 30);
+			section("Ready-made plans");
+			for (var design : dev.rubymod.industry.ReadyBlueprints.ALL) {
+				entries.add(new Entry(page, nextSlot++, 4, () -> dev.rubymod.industry.ReadyBlueprints.stack(design), "rubymod:blueprint_" + design.id(), null, section));
+			}
 			section("Moving parts");
 			item(ModBlocks.RUBY_BEARING, 1, 12);
 			item(ModBlocks.RUBY_PISTON, 1, 10);
@@ -478,6 +482,13 @@ public final class Shop {
 
 	static void refill(Container container, ServerPlayer player, int page) {
 		fill(container, player, page);
+	}
+
+	/** The Armory page with this name (tests), or 0. */
+	public static int pageIndex(String name) {
+		entries();
+		int i = PAGE_NAMES.indexOf(name);
+		return Math.max(0, i);
 	}
 
 	public static int pageCount() {

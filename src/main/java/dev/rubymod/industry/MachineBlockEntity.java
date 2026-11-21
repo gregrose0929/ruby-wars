@@ -91,6 +91,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	/** Ruby Drill: what it looks for (Recipes.FOCUS_*), and whether it leaves plain rock behind. */
 	private int focus;
 	private boolean leaveStone;
+	/** Constructor: repair the copied structure where it was copied, instead of building a copy in front. */
+	private boolean repair;
 	/** Ruby Drill: what the ground round it is rich in (looked at now and then, not saved). */
 	private DrillSite site;
 	private long siteAt = -100_000;
@@ -153,6 +155,16 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	public void cycleFocus(int step) {
 		focus = Math.floorMod(focus + step, Recipes.FOCUS_NAMES.length);
+		setChanged();
+	}
+
+	public boolean repairs() {
+		return repair;
+	}
+
+	public void toggleRepair() {
+		repair = !repair;
+		progress = 0;
 		setChanged();
 	}
 
@@ -1295,6 +1307,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 					yield from.isEmpty() ? 0 : net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(from.getItem()) + 1;
 				}
 				case 43 -> level instanceof ServerLevel server ? silosFilled(server) : 0;
+				// 44: a Constructor's mode (0: its Blueprint can't repair, 1: builds in front, 2: repairs in place).
+				case 44 -> kind() != MachineKind.CONSTRUCTOR || !items.get(0).has(dev.rubymod.registry.ModComponents.BLUEPRINT_AT) ? 0 : repair ? 2 : 1;
 				default -> {
 					// 19-30: the Trade Depot's last four sales, newest first: item id + 1, how many, what it paid (milli-rubies, capped).
 					int k = index - 19;
@@ -1374,6 +1388,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		rubiesFound = input.getLongOr("rubies_found", 0L);
 		focus = input.getIntOr("focus", 0);
 		leaveStone = input.getBooleanOr("leave_stone", false);
+		repair = input.getBooleanOr("repair", false);
 		fedBy.clear();
 		for (String s : input.getString("fed_by").orElse("").split(",")) {
 			if (!s.isEmpty()) {
@@ -1411,6 +1426,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		output.putLong("rubies_found", rubiesFound);
 		output.putInt("focus", focus);
 		output.putBoolean("leave_stone", leaveStone);
+		output.putBoolean("repair", repair);
 		if (!fedBy.isEmpty()) {
 			output.putString("fed_by", fedBy.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(",")));
 		}

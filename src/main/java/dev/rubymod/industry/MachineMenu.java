@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** The machine screen's server/client half: machine slots, the player's inventory, and live numbers. */
 public class MachineMenu extends AbstractContainerMenu {
-	public static final int DATA_SLOTS = 44;
+	public static final int DATA_SLOTS = 45;
 	public static final int WIDTH = 176;
 	public static final int HEIGHT = 190;
 	public static final int INVENTORY_Y = 108;
@@ -33,6 +33,8 @@ public class MachineMenu extends AbstractContainerMenu {
 	public static final int BUTTON_FOCUS = 6;
 	public static final int BUTTON_FOCUS_BACK = 7;
 	public static final int BUTTON_STONE = 8;
+	/** Constructor: build in front / repair in place. */
+	public static final int BUTTON_REPAIR = 9;
 	/** Assembler recipe picker: this plus the recipe's number picks it. */
 	public static final int BUTTON_PICK = 100;
 
@@ -140,6 +142,7 @@ public class MachineMenu extends AbstractContainerMenu {
 			case BUTTON_FOCUS -> blockEntity.cycleFocus(1);
 			case BUTTON_FOCUS_BACK -> blockEntity.cycleFocus(-1);
 			case BUTTON_STONE -> blockEntity.toggleStone();
+			case BUTTON_REPAIR -> blockEntity.toggleRepair();
 			case BUTTON_WITHDRAW_1 -> blockEntity.withdraw(sp, 1);
 			case BUTTON_WITHDRAW_16 -> blockEntity.withdraw(sp, 16);
 			case BUTTON_WITHDRAW_64 -> blockEntity.withdraw(sp, 64);

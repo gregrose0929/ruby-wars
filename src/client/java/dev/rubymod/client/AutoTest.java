@@ -3937,6 +3937,7 @@ public final class AutoTest {
 			case "view" -> viewScript();
 			case "features" -> featuresScript();
 			case "events" -> eventsScript();
+			case "building" -> buildingScript();
 			case "gear" -> gearScript();
 			case "impact" -> impactScript();
 			case "follow" -> followScript();
@@ -9228,6 +9229,99 @@ public final class AutoTest {
 	}
 
 	/** A real raid on a defended base: Heart, a sentry turret, two guards. Logs the fight every 10 seconds. */
+	/** Building: the Armory's ready-made plans, a round tower from the wand, a cracked wall, a Constructor set to repair. */
+	private static void buildingScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset confirm");
+			command(mc, "rubywars start");
+		});
+		then(40, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			var top = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.blockPosition().offset(90, 0, 90));
+			// The training world has no ground out here: make some.
+			var heart = new net.minecraft.core.BlockPos(top.getX(), Math.max(level.getMinY() + 4, top.getY()), top.getZ());
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(heart.offset(-20, -1, -36), heart.offset(20, -1, 20))) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+			}
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(heart.offset(-20, 0, -36), heart.offset(20, 12, 20))) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			level.setBlockAndUpdate(heart, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heart);
+			heartAt = heart;
+			p.teleportTo(level, heart.getX() + 0.5, heart.getY(), heart.getZ() - 14.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 15, true);
+			dev.rubymod.industry.Grid.deposit(p.getUUID(), 500_000L);
+		}));
+		then(60, mc -> onServer(mc, server -> dev.rubymod.game.Shop.open(me(server), dev.rubymod.game.Shop.pageIndex("Building"))));
+		then(60, mc -> shot(mc, "build-armory"));
+		then(5, mc -> mc.player.closeContainer());
+		then(20, mc -> mc.gui.setScreen(null));
+		// The wand's round tower.
+		then(5, mc -> {
+			command(mc, "give @p rubymod:architect_wand");
+			command(mc, "item replace entity @p weapon.offhand with minecraft:stone_bricks 64");
+		});
+		then(10, mc -> onServer(mc, server -> {
+			var p = me(server);
+			for (int i = 0; i < 9; i++) {
+				if (p.getInventory().getItem(i).is(dev.rubymod.registry.ModItems.ARCHITECT_WAND)) {
+					p.getInventory().setSelectedSlot(i);
+				}
+			}
+			var stack = p.getMainHandItem();
+			stack.set(dev.rubymod.registry.ModComponents.WAND_MODE, dev.rubymod.item.BuildShapes.Mode.TOWER.ordinal());
+			stack.set(dev.rubymod.registry.ModComponents.CORNER, heartAt.offset(-12, 0, -8));
+		}));
+		then(15, mc -> shot(mc, "build-wand-tower-preview"));
+		then(2, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var at = heartAt.offset(-6, 4, -2);
+			var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(at), net.minecraft.core.Direction.UP, at, false);
+			p.getMainHandItem().useOn(new net.minecraft.world.item.context.UseOnContext(p, net.minecraft.world.InteractionHand.MAIN_HAND, hit));
+		}));
+		then(20, mc -> shot(mc, "build-wand-tower"));
+		// A Concrete Wall with two blasts in it: cracks, and the look panel.
+		then(5, mc -> onServer(mc, server -> {
+			var level = server.overworld();
+			var wall = heartAt.offset(6, 0, -30);
+			for (int i = 0; i < 3; i++) {
+				level.setBlockAndUpdate(wall.offset(i, 0, 0), dev.rubymod.registry.ModBlocks.CONCRETE_WALL.defaultBlockState());
+				level.setBlockAndUpdate(wall.offset(i, 1, 0), dev.rubymod.registry.ModBlocks.CONCRETE_WALL.defaultBlockState());
+			}
+			dev.rubymod.game.Explosions.filter(level, java.util.List.of(wall.offset(1, 0, 0)), 3.0F);
+			dev.rubymod.game.Explosions.filter(level, java.util.List.of(wall.offset(1, 0, 0)), 3.0F);
+			dev.rubymod.game.Explosions.filter(level, java.util.List.of(wall.offset(2, 1, 0)), 3.0F);
+			me(server).teleportTo(level, wall.getX() + 1.5, wall.getY(), wall.getZ() - 2.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true);
+		}));
+		then(10, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(7, 0, -30))));
+		then(40, mc -> {
+			var look = ClientState.look;
+			log("look panel (wall): {}", look == null ? "nothing" : look.lines());
+			shot(mc, "build-wall-cracks");
+		});
+		// A Constructor with a copy of that wall: set to repair.
+		then(5, mc -> onServer(mc, server -> {
+			var level = server.overworld();
+			var p = me(server);
+			var wall = heartAt.offset(6, 0, -30);
+			var con = heartAt.offset(2, 0, -12);
+			level.setBlockAndUpdate(con, dev.rubymod.registry.ModBlocks.CONSTRUCTOR.defaultBlockState());
+			dev.rubymod.registry.ModBlocks.CONSTRUCTOR.setPlacedBy(level, con, level.getBlockState(con), p, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModBlocks.CONSTRUCTOR));
+			if (level.getBlockEntity(con) instanceof dev.rubymod.industry.MachineBlockEntity m) {
+				var copy = new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.BLUEPRINT);
+				copy.set(dev.rubymod.registry.ModComponents.BLUEPRINT, dev.rubymod.industry.Blueprints.capture(level, wall, wall.offset(2, 1, 0)));
+				copy.set(dev.rubymod.registry.ModComponents.BLUEPRINT_AT, wall);
+				m.setItem(0, copy);
+				m.toggleRepair();
+			}
+			p.teleportTo(level, con.getX() + 0.5, con.getY(), con.getZ() - 2.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 30, true);
+		}));
+		then(10, mc -> clickBlock(mc, heartAt.offset(2, 0, -12)));
+		then(25, mc -> shot(mc, "build-constructor-repair"));
+		then(5, mc -> mc.player.closeContainer());
+	}
+
 	/** World events: the Supply Cache told, opened and looked at; then the Ruby Shrine held. */
 	private static void eventsScript() {
 		then(5, mc -> {

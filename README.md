@@ -122,8 +122,10 @@ villages, rivers to the sea, and ruins to explore.
   Belts.
 - **Real damage:** bullets chip blocks, explosions blow holes, buildings that lose their
   supports **collapse** (heavy materials hold more), and fire spreads on Battle Day.
-- **Building tools:** the Architect's Wand (walls, floors and rooms in two clicks), the
-  Remodeler (swap a whole wall's material), Blueprints and a Constructor (copy a building),
+- **Building tools:** the Architect's Wand (walls, floors, rooms, round towers, domes and
+  staircases in two clicks), the Remodeler (swap a whole wall's material), Blueprints and a
+  Constructor (copy a building, build a ready-made Watchtower, Bunker, Gatehouse or Wall
+  Section, or repair your base where it was copied),
   the Builder's Wand and the Excavator, and the **Tunnel Borer** for digging under an
   enemy base.
 

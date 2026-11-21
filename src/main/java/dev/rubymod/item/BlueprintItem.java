@@ -38,6 +38,7 @@ public class BlueprintItem extends Item {
 		ItemStack stack = player.getItemInHand(hand);
 		if (player.isShiftKeyDown() && (stack.has(ModComponents.BLUEPRINT) || stack.has(ModComponents.CORNER))) {
 			stack.remove(ModComponents.BLUEPRINT);
+			stack.remove(ModComponents.BLUEPRINT_AT);
 			stack.remove(ModComponents.CORNER);
 			if (player instanceof ServerPlayer sp) {
 				sp.sendOverlayMessage(Component.literal("Blueprint wiped."));
@@ -72,6 +73,8 @@ public class BlueprintItem extends Item {
 		}
 		stack.remove(ModComponents.CORNER);
 		stack.set(ModComponents.BLUEPRINT, data);
+		stack.set(ModComponents.BLUEPRINT_AT, new BlockPos(Math.min(corner.getX(), pos.getX()), Math.min(corner.getY(), pos.getY()),
+				Math.min(corner.getZ(), pos.getZ())));
 		context.getLevel().playSound(null, pos, SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 1.0F);
 		sp.sendOverlayMessage(Component.literal("Copied " + data.sx() + "x" + data.sy() + "x" + data.sz() + " (" + data.blocks() + " blocks).")
 				.withStyle(ChatFormatting.AQUA));

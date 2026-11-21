@@ -66,6 +66,9 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		if (kind() == MachineKind.AMMO_FACTORY || kind() == MachineKind.ASSEMBLER) {
 			buttons.add(new Button(MachineMenu.BUTTON_RECIPE, 66, 22, 102, 13, "recipe"));
 		}
+		if (kind() == MachineKind.CONSTRUCTOR && menu.get(44) > 0) {
+			buttons.add(new Button(MachineMenu.BUTTON_REPAIR, 66, 74, 102, 13, "repair"));
+		}
 		if (kind() == MachineKind.RUBY_DRILL) {
 			buttons.add(new Button(MachineMenu.BUTTON_FOCUS, 22, 22, 72, 13, "focus"));
 			buttons.add(new Button(MachineMenu.BUTTON_STONE, 22, 37, 72, 13, "stone"));
@@ -626,7 +629,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		g.fill(x, y, x + 102, y + 8, SLOT_BG);
 		g.fillGradient(x + 1, y + 1, x + 1 + 100 * Math.min(done, total) / total, y + 7, 0xFFFF4D7A, 0xFFB0103E);
 		g.text(font, "Plan", 26, 32, MUTED, false);
-		g.text(font, Math.min(100, 100 * done / total) + "% built", 66, 30, TEXT, false);
+		g.text(font, menu.get(44) == 2 ? "Repairing: watching for holes" : Math.min(100, 100 * done / total) + "% built", 66, 30, TEXT, false);
 		int missing = menu.get(15);
 		if (missing > 0) {
 			Item item = BuiltInRegistries.ITEM.byId(missing - 1);
@@ -673,8 +676,19 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			label = "Find: " + new String[] {"All", "Metals", "Gems"}[Math.floorMod(menu.get(35), 3)];
 		} else if (b.id() == MachineMenu.BUTTON_STONE) {
 			label = menu.get(36) == 1 ? "Stone: Leave" : "Stone: Keep";
+		} else if (b.id() == MachineMenu.BUTTON_REPAIR) {
+			label = menu.get(44) == 2 ? "Repair where copied" : "Build in front";
 		}
 		dev.rubymod.client.ui.Ui.button(g, label, b.x(), b.y(), b.w(), b.h(), mx, my, RUBY, !disabled);
+		if (hover && b.id() == MachineMenu.BUTTON_REPAIR) {
+			g.setComponentTooltipForNextFrame(font, List.of(
+					Component.literal("What the Constructor does with this Blueprint").withStyle(net.minecraft.ChatFormatting.YELLOW),
+					Component.literal("Build in front: a copy, two blocks out").withStyle(net.minecraft.ChatFormatting.GRAY),
+					Component.literal("Repair where copied: fills holes back in").withStyle(net.minecraft.ChatFormatting.GRAY),
+					Component.literal("  where they were, inside your own base,").withStyle(net.minecraft.ChatFormatting.GRAY),
+					Component.literal("  and keeps watching (it never removes anything)").withStyle(net.minecraft.ChatFormatting.GRAY)),
+					mx + leftPos, my + topPos);
+		}
 		if (hover && (b.id() == MachineMenu.BUTTON_FOCUS || b.id() == MachineMenu.BUTTON_STONE)) {
 			List<Component> lines = new ArrayList<>();
 			if (b.id() == MachineMenu.BUTTON_FOCUS) {

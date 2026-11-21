@@ -186,6 +186,7 @@ public final class GameEvents {
 			dev.rubymod.industry.AwayTime.tick(server);
 			WorldEvents.tick(server);
 			Practice.tick(server);
+			Explosions.tickCracks(server);
 			BetweenSeasons.tick(server);
 			Celebrations.tick(server);
 			CannonRounds.tick();

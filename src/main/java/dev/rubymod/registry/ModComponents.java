@@ -58,6 +58,13 @@ public class ModComponents {
 					.networkSynchronized(dev.rubymod.industry.Blueprints.Data.STREAM_CODEC).build());
 
 	/** First corner picked with a Blueprint or the Architect's Wand. */
+	/** Where a Blueprint was copied (its lowest corner), so a Constructor can repair it in place. */
+	public static final DataComponentType<net.minecraft.core.BlockPos> BLUEPRINT_AT = Registry.register(
+			BuiltInRegistries.DATA_COMPONENT_TYPE,
+			RubyMod.id("blueprint_at"),
+			DataComponentType.<net.minecraft.core.BlockPos>builder().persistent(net.minecraft.core.BlockPos.CODEC)
+					.networkSynchronized(net.minecraft.core.BlockPos.STREAM_CODEC).build());
+
 	public static final DataComponentType<net.minecraft.core.BlockPos> CORNER = Registry.register(
 			BuiltInRegistries.DATA_COMPONENT_TYPE,
 			RubyMod.id("corner"),

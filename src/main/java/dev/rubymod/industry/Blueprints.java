@@ -163,12 +163,25 @@ public final class Blueprints {
 			return;
 		}
 		Direction facing = be.getBlockState().getValue(MachineBlock.FACING);
+		BlockPos origin = be.repairs() ? paper.get(ModComponents.BLUEPRINT_AT) : null;
 		if (be.ticks() % 20 == 0) {
-			outline(level, be.getBlockPos(), facing, data);
+			if (origin != null) {
+				outlineBox(level, origin, origin.offset(data.sx(), data.sy(), data.sz()));
+			} else {
+				outline(level, be.getBlockPos(), facing, data);
+			}
 		}
 		if (be.progress() >= data.cells().size()) {
+			if (origin == null) {
+				be.setStatus(MachineBlockEntity.IDLE);
+				return;
+			}
+			// Repairing: everything's in place. Look again in a few seconds.
 			be.setStatus(MachineBlockEntity.IDLE);
-			return;
+			if (be.ticks() % 100 != 0) {
+				return;
+			}
+			be.setProgress(0);
 		}
 		if (be.ticks() % be.kind().cycle(be.tier()) != 0) {
 			return;
@@ -177,8 +190,8 @@ public final class Blueprints {
 		int index = be.progress();
 		while (index < data.cells().size()) {
 			BlockState want = data.at(index);
-			BlockPos at = target(be.getBlockPos(), facing, data.local(index));
-			if (want != null && level.getBlockState(at).canBeReplaced() && mayBuild(level, be, at, want.getBlock())) {
+			BlockPos at = origin != null ? origin.offset(data.local(index)) : target(be.getBlockPos(), facing, data.local(index));
+			if (want != null && level.getBlockState(at).canBeReplaced() && (origin != null ? mayRepair(be, at) : mayBuild(level, be, at, want.getBlock()))) {
 				break;
 			}
 			index++;
@@ -188,7 +201,7 @@ public final class Blueprints {
 			level.playSound(null, be.getBlockPos(), net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 0.8F, 1.2F);
 			return;
 		}
-		BlockState want = data.at(index).rotate(rotation(facing));
+		BlockState want = origin != null ? data.at(index) : data.at(index).rotate(rotation(facing));
 		Item item = itemFor(want);
 		if (!Grid.consume(be.power(), be.kind().draw(be.tier()) * 10L)) {
 			be.setStatus(MachineBlockEntity.NO_POWER);
@@ -201,7 +214,7 @@ public final class Blueprints {
 		}
 		be.setMissing(0);
 		be.setStatus(MachineBlockEntity.WORKING);
-		BlockPos at = target(be.getBlockPos(), facing, data.local(index));
+		BlockPos at = origin != null ? origin.offset(data.local(index)) : target(be.getBlockPos(), facing, data.local(index));
 		level.setBlock(at, want, 3);
 		if (want.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)) {
 			level.setBlock(at.above(), want.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER), 3);
@@ -210,6 +223,12 @@ public final class Blueprints {
 		Vec3 c = Vec3.atCenterOf(at);
 		level.sendParticles(new DustParticleOptions(0xE0115F, 1.0F), c.x, c.y, c.z, 6, 0.3, 0.3, 0.3, 0);
 		be.setProgress(index + 1);
+	}
+
+	/** Repairing: only inside its owner's own base. */
+	private static boolean mayRepair(MachineBlockEntity be, BlockPos at) {
+		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(be.getLevel()), at.getX(), at.getZ());
+		return claim != null && claim.owner.equals(be.owner().toString());
 	}
 
 	/** Only where its owner may build, and equipment only in its owner's own base. */
@@ -237,6 +256,27 @@ public final class Blueprints {
 			}
 		}
 		return false;
+	}
+
+	/** A dotted outline round a box (repair mode: where the copy came from). */
+	private static void outlineBox(ServerLevel level, BlockPos min, BlockPos max) {
+		double x0 = min.getX();
+		double y0 = min.getY();
+		double z0 = min.getZ();
+		double x1 = max.getX();
+		double y1 = max.getY();
+		double z1 = max.getZ();
+		DustParticleOptions dust = new DustParticleOptions(0x40E0FF, 0.8F);
+		for (double[] e : new double[][] {
+				{x0, y0, z0, x1, y0, z0}, {x0, y0, z1, x1, y0, z1}, {x0, y1, z0, x1, y1, z0}, {x0, y1, z1, x1, y1, z1},
+				{x0, y0, z0, x0, y0, z1}, {x1, y0, z0, x1, y0, z1}, {x0, y1, z0, x0, y1, z1}, {x1, y1, z0, x1, y1, z1},
+				{x0, y0, z0, x0, y1, z0}, {x1, y0, z0, x1, y1, z0}, {x0, y0, z1, x0, y1, z1}, {x1, y0, z1, x1, y1, z1}}) {
+			double len = Math.max(Math.abs(e[3] - e[0]), Math.max(Math.abs(e[4] - e[1]), Math.abs(e[5] - e[2])));
+			for (double t = 0; t <= len; t += 0.75) {
+				double f = len == 0 ? 0 : t / len;
+				level.sendParticles(dust, true, false, e[0] + (e[3] - e[0]) * f, e[1] + (e[4] - e[1]) * f, e[2] + (e[5] - e[2]) * f, 1, 0, 0, 0, 0);
+			}
+		}
 	}
 
 	/** A dotted ruby outline of where the structure will go. */

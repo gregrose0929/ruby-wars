@@ -289,6 +289,14 @@ public final class LookInfo {
 				bar = claim.hp / (float) Math.max(1, claim.maxHp());
 				lines.add("Integrity " + claim.hp + " / " + claim.maxHp());
 				color = bar > 0.5F ? GREEN : bar > 0.25F ? AMBER : RED;
+			} else if (Explosions.blastsToBreak(state) > 0) {
+				// Armored walls: how many blasts it takes, and how many it's had.
+				int hp = Explosions.blastsToBreak(state);
+				int taken = Explosions.blastsTaken(player.level(), pos);
+				lines.add(state.getBlock().getName().getString());
+				lines.add(taken > 0 ? taken + " of " + hp + " blasts taken" : "Takes " + hp + " blasts" + (state.is(ModBlocks.REINFORCED_CONCRETE) ? " (grenades can't hurt it)" : ""));
+				bar = 1.0F - taken / (float) hp;
+				color = taken == 0 ? BLUE : bar > 0.4F ? AMBER : RED;
 			} else {
 				return;
 			}

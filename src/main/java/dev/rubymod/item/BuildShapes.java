@@ -14,7 +14,10 @@ public final class BuildShapes {
 		WALL("Wall"),
 		FLOOR("Floor"),
 		BOX("Solid Box"),
-		ROOM("Hollow Room");
+		ROOM("Hollow Room"),
+		TOWER("Round Tower"),
+		DOME("Dome"),
+		STAIRS("Staircase");
 
 		public final String title;
 
@@ -67,9 +70,80 @@ public final class BuildShapes {
 					}
 				}
 			}
+			case TOWER -> {
+				// A round wall (an oval in a long box) on the corners' footprint, from one height to the other.
+				for (int x = x0; x <= x1; x++) {
+					for (int z = z0; z <= z1; z++) {
+						if (rim(x, z, x0, x1, z0, z1)) {
+							for (int y = y0; y <= y1; y++) {
+								out.add(new BlockPos(x, y, z));
+							}
+						}
+					}
+				}
+			}
+			case DOME -> {
+				// Half an egg on the footprint, as tall as the corners are apart (or as round as it is wide if they're level).
+				double rx = (x1 - x0) / 2.0 + 0.5;
+				double rz = (z1 - z0) / 2.0 + 0.5;
+				double ry = y1 > y0 ? y1 - y0 + 0.5 : Math.min(rx, rz);
+				double cx = (x0 + x1) / 2.0;
+				double cz = (z0 + z1) / 2.0;
+				for (int x = x0; x <= x1; x++) {
+					for (int z = z0; z <= z1; z++) {
+						for (int dy = 0; dy < ry; dy++) {
+							if (inEgg(x, dy, z, cx, cz, rx, ry, rz) && (!inEgg(x + 1, dy, z, cx, cz, rx, ry, rz) || !inEgg(x - 1, dy, z, cx, cz, rx, ry, rz)
+									|| !inEgg(x, dy + 1, z, cx, cz, rx, ry, rz) || !inEgg(x, dy, z + 1, cx, cz, rx, ry, rz)
+									|| !inEgg(x, dy, z - 1, cx, cz, rx, ry, rz))) {
+								out.add(new BlockPos(x, y0 + dy, z));
+							}
+						}
+					}
+				}
+			}
+			case STAIRS -> {
+				// Steps up (or down) from A toward B along the longer way, as wide as the corners are apart the other way.
+				boolean alongX = x1 - x0 >= z1 - z0;
+				int length = alongX ? x1 - x0 : z1 - z0;
+				int dir = alongX ? Integer.signum(b.getX() - a.getX()) : Integer.signum(b.getZ() - a.getZ());
+				int up = b.getY() >= a.getY() ? 1 : -1;
+				int rise = b.getY() == a.getY() ? length : Math.abs(b.getY() - a.getY());
+				for (int i = 0; i <= length; i++) {
+					int y = a.getY() + up * Math.min(i, rise);
+					for (int w = alongX ? z0 : x0; w <= (alongX ? z1 : x1); w++) {
+						int along = (alongX ? a.getX() : a.getZ()) + dir * i;
+						out.add(alongX ? new BlockPos(along, y, w) : new BlockPos(w, y, along));
+					}
+				}
+			}
 		}
 		List<BlockPos> list = new ArrayList<>(out);
 		return list.size() > MAX_BLOCKS ? list.subList(0, MAX_BLOCKS) : list;
+	}
+
+	/** Inside the oval that fits the footprint. */
+	private static boolean inOval(int x, int z, int x0, int x1, int z0, int z1) {
+		double rx = (x1 - x0) / 2.0 + 0.5;
+		double rz = (z1 - z0) / 2.0 + 0.5;
+		double dx = (x - (x0 + x1) / 2.0) / rx;
+		double dz = (z - (z0 + z1) / 2.0) / rz;
+		return dx * dx + dz * dz <= 1.0;
+	}
+
+	/** On the oval's edge: inside it, with a side neighbour outside. */
+	private static boolean rim(int x, int z, int x0, int x1, int z0, int z1) {
+		return inOval(x, z, x0, x1, z0, z1) && (!inOval(x + 1, z, x0, x1, z0, z1) || !inOval(x - 1, z, x0, x1, z0, z1)
+				|| !inOval(x, z + 1, x0, x1, z0, z1) || !inOval(x, z - 1, x0, x1, z0, z1));
+	}
+
+	private static boolean inEgg(int x, int dy, int z, double cx, double cz, double rx, double ry, double rz) {
+		if (dy < 0) {
+			return true; // the ground under it closes it off
+		}
+		double a = (x - cx) / rx;
+		double b = dy / ry;
+		double c = (z - cz) / rz;
+		return a * a + b * b + c * c <= 1.0;
 	}
 
 	/** A 3D line through block centers (each block once). */
