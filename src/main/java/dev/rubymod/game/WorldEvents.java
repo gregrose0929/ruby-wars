@@ -740,6 +740,16 @@ public final class WorldEvents {
 		}
 	}
 
+	/** For /rubywars status: what's on and where (empty when nothing is). */
+	public static String describe() {
+		if (kind == null || at == null) {
+			return "";
+		}
+		long t = now();
+		String when = !open ? "opens in " + clock(opensAt - t) : endsAt == Long.MAX_VALUE ? "on now" : clock(endsAt - t) + " left";
+		return kind.title + " at " + at.getX() + ", " + at.getZ() + " (" + when + ")";
+	}
+
 	// ----- For tests and admins -----
 
 	/** End whatever's on now (ground put back). */

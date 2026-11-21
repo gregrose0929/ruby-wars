@@ -91,6 +91,14 @@ public class GeodeItem extends Item {
 				|| name.endsWith("Glass") || name.endsWith("Gunpowder") || name.endsWith("Charcoal") || name.endsWith("Dirt")) {
 			return name;
 		}
-		return name.endsWith("y") ? name.substring(0, name.length() - 1) + "ies" : name + "s";
+		for (String some : new String[] {"TNT", "Bread", "Beef", "Mutton", "Chicken", "Salmon", "Cod", "Sugar", "Wool", "Clay", "Ice", "Snow"}) {
+			if (name.endsWith(some)) {
+				return name;
+			}
+		}
+		if (name.endsWith("ch") || name.endsWith("sh") || name.endsWith("x")) {
+			return name + "es"; // Torches
+		}
+		return name.endsWith("y") && !name.endsWith("ey") && !name.endsWith("ay") ? name.substring(0, name.length() - 1) + "ies" : name + "s";
 	}
 }

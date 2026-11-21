@@ -505,6 +505,13 @@ public final class SelfTest {
 		got.put(net.minecraft.world.item.Items.DIAMOND, 1);
 		String said = dev.rubymod.item.GeodeItem.summary(got);
 		check("geode: a whole stack says what came out (" + said + ")", said.equals("14 Amethyst Shards, 2 Rubies and 1 Diamond"));
+		var P = new Object() {
+			String of(String name, int n) {
+				return dev.rubymod.item.GeodeItem.plural(name, n);
+			}
+		};
+		check("words: 12 Torches, 3 TNT, 5 Raw Iron, 2 Rubies, 4 Coal, 6 Iron Ingots", P.of("Torch", 12).equals("Torches") && P.of("TNT", 3).equals("TNT")
+				&& P.of("Raw Iron", 5).equals("Raw Iron") && P.of("Ruby", 2).equals("Rubies") && P.of("Coal", 4).equals("Coal") && P.of("Iron Ingot", 6).equals("Iron Ingots"));
 		alpha.getInventory().add(new ItemStack(net.minecraft.world.item.Items.RAW_GOLD));
 		dev.rubymod.game.Minerals.check(alpha);
 		check("rocks: raw gold in your inventory goes in your Rock Collection", dev.rubymod.game.Minerals.found(alpha).contains("minecraft:raw_gold")
@@ -1208,13 +1215,15 @@ public final class SelfTest {
 			java.util.function.BiFunction<net.minecraft.world.item.Item, net.minecraft.world.level.block.state.BlockState[], Float> through = (gun, wall) -> {
 				Zombie z = EntityTypes.ZOMBIE.create(level, EntitySpawnReason.COMMAND);
 				z.setNoAi(true);
+				z.setNoGravity(true); // it stays in the line of fire whatever the ground's like there
 				z.setPos(range.getX() + 6.5, alpha.getY(), range.getZ() + 0.5);
 				level.addFreshEntity(z);
 				ItemStack g = new ItemStack(gun);
 				g.set(ModComponents.AMMO, 30);
-				// Best of three shots (hip fire has a little spread, and can miss outright).
+				// Best of five shots (hip fire has a little spread, and can miss outright).
 				float dealt = 0;
-				for (int shot = 0; shot < 3 && dealt == 0; shot++) {
+				for (int shot = 0; shot < 5 && dealt == 0; shot++) {
+					z.setPos(range.getX() + 6.5, alpha.getY(), range.getZ() + 0.5);
 					// A fresh wall each time (bullets chip blocks, and glass shatters).
 					for (int k = 0; k < wall.length; k++) {
 						level.setBlockAndUpdate(range.offset(3 + k, 1, 0), wall[k]);

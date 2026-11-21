@@ -209,6 +209,9 @@ public final class RubyWarsCommand {
 			long length = SeasonTicker.durationOf(Phase.BUILD);
 			source.sendSystemMessage(Component.literal("Day " + SeasonTicker.currentDay() + (length > 0 ? " of " + Math.max(1, length / 86_400_000L)
 					: " of the build phase (it ends when an admin runs /rubywars battle)")));
+			String event = dev.rubymod.game.WorldEvents.describe();
+			source.sendSystemMessage(Component.literal(event.isEmpty() ? "No world event on right now (they come when two or more of you are on)"
+					: "World event: " + event).withStyle(event.isEmpty() ? ChatFormatting.GRAY : ChatFormatting.AQUA));
 		}
 		if (data.phase.isBattle() || data.phase == Phase.ENDED) {
 			source.sendSystemMessage(Component.literal("Players remaining: " + BattleDirector.aliveCount()));

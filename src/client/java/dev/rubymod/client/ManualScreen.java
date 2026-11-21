@@ -176,11 +176,10 @@ public class ManualScreen extends Screen {
 					"Ruby Shrine: stand in its ring alone and a ruby goes into your bank every 5 seconds (everyone in it glows). Anyone else in it and it's contested. Whoever holds it longest gets 15 more.",
 					"Ruby Meteor: comes down on the spot, full of ruby ore and blocks.",
 					"You can fight out there (only bases are safe in the build phase), and what you carry waits in your War Grave if you fall."),
-			new Page("Guards",
-					"Guard Contracts hire a Rifleman or AT Gunner. Right-click a guard: follow / hold post. Sneak + right-click: pack up."),
 			new Page("Gear",
 					"Backpacks hold 27 or 54 slots. The Field Radio lets you talk across the map (needs Simple Voice Chat).",
 					"Recon Drones mark enemies for you. Paint Kits respray vehicles.",
+					"Guard Contracts hire a Rifleman or AT Gunner. Right-click a guard: follow / hold post. Sneak + right-click: pack up.",
 					"When you die your gear waits in a War Grave: only you can open it for 5 minutes.",
 					"Blueprints copy a structure; hold one to see where a Constructor would build it.",
 					"Jetpack (wear it): hold Space in the air to fly; it refuels on the ground.",
@@ -240,7 +239,17 @@ public class ManualScreen extends Screen {
 			} else if (hv > 0) {
 				g.fill(nx + 2, ty, nx + navW() - 2, ty + rowH - 1, Ui.alpha(0x20FFFFFF, hv));
 			}
-			Ui.text(g, PAGES.get(i).title(), nx + 8, ty + (rowH - 8) / 2, navW() - 12, on ? Ui.TEXT : Ui.mix(Ui.MUTED, Ui.DIM, hv));
+			int color = on ? Ui.TEXT : Ui.mix(Ui.MUTED, Ui.DIM, hv);
+			if (rowH >= 10) {
+				Ui.text(g, PAGES.get(i).title(), nx + 8, ty + (rowH - 8) / 2, navW() - 12, color);
+			} else {
+				// A long list on a small screen: smaller letters, so the names don't run into each other.
+				g.pose().pushMatrix();
+				g.pose().translate(nx + 8, ty + Math.max(0, (rowH - 6) / 2));
+				g.pose().scale(0.75F, 0.75F);
+				Ui.text(g, PAGES.get(i).title(), 0, 0, Math.round((navW() - 12) / 0.75F), color);
+				g.pose().popMatrix();
+			}
 		}
 		// The page.
 		Page p = PAGES.get(page);

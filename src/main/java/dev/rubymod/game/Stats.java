@@ -243,7 +243,12 @@ public final class Stats {
 	}
 
 	public static void won(UUID id, String name, String mode) {
-		get(id, name).wins.merge(mode, 1, Integer::sum);
+		Record r = get(id, name);
+		int wins = r.wins.merge(mode, 1, Integer::sum);
+		// Joined after the round started (so it wasn't counted as played): a win is a game played too.
+		if (r.played.getOrDefault(mode, 0) < wins) {
+			r.played.put(mode, wins);
+		}
 		if (server != null) {
 			Celebrations.win(server, id);
 		}
@@ -370,9 +375,10 @@ public final class Stats {
 		List<String> lines = new ArrayList<>();
 		int[] lv = level(r.xp);
 		lines.add("@level|" + lv[0] + "|" + lv[1] + "|" + lv[2]);
-		lines.add("Party games won|" + r.totalWins() + " of " + r.totalPlayed());
+		// (Older records can have a win counted without the game: never "1 of 0".)
+		lines.add("Party games won|" + r.totalWins() + " of " + Math.max(r.totalWins(), r.totalPlayed()));
 		for (dev.rubymod.game.party.PartyGame game : dev.rubymod.game.party.PartyGames.ALL) {
-			int played = r.played.getOrDefault(game.id, 0);
+			int played = Math.max(r.wins(game.id), r.played.getOrDefault(game.id, 0));
 			if (played > 0) {
 				lines.add("  " + game.title + "|" + r.wins(game.id) + " wins, " + played + " played");
 			}

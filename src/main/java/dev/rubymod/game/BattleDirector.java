@@ -678,7 +678,8 @@ public final class BattleDirector {
 			}
 			level.getChunk(x >> 4, z >> 4);
 			BlockPos p = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
-			if (level.getFluidState(p.below()).isEmpty()) {
+			// Dry land, not water (and not the empty edge of a test world).
+			if (level.getFluidState(p.below()).isEmpty() && p.getY() > level.getMinY() && !level.getBlockState(p.below()).isAir()) {
 				top = p;
 			}
 		}
