@@ -1433,7 +1433,6 @@ public final class SelfTest {
 		// ----- World events -----
 		worldEventChecks(level, alpha, bravo, surface(level, base.offset(-160, 0, -160)));
 		practiceChecks(level, alpha, bravo);
-		socialChecks(level, alpha, bravo);
 
 		// ----- Ore -----
 		int ore = 0;
@@ -1449,68 +1448,6 @@ public final class SelfTest {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
 		}
 		Explosions.clearHits();
-	}
-
-	/** Gifts from the knocked-out on Battle Day, and Open House visits while building. */
-	private void socialChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo) {
-		var server = level.getServer();
-		var data = SeasonData.get();
-		Phase before = data.phase;
-		var ra = data.player(alpha.getUUID(), alpha.getName().getString());
-		var rb = data.player(bravo.getUUID(), bravo.getName().getString());
-		boolean aOut = ra.eliminated;
-		boolean bOut = rb.eliminated;
-		dev.rubymod.game.Gifts.reset();
-		try {
-			data.phase = Phase.WAR;
-			ra.eliminated = true;
-			rb.eliminated = false;
-			bravo.getInventory().clearContent();
-			String still = dev.rubymod.game.Gifts.send(server, bravo, alpha);
-			String sent = dev.rubymod.game.Gifts.send(server, alpha, bravo);
-			int got = 0;
-			for (int i = 0; i < bravo.getInventory().getContainerSize(); i++) {
-				got += bravo.getInventory().getItem(i).getCount();
-			}
-			String again = dev.rubymod.game.Gifts.send(server, alpha, bravo);
-			check("gifts: someone knocked out can send a gift to someone still in (" + sent + ", " + got + " items)", still != null && sent == null && got >= 2
-					&& again != null);
-			dev.rubymod.game.Gifts.advance(3 * 60_000L + 1000);
-			check("gifts: and another a few minutes later", dev.rubymod.game.Gifts.send(server, alpha, bravo) == null);
-			bravo.getInventory().clearContent();
-		} finally {
-			dev.rubymod.game.Gifts.reset();
-			ra.eliminated = aOut;
-			rb.eliminated = bOut;
-			data.phase = before;
-		}
-		// Open House.
-		var claim = data.claimOf(alpha.getUUID());
-		if (claim == null) {
-			return;
-		}
-		boolean wasDestroyed = claim.destroyed;
-		claim.destroyed = false;
-		dev.rubymod.game.OpenHouse.reset();
-		try {
-			data.phase = Phase.BUILD;
-			var from = bravo.position();
-			String closed = dev.rubymod.game.OpenHouse.visit(server, bravo, alpha);
-			dev.rubymod.game.OpenHouse.toggle(server, alpha);
-			String in = dev.rubymod.game.OpenHouse.visit(server, bravo, alpha);
-			double near = Math.hypot(bravo.getX() - (claim.x + 0.5), bravo.getZ() - (claim.z + 0.5));
-			String out = dev.rubymod.game.OpenHouse.back(server, bravo);
-			check("open house: you can visit an open base (" + Math.round(near) + " blocks from its Heart) and go back where you were", closed != null
-					&& in == null && near < 6 && out == null && bravo.position().distanceTo(from) < 1.5);
-			data.phase = Phase.LOCKDOWN;
-			dev.rubymod.game.OpenHouse.tick(server);
-			check("open house: bases close for Battle Day", !dev.rubymod.game.OpenHouse.isOpen(alpha.getUUID())
-					&& dev.rubymod.game.OpenHouse.visit(server, bravo, alpha) != null);
-		} finally {
-			dev.rubymod.game.OpenHouse.reset();
-			claim.destroyed = wasDestroyed;
-			data.phase = before;
-		}
 	}
 
 	/** The Practice Dummy: your turrets and Tesla Coils fire on it in your own base, for free; it goes after a minute. */

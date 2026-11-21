@@ -370,10 +370,6 @@ public final class BattleDirector {
 			player.setGameMode(GameType.SPECTATOR);
 		}
 		checkForWinner(server);
-		// Out, but not out of it: they can send gifts to those still in.
-		if (player != null && SeasonData.get().phase.isBattle()) {
-			Gifts.offer(server, player);
-		}
 	}
 
 	public static int aliveCount() {

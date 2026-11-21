@@ -24,10 +24,8 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-21-together";
+	private static final String VERSION = "2026-11-21-guide";
 	private static final List<String> LINES = List.of(
-			"minecraft:golden_apple|Knocked out on Battle Day? You can still help: send gifts (golden apples, ammo, grenades) to anyone still in, every 3 minutes. Click a name in the chat.",
-			"minecraft:oak_door|Open House: /rubywars openhouse lets everyone visit your base (they can look, not touch). Show off what you've built!",
 			"minecraft:writable_book|The Guide (J) now has three chapters, from your first Heart to being ready for Battle Day. Steps that need others on are optional.",
 			"minecraft:armor_stand|The Practice Dummy (Armory, Defenses): watch your turrets and Tesla Coils fire on it before Battle Day.",
 			"minecraft:chest|World events have their own map icons with the time left, and a [Go to Ruby Wars] button for anyone in the hub.");

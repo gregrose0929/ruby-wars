@@ -49,35 +49,6 @@ public final class RubyWarsCommand {
 				.then(Commands.literal("heart").executes(RubyWarsCommand::heart))
 				.then(Commands.literal("champions").executes(RubyWarsCommand::champions))
 				.then(Commands.literal("leaderboard").executes(RubyWarsCommand::leaderboard))
-				.then(Commands.literal("gift").then(Commands.argument("player", EntityArgument.player()).executes(c -> {
-					String error = dev.rubymod.game.Gifts.send(c.getSource().getServer(), c.getSource().getPlayerOrException(),
-							EntityArgument.getPlayer(c, "player"));
-					if (error != null) {
-						c.getSource().sendFailure(Component.literal(error));
-						return 0;
-					}
-					return 1;
-				})))
-				.then(Commands.literal("openhouse").executes(c -> ok(c, dev.rubymod.game.OpenHouse.toggle(c.getSource().getServer(),
-						c.getSource().getPlayerOrException()))))
-				.then(Commands.literal("visit")
-						.then(Commands.literal("back").executes(c -> {
-							String error = dev.rubymod.game.OpenHouse.back(c.getSource().getServer(), c.getSource().getPlayerOrException());
-							if (error != null) {
-								c.getSource().sendFailure(Component.literal(error));
-								return 0;
-							}
-							return 1;
-						}))
-						.then(Commands.argument("player", EntityArgument.player()).executes(c -> {
-							String error = dev.rubymod.game.OpenHouse.visit(c.getSource().getServer(), c.getSource().getPlayerOrException(),
-									EntityArgument.getPlayer(c, "player"));
-							if (error != null) {
-								c.getSource().sendFailure(Component.literal(error));
-								return 0;
-							}
-							return 1;
-						})))
 				.then(Commands.literal("event").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.literal("stop").executes(c -> {
 							dev.rubymod.game.WorldEvents.stop(c.getSource().getServer());

@@ -75,8 +75,6 @@ public class ManualScreen extends Screen {
 					"Respawns: in Lockdown and Open War you come back at your Heart while it stands (the line under the timer says so). "
 							+ "Heart gone, or Sudden Death: your next death knocks you out.",
 					"Knocked out? Watch: click for the next player, right-click for the one before, crouch to fly free. Or press H and play party games in the hub.",
-					"Knocked out, you can still help: every 3 minutes, send a gift (golden apples, ammo, grenades) to someone still in. Click a name in the chat, or /rubywars gift <player>.",
-					"While you build, /rubywars openhouse opens your base for visitors: everyone gets a [Visit] button, and a [Go back] one. They can look, not touch. It closes for Battle Day.",
 					"When the season ends, everyone gets a wrap-up card: the winner and a few awards. /rubywars recap shows it again. "
 							+ "Every winner goes up in the Hall of Champions, in the hub beside the path to Ruby Wars.",
 					"Each new season starts fresh: a fresh island, and everyone begins again with nothing in Ruby Wars (the hub and other games keep their things).",
