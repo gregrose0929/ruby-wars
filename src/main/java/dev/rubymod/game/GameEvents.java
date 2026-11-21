@@ -156,6 +156,8 @@ public final class GameEvents {
 			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+			// A world event going on: tidy it away (else its beacon and iron would be left behind, for anyone to mine).
+			WorldEvents.stop(server);
 			Collapse.clear();
 			Movers.finishAll();
 			NightBattle.clear();

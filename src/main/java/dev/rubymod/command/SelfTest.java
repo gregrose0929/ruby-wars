@@ -448,6 +448,8 @@ public final class SelfTest {
 			}
 		}
 		check("wrench: it picks up an Ore Silo with what's in it (" + carried + ")", level.getBlockState(wrenchAt).isAir() && carried == 128);
+		check("wrench: a silo picked up leaves My Base's silo list", dev.rubymod.industry.SiloBlockEntity.Silos.totals(A).stream()
+				.noneMatch(e -> e.getKey().equals("minecraft:iron_ingot")));
 		alpha.getInventory().clearContent();
 		for (BlockPos p : BlockPos.betweenClosed(lineAt.offset(-1, 0, -1), lineAt.offset(10, 2, 1))) {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
@@ -1478,6 +1480,13 @@ public final class SelfTest {
 			alpha.teleportTo(level, spot.getX() + 0.5, spot.getY(), spot.getZ() - 1.5, java.util.Set.of(), 0, 0, true);
 			dev.rubymod.game.WorldEvents.tickSecond(server, both);
 			int ring = W.chests();
+			// A block someone puts in the cache's space is theirs to break again; the cache's own aren't.
+			BlockPos inSpace = spot.offset(1, 1, 1);
+			level.setBlockAndUpdate(inSpace, Blocks.COBBLESTONE.defaultBlockState());
+			boolean theirs = !dev.rubymod.game.WorldEvents.protects(level, inSpace) && dev.rubymod.game.WorldEvents.protects(level, spot.offset(1, -1, 1));
+			level.setBlockAndUpdate(inSpace, Blocks.AIR.defaultBlockState());
+			boolean forced = !level.getForceLoadedChunks().isEmpty();
+			check("events: a block put in an event's space can be broken again, and the event's chunks stay loaded", theirs && forced);
 			check("events: a Supply Cache opens with 6 chests of loot round a sealed glass case (" + ring + " chests)",
 					dev.rubymod.game.WorldEvents.isOpen() && ring == 6 && !level.getBlockState(spot).is(Blocks.CHEST)
 							&& !dev.rubymod.game.WorldEvents.protects(level, spot.offset(3, 0, 0)));
@@ -1596,7 +1605,8 @@ public final class SelfTest {
 				dev.rubymod.game.Duels.tick(level.getServer());
 			}
 			check("duels: afterwards both go back where they were [score " + dev.rubymod.game.Duels.score(alpha) + ", alpha at " + alpha.blockPosition().toShortString() + " in " + alpha.level().dimension().identifier() + ", home " + home.toShortString() + ", bravo in " + bravo.level().dimension().identifier() + "]", dev.rubymod.game.Duels.score(alpha) == null && alpha.level() == level
-					&& alpha.blockPosition().closerThan(home, 2) && bravo.level() == level);
+					&& Math.abs(alpha.getX() - (home.getX() + 0.5)) < 2 && Math.abs(alpha.getZ() - (home.getZ() + 0.5)) < 2
+					&& alpha.getY() >= home.getY() - 0.5 && alpha.getY() < home.getY() + 8 && bravo.level() == level);
 			check("duels: and get their own inventory back", alpha.getInventory().countItem(ModItems.RUBY) == 5
 					&& alpha.getInventory().countItem(ModItems.ARR_RIFLE) == 0 && bravo.getInventory().countItem(net.minecraft.world.item.Items.BREAD) == 3);
 			check("duels: the duel's PvP rules end with it", dev.rubymod.game.Duels.canHurt(alpha, bravo) == null);

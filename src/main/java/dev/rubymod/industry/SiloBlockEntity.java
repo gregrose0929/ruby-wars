@@ -367,7 +367,7 @@ public class SiloBlockEntity extends BlockEntity implements WorldlyContainer {
 			ALL.put(key(level, be.worldPosition), new Entry(be.owner, item, be.stored + be.out.getCount()));
 		}
 
-		static void removed(ServerLevel level, BlockPos pos) {
+		public static void removed(ServerLevel level, BlockPos pos) {
 			ALL.remove(key(level, pos));
 		}
 

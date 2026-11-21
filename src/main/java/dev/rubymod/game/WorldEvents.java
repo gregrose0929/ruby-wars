@@ -101,6 +101,10 @@ public final class WorldEvents {
 	/** What the event built over, to put back after. */
 	private static final Map<BlockPos, BlockState> RESTORE = new LinkedHashMap<>();
 	private static final List<BlockPos> CHESTS = new ArrayList<>();
+	/** What the event itself put where (so a block a player puts in its space isn't counted as the event's). */
+	private static final Map<BlockPos, BlockState> PLACED = new HashMap<>();
+	/** Chunks kept loaded while it's on (so its chests and countdown work with nobody near). */
+	private static final Set<Long> FORCED = new HashSet<>();
 	private static final Set<UUID> CAME = new HashSet<>();
 	/** Shrine: seconds each player has held it alone. */
 	private static final Map<UUID, Integer> HELD = new HashMap<>();
@@ -247,6 +251,7 @@ public final class WorldEvents {
 						+ at.getX() + ", " + at.getZ() + ".").withStyle(what.chat));
 			}
 		}
+		force(level);
 		beacon(level);
 		dev.rubymod.RubyMod.LOGGER.info("World event: {} at {} (opens in {}s)", what.title, at.toShortString(), seconds);
 		return null;
@@ -304,7 +309,15 @@ public final class WorldEvents {
 			}
 			level.getChunk(x >> 4, z >> 4);
 			BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, 0, z));
-			if (level.getFluidState(top.below()).isEmpty() && level.getFluidState(top).isEmpty() && top.getY() > level.getMinY() + 5) {
+			boolean things = false;
+			for (BlockPos p : BlockPos.betweenClosed(top.offset(-4, -3, -4), top.offset(4, 4, 4))) {
+				if (level.getBlockEntity(p) != null) {
+					things = true; // someone's chest, sign or machine: not here
+					break;
+				}
+			}
+			if (!things && level.getFluidState(top.below()).isEmpty() && level.getFluidState(top).isEmpty() && top.getY() > level.getMinY()
+					&& !level.getBlockState(top.below()).isAir()) {
 				return top;
 			}
 		}
@@ -338,8 +351,8 @@ public final class WorldEvents {
 
 	/** Part of a world event's build (not its chests): nobody can break it, by hand or with explosives. */
 	public static boolean protects(net.minecraft.world.level.Level level, BlockPos pos) {
-		return kind != null && level instanceof ServerLevel server && server == server.getServer().overworld() && RESTORE.containsKey(pos)
-				&& !CHESTS.contains(pos);
+		return kind != null && level instanceof ServerLevel server && server == server.getServer().overworld() && !CHESTS.contains(pos)
+				&& PLACED.get(pos) != null && PLACED.get(pos) == level.getBlockState(pos);
 	}
 
 	/** Particles: a few sparks up the beam, and the shrine's ring. */
@@ -379,6 +392,7 @@ public final class WorldEvents {
 			case METEOR -> {
 				undo(level); // the beacon goes; the crater stays
 				BlockPos c = BattleDirector.meteorAt(level, at);
+				unforce(level);
 				Waypoints.clearGlobal(at);
 				kind = null; // the meteor says the rest itself, and its crater stays
 				at = null;
@@ -403,6 +417,31 @@ public final class WorldEvents {
 	private static void put(ServerLevel level, BlockPos pos, BlockState state) {
 		RESTORE.putIfAbsent(pos.immutable(), level.getBlockState(pos));
 		level.setBlockAndUpdate(pos, state);
+		if (state.isAir()) {
+			PLACED.remove(pos.immutable());
+		} else {
+			PLACED.put(pos.immutable(), level.getBlockState(pos));
+		}
+	}
+
+	/** Keep the chunks under the event loaded until it's over. */
+	private static void force(ServerLevel level) {
+		for (int dx = -4; dx <= 4; dx += 8) {
+			for (int dz = -4; dz <= 4; dz += 8) {
+				int cx = (at.getX() + dx) >> 4;
+				int cz = (at.getZ() + dz) >> 4;
+				if (FORCED.add(((long) cx << 32) | (cz & 0xFFFFFFFFL))) {
+					level.setChunkForced(cx, cz, true);
+				}
+			}
+		}
+	}
+
+	private static void unforce(ServerLevel level) {
+		for (long chunk : FORCED) {
+			level.setChunkForced((int) (chunk >> 32), (int) chunk, false);
+		}
+		FORCED.clear();
 	}
 
 	private static void platform(ServerLevel level, int radius) {
@@ -506,6 +545,7 @@ public final class WorldEvents {
 			level.sendParticles(ParticleTypes.POOF, at.getX() + 0.5, at.getY() + 0.5, at.getZ() + 0.5, 40, 2, 0.5, 2, 0.02);
 		}
 		undo(level);
+		unforce(level);
 		if (at != null) {
 			Waypoints.clearGlobal(at);
 		}
@@ -526,6 +566,7 @@ public final class WorldEvents {
 		java.util.Collections.reverse(list);
 		RESTORE.clear();
 		CHESTS.clear();
+		PLACED.clear();
 		for (var e : list) {
 			level.setBlockAndUpdate(e.getKey(), e.getValue());
 		}
@@ -649,6 +690,7 @@ public final class WorldEvents {
 		if (kind == null) {
 			return;
 		}
+		int left = kind == Kind.CACHE && open && !players.isEmpty() ? chestsLeft(players.get(0).level().getServer().overworld()) : 0;
 		for (ServerPlayer p : players) {
 			String where;
 			if (p.level() == p.level().getServer().overworld()) {
@@ -663,7 +705,6 @@ public final class WorldEvents {
 			if (!open) {
 				text = kind.title.toUpperCase(java.util.Locale.ROOT) + " in " + clock(opensAt - t) + "   " + where;
 			} else if (kind == Kind.CACHE) {
-				int left = chestsLeft(p.level().getServer().overworld());
 				String next = !bigOpen ? "big chest in " + clock(openedAt + BIG_CHEST - t)
 						: !refilled ? left + (left == 1 ? " chest" : " chests") + " left, more in " + clock(openedAt + REFILL - t)
 						: left + (left == 1 ? " chest" : " chests") + " left";
@@ -720,6 +761,8 @@ public final class WorldEvents {
 	public static void reset() {
 		RESTORE.clear();
 		CHESTS.clear();
+		PLACED.clear();
+		FORCED.clear();
 		CAME.clear();
 		HELD.clear();
 		bigOpen = false;

@@ -326,6 +326,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	 * machines together ({@link AwayTime}).
 	 */
 	public void catchUp(ServerLevel level, long elapsed) {
+		if (owner.equals(NOBODY) || Grid.special(owner)) {
+			return; // the training ground's, and Horde's (a game, not a base)
+		}
 		MachineKind kind = kind();
 		switch (kind) {
 			case RUBY_DRILL, ORE_REFINERY, AMMO_FACTORY, ASSEMBLER, TRADE_DEPOT -> {

@@ -987,7 +987,13 @@ public final class Rift {
 				}
 			}
 			boss.tick(level, targets);
+			if (boss == null) {
+				return; // the fight ended inside its own tick (everyone went down): nothing more to do this tick
+			}
 			RiftMutations.tick(level, boss, targets, ticks);
+			if (boss == null) {
+				return;
+			}
 			LivingEntity bossBody = boss.body(level);
 			if (!raged && bossBody != null && bossBody.getHealth() < bossBody.getMaxHealth() * 0.5F && map.boss != RiftBosses.Boss.SOVEREIGN) {
 				// Half gone: the music turns.

@@ -163,6 +163,9 @@ public class WrenchItem extends Item {
 		if (level.getBlockEntity(pos) instanceof dev.rubymod.industry.SiloBlockEntity silo && state.getBlock() instanceof dev.rubymod.industry.OreSiloBlock block) {
 			// An Ore Silo comes with everything in it, on the item (like breaking it).
 			item = block.drop(silo);
+			if (level instanceof net.minecraft.server.level.ServerLevel server) {
+				dev.rubymod.industry.SiloBlockEntity.Silos.removed(server, pos); // off My Base's silo list
+			}
 			level.removeBlockEntity(pos);
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 			give(player, item);

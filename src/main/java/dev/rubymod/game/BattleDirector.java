@@ -113,7 +113,13 @@ public final class BattleDirector {
 			}
 			case FINAL_CIRCLE -> {
 				WorldBorder border = overworld.getWorldBorder();
-				border.setSize(config.borderEndSize);
+				if (border.getSize() > config.borderEndSize + 1) {
+					// Sudden Death cut short (an admin skipped ahead): close the rest of the way over a minute, so nobody
+					// outside it is killed by the border on the spot.
+					border.lerpSizeBetween(border.getSize(), config.borderEndSize, 60L * 20L, overworld.getGameTime());
+				} else {
+					border.setSize(config.borderEndSize);
+				}
 				Alerts.broadcastTitle(server, "FINAL CIRCLE", "Everyone is glowing. Artillery incoming.", ChatFormatting.GOLD);
 				Alerts.broadcast(server, Component.literal("Artillery will shell the circle every 15 seconds. Keep moving!")
 						.withStyle(ChatFormatting.GOLD));

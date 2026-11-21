@@ -9420,11 +9420,12 @@ public final class AutoTest {
 			var level = (net.minecraft.server.level.ServerLevel) p.level();
 			int x = p.getBlockX();
 			int z = p.getBlockZ();
-			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 8, y - 1, z - 8, x + 8, y - 1, z + 8)) {
+			// The test world may have no ground out here (a training world): make some.
+			int y = Math.max(level.getMinY() + 4, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z));
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 20, y - 1, z - 20, x + 20, y - 1, z + 20)) {
 				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
 			}
-			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 8, y, z - 8, x + 8, y + 6, z + 8)) {
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(x - 20, y, z - 20, x + 20, y + 6, z + 20)) {
 				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 			}
 			p.teleportTo(x + 0.5, y, z - 4.5);
