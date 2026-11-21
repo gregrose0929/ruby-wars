@@ -302,7 +302,17 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			if (lock) {
 				Ui.icon(g, Ui.Icon.LOCK, x + 11, y + 11);
 			}
-			g.text(font, Ui.fit(name(stack), CARD_W - 24), x + 21, y + 3, lock ? Ui.MUTED : Ui.TEXT, false);
+			// A long name in smaller letters rather than cut short ("Excavator Picka...").
+			String title = name(stack);
+			if (font.width(title) <= CARD_W - 24) {
+				g.text(font, title, x + 21, y + 3, lock ? Ui.MUTED : Ui.TEXT, false);
+			} else {
+				g.pose().pushMatrix();
+				g.pose().translate(x + 21, y + 4);
+				g.pose().scale(0.75F, 0.75F);
+				g.text(font, Ui.fit(title, Math.round((CARD_W - 24) / 0.75F)), 0, 0, lock ? Ui.MUTED : Ui.TEXT, false);
+				g.pose().popMatrix();
+			}
 			String line;
 			int color;
 			if (lock) {

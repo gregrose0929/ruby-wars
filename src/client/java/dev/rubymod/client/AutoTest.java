@@ -9253,8 +9253,8 @@ public final class AutoTest {
 			p.teleportTo(level, heart.getX() + 0.5, heart.getY(), heart.getZ() - 14.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 15, true);
 			dev.rubymod.industry.Grid.deposit(p.getUUID(), 500_000L);
 		}));
-		then(60, mc -> onServer(mc, server -> dev.rubymod.game.Shop.open(me(server), dev.rubymod.game.Shop.pageIndex("Building"))));
-		then(60, mc -> shot(mc, "build-armory"));
+		then(100, mc -> onServer(mc, server -> dev.rubymod.game.Shop.open(me(server), dev.rubymod.game.Shop.pageIndex("Building"))));
+		then(140, mc -> shot(mc, "build-armory"));
 		then(5, mc -> mc.player.closeContainer());
 		then(20, mc -> mc.gui.setScreen(null));
 		// The wand's round tower.

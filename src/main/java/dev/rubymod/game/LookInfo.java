@@ -289,7 +289,7 @@ public final class LookInfo {
 				bar = claim.hp / (float) Math.max(1, claim.maxHp());
 				lines.add("Integrity " + claim.hp + " / " + claim.maxHp());
 				color = bar > 0.5F ? GREEN : bar > 0.25F ? AMBER : RED;
-			} else if (Explosions.blastsToBreak(state) > 0) {
+			} else if (Explosions.blastsToBreak(state) > 0 && (Explosions.blastsTaken(player.level(), pos) > 0 || player.isShiftKeyDown())) {
 				// Armored walls: how many blasts it takes, and how many it's had.
 				int hp = Explosions.blastsToBreak(state);
 				int taken = Explosions.blastsTaken(player.level(), pos);

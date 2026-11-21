@@ -237,14 +237,15 @@ public final class WorldEvents {
 		Waypoints.global(what.title, at, what.marker, seconds + 10 * 60);
 		String when = seconds >= 60 ? "in " + (seconds + 30) / 60 + " minute" + ((seconds + 30) / 60 == 1 ? "" : "s") : "now";
 		String what2 = switch (what) {
-			case CACHE -> "Chests full of Armory gear and rubies. First there takes them.";
-			case SHRINE -> "Stand in it alone and rubies go into your bank. Anyone else in it and it's contested.";
-			case METEOR -> "It'll be full of rubies, and it's on nobody's land.";
+			case CACHE -> "Armory gear and rubies";
+			case SHRINE -> "hold it alone for rubies";
+			case METEOR -> "full of rubies";
 		};
 		for (ServerPlayer p : players) {
 			Alerts.title(p, what.title.toUpperCase(java.util.Locale.ROOT), when + " at " + at.getX() + ", " + at.getZ() + " (on your map: K)", what.chat);
-			p.sendSystemMessage(Component.literal("★ A " + what.title + " " + (seconds >= 60 ? "opens " + when : "is here") + " at " + at.getX() + ", "
-					+ at.getZ() + ". " + what2 + " Watch out: you can fight out there.").withStyle(what.chat, ChatFormatting.BOLD));
+			// One line: the title, the banner and the map say the rest.
+			p.sendSystemMessage(Component.literal("★ " + what.title + (seconds >= 60 ? " in " + (seconds + 30) / 60 + " min" : " now") + " at " + at.getX() + ", "
+					+ at.getZ() + ": " + what2).withStyle(what.chat));
 			p.level().playSound(null, p.blockPosition(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 1.0F, 0.8F);
 		}
 		// Everyone elsewhere (the hub, a duel, the other games) hears about it too.

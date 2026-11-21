@@ -99,8 +99,8 @@ public final class SupplyDrops {
 				p.level().playSound(null, p.blockPosition(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 0.8F, 1.2F);
 			}
 		}
-		Alerts.broadcast(level.getServer(), Component.literal("SUPPLY DROP coming down in " + seconds + " seconds at " + spot.getX() + ", " + spot.getZ()
-				+ ": follow the beam!").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+		Alerts.broadcast(level.getServer(), Component.literal("★ Supply drop in " + seconds + "s at " + spot.getX() + ", " + spot.getZ()
+				+ ": follow the beam").withStyle(ChatFormatting.AQUA));
 		save(level.getServer());
 	}
 

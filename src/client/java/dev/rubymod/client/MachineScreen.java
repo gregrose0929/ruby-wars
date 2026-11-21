@@ -677,14 +677,14 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		} else if (b.id() == MachineMenu.BUTTON_STONE) {
 			label = menu.get(36) == 1 ? "Stone: Leave" : "Stone: Keep";
 		} else if (b.id() == MachineMenu.BUTTON_REPAIR) {
-			label = menu.get(44) == 2 ? "Repair where copied" : "Build in front";
+			label = menu.get(44) == 2 ? "Repair in place" : "Build in front";
 		}
 		dev.rubymod.client.ui.Ui.button(g, label, b.x(), b.y(), b.w(), b.h(), mx, my, RUBY, !disabled);
 		if (hover && b.id() == MachineMenu.BUTTON_REPAIR) {
 			g.setComponentTooltipForNextFrame(font, List.of(
 					Component.literal("What the Constructor does with this Blueprint").withStyle(net.minecraft.ChatFormatting.YELLOW),
 					Component.literal("Build in front: a copy, two blocks out").withStyle(net.minecraft.ChatFormatting.GRAY),
-					Component.literal("Repair where copied: fills holes back in").withStyle(net.minecraft.ChatFormatting.GRAY),
+					Component.literal("Repair in place: fills holes back in").withStyle(net.minecraft.ChatFormatting.GRAY),
 					Component.literal("  where they were, inside your own base,").withStyle(net.minecraft.ChatFormatting.GRAY),
 					Component.literal("  and keeps watching (it never removes anything)").withStyle(net.minecraft.ChatFormatting.GRAY)),
 					mx + leftPos, my + topPos);

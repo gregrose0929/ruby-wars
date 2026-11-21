@@ -57,16 +57,54 @@ public class RubyToast implements Toast {
 		this.cardHeight = lines.size() > 1 ? 43 : SLOT;
 	}
 
+	/** Notes that came in together (shown as one where they can be), and held while a menu is open. */
+	private static final java.util.List<MorePayloads.Note> WAITING = new java.util.ArrayList<>();
+	private static long lastIn;
+	/** How long to wait for more to come with the first (goals finished by the same thing arrive together). */
+	private static final long GATHER_MS = 600;
+
 	public static void register() {
 		ClientPlayNetworking.registerGlobalReceiver(MorePayloads.Note.TYPE, (p, c) -> {
 			Minecraft mc = Minecraft.getInstance();
 			if (ClientSettings.toasts) {
-				mc.gui.toastManager().addToast(new RubyToast(p.icon(), p.title(), p.body(), p.color()));
+				WAITING.add(p);
+				lastIn = System.currentTimeMillis();
 			} else if (mc.player != null) {
 				// Toasts off: a quiet line over the hotbar instead.
 				mc.player.sendOverlayMessage(net.minecraft.network.chat.Component.literal(p.title() + (p.body().isEmpty() ? "" : ": " + p.body())));
 			}
 		});
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(RubyToast::tick);
+	}
+
+	/** Show what's waiting once nothing more has come for a moment, and nothing's open on screen (chat aside). */
+	private static void tick(Minecraft mc) {
+		if (WAITING.isEmpty() || System.currentTimeMillis() - lastIn < GATHER_MS || GameHud.menuOpen()) {
+			return;
+		}
+		java.util.List<MorePayloads.Note> goals = new java.util.ArrayList<>();
+		for (MorePayloads.Note n : WAITING) {
+			if (n.title().startsWith("Goal done!")) {
+				goals.add(n);
+			}
+		}
+		if (goals.size() >= 2) {
+			// "4 goals done! +5 stars (J)": the goals by name underneath.
+			int stars = 0;
+			java.util.List<String> names = new java.util.ArrayList<>();
+			for (MorePayloads.Note n : goals) {
+				stars += (int) n.title().chars().filter(ch -> ch == '\u2605').count();
+				names.add(n.body());
+			}
+			mc.gui.toastManager().addToast(new RubyToast("minecraft:nether_star", goals.size() + " goals done! +" + stars + (stars == 1 ? " star" : " stars") + " (J)",
+					String.join(", ", names), goals.get(0).color()));
+		}
+		for (MorePayloads.Note n : WAITING) {
+			if (goals.size() < 2 || !goals.contains(n)) {
+				mc.gui.toastManager().addToast(new RubyToast(n.icon(), n.title(), n.body(), n.color()));
+			}
+		}
+		WAITING.clear();
 	}
 
 	@Override
@@ -74,9 +112,22 @@ public class RubyToast implements Toast {
 		return visibility;
 	}
 
+	/** Time spent out of sight behind an open menu (it doesn't count toward its five seconds). */
+	private long hidden;
+	private long hiddenFrom = -1;
+
 	@Override
 	public void update(ToastManager manager, long visibleTime) {
-		visibility = visibleTime >= SHOW_MS * manager.getNotificationDisplayTimeMultiplier() ? Visibility.HIDE : Visibility.SHOW;
+		if (GameHud.menuOpen()) {
+			if (hiddenFrom < 0) {
+				hiddenFrom = visibleTime;
+			}
+		} else if (hiddenFrom >= 0) {
+			hidden += visibleTime - hiddenFrom;
+			hiddenFrom = -1;
+		}
+		long shown = visibleTime - hidden - (hiddenFrom >= 0 ? visibleTime - hiddenFrom : 0);
+		visibility = shown >= SHOW_MS * manager.getNotificationDisplayTimeMultiplier() ? Visibility.HIDE : Visibility.SHOW;
 	}
 
 	/** Below the minimap (when it's showing), not on top of it. */
@@ -98,6 +149,9 @@ public class RubyToast implements Toast {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, Font font, long visibleTime) {
+		if (GameHud.menuOpen()) {
+			return; // out of sight while a menu's open; it carries on when it closes
+		}
 		HudScale.push(g);
 		try {
 			drawCard(g, font);
