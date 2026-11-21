@@ -1,0 +1,20 @@
+{
+	"variants": {
+		"facing=north": {
+			"model": "rubymod:block/ore_silo",
+			"y": 0
+		},
+		"facing=east": {
+			"model": "rubymod:block/ore_silo",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "rubymod:block/ore_silo",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "rubymod:block/ore_silo",
+			"y": 270
+		}
+	}
+}

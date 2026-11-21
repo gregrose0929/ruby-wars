@@ -4599,6 +4599,7 @@ public final class AutoTest {
 			case "hudcheck" -> hudCheckScript();
 			case "beltyard" -> beltYardScript();
 			case "drillgauge" -> drillGaugeScript();
+			case "mining" -> miningScript();
 			case "manualbelts" -> {
 				// The Field Manual's belt page, at two GUI scales (does it all fit?).
 				then(40, mc -> {
@@ -10108,6 +10109,140 @@ public final class AutoTest {
 		});
 		then(10, mc -> clickBlock(mc, heartAt.offset(2, 0, -3)));
 		then(20, mc -> shot(mc, "drill-screen-finds"));
+		then(5, mc -> {
+			log("done");
+			mc.stop();
+		});
+	}
+
+	/** The mining and making screens: drill buttons, Refinery, Assembler, Ore Silo, the pick, a geode, My Base and the Manual pages. */
+	private static void miningScript() {
+		then(5, mc -> {
+			command(mc, "rubywars reset everything confirm");
+			command(mc, "play rubywars");
+		});
+		then(60, mc -> {
+			command(mc, "rubywars start");
+			command(mc, "gamemode survival @a");
+			command(mc, "time set 1000");
+		});
+		then(60, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			int x = p.getBlockX();
+			int z = p.getBlockZ() + 5;
+			int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+			heartAt = new net.minecraft.core.BlockPos(x, y, z);
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(heartAt.offset(-6, 0, -8), heartAt.offset(6, 3, -2))) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(heartAt.offset(-6, -1, -8), heartAt.offset(6, -1, -2))) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState());
+			}
+			level.setBlockAndUpdate(heartAt, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heartAt);
+			var kinds = new net.minecraft.world.level.block.Block[] {dev.rubymod.registry.ModBlocks.COMBUSTION_GENERATOR, dev.rubymod.registry.ModBlocks.RUBY_DRILL,
+					dev.rubymod.registry.ModBlocks.ORE_REFINERY, dev.rubymod.registry.ModBlocks.ASSEMBLER, dev.rubymod.registry.ModBlocks.ORE_SILO};
+			for (int i = 0; i < kinds.length; i++) {
+				var at = heartAt.offset(-4 + i * 2, 0, -3);
+				level.setBlockAndUpdate(at, kinds[i].defaultBlockState());
+				kinds[i].setPlacedBy(level, at, level.getBlockState(at), p, new net.minecraft.world.item.ItemStack(kinds[i]));
+				var be = level.getBlockEntity(at);
+				if (be instanceof dev.rubymod.industry.MachineBlockEntity m) {
+					switch (m.kind()) {
+						case COMBUSTION_GENERATOR -> m.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 64));
+						case RUBY_DRILL -> {
+							m.setTier(3);
+							m.cycleFocus(2);
+							m.toggleStone();
+						}
+						case ORE_REFINERY -> {
+							m.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 20));
+							m.setItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SAND, 20));
+						}
+						case ASSEMBLER -> m.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 45));
+						default -> {
+						}
+					}
+				} else if (be instanceof dev.rubymod.industry.SiloBlockEntity silo) {
+					for (int k = 0; k < 37; k++) {
+						silo.put(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RAW_IRON, 64));
+					}
+				}
+			}
+			// Some ore under the drill, and Ruby Ore for the pick to find.
+			for (int k = 0; k < 30; k++) {
+				level.setBlockAndUpdate(heartAt.offset(-2 + k % 5 - 2, -1 - k / 25, -3 + k / 5 % 5 - 2), net.minecraft.world.level.block.Blocks.GOLD_ORE.defaultBlockState());
+			}
+			level.setBlockAndUpdate(heartAt.offset(3, -2, -7), dev.rubymod.registry.ModBlocks.RUBY_ORE.defaultBlockState());
+			p.getInventory().clearContent();
+			p.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.PROSPECTOR_PICK));
+			p.getInventory().setItem(1, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.GEODE, 3));
+			p.getInventory().setItem(2, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RAW_GOLD, 5));
+			p.getInventory().setItem(3, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModBlocks.ORE_SILO));
+			p.getInventory().setItem(4, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModBlocks.ASSEMBLER));
+			p.getInventory().setSelectedSlot(0);
+			p.teleportTo(level, heartAt.getX() + 0.5, heartAt.getY(), heartAt.getZ() - 8.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 20, true);
+		}));
+		then(400, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(0, 0, -3))));
+		then(20, mc -> shot(mc, "mining-row"));
+		then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), heartAt.getX() + 3.5, heartAt.getY(), heartAt.getZ() - 6.0,
+				java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 20, true)));
+		then(10, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(4, 0, -3))));
+		then(60, mc -> {
+			var look = ClientState.look;
+			log("look panel (silo): {}", look == null ? "nothing" : look.lines());
+			shot(mc, "silo-look");
+		});
+		then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), heartAt.getX() - 1.5, heartAt.getY(), heartAt.getZ() - 6.0,
+				java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 20, true)));
+		then(10, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(-2, 0, -3))));
+		then(60, mc -> {
+			var look = ClientState.look;
+			log("look panel (drill): {}", look == null ? "nothing" : look.lines());
+			shot(mc, "drill-look-new");
+		});
+		for (int i = 1; i <= 3; i++) {
+			int x = -4 + i * 2;
+			String name = new String[] {"", "drill-screen-new", "refinery-screen", "assembler-screen"}[i];
+			then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), heartAt.getX() + x + 0.5, heartAt.getY(), heartAt.getZ() - 5.5,
+					java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 30, true)));
+			then(10, mc -> clickBlock(mc, heartAt.offset(x, 0, -3)));
+			then(20, mc -> shot(mc, name));
+			then(5, mc -> mc.player.closeContainer());
+		}
+		// The pick and a geode.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.teleportTo(server.overworld(), heartAt.getX() + 0.5, heartAt.getY(), heartAt.getZ() - 5.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 20, true);
+		}));
+		then(10, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.getInventory().setSelectedSlot(0);
+			p.getInventory().getSelectedItem().getItem().use(server.overworld(), p, net.minecraft.world.InteractionHand.MAIN_HAND);
+		}));
+		then(6, mc -> shot(mc, "pick-message"));
+		then(30, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.getInventory().setSelectedSlot(1);
+			p.getInventory().getSelectedItem().getItem().use(server.overworld(), p, net.minecraft.world.InteractionHand.MAIN_HAND);
+		}));
+		then(6, mc -> shot(mc, "geode-message"));
+		then(60, mc -> {
+			log("made: {} | silos: {} | rocks: {}", ClientState.made, ClientState.silos, ClientState.rocks);
+			mc.gui.setScreen(new BaseScreen());
+		});
+		then(15, mc -> shot(mc, "my-base-made"));
+		then(5, mc -> {
+			ManualScreen m = new ManualScreen();
+			mc.gui.setScreen(m);
+			m.showPage(11);
+		});
+		then(15, mc -> shot(mc, "manual-mining"));
+		then(5, mc -> ((ManualScreen) mc.gui.screen()).showPage(12));
+		then(15, mc -> shot(mc, "manual-rocks"));
+		then(5, mc -> mc.gui.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player)));
+		then(15, mc -> shot(mc, "mining-items"));
 		then(5, mc -> {
 			log("done");
 			mc.stop();

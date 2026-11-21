@@ -9,14 +9,15 @@ public enum MachineKind {
 	SOLAR_PANEL("Solar Panel", "Free charge while the sun shines on it.", 0, 0, 8),
 	BATTERY("Battery Bank", "Stores charge: raises your grid's capacity.", 0, 0, 10),
 	RUBY_DRILL("Ruby Drill", "Mines ore by itself and keeps what it finds: open it to collect, or run a conveyor belt from it to a chest. Stops when it's full.", 0, 9, 20),
-	ORE_REFINERY("Ore Refinery", "Raw ore in, two ingots out (three at Mk IV). Ruby ore gives rubies.", 1, 3, 15),
+	ORE_REFINERY("Ore Refinery", "Raw ore in, two ingots out (three at Mk IV); cooks anything a furnace can. Coal with sand makes gunpowder.", 2, 3, 15),
 	AMMO_FACTORY("Ammo Factory", "Metal and gunpowder in, ammunition out. Click the recipe to change it.", 2, 2, 12),
 	TRADE_DEPOT("Trade Depot", "Sells anything you put in it (ore and ingots pay best); the rubies go straight to your bank.", 9, 0, 15),
 	VAULT("Ruby Vault", "Your bank: deposit rubies, earn daily interest. Raiders can crack it on Battle Day.", 1, 0, 25),
 	SHIELD_GENERATOR("Shield Generator", "Projects a dome that destroys incoming rockets, shells and bombs. Uses charge per hit.", 0, 0, 40),
 	POINT_DEFENSE("Point Defense Gun", "Automatic gatling that shreds missiles, bombs and drones nearby. Uses charge.", 0, 0, 35),
 	CONSTRUCTOR("Constructor", "Builds a Blueprint, pulling blocks from containers next to it.", 1, 0, 15),
-	TESLA_COIL("Tesla Coil", "Zaps hostile mobs, and enemies inside your claim on Battle Day. Uses charge per zap.", 0, 0, 30);
+	TESLA_COIL("Tesla Coil", "Zaps hostile mobs, and enemies inside your claim on Battle Day. Uses charge per zap.", 0, 0, 30),
+	ASSEMBLER("Assembler", "Crafts from what you (or a belt) bring it: pick a recipe, feed it the parts.", 2, 2, 15);
 
 	public static final int MAX_TIER = 5;
 	public static final String[] TIER_NAMES = {"Mk I", "Mk II", "Mk III", "Mk IV", "Mk V"};
@@ -60,7 +61,7 @@ public enum MachineKind {
 	public int draw(int tier) {
 		return switch (this) {
 			case RUBY_DRILL -> 1 + tier / 2;
-			case ORE_REFINERY, AMMO_FACTORY -> 1 + tier / 3;
+			case ORE_REFINERY, AMMO_FACTORY, ASSEMBLER -> 1 + tier / 3;
 			case SHIELD_GENERATOR -> tier;
 			case CONSTRUCTOR -> 2;
 			default -> 0;
@@ -71,7 +72,7 @@ public enum MachineKind {
 	public int cycle(int tier) {
 		return switch (this) {
 			case RUBY_DRILL -> new int[] {160, 120, 90, 65, 45}[tier - 1];
-			case ORE_REFINERY, AMMO_FACTORY -> new int[] {100, 75, 55, 40, 28}[tier - 1];
+			case ORE_REFINERY, AMMO_FACTORY, ASSEMBLER -> new int[] {100, 75, 55, 40, 28}[tier - 1];
 			case TRADE_DEPOT -> 20;
 			case CONSTRUCTOR -> new int[] {8, 6, 4, 3, 2}[tier - 1];
 			default -> 1;

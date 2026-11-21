@@ -96,6 +96,10 @@ public final class LookInfo {
 				if (kind.slots() > 0) {
 					lines.add(holds.isEmpty() ? "Empty" : "Holds " + holds);
 				}
+				if (kind == MachineKind.RUBY_DRILL) {
+					lines.add("Finds: " + dev.rubymod.industry.Recipes.FOCUS_NAMES[m.focus()] + (m.leavesStone() ? ", leaves stone behind" : "")
+							+ ". " + m.site().describe());
+				}
 				if (kind == MachineKind.BATTERY || kind.output(m.tier()) > 0 || kind.draw(m.tier()) > 0) {
 					UUID owner = m.power();
 					long cap = Grid.capacity(owner);
@@ -103,6 +107,11 @@ public final class LookInfo {
 					lines.add(String.format(java.util.Locale.ROOT, "Grid: %,d / %,d charge", Grid.charge(owner), cap));
 				}
 				color = m.status() == MachineBlockEntity.WORKING ? GREEN : m.status() == MachineBlockEntity.IDLE ? BLUE : AMBER;
+			} else if (be instanceof dev.rubymod.industry.SiloBlockEntity silo) {
+				lines.add(dev.rubymod.industry.OreSiloBlock.describe(silo));
+				lines.add("Owner: " + (silo.owner() == null ? "nobody" : name(silo.owner())));
+				bar = silo.total() > 0 ? (float) silo.total() / silo.capacity() : 0;
+				color = BLUE;
 			} else if (state.getBlock() instanceof dev.rubymod.industry.BeltLoaderBlock) {
 				net.minecraft.core.Direction facing = state.getValue(dev.rubymod.industry.BeltLoaderBlock.FACING);
 				String what = be instanceof dev.rubymod.industry.FilterBlockEntity f ? f.filterName() : "anything";

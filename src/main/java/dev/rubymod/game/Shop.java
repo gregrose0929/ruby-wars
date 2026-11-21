@@ -185,6 +185,10 @@ public final class Shop {
 			item(ModBlocks.TRADE_DEPOT, 1, 15);
 			item(ModBlocks.VAULT, 1, 20);
 			item(ModBlocks.AMMO_FACTORY, 1, 18);
+			section("Mining and making");
+			item(ModItems.PROSPECTOR_PICK, 1, 6);
+			item(ModBlocks.ASSEMBLER, 1, 20);
+			item(ModBlocks.ORE_SILO, 1, 12);
 			section("Moving things");
 			item(ModBlocks.CONVEYOR, 16, 2);
 			item(ModBlocks.BELT_LOADER, 1, 3);

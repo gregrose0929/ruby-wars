@@ -76,16 +76,37 @@ public final class ClientState {
 		}
 	}
 
+	/** What your machines made this season, and what's in your silos (item id, count; most first). */
+	public static java.util.List<java.util.Map.Entry<String, Long>> made = java.util.List.of();
+	public static java.util.List<java.util.Map.Entry<String, Long>> silos = java.util.List.of();
+	/** Minerals found for the Rock Collection (item ids). */
+	public static java.util.Set<String> rocks = java.util.Set.of();
+
 	public static void base(java.util.List<String> rows) {
 		var list = new java.util.ArrayList<BaseMachine>();
+		var madeList = new java.util.ArrayList<java.util.Map.Entry<String, Long>>();
+		var siloList = new java.util.ArrayList<java.util.Map.Entry<String, Long>>();
 		for (String row : rows) {
 			try {
+				if (row.startsWith("#")) {
+					String[] p = row.split("\\|", -1);
+					switch (p[0]) {
+						case "#made" -> madeList.add(java.util.Map.entry(p[1], Long.parseLong(p[2])));
+						case "#silo" -> siloList.add(java.util.Map.entry(p[1], Long.parseLong(p[2])));
+						case "#rocks" -> rocks = p[1].isEmpty() ? java.util.Set.of() : java.util.Set.of(p[1].split(","));
+						default -> {
+						}
+					}
+					continue;
+				}
 				list.add(BaseMachine.parse(row));
 			} catch (RuntimeException e) {
 				// a row from a newer or older server: skip it
 			}
 		}
 		base = list;
+		made = madeList;
+		silos = siloList;
 	}
 	/** Last warhead hit on a vehicle or aircraft (shown under the crosshair). */
 	public static Payloads.HitConfirm hitConfirm;

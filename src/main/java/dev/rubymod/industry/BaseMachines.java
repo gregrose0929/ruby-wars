@@ -133,4 +133,21 @@ public final class BaseMachines {
 		}
 		return rows;
 	}
+
+	/**
+	 * For My Base and the Rock Collection: the machine rows, then "#made|item|count" (this season, most first),
+	 * "#silo|item|count" (in your silos) and "#rocks|id,id,..." (minerals found).
+	 */
+	public static List<String> rows(MinecraftServer server, ServerPlayer player) {
+		List<String> rows = rows(server, player.getUUID());
+		for (var e : Production.top(player.getUUID(), 8)) {
+			rows.add("#made|" + e.getKey() + "|" + e.getValue());
+		}
+		var silos = SiloBlockEntity.Silos.totals(player.getUUID());
+		for (var e : silos.subList(0, Math.min(8, silos.size()))) {
+			rows.add("#silo|" + e.getKey() + "|" + e.getValue());
+		}
+		rows.add("#rocks|" + String.join(",", dev.rubymod.game.Minerals.found(player)));
+		return rows;
+	}
 }

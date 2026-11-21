@@ -249,5 +249,13 @@
 	"block.rubymod.belt_splitter": "Belt Splitter",
 	"block.rubymod.belt_splitter.desc": "A belt piece that shares what comes in between its left and its right, turn about.",
 	"block.rubymod.belt_tunnel": "Belt Tunnel",
-	"block.rubymod.belt_tunnel.desc": "Place two facing the same way, up to 7 blocks apart: things go in one and out the other, under walls and floors."
+	"block.rubymod.belt_tunnel.desc": "Place two facing the same way, up to 7 blocks apart: things go in one and out the other, under walls and floors.",
+	"block.rubymod.assembler": "Assembler",
+	"block.rubymod.assembler.desc": "Crafts what you pick: ingots into blocks, torches, rails, TNT and more. Belts can feed it.",
+	"block.rubymod.ore_silo": "Ore Silo",
+	"block.rubymod.ore_silo.desc": "Holds 128 stacks of one thing. Right-click with an item to store it (twice quickly: all of it), with an empty hand to take a stack. Belts and hoppers work with it.",
+	"item.rubymod.prospector_pick": "Prospector's Pick",
+	"item.rubymod.prospector_pick.desc": "Right-click: it chimes and sparkles toward the nearest Ruby Ore within 16 blocks.",
+	"item.rubymod.geode": "Geode",
+	"item.rubymod.geode.desc": "Right-click to crack it open for a surprise."
 }

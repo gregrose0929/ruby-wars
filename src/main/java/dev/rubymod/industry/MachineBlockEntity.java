@@ -81,6 +81,14 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	/** Ruby Drill: loads dug up, and how many of them were rubies. */
 	private long loads;
 	private long rubiesFound;
+	/** Ruby Drill: what it looks for (Recipes.FOCUS_*), and whether it leaves plain rock behind. */
+	private int focus;
+	private boolean leaveStone;
+	/** Ruby Drill: what the ground round it is rich in (looked at now and then, not saved). */
+	private DrillSite site;
+	private long siteAt = -100_000;
+	/** Slot layout version (2: the Refinery has a sand slot). */
+	private static final int LAYOUT = 2;
 
 	public MachineBlockEntity(BlockPos pos, BlockState state) {
 		super(ModBlockEntities.MACHINE, pos, state);
@@ -117,7 +125,60 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (stack.is(ModItems.RUBY)) {
 			rubiesFound += stack.getCount();
 		}
+		Production.add(owner, stack);
 		setChanged();
+	}
+
+	public int focus() {
+		return focus;
+	}
+
+	public boolean leavesStone() {
+		return leaveStone;
+	}
+
+	public void cycleFocus(int step) {
+		focus = Math.floorMod(focus + step, Recipes.FOCUS_NAMES.length);
+		setChanged();
+	}
+
+	public void toggleStone() {
+		leaveStone = !leaveStone;
+		setChanged();
+	}
+
+	/** What the ground round this drill is rich in (looked at again every few minutes). */
+	public DrillSite site() {
+		if (level instanceof ServerLevel server && (site == null || server.getGameTime() - siteAt > 6000 || server.getGameTime() < siteAt)) {
+			site = DrillSite.scan(server, worldPosition);
+			siteAt = server.getGameTime();
+		}
+		return site == null ? DrillSite.PLAIN : site;
+	}
+
+	/** One haul for this drill, or empty when it was plain rock it leaves behind. */
+	private ItemStack dig(ServerLevel level) {
+		ItemStack dug = Recipes.drill(level.getRandom(), tier, worldPosition.getY() < 0, focus, site());
+		return leaveStone && Recipes.isRock(dug) ? ItemStack.EMPTY : dug;
+	}
+
+	/** Crouch-click with an empty hand: everything it has made, into your inventory. Returns how many items. */
+	public int collectAll(ServerPlayer player) {
+		int taken = 0;
+		for (int i = firstOutput(); i < items.size(); i++) {
+			ItemStack s = items.get(i);
+			if (s.isEmpty()) {
+				continue;
+			}
+			int before = s.getCount();
+			player.getInventory().add(s);
+			taken += before - s.getCount();
+		}
+		if (taken > 0) {
+			setChanged();
+			level.playSound(null, worldPosition, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.4F, 1.2F);
+		}
+		return taken;
 	}
 
 	public int tier() {
@@ -198,7 +259,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			}
 			case RUBY_DRILL -> tickDrill(level);
 			case ORE_REFINERY -> tickRefinery(level);
-			case AMMO_FACTORY -> tickAmmo(level);
+			case AMMO_FACTORY, ASSEMBLER -> tickAmmo(level);
 			case TRADE_DEPOT -> tickDepot(level);
 			case VAULT -> tickVault(level);
 			case SHIELD_GENERATOR -> tickShield(level);
@@ -226,7 +287,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		}
 		boolean working = now - workedAt < 40 && kind() != MachineKind.BATTERY;
 		if (status == WORKING && switch (kind()) {
-			case RUBY_DRILL, ORE_REFINERY, AMMO_FACTORY, TRADE_DEPOT, CONSTRUCTOR -> true;
+			case RUBY_DRILL, ORE_REFINERY, AMMO_FACTORY, ASSEMBLER, TRADE_DEPOT, CONSTRUCTOR -> true;
 			default -> false;
 		}) {
 			dev.rubymod.game.Goals.working(owner, worldPosition.asLong(), now);
@@ -245,7 +306,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		long cycles = (long) (Math.min(elapsed, 24000) * OFFLINE_RATE / kind().cycle(tier));
 		int made = 0;
 		for (long i = 0; i < cycles; i++) {
-			ItemStack dug = Recipes.drill(level.getRandom(), tier, worldPosition.getY() < 0);
+			ItemStack dug = dig(level);
 			ItemStack copy = dug.copy();
 			if (!insertOutput(dug)) {
 				break;
@@ -309,7 +370,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		status = WORKING;
 		if (++progress >= kind().cycle(tier)) {
 			progress = 0;
-			ItemStack dug = Recipes.drill(level.getRandom(), tier, worldPosition.getY() < 0);
+			ItemStack dug = dig(level);
 			ItemStack copy = dug.copy();
 			if (insertOutput(dug)) {
 				found(copy);
@@ -323,7 +384,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	private void tickRefinery(ServerLevel level) {
 		ItemStack input = items.get(0);
-		ItemStack result = Recipes.refine(input, tier);
+		ItemStack sand = items.get(1);
+		boolean gunpowder = Recipes.isGunpowderFuel(input) && Recipes.isSand(sand);
+		ItemStack result = gunpowder ? Recipes.gunpowder(tier) : Recipes.refine(level, input, tier);
 		if (result.isEmpty()) {
 			progress = 0;
 			status = NO_INPUT;
@@ -341,15 +404,20 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (++progress >= kind().cycle(tier)) {
 			progress = 0;
 			input.shrink(1);
+			if (gunpowder) {
+				sand.shrink(1);
+			}
+			Production.add(owner, result);
 			insertOutput(result);
 		}
 	}
 
 	private void tickAmmo(ServerLevel level) {
-		Recipes.AmmoRecipe r = Recipes.AMMO.get(Math.floorMod(recipe, Recipes.AMMO.size()));
+		Recipes.AmmoRecipe r = Recipes.recipe(kind(), recipe);
 		ItemStack metal = items.get(0);
 		ItemStack extra = items.get(1);
-		if (!metal.is(r.metal()) || metal.getCount() < r.metalCount() || !extra.is(r.extra()) || extra.getCount() < r.extraCount()) {
+		if (!metal.is(r.metal()) || metal.getCount() < r.metalCount()
+				|| r.extra() != null && (!extra.is(r.extra()) || extra.getCount() < r.extraCount())) {
 			progress = 0;
 			status = NO_INPUT;
 			return;
@@ -367,7 +435,10 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (++progress >= kind().cycle(tier)) {
 			progress = 0;
 			metal.shrink(r.metalCount());
-			extra.shrink(r.extraCount());
+			if (r.extra() != null) {
+				extra.shrink(r.extraCount());
+			}
+			Production.add(owner, result);
 			insertOutput(result);
 		}
 	}
@@ -736,7 +807,11 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	}
 
 	public void cycleRecipe() {
-		recipe = Math.floorMod(recipe + 1, Recipes.AMMO.size());
+		cycleRecipe(1);
+	}
+
+	public void cycleRecipe(int step) {
+		recipe = Math.floorMod(recipe + step, Recipes.recipes(kind()).size());
 		progress = 0;
 		setChanged();
 	}
@@ -804,6 +879,18 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 				case 32 -> hi(loads);
 				case 33 -> lo(rubiesFound);
 				case 34 -> hi(rubiesFound);
+				// 35-40: a drill's focus, stone switch, and the two richest minerals round it (item id + 1, strength in %).
+				case 35 -> focus;
+				case 36 -> leaveStone ? 1 : 0;
+				case 37, 38 -> {
+					if (kind() != MachineKind.RUBY_DRILL) {
+						yield 0;
+					}
+					var rich = site().rich();
+					int k = index - 37;
+					yield k < rich.size() ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(rich.get(k)) + 1 : 0;
+				}
+				case 39 -> kind() == MachineKind.RUBY_DRILL ? Math.round(1000 * Recipes.rubyChance(tier, worldPosition.getY() < 0, focus, site())) : 0;
 				default -> {
 					// 19-30: the Trade Depot's last four sales, newest first: item id + 1, how many, what it paid (milli-rubies, capped).
 					int k = index - 19;
@@ -880,6 +967,15 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		aux = input.getIntOr("aux", 0);
 		loads = input.getLongOr("loads", 0L);
 		rubiesFound = input.getLongOr("rubies_found", 0L);
+		focus = input.getIntOr("focus", 0);
+		leaveStone = input.getBooleanOr("leave_stone", false);
+		// A Refinery saved before it had a sand slot: its outputs move up one.
+		if (input.getIntOr("layout", 1) < 2 && kind() == MachineKind.ORE_REFINERY && items.size() == 5) {
+			for (int i = 4; i >= 2; i--) {
+				items.set(i, items.get(i - 1));
+			}
+			items.set(1, ItemStack.EMPTY);
+		}
 		Blueprints.load(this, input);
 	}
 
@@ -897,6 +993,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		output.putInt("aux", aux);
 		output.putLong("loads", loads);
 		output.putLong("rubies_found", rubiesFound);
+		output.putInt("focus", focus);
+		output.putBoolean("leave_stone", leaveStone);
+		output.putInt("layout", LAYOUT);
 		Blueprints.save(this, output);
 	}
 
@@ -919,10 +1018,14 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		}
 		return switch (kind) {
 			case COMBUSTION_GENERATOR -> Recipes.burnTicks(stack) > 0;
-			case ORE_REFINERY -> !Recipes.refine(stack, tier).isEmpty();
-			case AMMO_FACTORY -> {
-				Recipes.AmmoRecipe r = Recipes.AMMO.get(Math.floorMod(recipe, Recipes.AMMO.size()));
-				yield slot == 0 ? stack.is(r.metal()) : stack.is(r.extra());
+			// Slot 0: ore, anything to cook, or coal for gunpowder. Slot 1: sand for gunpowder (sand goes on top to
+			// become glass only while no sand is waiting below).
+			case ORE_REFINERY -> slot == 1 ? Recipes.isSand(stack)
+					: Recipes.isSand(stack) ? items.get(1).isEmpty()
+					: Recipes.isGunpowderFuel(stack) || !Recipes.refine(level, stack, tier).isEmpty();
+			case AMMO_FACTORY, ASSEMBLER -> {
+				Recipes.AmmoRecipe r = Recipes.recipe(kind, recipe);
+				yield slot == 0 ? stack.is(r.metal()) : r.extra() != null && stack.is(r.extra());
 			}
 			case TRADE_DEPOT -> Recipes.price(stack) > 0;
 			case VAULT -> stack.is(ModItems.RUBY);

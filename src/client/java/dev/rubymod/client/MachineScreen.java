@@ -57,8 +57,12 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		buttons.clear();
 		int cost = kind().upgradeCost(menu.tier());
 		buttons.add(new Button(MachineMenu.BUTTON_UPGRADE, 118, 90, 52, 13, cost < 0 ? "MAX" : "Upgrade"));
-		if (kind() == MachineKind.AMMO_FACTORY) {
+		if (kind() == MachineKind.AMMO_FACTORY || kind() == MachineKind.ASSEMBLER) {
 			buttons.add(new Button(MachineMenu.BUTTON_RECIPE, 66, 22, 102, 13, "recipe"));
+		}
+		if (kind() == MachineKind.RUBY_DRILL) {
+			buttons.add(new Button(MachineMenu.BUTTON_FOCUS, 22, 22, 72, 13, "focus"));
+			buttons.add(new Button(MachineMenu.BUTTON_STONE, 22, 37, 72, 13, "stone"));
 		}
 		if (kind() == MachineKind.VAULT) {
 			buttons.add(new Button(MachineMenu.BUTTON_WITHDRAW_1, 66, 70, 30, 13, "-1"));
@@ -113,29 +117,14 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			case COMBUSTION_GENERATOR -> drawGenerator(g);
 			case SOLAR_PANEL -> info(g, "Output", kind.output(tier) * 20 + " charge/s in sunlight", "Needs open sky above it");
 			case BATTERY -> info(g, "Capacity", String.format(Locale.ROOT, "%,d charge", kind.batteryCapacity(tier)), "Adds to your whole grid");
-			case RUBY_DRILL -> {
+			case RUBY_DRILL -> drawDrill(g, mouseX - leftPos, mouseY - topPos);
+			case ORE_REFINERY -> {
 				drawArrow(g, 66, 44, true);
-				float chance = new float[] {1.5F, 2.0F, 3.0F, 4.0F, 5.5F}[tier - 1];
-				g.text(font, "Rubies", 24, 26, MUTED, false);
-				g.text(font, chance + "%", 24, 36, 0xFFFF5A82, false);
-				g.text(font, "x2 deep", 24, 50, MUTED, false);
-				g.text(font, "(Y<0)", 24, 60, MUTED, false);
-				g.text(font, String.format(java.util.Locale.ROOT, "%.1fs", kind.cycle(tier) / 20.0), 66, 58, MUTED, false);
-				// What it has found so far.
-				long loads = menu.wide(31, 32);
-				if (loads > 0) {
-					long rubies = menu.wide(33, 34);
-					g.pose().pushMatrix();
-					g.pose().translate(24, 71);
-					g.pose().scale(0.75F, 0.75F);
-					// Two short lines, clear of the output slots.
-					g.text(font, String.format(java.util.Locale.ROOT, "%,d loads dug", loads), 0, 0, MUTED, false);
-					g.text(font, String.format(java.util.Locale.ROOT, "%,d %s found", rubies, rubies == 1 ? "ruby" : "rubies"), 0, 10, 0xFFFF5A82, false);
-					g.pose().popMatrix();
-				}
+				small(g, "sand", 23, 67, MUTED);
+				small(g, "Coal + sand: gunpowder", 66, 64, MUTED);
+				small(g, "Cooks like a furnace too", 66, 73, MUTED);
 			}
-			case ORE_REFINERY -> drawArrow(g, 66, 44, true);
-			case AMMO_FACTORY -> drawAmmo(g);
+			case AMMO_FACTORY, ASSEMBLER -> drawAmmo(g);
 			case TRADE_DEPOT -> drawDepot(g);
 			case VAULT -> drawVault(g);
 			case SHIELD_GENERATOR -> info(g, "Dome radius", kind.radius(tier) + " blocks", "1,500 charge per rocket stopped");
@@ -205,11 +194,12 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		return switch (status) {
 			case MachineBlockEntity.NO_POWER -> "add solar panels or a generator";
 			case MachineBlockEntity.OUTPUT_FULL -> kind.generator() ? "add a Battery Bank to store more"
-					: kind == MachineKind.RUBY_DRILL ? "take it out, or run a conveyor belt to a chest" : "take it out, or run a belt onward";
+					: kind == MachineKind.RUBY_DRILL ? "crouch-click to collect, or run a belt to a chest" : "take it out, or run a belt onward";
 			case MachineBlockEntity.NO_INPUT -> switch (kind) {
 				case COMBUSTION_GENERATOR -> "coal, charcoal, wood or lava";
-				case ORE_REFINERY -> "raw ore, ruby ore or cobblestone";
+				case ORE_REFINERY -> "ore, something to cook, or coal + sand";
 				case AMMO_FACTORY -> "metal and gunpowder (see above)";
+				case ASSEMBLER -> "the parts shown above";
 				default -> "";
 			};
 			case MachineBlockEntity.NIGHT -> "solar panels rest at night";
@@ -281,12 +271,84 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 	}
 
 	private void drawAmmo(GuiGraphicsExtractor g) {
-		Recipes.AmmoRecipe r = Recipes.AMMO.get(Math.floorMod(menu.get(11), Recipes.AMMO.size()));
+		Recipes.AmmoRecipe r = Recipes.recipe(kind(), menu.get(11));
 		g.item(new ItemStack(r.metal(), r.metalCount()), 66, 38);
-		g.text(font, "+", 86, 42, MUTED, false);
-		g.item(new ItemStack(r.extra(), r.extraCount()), 94, 38);
+		g.itemDecorations(font, new ItemStack(r.metal(), r.metalCount()), 66, 38);
+		if (r.extra() != null) {
+			g.text(font, "+", 86, 42, MUTED, false);
+			g.item(new ItemStack(r.extra(), r.extraCount()), 94, 38);
+			g.itemDecorations(font, new ItemStack(r.extra(), r.extraCount()), 94, 38);
+		}
 		drawArrow(g, 66, 58, true);
 		g.text(font, r.count() + "x", 140, 64, MUTED, false);
+		if (kind() == MachineKind.ASSEMBLER) {
+			small(g, "Right-click the recipe to go back", 66, 80, MUTED);
+		}
+	}
+
+	/** The Ruby Drill: what it looks for, what happens to plain rock, its progress, the ground here, and its finds. */
+	private void drawDrill(GuiGraphicsExtractor g, int mx, int my) {
+		int tier = menu.tier();
+		// Progress to the next load.
+		int progress = menu.get(1);
+		int max = Math.max(1, menu.get(2));
+		g.fill(22, 53, 94, 56, SLOT_EDGE);
+		g.fill(23, 54, 93, 55, SLOT_BG);
+		if (progress > 0) {
+			g.fill(23, 54, 23 + 70 * Math.min(progress, max) / max, 55, RUBY);
+		}
+		float chance = menu.get(39) / 10.0F;
+		small(g, String.format(Locale.ROOT, "Rubies %.1f%%", chance), 22, 59, 0xFFFF5A82);
+		small(g, richLine(), 22, 67, menu.get(37) > 0 ? GREEN : MUTED);
+		long loads = menu.wide(31, 32);
+		if (loads > 0) {
+			long rubies = menu.wide(33, 34);
+			small(g, String.format(Locale.ROOT, "%,d loads dug", loads), 22, 75, MUTED);
+			small(g, String.format(Locale.ROOT, "%,d %s found", rubies, rubies == 1 ? "ruby" : "rubies"), 22, 83, 0xFFFF5A82);
+		}
+		if (mx >= 22 && mx < 94 && my >= 52 && my < 90) {
+			List<Component> lines = new ArrayList<>();
+			lines.add(Component.literal(String.format(Locale.ROOT, "A load every %.1f seconds", kind().cycle(tier) / 20.0)).withStyle(net.minecraft.ChatFormatting.YELLOW));
+			lines.add(Component.literal(String.format(Locale.ROOT, "Rubies: %.1f%% of loads", chance)).withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE));
+			lines.add(Component.literal("Twice as many below Y 0").withStyle(net.minecraft.ChatFormatting.GRAY));
+			lines.add(Component.literal(richSentence()).withStyle(net.minecraft.ChatFormatting.GRAY));
+			lines.add(Component.literal("Ore in the ground nearby comes up more often,").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+			lines.add(Component.literal("and so do some biomes' minerals.").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+			lines.add(Component.literal("Crouch-click the drill to collect everything.").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+			g.setComponentTooltipForNextFrame(font, lines, mx + leftPos, my + topPos);
+		}
+	}
+
+	private Item rich(int slot) {
+		int id = menu.get(slot);
+		return id <= 0 ? null : BuiltInRegistries.ITEM.byId(id - 1);
+	}
+
+	/** "Rich: iron, gold" (short, for the screen). */
+	private String richLine() {
+		Item a = rich(37);
+		Item b = rich(38);
+		if (a == null) {
+			return "Plain rock here";
+		}
+		return "Rich: " + dev.rubymod.industry.DrillSite.name(a) + (b == null ? "" : ", " + dev.rubymod.industry.DrillSite.name(b));
+	}
+
+	private String richSentence() {
+		Item a = rich(37);
+		Item b = rich(38);
+		if (a == null) {
+			return "The ground here is plain rock";
+		}
+		return "The ground here is rich in " + dev.rubymod.industry.DrillSite.name(a) + (b == null ? "" : " and " + dev.rubymod.industry.DrillSite.name(b));
+	}
+
+	private void small(GuiGraphicsExtractor g, String text, int x, int y, int color) {
+		g.pose().pushMatrix();
+		g.pose().translate(x, y);
+		g.pose().scale(0.75F, 0.75F);
+		g.text(font, text, 0, 0, color, false);
+		g.pose().popMatrix();
 	}
 
 	/** What's waiting to be sold: the Depot's slots, plus whatever you're holding or pointing at (milli-rubies). */
@@ -478,9 +540,30 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		boolean disabled = b.id() == MachineMenu.BUTTON_UPGRADE && cost < 0;
 		String label = b.label();
 		if (b.id() == MachineMenu.BUTTON_RECIPE) {
-			label = Recipes.AMMO.get(Math.floorMod(menu.get(11), Recipes.AMMO.size())).name() + "  >";
+			label = Recipes.recipe(kind(), menu.get(11)).name() + "  >";
+		} else if (b.id() == MachineMenu.BUTTON_FOCUS) {
+			label = "Find: " + new String[] {"All", "Metals", "Gems"}[Math.floorMod(menu.get(35), 3)];
+		} else if (b.id() == MachineMenu.BUTTON_STONE) {
+			label = menu.get(36) == 1 ? "Stone: Leave" : "Stone: Keep";
 		}
 		dev.rubymod.client.ui.Ui.button(g, label, b.x(), b.y(), b.w(), b.h(), mx, my, RUBY, !disabled);
+		if (hover && (b.id() == MachineMenu.BUTTON_FOCUS || b.id() == MachineMenu.BUTTON_STONE)) {
+			List<Component> lines = new ArrayList<>();
+			if (b.id() == MachineMenu.BUTTON_FOCUS) {
+				lines.add(Component.literal("What the drill looks for").withStyle(net.minecraft.ChatFormatting.YELLOW));
+				lines.add(Component.literal("All: a bit of everything").withStyle(net.minecraft.ChatFormatting.GRAY));
+				lines.add(Component.literal("Metals: more iron, copper and gold").withStyle(net.minecraft.ChatFormatting.GRAY));
+				lines.add(Component.literal("Gems: more rubies, diamonds, emeralds,").withStyle(net.minecraft.ChatFormatting.GRAY));
+				lines.add(Component.literal("  lapis and redstone").withStyle(net.minecraft.ChatFormatting.GRAY));
+				lines.add(Component.literal("Less of the rest. Right-click to go back.").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+			} else {
+				lines.add(Component.literal("Plain rock (cobblestone, deepslate)").withStyle(net.minecraft.ChatFormatting.YELLOW));
+				lines.add(Component.literal("Keep: it goes in the drill with the rest").withStyle(net.minecraft.ChatFormatting.GRAY));
+				lines.add(Component.literal("Leave: it stays in the hole, so the").withStyle(net.minecraft.ChatFormatting.GRAY));
+				lines.add(Component.literal("  drill fills up much slower").withStyle(net.minecraft.ChatFormatting.GRAY));
+			}
+			g.setComponentTooltipForNextFrame(font, lines, mx + leftPos, my + topPos);
+		}
 		if (hover && b.id() == MachineMenu.BUTTON_UPGRADE && cost >= 0) {
 			MachineKind kind = kind();
 			int next = menu.tier() + 1;
@@ -490,7 +573,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			String gain = switch (kind) {
 				case COMBUSTION_GENERATOR, SOLAR_PANEL -> kind.output(menu.tier()) * 20 + " -> " + kind.output(next) * 20 + " charge/s";
 				case BATTERY -> kind.batteryCapacity(menu.tier()) + " -> " + kind.batteryCapacity(next) + " charge";
-				case RUBY_DRILL, ORE_REFINERY, AMMO_FACTORY -> String.format(Locale.ROOT, "%.1fs -> %.1fs per job", kind.cycle(menu.tier()) / 20.0,
+				case RUBY_DRILL, ORE_REFINERY, AMMO_FACTORY, ASSEMBLER -> String.format(Locale.ROOT, "%.1fs -> %.1fs per job", kind.cycle(menu.tier()) / 20.0,
 						kind.cycle(next) / 20.0) + (kind == MachineKind.RUBY_DRILL ? ", more rubies" : kind == MachineKind.ORE_REFINERY && next == 4 ? ", x3 ore" : "");
 				case TRADE_DEPOT -> "+6% prices, sells faster";
 				case VAULT -> "Interest " + kind.interestPercent(menu.tier()) + "% -> " + kind.interestPercent(next) + "%";
@@ -508,7 +591,12 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		double my = event.y() - topPos;
 		for (Button b : buttons) {
 			if (b.over(mx, my)) {
-				minecraft.gameMode.handleInventoryButtonClick(menu.containerId, b.id());
+				int id = b.id();
+				if (event.button() == 1) {
+					// Right-click goes back through recipes and drill focus.
+					id = id == MachineMenu.BUTTON_RECIPE ? MachineMenu.BUTTON_RECIPE_BACK : id == MachineMenu.BUTTON_FOCUS ? MachineMenu.BUTTON_FOCUS_BACK : id;
+				}
+				minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
 				minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.4F, 1.0F);
 				return true;
 			}

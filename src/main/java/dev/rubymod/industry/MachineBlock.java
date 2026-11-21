@@ -139,7 +139,7 @@ public class MachineBlock extends BaseEntityBlock {
 							0, 0.05, 0);
 				}
 			}
-			case ORE_REFINERY, AMMO_FACTORY -> {
+			case ORE_REFINERY, AMMO_FACTORY, ASSEMBLER -> {
 				if (random.nextInt(4) == 0) {
 					level.addParticle(net.minecraft.core.particles.ParticleTypes.SMOKE, x + random.nextGaussian() * 0.15, y, z + random.nextGaussian() * 0.15, 0, 0.03, 0);
 				}
@@ -181,6 +181,13 @@ public class MachineBlock extends BaseEntityBlock {
 			if (!be.canUse(sp)) {
 				sp.sendOverlayMessage(Component.literal("This " + kind.title + " belongs to someone else."));
 				return InteractionResult.FAIL;
+			}
+			// Crouch with an empty hand: take everything it has made, without opening it.
+			if (sp.isShiftKeyDown() && kind.outputs > 0) {
+				int taken = be.collectAll(sp);
+				sp.sendOverlayMessage(Component.literal(taken > 0 ? "Took " + taken + (taken == 1 ? " item" : " items") + " from the " + kind.title
+						: "Nothing to take"));
+				return InteractionResult.SUCCESS;
 			}
 			sp.openMenu(be);
 		}

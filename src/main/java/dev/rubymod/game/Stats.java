@@ -57,6 +57,8 @@ public final class Stats {
 		public int convoyKills;
 		public int riftShards;
 		public Set<String> riftUnlocks = new HashSet<>();
+		/** Minerals found for the Rock Collection (item ids; see Minerals). They stay across seasons. */
+		public Set<String> rocks = new HashSet<>();
 		/** The Ruby Rift Codex: everything found ("relic:id", "duo:id", "legend:name", "boss:ID", "charm:ID"). */
 		public Set<String> riftCodex = new HashSet<>();
 		public String riftLoadout = "soldier";

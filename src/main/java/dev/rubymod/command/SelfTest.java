@@ -113,6 +113,195 @@ public final class SelfTest {
 		}
 	}
 
+	/** Share of {@code n} drill hauls that are one of {@code items}. */
+	private static double share(int tier, int focus, dev.rubymod.industry.DrillSite site, int n, net.minecraft.world.item.Item... items) {
+		var random = net.minecraft.util.RandomSource.create(1234);
+		int hit = 0;
+		for (int i = 0; i < n; i++) {
+			ItemStack dug = dev.rubymod.industry.Recipes.drill(random, tier, false, focus, site);
+			for (var item : items) {
+				if (dug.is(item)) {
+					hit++;
+					break;
+				}
+			}
+		}
+		return hit / (double) n;
+	}
+
+	/** Drill focus and stone, the ground under a drill, the Refinery's cooking and gunpowder, the Assembler, the Ore Silo, and the rest. */
+	private void miningChecks(ServerLevel level, FakePlayer alpha, BlockPos base) {
+		var A = alpha.getUUID();
+		BlockPos spot = base.offset(8, 1, -10);
+		for (BlockPos p : BlockPos.betweenClosed(spot.offset(-1, -1, -1), spot.offset(10, 2, 3))) {
+			level.setBlock(p, p.getY() < spot.getY() ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2);
+		}
+		long chargeBefore = dev.rubymod.industry.Grid.charge(A);
+		var plain = dev.rubymod.industry.DrillSite.PLAIN;
+		var metals = new net.minecraft.world.item.Item[] {net.minecraft.world.item.Items.RAW_IRON, net.minecraft.world.item.Items.RAW_COPPER, net.minecraft.world.item.Items.RAW_GOLD};
+		var gems = new net.minecraft.world.item.Item[] {net.minecraft.world.item.Items.DIAMOND, net.minecraft.world.item.Items.EMERALD, net.minecraft.world.item.Items.REDSTONE,
+				net.minecraft.world.item.Items.LAPIS_LAZULI, ModItems.RUBY};
+		// Focus: more of what you picked.
+		double stone = share(1, dev.rubymod.industry.Recipes.FOCUS_ALL, plain, 20000, net.minecraft.world.item.Items.COBBLESTONE);
+		check("drill: a plain drill still digs about as much rock as before (" + Math.round(stone * 100) + "%)", stone > 0.40 && stone < 0.48);
+		double m0 = share(1, dev.rubymod.industry.Recipes.FOCUS_ALL, plain, 20000, metals);
+		double m1 = share(1, dev.rubymod.industry.Recipes.FOCUS_METALS, plain, 20000, metals);
+		double g0 = share(1, dev.rubymod.industry.Recipes.FOCUS_ALL, plain, 20000, gems);
+		double g1 = share(1, dev.rubymod.industry.Recipes.FOCUS_GEMS, plain, 20000, gems);
+		check(String.format(java.util.Locale.ROOT, "drill: Metals finds more metal (%.0f%% -> %.0f%%) and Gems more gems (%.0f%% -> %.0f%%)", m0 * 100, m1 * 100, g0 * 100, g1 * 100),
+				m1 > m0 * 1.3 && g1 > g0 * 1.3 && share(1, dev.rubymod.industry.Recipes.FOCUS_METALS, plain, 20000, gems) < g0);
+		// The ground: iron ore under a drill brings up more iron.
+		var ironRich = new dev.rubymod.industry.DrillSite(java.util.Map.of(net.minecraft.world.item.Items.RAW_IRON, 1.0F));
+		double i0 = share(1, 0, plain, 20000, net.minecraft.world.item.Items.RAW_IRON);
+		double i1 = share(1, 0, ironRich, 20000, net.minecraft.world.item.Items.RAW_IRON);
+		check(String.format(java.util.Locale.ROOT, "drill: iron in the ground brings up more iron (%.0f%% -> %.0f%%)", i0 * 100, i1 * 100), i1 > i0 * 1.6);
+		BlockPos far = spot.offset(0, -30, 0);
+		for (int k = 0; k < 32; k++) {
+			level.setBlock(far.offset(k % 4 - 2, -2 - k / 16, k / 4 % 4 - 2), Blocks.IRON_ORE.defaultBlockState(), 2);
+		}
+		var site = dev.rubymod.industry.DrillSite.scan(level, far);
+		check("drill: it sees the iron ore under it (" + site.describe() + ")", site.rich().contains(net.minecraft.world.item.Items.RAW_IRON)
+				&& site.describe().contains("iron"));
+		// Stone: left behind, so it never fills the drill.
+		var drill = machine(level, spot, ModBlocks.RUBY_DRILL, alpha);
+		drill.setTier(5);
+		drill.toggleStone();
+		dev.rubymod.industry.Grid.account(A).charge = 200_000;
+		runMachines(level, 40 * dev.rubymod.industry.MachineKind.RUBY_DRILL.cycle(5), drill);
+		boolean anyRock = false;
+		int held = 0;
+		for (int i = 0; i < drill.getContainerSize(); i++) {
+			anyRock |= dev.rubymod.industry.Recipes.isRock(drill.getItem(i));
+			held += drill.getItem(i).getCount();
+		}
+		check("drill: with Stone: Leave it keeps no rock (" + drill.loads() + " loads, " + held + " items kept)", !anyRock && drill.loads() >= 30 && held > 0);
+		// Crouch-click: everything it made, into your inventory.
+		alpha.getInventory().clearContent();
+		int took = drill.collectAll(alpha);
+		boolean emptied = true;
+		for (int i = 0; i < drill.getContainerSize(); i++) {
+			emptied &= drill.getItem(i).isEmpty();
+		}
+		check("drill: crouch-click takes everything it dug (" + took + ")", took == held && emptied);
+		alpha.getInventory().clearContent();
+		// Refinery: cooks like a furnace; coal with sand makes gunpowder.
+		var refinery = machine(level, spot.east(2), ModBlocks.ORE_REFINERY, alpha);
+		refinery.setTier(5);
+		refinery.setItem(0, new ItemStack(net.minecraft.world.item.Items.SAND, 2));
+		runMachines(level, 2 * dev.rubymod.industry.MachineKind.ORE_REFINERY.cycle(5) + 2, refinery);
+		check("refinery: sand cooks into glass (" + refinery.getItem(2) + ")", refinery.getItem(2).is(net.minecraft.world.item.Items.GLASS) && refinery.getItem(2).getCount() == 2);
+		refinery.setItem(2, ItemStack.EMPTY);
+		refinery.setItem(0, new ItemStack(net.minecraft.world.item.Items.OAK_LOG, 1));
+		runMachines(level, dev.rubymod.industry.MachineKind.ORE_REFINERY.cycle(5) + 2, refinery);
+		check("refinery: logs cook into charcoal (" + refinery.getItem(2) + ")", refinery.getItem(2).is(net.minecraft.world.item.Items.CHARCOAL));
+		refinery.setItem(2, ItemStack.EMPTY);
+		refinery.setItem(0, new ItemStack(net.minecraft.world.item.Items.COAL, 2));
+		refinery.setItem(1, new ItemStack(net.minecraft.world.item.Items.SAND, 2));
+		check("refinery: sand waits in the slot below while some is there, coal goes on top",
+				refinery.canPlaceItem(1, new ItemStack(net.minecraft.world.item.Items.SAND)) && !refinery.canPlaceItem(1, new ItemStack(net.minecraft.world.item.Items.COAL))
+						&& !refinery.canPlaceItem(0, new ItemStack(net.minecraft.world.item.Items.SAND)));
+		runMachines(level, 2 * dev.rubymod.industry.MachineKind.ORE_REFINERY.cycle(5) + 2, refinery);
+		check("refinery: coal with sand makes gunpowder (" + refinery.getItem(2) + ")", refinery.getItem(2).is(net.minecraft.world.item.Items.GUNPOWDER)
+				&& refinery.getItem(2).getCount() == 6 && refinery.getItem(0).isEmpty() && refinery.getItem(1).isEmpty());
+		check("refinery: it still doubles ore", dev.rubymod.industry.Recipes.refine(level, new ItemStack(net.minecraft.world.item.Items.RAW_GOLD), 1).getCount() == 2);
+		// Assembler: ingots into blocks; a two-part recipe; the parts it doesn't need are refused.
+		var assembler = machine(level, spot.east(4), ModBlocks.ASSEMBLER, alpha);
+		assembler.setTier(5);
+		assembler.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 18));
+		runMachines(level, 2 * dev.rubymod.industry.MachineKind.ASSEMBLER.cycle(5) + 2, assembler);
+		check("assembler: 18 iron ingots make 2 iron blocks (" + assembler.getItem(2) + ")", assembler.getItem(2).is(net.minecraft.world.item.Items.IRON_BLOCK)
+				&& assembler.getItem(2).getCount() == 2 && assembler.getItem(0).isEmpty());
+		check("assembler: a one-part recipe takes nothing in its second slot", !assembler.canPlaceItem(1, new ItemStack(net.minecraft.world.item.Items.STICK)));
+		assembler.setItem(2, ItemStack.EMPTY);
+		int torches = -1;
+		for (int i = 0; i < dev.rubymod.industry.Recipes.ASSEMBLY.size(); i++) {
+			if (dev.rubymod.industry.Recipes.ASSEMBLY.get(i).result() == net.minecraft.world.item.Items.TORCH) {
+				torches = i;
+			}
+		}
+		for (int i = 0; i < torches; i++) {
+			assembler.cycleRecipe(1);
+		}
+		assembler.setItem(0, new ItemStack(net.minecraft.world.item.Items.COAL, 1));
+		assembler.setItem(1, new ItemStack(net.minecraft.world.item.Items.STICK, 1));
+		runMachines(level, dev.rubymod.industry.MachineKind.ASSEMBLER.cycle(5) + 2, assembler);
+		check("assembler: coal and a stick make 4 torches (" + assembler.getItem(2) + ")", assembler.getItem(2).is(net.minecraft.world.item.Items.TORCH)
+				&& assembler.getItem(2).getCount() == 4);
+		assembler.cycleRecipe(-1);
+		check("assembler: right-click goes back a recipe", dev.rubymod.industry.Recipes.recipe(dev.rubymod.industry.MachineKind.ASSEMBLER, torches - 1).result()
+				!= net.minecraft.world.item.Items.TORCH);
+		// What it all made shows on My Base.
+		var made = dev.rubymod.industry.Production.top(A, 50);
+		check("my base: what your machines made counts up (" + made.size() + " kinds)", made.stream().anyMatch(e -> e.getKey().equals("minecraft:glass") && e.getValue() >= 2)
+				&& made.stream().anyMatch(e -> e.getKey().equals("minecraft:iron_block")));
+		// Ore Silo: belts in and out, one kind only, and nothing lost when a hopper can't take what it pulled.
+		BlockPos siloPos = spot.east(7);
+		level.setBlockAndUpdate(siloPos, ModBlocks.ORE_SILO.defaultBlockState());
+		var silo = (dev.rubymod.industry.SiloBlockEntity) level.getBlockEntity(siloPos);
+		silo.setOwner(A);
+		for (int i = 0; i < 5; i++) {
+			dev.rubymod.industry.Belts.insert(level, siloPos, net.minecraft.core.Direction.WEST, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64));
+		}
+		ItemStack refused = dev.rubymod.industry.Belts.insert(level, siloPos, net.minecraft.core.Direction.WEST, new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT, 5));
+		check("silo: belts fill it with one kind of thing (" + silo.total() + ")", silo.total() == 320 && refused.getCount() == 5);
+		ItemStack out = dev.rubymod.industry.Belts.extract(level, siloPos, net.minecraft.core.Direction.EAST, ItemStack.EMPTY, 8);
+		check("silo: a Belt Loader takes things out (" + out + ", " + silo.total() + " left)", out.is(net.minecraft.world.item.Items.IRON_INGOT) && out.getCount() == 8
+				&& silo.total() == 312);
+		ItemStack ready = silo.getItem(1);
+		int was = ready.getCount();
+		silo.removeItem(1, 1);
+		ready.setCount(was);
+		check("silo: nothing is lost when a hopper puts one back (" + silo.total() + ")", silo.total() == 312);
+		var stacks = silo.asStacks();
+		check("silo: it keeps what it holds when picked up (" + stacks.size() + " stacks)", stacks.size() == 5
+				&& stacks.stream().mapToInt(ItemStack::getCount).sum() == 312);
+		ItemStack siloItem = new ItemStack(ModBlocks.ORE_SILO);
+		siloItem.set(net.minecraft.core.component.DataComponents.CONTAINER, net.minecraft.world.item.component.ItemContainerContents.fromItems(stacks));
+		BlockPos silo2Pos = spot.east(9);
+		level.setBlockAndUpdate(silo2Pos, ModBlocks.ORE_SILO.defaultBlockState());
+		var silo2 = (dev.rubymod.industry.SiloBlockEntity) level.getBlockEntity(silo2Pos);
+		silo2.applyComponentsFromItemStack(siloItem);
+		check("silo: placed again, it holds the same (" + silo2.total() + ")", silo2.total() == 312 && silo2.type().is(net.minecraft.world.item.Items.IRON_INGOT));
+		silo2.setOwner(A);
+		var rows = dev.rubymod.industry.BaseMachines.rows(level.getServer(), alpha);
+		check("my base: your silos show what's in them", rows.stream().anyMatch(r -> r.startsWith("#silo|minecraft:iron_ingot|624")));
+		ItemStack full = new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64);
+		while (silo.put(full) > 0) {
+			full = new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64);
+		}
+		check("silo: it holds 128 stacks (" + silo.total() + ")", silo.total() == 128L * 64 && !silo.accepts(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)));
+		level.setBlockAndUpdate(siloPos, Blocks.AIR.defaultBlockState());
+		level.setBlockAndUpdate(silo2Pos, Blocks.AIR.defaultBlockState());
+		// Prospector's Pick: finds the nearest Ruby Ore.
+		BlockPos dig = spot.offset(3, -30, 2);
+		for (BlockPos p : BlockPos.betweenClosed(dig.offset(-17, -17, -17), dig.offset(17, 17, 17))) {
+			if (level.getBlockState(p).is(ModBlocks.RUBY_ORE) || level.getBlockState(p).is(ModBlocks.DEEPSLATE_RUBY_ORE)) {
+				level.setBlock(p, Blocks.STONE.defaultBlockState(), 2);
+			}
+		}
+		check("pick: no Ruby Ore near, it says so", dev.rubymod.item.ProspectorPickItem.nearest(level, dig) == null);
+		level.setBlock(dig.offset(5, -3, 0), ModBlocks.DEEPSLATE_RUBY_ORE.defaultBlockState(), 2);
+		level.setBlock(dig.offset(-9, 0, 4), ModBlocks.RUBY_ORE.defaultBlockState(), 2);
+		var found = dev.rubymod.item.ProspectorPickItem.nearest(level, dig);
+		check("pick: it points at the nearest Ruby Ore (" + found + ")", dig.offset(5, -3, 0).equals(found));
+		// Geodes always hold something; minerals go in your Rock Collection.
+		var random = net.minecraft.util.RandomSource.create(7);
+		boolean geodes = true;
+		for (int i = 0; i < 300; i++) {
+			geodes &= !dev.rubymod.item.GeodeItem.crack(random).isEmpty();
+		}
+		check("geode: there's always something inside", geodes);
+		alpha.getInventory().add(new ItemStack(net.minecraft.world.item.Items.RAW_GOLD));
+		dev.rubymod.game.Minerals.check(alpha);
+		check("rocks: raw gold in your inventory goes in your Rock Collection", dev.rubymod.game.Minerals.found(alpha).contains("minecraft:raw_gold")
+				|| !dev.rubymod.game.Hub.inRubyWarsWorld(alpha));
+		alpha.getInventory().clearContent();
+		for (BlockPos p : BlockPos.betweenClosed(spot, spot.offset(9, 0, 0))) {
+			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+		}
+		dev.rubymod.industry.Grid.account(A).charge = chargeBefore;
+	}
+
 	/** Belts: curves, merges, turning, redstone, waiting when full, items nobody can grab, people stepping off, tunnels. */
 	/** One base, one power supply; the base list; a drill's finds; the wrench taking a whole belt line. */
 	private void powerChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo, SeasonData.Claim claim, BlockPos base) {
@@ -421,6 +610,7 @@ public final class SelfTest {
 		check("protection: trusted player can build", Rules.canBuild(bravo, level, inside));
 		claim.trusted.clear();
 		powerChecks(level, alpha, bravo, claim, base);
+		miningChecks(level, alpha, base);
 
 		// ----- Tunnel Borer and Seismic Sensor -----
 		{

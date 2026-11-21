@@ -22,6 +22,11 @@ public class ModBlockEntities {
 			RubyMod.id("machine"),
 			new BlockEntityType<>(dev.rubymod.industry.MachineBlockEntity::new, ModBlocks.machines()));
 
+	public static final BlockEntityType<dev.rubymod.industry.SiloBlockEntity> SILO = Registry.register(
+			BuiltInRegistries.BLOCK_ENTITY_TYPE,
+			RubyMod.id("ore_silo"),
+			new BlockEntityType<>(dev.rubymod.industry.SiloBlockEntity::new, Set.of(ModBlocks.ORE_SILO)));
+
 	public static final BlockEntityType<dev.rubymod.block.GraveBlockEntity> GRAVE = Registry.register(
 			BuiltInRegistries.BLOCK_ENTITY_TYPE,
 			RubyMod.id("war_grave"),

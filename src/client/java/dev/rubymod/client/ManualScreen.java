@@ -9,11 +9,16 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.item.ItemStack;
 
 /** The Field Manual (Y): short pages on everything Ruby Wars adds, so nobody has to read the README. */
 public class ManualScreen extends Screen {
 	private record Page(String title, String... lines) {
 	}
+
+	private static final String ROCKS = "Rock Collection";
+	private static final int ROCK_COLS = 4;
+	private static final int ROCK_H = 28;
 
 	private static final List<Page> PAGES = List.of(
 			new Page("Getting Started",
@@ -103,6 +108,18 @@ public class ManualScreen extends Screen {
 					"Belt Tunnel: two facing the same way, up to 7 blocks apart, carry things under walls and floors. Belt Ramp: up a level (empty hand: switch to down).",
 					"Furnaces work with belts from any side: things to cook go in the top, fuel underneath. A Loader on a furnace takes only what's cooked.",
 					"Ruby Wrench: right-click a machine or belt to turn it; crouch to pick it up (it keeps its tier). Do it again on the next belt to take the whole line. Hoppers and comparators work with machines."),
+			new Page("Mining & Making",
+					"Prospector's Pick: right-click and it chimes (higher when you're closer) and sparkles toward the nearest Ruby Ore within 16 blocks, and says if you're warmer or colder. Ruby Ore is found below Y 0.",
+					"Ruby Drill buttons: Find (All, Metals or Gems: more of those, less of the rest) and Stone (Leave: plain rock stays in the hole, so the drill fills up slower). Right-click Find to go back.",
+					"Where you drill matters: ore in the ground nearby comes up more often, and so do some biomes' minerals (badlands: gold, mountains: emeralds, dripstone caves: copper, the deep dark: diamonds). The drill's screen says what the ground is rich in.",
+					"Crouch and right-click a drill (or any machine that makes things) with an empty hand to take everything it has made.",
+					"Ore Refinery: ore in, double out. It also cooks anything a furnace can (sand to glass, logs to charcoal, food), and coal with sand in the slot below makes gunpowder.",
+					"Assembler: pick a recipe (right-click it to go back) and feed it the parts: ingots into blocks, torches, rails, TNT and more. Belts can feed it like any machine.",
+					"Ore Silo: holds 128 stacks of one thing. Right-click with an item to put it in (click twice quickly for all of it), with an empty hand to take a stack (crouch: one). Belts and hoppers work with it, and it keeps what it holds when you pick it up.",
+					"Geodes turn up now and then from drills and from mining stone. Right-click one to crack it open.",
+					"My Base (M menu) shows what your machines have made this season and what's in your silos."),
+			new Page(ROCKS,
+					"Every mineral you find in Ruby Wars fills in a spot here (it just has to be in your inventory). Hover over one to see where it comes from. Your collection stays from season to season."),
 			new Page("Defenses",
 					"All base defenses follow one rule: they go for raiders whenever a raid is on, monsters any time, and enemy players from Open War.",
 					"Sentry Turrets and Flak Cannons load with Heavy Ammo (right-click them). Interceptors and SAM Sites recharge with rubies.",
@@ -235,6 +252,10 @@ public class ManualScreen extends Screen {
 		for (String line : p.lines()) {
 			total += font.split(Component.literal(line), tw).size() * 10 + 4;
 		}
+		boolean rocks = p.title().equals(ROCKS);
+		if (rocks) {
+			total += 12 + (dev.rubymod.game.Minerals.ALL.size() + ROCK_COLS - 1) / ROCK_COLS * ROCK_H;
+		}
 		scrollMax = Math.max(0, total - 4 - (bottom - top));
 		scroll = Math.max(0, Math.min(scroll, scrollMax));
 		g.enableScissor(tx - 2, top - 1, x + w - 6, bottom);
@@ -248,10 +269,52 @@ public class ManualScreen extends Screen {
 			}
 			ty += 4;
 		}
+		if (rocks) {
+			drawRocks(g, tx, ty, tw, top, bottom, mouseX, mouseY, turn);
+		}
 		g.disableScissor();
 		if (scrollMax > 0) {
 			String hint = scroll < scrollMax ? "Scroll for more" : "Scroll back up";
 			Ui.text(g, hint, x + w - 10 - font.width(hint), y + h - 12, Ui.MUTED);
+		}
+	}
+
+	/** The Rock Collection: found minerals in colour with their names, the rest dark until you find them. */
+	private void drawRocks(GuiGraphicsExtractor g, int tx, int ty, int tw, int top, int bottom, int mouseX, int mouseY, float turn) {
+		var all = dev.rubymod.game.Minerals.ALL;
+		long found = all.stream().filter(m -> ClientState.rocks.contains(m.id())).count();
+		if (ty >= top - 1 && ty <= bottom - 8) {
+			g.text(font, found + " of " + all.size() + " found", tx, ty, Ui.alpha(found == all.size() ? Ui.GREEN : Ui.GOLD, turn), false);
+		}
+		ty += 12;
+		int cw = tw / ROCK_COLS;
+		for (int i = 0; i < all.size(); i++) {
+			var m = all.get(i);
+			int cx = tx + (i % ROCK_COLS) * cw;
+			int cy = ty + (i / ROCK_COLS) * ROCK_H;
+			if (cy + ROCK_H < top || cy > bottom) {
+				continue;
+			}
+			boolean have = ClientState.rocks.contains(m.id());
+			ItemStack stack = new ItemStack(m.item());
+			int ix = cx + (cw - 16) / 2;
+			Ui.inset(g, ix - 2, cy - 2, 20, 20);
+			g.item(stack, ix, cy);
+			if (!have) {
+				g.fill(ix, cy, ix + 16, cy + 16, 0xD0181B21);
+			}
+			String name = have ? stack.getHoverName().getString() : "???";
+			g.pose().pushMatrix();
+			int nw = Math.round(Math.min(font.width(name), (cw - 4) / 0.75F) * 0.75F);
+			g.pose().translate(cx + (cw - nw) / 2.0F, cy + 19);
+			g.pose().scale(0.75F, 0.75F);
+			g.text(font, Ui.fit(name, (int) ((cw - 4) / 0.75F)), 0, 0, Ui.alpha(have ? Ui.TEXT : Ui.MUTED, turn), false);
+			g.pose().popMatrix();
+			if (Ui.inside(mouseX, mouseY, cx, cy - 2, cw, ROCK_H) && mouseY >= top && mouseY <= bottom) {
+				g.setComponentTooltipForNextFrame(font, java.util.List.of(
+						Component.literal(have ? stack.getHoverName().getString() : "Not found yet").withStyle(have ? net.minecraft.ChatFormatting.GOLD : net.minecraft.ChatFormatting.GRAY),
+						Component.literal(m.where()).withStyle(net.minecraft.ChatFormatting.GRAY)), mouseX, mouseY);
+			}
 		}
 	}
 

@@ -179,6 +179,10 @@ public class ModBlocks {
 	public static final Block POINT_DEFENSE = machine("point_defense", dev.rubymod.industry.MachineKind.POINT_DEFENSE, Shapes.block());
 	public static final Block CONSTRUCTOR = machine("constructor", dev.rubymod.industry.MachineKind.CONSTRUCTOR, Shapes.block());
 	public static final Block TESLA_COIL = machine("tesla_coil", dev.rubymod.industry.MachineKind.TESLA_COIL, Block.box(3, 0, 3, 13, 16, 13));
+	public static final Block ASSEMBLER = machine("assembler", dev.rubymod.industry.MachineKind.ASSEMBLER, Shapes.block());
+	/** Holds a huge amount of one thing (see OreSiloBlock). */
+	public static final Block ORE_SILO = register("ore_silo", dev.rubymod.industry.OreSiloBlock::new,
+			props().mapColor(MapColor.METAL).strength(4.0F, 8.0F).sound(SoundType.METAL).noOcclusion().noLootTable().requiresCorrectToolForDrops());
 	/** Where a player fell: holds their gear (see GraveBlock). */
 	public static final Block WAR_GRAVE = register("war_grave", dev.rubymod.block.GraveBlock::new,
 			props().mapColor(MapColor.COLOR_GREEN).strength(-1.0F, 3600000.0F).sound(SoundType.METAL).noOcclusion().noLootTable());

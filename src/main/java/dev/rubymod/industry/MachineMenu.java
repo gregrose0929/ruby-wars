@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** The machine screen's server/client half: machine slots, the player's inventory, and live numbers. */
 public class MachineMenu extends AbstractContainerMenu {
-	public static final int DATA_SLOTS = 35;
+	public static final int DATA_SLOTS = 40;
 	public static final int WIDTH = 176;
 	public static final int HEIGHT = 190;
 	public static final int INVENTORY_Y = 108;
@@ -29,6 +29,10 @@ public class MachineMenu extends AbstractContainerMenu {
 	public static final int BUTTON_WITHDRAW_1 = 2;
 	public static final int BUTTON_WITHDRAW_16 = 3;
 	public static final int BUTTON_WITHDRAW_64 = 4;
+	public static final int BUTTON_RECIPE_BACK = 5;
+	public static final int BUTTON_FOCUS = 6;
+	public static final int BUTTON_FOCUS_BACK = 7;
+	public static final int BUTTON_STONE = 8;
 
 	/** Sent when the screen opens: which machine, and where. */
 	public record Opening(BlockPos pos, int kind) {
@@ -83,8 +87,8 @@ public class MachineMenu extends AbstractContainerMenu {
 		return switch (kind) {
 			case COMBUSTION_GENERATOR -> new int[][] {{44, 52}};
 			case RUBY_DRILL -> grid(98, 26, 3, 3);
-			case ORE_REFINERY -> new int[][] {{44, 44}, {98, 44}, {116, 44}, {134, 44}};
-			case AMMO_FACTORY -> new int[][] {{44, 32}, {44, 56}, {116, 44}, {134, 44}};
+			case ORE_REFINERY -> new int[][] {{44, 32}, {44, 62}, {98, 44}, {116, 44}, {134, 44}};
+			case AMMO_FACTORY, ASSEMBLER -> new int[][] {{44, 32}, {44, 56}, {116, 44}, {134, 44}};
 			case TRADE_DEPOT -> grid(12, 26, 3, 3);
 			case VAULT, CONSTRUCTOR -> new int[][] {{26, 44}};
 			default -> new int[0][];
@@ -129,7 +133,11 @@ public class MachineMenu extends AbstractContainerMenu {
 		}
 		switch (id) {
 			case BUTTON_UPGRADE -> sp.sendOverlayMessage(net.minecraft.network.chat.Component.literal(blockEntity.upgrade(sp)));
-			case BUTTON_RECIPE -> blockEntity.cycleRecipe();
+			case BUTTON_RECIPE -> blockEntity.cycleRecipe(1);
+			case BUTTON_RECIPE_BACK -> blockEntity.cycleRecipe(-1);
+			case BUTTON_FOCUS -> blockEntity.cycleFocus(1);
+			case BUTTON_FOCUS_BACK -> blockEntity.cycleFocus(-1);
+			case BUTTON_STONE -> blockEntity.toggleStone();
 			case BUTTON_WITHDRAW_1 -> blockEntity.withdraw(sp, 1);
 			case BUTTON_WITHDRAW_16 -> blockEntity.withdraw(sp, 16);
 			case BUTTON_WITHDRAW_64 -> blockEntity.withdraw(sp, 64);

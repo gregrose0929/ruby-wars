@@ -142,6 +142,18 @@ smelted in furnaces (belts put ore in the top and fuel below), and sold at the T
 Your Heart tab) for a bigger claim, more health and room for more drills.
 `/rubywars leaderboard` shows the top tycoons.
 
+Mining and making: a drill's **Find** button picks what it looks for (everything, metals or
+gems) and its **Stone** button leaves plain rock in the hole so it fills up slower; ore in the
+ground around a drill (and some biomes) comes up more often, and its screen says what the ground
+is rich in. Crouch and right-click a machine with an empty hand to take everything it made. The
+Ore Refinery also cooks anything a furnace can and makes gunpowder from coal and sand; the
+**Assembler** crafts ingots into blocks, torches, rails, TNT and more; the **Ore Silo** holds
+128 stacks of one thing (belts and hoppers work with it, and it keeps its contents when picked
+up). The **Prospector's Pick** chimes and sparkles toward the nearest Ruby Ore. **Geodes**
+turn up from drills and mining (right-click to crack one open), and the Field Manual has a
+**Rock Collection** that fills in as you find each mineral. My Base shows what your machines
+made this season and what's in your silos.
+
 ### Weapons and vehicles
 
 - **Guns:** pistol, six-shooter, rifle, shotgun, sniper, minigun, flamethrower, the Ruby

@@ -39,6 +39,8 @@
 		"rubymod:keycard_door",
 		"rubymod:ruby_bearing",
 		"rubymod:ruby_piston",
-		"rubymod:keycard_reader"
+		"rubymod:keycard_reader",
+		"rubymod:assembler",
+		"rubymod:ore_silo"
 	]
 }

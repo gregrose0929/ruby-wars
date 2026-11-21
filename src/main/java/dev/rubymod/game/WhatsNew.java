@@ -24,15 +24,15 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-20-goals";
+	private static final String VERSION = "2026-11-20-mining";
 	private static final List<String> LINES = List.of(
-			"rubymod:battery|My Base (in the M menu) lists every machine you own and how long your power lasts.",
-			"rubymod:ruby_heart|Everyone plays on their own (no squads), and only you can put Ruby Wars equipment in your base.",
-			"rubymod:ruby_drill|Stopped machines show as amber dots on the minimap; drills count what they've dug; the power bar is back at the top left.",
-			"rubymod:ruby_wrench|Crouch + right-click two belts in a row with the Ruby Wrench to pick up the whole line. Look at a belt to see what's riding it.",
-			"rubymod:conveyor|Belts curve by themselves, you can walk and jump off them, nobody grabs what's riding them, and redstone stops them.",
-			"rubymod:belt_tunnel|New at the Armory: the Belt Splitter (shares things left and right) and the Belt Tunnel (carries things under walls). Ramps can go down too.",
-			"minecraft:spyglass|A smaller, tidier HUD: one slim panel for your Heart, rubies and power, and a one-line guide. Settings (M) has HUD size.",
+			"rubymod:prospector_pick|New at the Armory: the Prospector's Pick chimes and sparkles toward the nearest Ruby Ore.",
+			"rubymod:ruby_drill|Drills have Find (All, Metals or Gems) and Stone (leave plain rock in the hole) buttons, and dig more of the ore around them. Crouch-click one to collect.",
+			"rubymod:ore_refinery|The Ore Refinery cooks anything a furnace can, and makes gunpowder from coal and sand.",
+			"rubymod:assembler|New: the Assembler crafts ingots into blocks, torches, rails, TNT and more.",
+			"rubymod:ore_silo|New: the Ore Silo holds 128 stacks of one thing. Belts and hoppers work with it.",
+			"rubymod:geode|Geodes turn up from drills and mining: right-click to crack one open. The Field Manual has your Rock Collection.",
+			"rubymod:battery|My Base (M menu) shows what your machines made this season and what's in your silos.",
 			"minecraft:nether_star|Goals (J) fit in an evening or two: bank 100 and 200 rubies, mine 25 Ruby Ore, fly 500 blocks (jetpacks count), sail any boat, damage an enemy Heart.");
 
 	/** Who's seen this update's card. */

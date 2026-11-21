@@ -97,6 +97,9 @@ public class BaseScreen extends Screen {
 				ty += 9;
 			}
 		}
+		// What your machines have made, and what's in your silos.
+		ty = strip(g, "Made this season", ClientState.made, x, ty, w, mouseX, mouseY);
+		ty = strip(g, "In your silos", ClientState.silos, x, ty, w, mouseX, mouseY);
 		ty += 3;
 		g.fill(x + 8, ty, x + w - 8, ty + 1, 0xFF2E3440);
 		ty += 5;
@@ -149,6 +152,44 @@ public class BaseScreen extends Screen {
 		String foot = scrollMax > 0 ? (scroll < scrollMax ? "Scroll for more" : "Scroll back up")
 				: "All your machines share your power";
 		g.centeredText(font, Ui.fit(foot, w - 20), x + w / 2, y + h - 13, Ui.MUTED);
+	}
+
+	/** A row of item icons with counts (nothing at all when the list is empty). Returns the next y. */
+	private int strip(GuiGraphicsExtractor g, String label, List<java.util.Map.Entry<String, Long>> list, int x, int ty, int w, int mouseX, int mouseY) {
+		if (list.isEmpty()) {
+			return ty;
+		}
+		ty += 2;
+		small(g, label, x + 10, ty + 5, Ui.MUTED);
+		int cx = x + 10 + Math.round(font.width(label) * 0.75F) + 8;
+		for (var e : list) {
+			String count = compact(e.getValue());
+			int cellW = 18 + Math.round(font.width(count) * 0.75F) + 6;
+			if (cx + cellW > x + w - 8) {
+				break;
+			}
+			var item = BuiltInRegistries.ITEM.getValue(Identifier.parse(e.getKey()));
+			ItemStack stack = new ItemStack(item);
+			g.item(stack, cx, ty);
+			small(g, count, cx + 18, ty + 5, Ui.TEXT);
+			if (Ui.inside(mouseX, mouseY, cx, ty, cellW, 16)) {
+				g.setComponentTooltipForNextFrame(font, List.of(Component.literal(String.format(Locale.ROOT, "%s: %,d", stack.getHoverName().getString(),
+						e.getValue()))), mouseX, mouseY);
+			}
+			cx += cellW;
+		}
+		return ty + 18;
+	}
+
+	/** 950, 12.4k, 3.1M. */
+	private static String compact(long n) {
+		if (n < 10_000) {
+			return String.format(Locale.ROOT, "%,d", n);
+		}
+		if (n < 1_000_000) {
+			return String.format(Locale.ROOT, "%.1fk", n / 1000.0);
+		}
+		return String.format(Locale.ROOT, "%.1fM", n / 1_000_000.0);
 	}
 
 	private void small(GuiGraphicsExtractor g, String s, int x, int y, int color) {

@@ -223,7 +223,8 @@ public final class GameEvents {
 							dev.rubymod.industry.Grid.capacity(grid), dev.rubymod.industry.Grid.producedPerSecond(grid),
 							dev.rubymod.industry.Grid.consumedPerSecond(grid)));
 					if (server.getTickCount() % 40 == 0) {
-						Net.send(player, new dev.rubymod.net.MorePayloads.BaseSync(dev.rubymod.industry.BaseMachines.rows(server, player.getUUID())));
+						Minerals.check(player);
+						Net.send(player, new dev.rubymod.net.MorePayloads.BaseSync(dev.rubymod.industry.BaseMachines.rows(server, player)));
 					}
 				}
 				TrainingGround.tick();
@@ -531,6 +532,7 @@ public final class GameEvents {
 					Goals.add(serverPlayer.level().getServer(), serverPlayer.getUUID(), "ruby50", 1);
 				}
 				ExcavatorItem.afterBreak(serverLevel, serverPlayer, pos, state);
+				Minerals.mined(serverLevel, serverPlayer, pos, state);
 			}
 		});
 

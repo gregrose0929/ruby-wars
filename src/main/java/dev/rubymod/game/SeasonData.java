@@ -126,6 +126,8 @@ public class SeasonData {
 		/** Goal progress (counts or reached values) and finished goals; see Goals. */
 		public Map<String, Integer> goalProgress = new java.util.HashMap<>();
 		public Set<String> goalsDone = new HashSet<>();
+		/** What this player's machines have made this season, by item id (see Production). */
+		public Map<String, Long> made = new java.util.HashMap<>();
 	}
 
 	public static SeasonData get() {

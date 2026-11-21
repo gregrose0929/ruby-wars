@@ -50,36 +50,68 @@ public final class Recipes {
 
 	// ----- Ruby Drill -----
 
+	/** What a drill looks for (its Focus button). */
+	public static final int FOCUS_ALL = 0;
+	public static final int FOCUS_METALS = 1;
+	public static final int FOCUS_GEMS = 2;
+	public static final String[] FOCUS_NAMES = {"Everything", "Metals", "Gems"};
+
+	/** Ruby chance per haul by tier, before depth, focus and the ground. */
+	public static final float[] RUBY_CHANCE = {0.015F, 0.02F, 0.03F, 0.04F, 0.055F};
+
 	/** One haul. Deeper drills (below Y 0) find twice the rubies. */
 	public static ItemStack drill(RandomSource random, int tier, boolean deep) {
-		float rubyChance = new float[] {0.015F, 0.02F, 0.03F, 0.04F, 0.055F}[tier - 1] * (deep ? 2.0F : 1.0F);
-		float roll = random.nextFloat();
-		if (roll < rubyChance) {
+		return drill(random, tier, deep, FOCUS_ALL, DrillSite.PLAIN);
+	}
+
+	/** The ruby chance for a drill (shown on its screen). */
+	public static float rubyChance(int tier, boolean deep, int focus, DrillSite site) {
+		return RUBY_CHANCE[tier - 1] * (deep ? 2.0F : 1.0F) * (focus == FOCUS_GEMS ? 1.3F : focus == FOCUS_METALS ? 0.7F : 1.0F)
+				* (1.0F + 0.5F * site.strength(ModItems.RUBY));
+	}
+
+	/**
+	 * One haul. Deeper drills (below Y 0) find twice the rubies; the focus brings more metals or gems (and less of
+	 * the rest); ore in the ground around the drill (and some biomes) brings more of that. Now and then a Geode.
+	 */
+	public static ItemStack drill(RandomSource random, int tier, boolean deep, int focus, DrillSite site) {
+		if (random.nextFloat() < rubyChance(tier, deep, focus, site)) {
 			return new ItemStack(ModItems.RUBY);
 		}
-		roll = random.nextFloat();
-		if (roll < 0.01F + 0.004F * tier) {
-			return new ItemStack(Items.DIAMOND);
+		if (random.nextFloat() < (deep ? 0.003F : 0.0015F)) {
+			return new ItemStack(ModItems.GEODE);
 		}
-		if (roll < 0.06F + 0.005F * tier) {
-			return new ItemStack(Items.RAW_GOLD);
+		Item[] finds = {Items.DIAMOND, Items.RAW_GOLD, Items.RAW_IRON, Items.RAW_COPPER, Items.COAL, Items.REDSTONE, Items.LAPIS_LAZULI, Items.EMERALD};
+		float[] weight = {0.01F + 0.004F * tier, 0.05F + 0.001F * tier, 0.14F - 0.005F * tier, 0.13F, 0.13F, 0.06F, 0.04F, 0.0F};
+		float total = 0.44F; // plain rock
+		for (int i = 0; i < finds.length; i++) {
+			Item item = finds[i];
+			boolean metal = item == Items.RAW_GOLD || item == Items.RAW_IRON || item == Items.RAW_COPPER;
+			boolean gem = item == Items.DIAMOND || item == Items.EMERALD || item == Items.REDSTONE || item == Items.LAPIS_LAZULI;
+			if (focus == FOCUS_METALS) {
+				weight[i] *= metal ? 1.6F : 0.4F;
+			} else if (focus == FOCUS_GEMS) {
+				weight[i] *= gem ? 1.6F : 0.4F;
+			}
+			float s = site.strength(item);
+			weight[i] = item == Items.EMERALD ? weight[i] + 0.006F * s * (focus == FOCUS_GEMS ? 1.6F : focus == FOCUS_METALS ? 0.4F : 1.0F)
+					: weight[i] * (1.0F + s);
+			total += weight[i];
 		}
-		if (roll < 0.20F) {
-			return new ItemStack(Items.RAW_IRON);
-		}
-		if (roll < 0.33F) {
-			return new ItemStack(Items.RAW_COPPER);
-		}
-		if (roll < 0.46F) {
-			return new ItemStack(Items.COAL);
-		}
-		if (roll < 0.52F) {
-			return new ItemStack(Items.REDSTONE, 2);
-		}
-		if (roll < 0.56F) {
-			return new ItemStack(Items.LAPIS_LAZULI, 2);
+		float roll = random.nextFloat() * total;
+		for (int i = 0; i < finds.length; i++) {
+			if (roll < weight[i]) {
+				Item item = finds[i];
+				return new ItemStack(item, item == Items.REDSTONE || item == Items.LAPIS_LAZULI ? 2 : 1);
+			}
+			roll -= weight[i];
 		}
 		return new ItemStack(deep ? Items.COBBLED_DEEPSLATE : Items.COBBLESTONE);
+	}
+
+	/** Plain rock a drill can leave behind (its Stone button). */
+	public static boolean isRock(ItemStack stack) {
+		return stack.is(Items.COBBLESTONE) || stack.is(Items.COBBLED_DEEPSLATE);
 	}
 
 	// ----- Ore Refinery -----
@@ -112,6 +144,31 @@ public final class Recipes {
 		return ItemStack.EMPTY;
 	}
 
+	/** Ore (doubled, as above), or anything a furnace can cook: sand to glass, logs to charcoal, food. */
+	public static ItemStack refine(net.minecraft.world.level.Level level, ItemStack input, int tier) {
+		ItemStack ore = refine(input, tier);
+		if (!ore.isEmpty() || input.isEmpty() || !(level instanceof net.minecraft.server.level.ServerLevel server)) {
+			return ore;
+		}
+		var recipe = server.recipeAccess().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.SMELTING,
+				new net.minecraft.world.item.crafting.SingleRecipeInput(input), server);
+		return recipe.map(r -> r.value().assemble(new net.minecraft.world.item.crafting.SingleRecipeInput(input))).orElse(ItemStack.EMPTY);
+	}
+
+	/** Coal or charcoal: with sand in the Refinery's second slot, it makes gunpowder. */
+	public static boolean isGunpowderFuel(ItemStack stack) {
+		return stack.is(Items.COAL) || stack.is(Items.CHARCOAL);
+	}
+
+	public static boolean isSand(ItemStack stack) {
+		return stack.is(Items.SAND) || stack.is(Items.RED_SAND);
+	}
+
+	/** Gunpowder from one coal and one sand. */
+	public static ItemStack gunpowder(int tier) {
+		return new ItemStack(Items.GUNPOWDER, tier >= 4 ? 3 : 2);
+	}
+
 	// ----- Ammo Factory -----
 
 	public record AmmoRecipe(String name, Item metal, int metalCount, Item extra, int extraCount, Item result, int count) {
@@ -124,6 +181,35 @@ public final class Recipes {
 			new AmmoRecipe("Sniper Rounds", Items.GOLD_INGOT, 1, Items.GUNPOWDER, 2, ModItems.SNIPER_ROUND, 8),
 			new AmmoRecipe("Rockets", Items.IRON_INGOT, 3, Items.GUNPOWDER, 4, ModItems.ROCKET, 2),
 			new AmmoRecipe("Mortar Shells", Items.IRON_INGOT, 2, Items.GUNPOWDER, 3, ModItems.MORTAR_SHELL, 2));
+
+	// ----- Assembler (a null extra: one ingredient) -----
+
+	public static final List<AmmoRecipe> ASSEMBLY = List.of(
+			new AmmoRecipe("Iron Block", Items.IRON_INGOT, 9, null, 0, Items.IRON_BLOCK, 1),
+			new AmmoRecipe("Gold Block", Items.GOLD_INGOT, 9, null, 0, Items.GOLD_BLOCK, 1),
+			new AmmoRecipe("Copper Block", Items.COPPER_INGOT, 9, null, 0, net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.withDefaultNamespace("copper_block")), 1),
+			new AmmoRecipe("Coal Block", Items.COAL, 9, null, 0, Items.COAL_BLOCK, 1),
+			new AmmoRecipe("Redstone Block", Items.REDSTONE, 9, null, 0, Items.REDSTONE_BLOCK, 1),
+			new AmmoRecipe("Lapis Block", Items.LAPIS_LAZULI, 9, null, 0, Items.LAPIS_BLOCK, 1),
+			new AmmoRecipe("Diamond Block", Items.DIAMOND, 9, null, 0, Items.DIAMOND_BLOCK, 1),
+			new AmmoRecipe("Ruby Block", ModItems.RUBY, 9, null, 0, ModBlocks.RUBY_BLOCK.asItem(), 1),
+			new AmmoRecipe("Torches", Items.COAL, 1, Items.STICK, 1, Items.TORCH, 4),
+			new AmmoRecipe("Rails", Items.IRON_INGOT, 6, Items.STICK, 1, Items.RAIL, 16),
+			new AmmoRecipe("Iron Bars", Items.IRON_INGOT, 6, null, 0, Items.IRON_BARS, 16),
+			new AmmoRecipe("Glass Panes", Items.GLASS, 6, null, 0, Items.GLASS_PANE, 16),
+			new AmmoRecipe("Stone Bricks", Items.STONE, 4, null, 0, Items.STONE_BRICKS, 4),
+			new AmmoRecipe("TNT", Items.GUNPOWDER, 5, Items.SAND, 4, Items.TNT, 1),
+			new AmmoRecipe("Bread", Items.WHEAT, 3, null, 0, Items.BREAD, 1));
+
+	/** The recipe list a machine picks from. */
+	public static List<AmmoRecipe> recipes(MachineKind kind) {
+		return kind == MachineKind.ASSEMBLER ? ASSEMBLY : AMMO;
+	}
+
+	public static AmmoRecipe recipe(MachineKind kind, int index) {
+		List<AmmoRecipe> list = recipes(kind);
+		return list.get(Math.floorMod(index, list.size()));
+	}
 
 	// ----- Trade Depot prices, in thousandths of a ruby per item -----
 
