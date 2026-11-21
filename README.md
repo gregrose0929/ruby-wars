@@ -147,11 +147,13 @@ gems) and its **Stone** button leaves plain rock in the hole so it fills up slow
 ground around a drill (and some biomes) comes up more often, and its screen says what the ground
 is rich in. Crouch and right-click a machine with an empty hand to take everything it made. The
 Ore Refinery also cooks anything a furnace can and makes gunpowder from coal and sand; the
-**Assembler** crafts ingots into blocks, torches, rails, TNT and more; the **Ore Silo** holds
-128 stacks of one thing (belts and hoppers work with it, and it keeps its contents when picked
-up). The **Prospector's Pick** chimes and sparkles toward the nearest Ruby Ore. **Geodes**
-turn up from drills and mining (right-click to crack one open), and the Field Manual has a
-**Rock Collection** that fills in as you find each mineral. My Base shows what your machines
+**Assembler** crafts ingots into blocks, torches, rails, TNT and more (pick a recipe from a
+grid); the **Ore Silo** holds 128 stacks of one thing and shows it in its window (belts and
+hoppers work with it, and it keeps its contents when picked up). The **Prospector's Pick**
+chimes and sparkles toward the nearest Ruby Ore (crouch-click it to look for diamonds or any
+ore). **Geodes** turn up from drills and mining (right-click to crack one open, crouch for
+the whole stack), and the Field Manual has a **Rock Collection** that fills in as you find
+each mineral; find all 16 for the Geode Glitter firework. My Base shows what your machines
 made this season and what's in your silos.
 
 ### Weapons and vehicles

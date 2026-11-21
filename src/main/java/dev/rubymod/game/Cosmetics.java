@@ -77,6 +77,8 @@ public final class Cosmetics {
 			new Cosmetic("fw_frost", Kind.FIREWORK, "Snowfall", "minecraft:snowball", "Play 1 Ruby Wars season", r -> r.seasonsPlayed >= 1),
 			new Cosmetic("fw_rainbow", Kind.FIREWORK, "Rainbow Blast", "minecraft:prismarine_crystals", "Win 3 party games", r -> r.totalWins() >= 3),
 			new Cosmetic("fw_duelist", Kind.FIREWORK, "Duelist's Sparks", "minecraft:blaze_rod", "Win 3 duels", r -> r.duelsWon >= 3),
+			new Cosmetic("fw_geode", Kind.FIREWORK, "Geode Glitter", "minecraft:amethyst_cluster", "Find all 16 minerals for your Rock Collection",
+					r -> r.rocks != null && r.rocks.size() >= Minerals.ALL.size()),
 			new Cosmetic("fw_champion", Kind.FIREWORK, "Champion's Crown", "minecraft:totem_of_undying", "Win a Ruby Wars season", r -> r.seasonsWon >= 1),
 			new Cosmetic("set_recruit", Kind.ARMOR, "Recruit Fatigues", "minecraft:iron_chestplate", "Reach level 2", level(2)),
 			new Cosmetic("set_ranger", Kind.ARMOR, "Forest Ranger", "minecraft:fern", "Reach level 5", level(5)),

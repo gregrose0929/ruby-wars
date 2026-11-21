@@ -68,12 +68,25 @@ public final class Minerals {
 					}
 					if (record.rocks.add(m.id())) {
 						Stats.markDirty();
-						Alerts.toast(player, m.id(), "New for your Rock Collection",
-								stack.getHoverName().getString() + " (" + record.rocks.size() + " of " + ALL.size() + "). See the Field Manual.", Alerts.GREEN);
+						if (record.rocks.size() >= ALL.size()) {
+							complete(player, stack);
+						} else {
+							Alerts.toast(player, m.id(), "New for your Rock Collection",
+									stack.getHoverName().getString() + " (" + record.rocks.size() + " of " + ALL.size() + "). See the Field Manual.", Alerts.GREEN);
+						}
 					}
 				}
 			}
 		}
+	}
+
+	/** The last mineral found: a toast, a little show, and the Geode Glitter firework. */
+	private static void complete(ServerPlayer player, ItemStack last) {
+		Alerts.toast(player, "minecraft:amethyst_cluster", "Rock Collection complete!",
+				"You found all " + ALL.size() + " minerals (the last: " + last.getHoverName().getString() + "). Well done!", Alerts.GOLD);
+		player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, net.minecraft.sounds.SoundSource.PLAYERS, 0.7F, 1.0F);
+		Celebrations.rocks(player);
+		Cosmetics.checkUnlocks(player);
 	}
 
 	/** The ids this player has found. */

@@ -125,15 +125,8 @@ public class OreSiloBlock extends BaseEntityBlock {
 		long now = level.getGameTime();
 		Long last = LAST_PUT.get(player.getUUID());
 		int moved = be.put(stack);
-		if (last != null && now - last <= 10 && now >= last) {
-			// A quick second click: everything like it from your inventory.
-			var inv = player.getInventory();
-			for (int i = 0; i < inv.getContainerSize(); i++) {
-				ItemStack s = inv.getItem(i);
-				if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, be.type())) {
-					moved += be.put(s);
-				}
-			}
+		if (quick(last, now)) {
+			moved += putAll(be, player);
 		}
 		LAST_PUT.put(player.getUUID(), now);
 		if (moved > 0) {
@@ -143,6 +136,24 @@ public class OreSiloBlock extends BaseEntityBlock {
 				+ (moved == 0 ? " (full)" : last == null || now - last > 10 ? "   Click again quickly to put in all of it" : ""))
 				.withStyle(ChatFormatting.AQUA));
 		return InteractionResult.SUCCESS;
+	}
+
+	/** A second click soon after putting something in? */
+	private static boolean quick(Long last, long now) {
+		return last != null && now - last <= 10 && now >= last;
+	}
+
+	/** Everything like what the silo holds, from the player's inventory. Returns how many went in. */
+	private static int putAll(SiloBlockEntity be, Player player) {
+		int moved = 0;
+		var inv = player.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack s = inv.getItem(i);
+			if (!s.isEmpty() && !be.type().isEmpty() && ItemStack.isSameItemSameComponents(s, be.type())) {
+				moved += be.put(s);
+			}
+		}
+		return moved;
 	}
 
 	@Override
@@ -161,6 +172,17 @@ public class OreSiloBlock extends BaseEntityBlock {
 		if (type.isEmpty()) {
 			player.sendOverlayMessage(Component.literal("Ore Silo: empty. Right-click it with something to store it, or run a belt into it.")
 					.withStyle(ChatFormatting.AQUA));
+			return InteractionResult.SUCCESS;
+		}
+		long now = level.getGameTime();
+		if (quick(LAST_PUT.remove(player.getUUID()), now)) {
+			// The second click of a double click: the first put your stack in and left your hand empty, so this one
+			// puts in the rest of it (rather than taking a stack back out).
+			int moved = putAll(be, player);
+			if (moved > 0) {
+				level.playSound(null, pos, SoundEvents.BARREL_CLOSE, SoundSource.BLOCKS, 0.4F, 1.3F);
+			}
+			player.sendOverlayMessage(Component.literal((moved > 0 ? "+" + moved + "  " : "") + describe(be)).withStyle(ChatFormatting.AQUA));
 			return InteractionResult.SUCCESS;
 		}
 		ItemStack taken = be.take(player.isSecondaryUseActive() ? 1 : type.getMaxStackSize());

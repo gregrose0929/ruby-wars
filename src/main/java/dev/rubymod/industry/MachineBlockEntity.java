@@ -71,6 +71,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	private int burn;
 	private int burnMax;
 	private int recipe;
+	/** What the Refinery is making from what it has now (for its screen). */
+	private ItemStack refining = ItemStack.EMPTY;
 	private int status;
 	private long lastTick = -1;
 	private int aux;
@@ -387,6 +389,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		ItemStack sand = items.get(1);
 		boolean gunpowder = Recipes.isGunpowderFuel(input) && Recipes.isSand(sand);
 		ItemStack result = gunpowder ? Recipes.gunpowder(tier) : Recipes.refine(level, input, tier);
+		refining = result;
 		if (result.isEmpty()) {
 			progress = 0;
 			status = NO_INPUT;
@@ -416,8 +419,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		Recipes.AmmoRecipe r = Recipes.recipe(kind(), recipe);
 		ItemStack metal = items.get(0);
 		ItemStack extra = items.get(1);
-		if (!metal.is(r.metal()) || metal.getCount() < r.metalCount()
-				|| r.extra() != null && (!extra.is(r.extra()) || extra.getCount() < r.extraCount())) {
+		if (!Recipes.fits(r, r.metal(), metal) || metal.getCount() < r.metalCount()
+				|| r.extra() != null && (!Recipes.fits(r, r.extra(), extra) || extra.getCount() < r.extraCount())) {
 			progress = 0;
 			status = NO_INPUT;
 			return;
@@ -811,8 +814,29 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	}
 
 	public void cycleRecipe(int step) {
-		recipe = Math.floorMod(recipe + step, Recipes.recipes(kind()).size());
+		cycleRecipe(step, null);
+	}
+
+	public void cycleRecipe(int step, Player player) {
+		setRecipe(recipe + step, player);
+	}
+
+	/** Pick recipe {@code index}; parts the new recipe can't use go back to {@code player} (if there is one). */
+	public void setRecipe(int index, Player player) {
+		recipe = Math.floorMod(index, Recipes.recipes(kind()).size());
 		progress = 0;
+		if (player != null) {
+			Recipes.AmmoRecipe r = Recipes.recipe(kind(), recipe);
+			for (int slot = 0; slot < 2 && slot < kind().inputs; slot++) {
+				ItemStack in = items.get(slot);
+				if (!in.isEmpty() && !Recipes.fits(r, slot == 0 ? r.metal() : r.extra(), in)) {
+					items.set(slot, ItemStack.EMPTY);
+					if (!player.getInventory().add(in)) {
+						player.drop(in, false, net.minecraft.util.Prediction.SERVER_ONLY);
+					}
+				}
+			}
+		}
 		setChanged();
 	}
 
@@ -891,6 +915,9 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 					yield k < rich.size() ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(rich.get(k)) + 1 : 0;
 				}
 				case 39 -> kind() == MachineKind.RUBY_DRILL ? Math.round(1000 * Recipes.rubyChance(tier, worldPosition.getY() < 0, focus, site())) : 0;
+				// 40-41: what the Refinery is making (item id + 1, how many).
+				case 40 -> kind() == MachineKind.ORE_REFINERY && !refining.isEmpty() ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(refining.getItem()) + 1 : 0;
+				case 41 -> kind() == MachineKind.ORE_REFINERY ? refining.getCount() : 0;
 				default -> {
 					// 19-30: the Trade Depot's last four sales, newest first: item id + 1, how many, what it paid (milli-rubies, capped).
 					int k = index - 19;
@@ -1025,7 +1052,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 					: Recipes.isGunpowderFuel(stack) || !Recipes.refine(level, stack, tier).isEmpty();
 			case AMMO_FACTORY, ASSEMBLER -> {
 				Recipes.AmmoRecipe r = Recipes.recipe(kind, recipe);
-				yield slot == 0 ? stack.is(r.metal()) : r.extra() != null && stack.is(r.extra());
+				yield Recipes.fits(r, slot == 0 ? r.metal() : r.extra(), stack);
 			}
 			case TRADE_DEPOT -> Recipes.price(stack) > 0;
 			case VAULT -> stack.is(ModItems.RUBY);

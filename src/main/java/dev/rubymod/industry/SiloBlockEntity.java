@@ -40,6 +40,8 @@ public class SiloBlockEntity extends BlockEntity implements WorldlyContainer {
 	private ItemStack in = ItemStack.EMPTY;
 	private ItemStack out = ItemStack.EMPTY;
 	private UUID owner;
+	/** The item players last saw in its window (it's sent again when this changes). */
+	private net.minecraft.world.item.Item shown = net.minecraft.world.item.Items.AIR;
 
 	public SiloBlockEntity(BlockPos pos, BlockState state) {
 		super(ModBlockEntities.SILO, pos, state);
@@ -161,7 +163,32 @@ public class SiloBlockEntity extends BlockEntity implements WorldlyContainer {
 		super.setChanged();
 		if (level instanceof ServerLevel server) {
 			Silos.report(server, this);
+			syncWindow();
 		}
+	}
+
+	/** Tell players what's in it (drawn in its window) when that changes. */
+	private void syncWindow() {
+		net.minecraft.world.item.Item now = type.isEmpty() ? net.minecraft.world.item.Items.AIR : type.getItem();
+		if (now != shown && level != null && !level.isClientSide()) {
+			shown = now;
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+		}
+	}
+
+	/** What's in it, for its window (client side). */
+	public ItemStack shownType() {
+		return type;
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
 	}
 
 	// ----- Container (belts, hoppers, machines) -----
@@ -309,6 +336,7 @@ public class SiloBlockEntity extends BlockEntity implements WorldlyContainer {
 		if (level instanceof ServerLevel server && server.getGameTime() % 40 == Math.floorMod(pos.asLong(), 40)) {
 			be.settle();
 			Silos.report(server, be);
+			be.syncWindow();
 		}
 	}
 

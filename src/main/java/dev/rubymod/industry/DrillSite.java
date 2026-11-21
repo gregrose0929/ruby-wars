@@ -84,7 +84,7 @@ public record DrillSite(Map<Item, Float> strength) {
 	}
 
 	/** What an ore block gives in a drill, or null. */
-	private static Item mineral(BlockState state) {
+	public static Item mineral(BlockState state) {
 		if (state.is(net.minecraft.world.level.block.Blocks.COAL_ORE) || state.is(net.minecraft.world.level.block.Blocks.DEEPSLATE_COAL_ORE)) {
 			return Items.COAL;
 		}

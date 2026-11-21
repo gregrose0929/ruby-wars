@@ -95,6 +95,9 @@ public final class LookInfo {
 				String holds = holds(m, kind.inputs, m.getContainerSize());
 				if (kind.slots() > 0) {
 					lines.add(holds.isEmpty() ? "Empty" : "Holds " + holds);
+					if (!holds.isEmpty() && kind.slots() > kind.inputs) {
+						lines.add("Crouch + empty hand: collect it all");
+					}
 				}
 				if (kind == MachineKind.RUBY_DRILL) {
 					lines.add("Finds: " + dev.rubymod.industry.Recipes.FOCUS_NAMES[m.focus()] + (m.leavesStone() ? ", leaves stone behind" : "")
@@ -110,6 +113,7 @@ public final class LookInfo {
 			} else if (be instanceof dev.rubymod.industry.SiloBlockEntity silo) {
 				lines.add(dev.rubymod.industry.OreSiloBlock.describe(silo));
 				lines.add("Owner: " + (silo.owner() == null ? "nobody" : name(silo.owner())));
+				lines.add(silo.total() > 0 ? "Empty hand: take a stack (crouch: one)" : "Right-click with something to store it");
 				bar = silo.total() > 0 ? (float) silo.total() / silo.capacity() : 0;
 				color = BLUE;
 			} else if (state.getBlock() instanceof dev.rubymod.industry.BeltLoaderBlock) {

@@ -10155,12 +10155,13 @@ public final class AutoTest {
 							m.setTier(3);
 							m.cycleFocus(2);
 							m.toggleStone();
+							m.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RAW_GOLD, 7));
 						}
 						case ORE_REFINERY -> {
 							m.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 20));
 							m.setItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SAND, 20));
 						}
-						case ASSEMBLER -> m.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 45));
+						case ASSEMBLER -> m.setRecipe(8, null);
 						default -> {
 						}
 					}
@@ -10202,6 +10203,10 @@ public final class AutoTest {
 			log("look panel (drill): {}", look == null ? "nothing" : look.lines());
 			shot(mc, "drill-look-new");
 		});
+		then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), heartAt.getX() + 4.5, heartAt.getY(), heartAt.getZ() - 5.2,
+				java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 10, true)));
+		then(15, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(4, 0, -3)).add(0, -0.15, -0.5)));
+		then(15, mc -> shot(mc, "silo-window"));
 		for (int i = 1; i <= 3; i++) {
 			int x = -4 + i * 2;
 			String name = new String[] {"", "drill-screen-new", "refinery-screen", "assembler-screen"}[i];
@@ -10209,6 +10214,10 @@ public final class AutoTest {
 					java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 30, true)));
 			then(10, mc -> clickBlock(mc, heartAt.offset(x, 0, -3)));
 			then(20, mc -> shot(mc, name));
+			if (i == 3) {
+				then(2, mc -> ((MachineScreen) mc.gui.screen()).openPicker());
+				then(10, mc -> shot(mc, "assembler-picker"));
+			}
 			then(5, mc -> mc.player.closeContainer());
 		}
 		// The pick and a geode.
@@ -10225,9 +10234,19 @@ public final class AutoTest {
 		then(30, mc -> onServer(mc, server -> {
 			var p = me(server);
 			p.getInventory().setSelectedSlot(1);
+			p.setShiftKeyDown(true);
 			p.getInventory().getSelectedItem().getItem().use(server.overworld(), p, net.minecraft.world.InteractionHand.MAIN_HAND);
+			p.setShiftKeyDown(false);
 		}));
 		then(6, mc -> shot(mc, "geode-message"));
+		then(40, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.getInventory().setSelectedSlot(0);
+			p.setShiftKeyDown(true);
+			p.getInventory().getSelectedItem().getItem().use(server.overworld(), p, net.minecraft.world.InteractionHand.MAIN_HAND);
+			p.setShiftKeyDown(false);
+		}));
+		then(6, mc -> shot(mc, "pick-mode"));
 		then(60, mc -> {
 			log("made: {} | silos: {} | rocks: {}", ClientState.made, ClientState.silos, ClientState.rocks);
 			mc.gui.setScreen(new BaseScreen());

@@ -44,6 +44,12 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 	}
 
 	private final List<Button> buttons = new ArrayList<>();
+	/** The Assembler's recipe picker is open. */
+	private boolean picking;
+	private static final int PICK_X = 62;
+	private static final int PICK_Y = 20;
+	private static final int PICK_COLS = 5;
+	private static final int PICK_CELL = 21;
 
 	public MachineScreen(MachineMenu menu, Inventory inventory, Component title) {
 		super(menu, inventory, title, MachineMenu.WIDTH, MachineMenu.HEIGHT);
@@ -118,12 +124,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			case SOLAR_PANEL -> info(g, "Output", kind.output(tier) * 20 + " charge/s in sunlight", "Needs open sky above it");
 			case BATTERY -> info(g, "Capacity", String.format(Locale.ROOT, "%,d charge", kind.batteryCapacity(tier)), "Adds to your whole grid");
 			case RUBY_DRILL -> drawDrill(g, mouseX - leftPos, mouseY - topPos);
-			case ORE_REFINERY -> {
-				drawArrow(g, 66, 44, true);
-				small(g, "sand", 23, 67, MUTED);
-				small(g, "Coal + sand: gunpowder", 66, 64, MUTED);
-				small(g, "Cooks like a furnace too", 66, 73, MUTED);
-			}
+			case ORE_REFINERY -> drawRefinery(g);
 			case AMMO_FACTORY, ASSEMBLER -> drawAmmo(g);
 			case TRADE_DEPOT -> drawDepot(g);
 			case VAULT -> drawVault(g);
@@ -136,6 +137,95 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			drawButton(g, b, mouseX - leftPos, mouseY - topPos);
 		}
 		depotPrices(g, mouseX - leftPos, mouseY - topPos);
+		if (picking) {
+			drawPicker(g, mouseX - leftPos, mouseY - topPos);
+		}
+	}
+
+	/** The Refinery: what it's making from what's in it right now. */
+	private void drawRefinery(GuiGraphicsExtractor g) {
+		drawArrow(g, 66, 44, true);
+		small(g, "sand", 23, 67, MUTED);
+		int id = menu.get(40);
+		ItemStack in = menu.slots.get(0).getItem();
+		if (id <= 0 || in.isEmpty()) {
+			small(g, "Coal + sand: gunpowder", 66, 64, MUTED);
+			small(g, "Cooks like a furnace too", 66, 73, MUTED);
+			return;
+		}
+		Item out = BuiltInRegistries.ITEM.byId(id - 1);
+		int n = Math.max(1, menu.get(41));
+		ItemStack sand = menu.slots.get(1).getItem();
+		boolean gunpowder = out == net.minecraft.world.item.Items.GUNPOWDER && !sand.isEmpty();
+		String making = "Making: " + new ItemStack(out).getHoverName().getString() + (n > 1 ? " x" + n : "");
+		int room = (int) ((imageWidth - 66 - 6) / 0.75F);
+		small(g, dev.rubymod.client.ui.Ui.fit(making, room), 66, 64, TEXT);
+		small(g, gunpowder ? "Cooks like a furnace too" : "Coal + sand: gunpowder", 66, 73, MUTED);
+	}
+
+	/** The Assembler's recipes as a grid of what they make: click one to pick it. */
+	private void drawPicker(GuiGraphicsExtractor g, int mx, int my) {
+		List<Recipes.AmmoRecipe> all = Recipes.recipes(kind());
+		int rows = (all.size() + PICK_COLS - 1) / PICK_COLS;
+		int w = PICK_COLS * PICK_CELL + 6;
+		int h = rows * PICK_CELL + 18;
+		g.nextStratum();
+		dev.rubymod.client.ui.Ui.panel(g, PICK_X, PICK_Y, w, h);
+		small(g, "Pick a recipe", PICK_X + 4, PICK_Y + 4, AMBER);
+		int current = menu.get(11);
+		for (int i = 0; i < all.size(); i++) {
+			Recipes.AmmoRecipe r = all.get(i);
+			int cx = PICK_X + 3 + (i % PICK_COLS) * PICK_CELL;
+			int cy = PICK_Y + 14 + (i / PICK_COLS) * PICK_CELL;
+			boolean over = mx >= cx && mx < cx + PICK_CELL && my >= cy && my < cy + PICK_CELL;
+			dev.rubymod.client.ui.Ui.inset(g, cx + 1, cy + 1, 19, 19);
+			if (i == current) {
+				g.fill(cx + 2, cy + 2, cx + 19, cy + 19, 0x885A1028);
+			}
+			if (over) {
+				g.fill(cx + 2, cy + 2, cx + 19, cy + 19, 0x55FFFFFF);
+			}
+			ItemStack result = new ItemStack(r.result(), r.count());
+			g.item(result, cx + 3, cy + 3);
+			g.itemDecorations(font, result, cx + 3, cy + 3);
+			if (over) {
+				List<Component> lines = new ArrayList<>();
+				lines.add(Component.literal(r.name()).withStyle(net.minecraft.ChatFormatting.YELLOW));
+				String needs = r.metalCount() + " " + new ItemStack(r.metal()).getHoverName().getString()
+						+ (r.extra() != null ? " + " + r.extraCount() + " " + new ItemStack(r.extra()).getHoverName().getString() : "");
+				lines.add(Component.literal(needs + " -> " + r.count()).withStyle(net.minecraft.ChatFormatting.GRAY));
+				if (r.result() == net.minecraft.world.item.Items.TORCH) {
+					lines.add(Component.literal("Charcoal works as well as coal").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+				}
+				g.setComponentTooltipForNextFrame(font, lines, mx + leftPos, my + topPos);
+			}
+		}
+	}
+
+	/** Opens the Assembler's recipe picker (as clicking its recipe does). */
+	public void openPicker() {
+		picking = kind() == MachineKind.ASSEMBLER;
+	}
+
+	/** The picker cell under (mx, my), or -1. */
+	private int pickerCell(double mx, double my) {
+		int n = Recipes.recipes(kind()).size();
+		for (int i = 0; i < n; i++) {
+			int cx = PICK_X + 3 + (i % PICK_COLS) * PICK_CELL;
+			int cy = PICK_Y + 14 + (i / PICK_COLS) * PICK_CELL;
+			if (mx >= cx && mx < cx + PICK_CELL && my >= cy && my < cy + PICK_CELL) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	@Override
+	protected void extractTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+		// The picker covers the slots, so their tooltips would be for things you can't see.
+		if (!picking) {
+			super.extractTooltip(g, mouseX, mouseY);
+		}
 	}
 
 	private void drawStatus(GuiGraphicsExtractor g) {
@@ -282,7 +372,26 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		drawArrow(g, 66, 58, true);
 		g.text(font, r.count() + "x", 140, 64, MUTED, false);
 		if (kind() == MachineKind.ASSEMBLER) {
-			small(g, "Right-click the recipe to go back", 66, 80, MUTED);
+			small(g, "Click the recipe to pick another", 66, 80, MUTED);
+		}
+		// Faint pictures of the parts it needs in empty input slots.
+		int[][] at = MachineMenu.layout(kind());
+		boolean any = false;
+		for (int slot = 0; slot < 2; slot++) {
+			Item want = slot == 0 ? r.metal() : r.extra();
+			if (want != null && menu.slots.get(slot).getItem().isEmpty()) {
+				g.item(new ItemStack(want), at[slot][0], at[slot][1]);
+				any = true;
+			}
+		}
+		if (any) {
+			g.nextStratum();
+			for (int slot = 0; slot < 2; slot++) {
+				Item want = slot == 0 ? r.metal() : r.extra();
+				if (want != null && menu.slots.get(slot).getItem().isEmpty()) {
+					g.fill(at[slot][0], at[slot][1], at[slot][0] + 16, at[slot][1] + 16, 0xB00E1013);
+				}
+			}
 		}
 	}
 
@@ -589,9 +698,24 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		double mx = event.x() - leftPos;
 		double my = event.y() - topPos;
+		if (picking) {
+			// Any click closes the picker; one on a recipe picks it.
+			int cell = pickerCell(mx, my);
+			picking = false;
+			if (cell >= 0) {
+				minecraft.gameMode.handleInventoryButtonClick(menu.containerId, MachineMenu.BUTTON_PICK + cell);
+				minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.4F, 1.0F);
+			}
+			return true;
+		}
 		for (Button b : buttons) {
 			if (b.over(mx, my)) {
 				int id = b.id();
+				if (id == MachineMenu.BUTTON_RECIPE && kind() == MachineKind.ASSEMBLER && event.button() == 0) {
+					picking = true;
+					minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.4F, 1.2F);
+					return true;
+				}
 				if (event.button() == 1) {
 					// Right-click goes back through recipes and drill focus.
 					id = id == MachineMenu.BUTTON_RECIPE ? MachineMenu.BUTTON_RECIPE_BACK : id == MachineMenu.BUTTON_FOCUS ? MachineMenu.BUTTON_FOCUS_BACK : id;

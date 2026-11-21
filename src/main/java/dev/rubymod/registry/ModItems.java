@@ -172,7 +172,8 @@ public class ModItems {
 	public static final Item BUILDERS_WAND = register("builders_wand", BuildersWandItem::new, new Item.Properties().durability(1024));
 	public static final Item EXCAVATOR = register("excavator", ExcavatorItem::new, new Item.Properties().pickaxe(ToolMaterial.IRON, 1.0F, -3.0F).durability(750));
 	/** Points you toward the nearest Ruby Ore. */
-	public static final Item PROSPECTOR_PICK = register("prospector_pick", dev.rubymod.item.ProspectorPickItem::new, new Item.Properties().stacksTo(1));
+	public static final Item PROSPECTOR_PICK = register("prospector_pick", dev.rubymod.item.ProspectorPickItem::new, new Item.Properties().stacksTo(1)
+			.component(net.minecraft.core.component.DataComponents.LORE, dev.rubymod.item.ProspectorPickItem.lore(dev.rubymod.item.ProspectorPickItem.Mode.RUBY)));
 	/** Crack it open for a surprise. */
 	public static final Item GEODE = register("geode", dev.rubymod.item.GeodeItem::new, new Item.Properties());
 

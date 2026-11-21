@@ -230,6 +230,24 @@ public final class SelfTest {
 		assembler.cycleRecipe(-1);
 		check("assembler: right-click goes back a recipe", dev.rubymod.industry.Recipes.recipe(dev.rubymod.industry.MachineKind.ASSEMBLER, torches - 1).result()
 				!= net.minecraft.world.item.Items.TORCH);
+		// Switching recipe hands back parts the new one can't use; torches take charcoal too.
+		assembler.setItem(2, ItemStack.EMPTY);
+		assembler.setRecipe(0, null);
+		assembler.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 5));
+		alpha.getInventory().clearContent();
+		assembler.setRecipe(dev.rubymod.industry.Recipes.ASSEMBLY.size() - 1, alpha);
+		check("assembler: switching recipe gives back parts it can't use", assembler.getItem(0).isEmpty()
+				&& alpha.getInventory().countItem(net.minecraft.world.item.Items.IRON_INGOT) == 5);
+		assembler.setRecipe(torches, alpha);
+		check("assembler: torches take charcoal as well as coal", assembler.canPlaceItem(0, new ItemStack(net.minecraft.world.item.Items.CHARCOAL))
+				&& !dev.rubymod.industry.Recipes.fits(dev.rubymod.industry.Recipes.ASSEMBLY.get(3), net.minecraft.world.item.Items.COAL,
+						new ItemStack(net.minecraft.world.item.Items.CHARCOAL)));
+		assembler.setItem(0, new ItemStack(net.minecraft.world.item.Items.CHARCOAL, 1));
+		assembler.setItem(1, new ItemStack(net.minecraft.world.item.Items.STICK, 1));
+		runMachines(level, dev.rubymod.industry.MachineKind.ASSEMBLER.cycle(5) + 2, assembler);
+		check("assembler: charcoal and a stick make 4 torches (" + assembler.getItem(2) + ")", assembler.getItem(2).is(net.minecraft.world.item.Items.TORCH)
+				&& assembler.getItem(2).getCount() == 4);
+		alpha.getInventory().clearContent();
 		// What it all made shows on My Base.
 		var made = dev.rubymod.industry.Production.top(A, 50);
 		check("my base: what your machines made counts up (" + made.size() + " kinds)", made.stream().anyMatch(e -> e.getKey().equals("minecraft:glass") && e.getValue() >= 2)
@@ -270,6 +288,20 @@ public final class SelfTest {
 			full = new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64);
 		}
 		check("silo: it holds 128 stacks (" + silo.total() + ")", silo.total() == 128L * 64 && !silo.accepts(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)));
+		// A quick double click: the first puts your stack in (leaving your hand empty), the second puts in the rest.
+		alpha.getInventory().clearContent();
+		alpha.getInventory().setSelectedSlot(0);
+		alpha.getInventory().setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64));
+		alpha.getInventory().setItem(5, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 40));
+		long before2 = silo2.total();
+		var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(silo2Pos), net.minecraft.core.Direction.NORTH, silo2Pos, false);
+		var siloState = level.getBlockState(silo2Pos);
+		siloState.useItemOn(alpha.getMainHandItem(), level, alpha, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+		boolean handEmpty = alpha.getMainHandItem().isEmpty();
+		siloState.useWithoutItem(level, alpha, hit);
+		check("silo: a quick second click puts in the rest, not takes a stack out (" + (silo2.total() - before2) + " in)", handEmpty
+				&& silo2.total() - before2 == 104 && alpha.getInventory().countItem(net.minecraft.world.item.Items.IRON_INGOT) == 0);
+		alpha.getInventory().clearContent();
 		level.setBlockAndUpdate(siloPos, Blocks.AIR.defaultBlockState());
 		level.setBlockAndUpdate(silo2Pos, Blocks.AIR.defaultBlockState());
 		// Prospector's Pick: finds the nearest Ruby Ore.
@@ -284,6 +316,31 @@ public final class SelfTest {
 		level.setBlock(dig.offset(-9, 0, 4), ModBlocks.RUBY_ORE.defaultBlockState(), 2);
 		var found = dev.rubymod.item.ProspectorPickItem.nearest(level, dig);
 		check("pick: it points at the nearest Ruby Ore (" + found + ")", dig.offset(5, -3, 0).equals(found));
+		// Crouch-click picks what it looks for.
+		for (BlockPos p : BlockPos.betweenClosed(dig.offset(-17, -17, -17), dig.offset(17, 17, 17))) {
+			if (dev.rubymod.industry.DrillSite.mineral(level.getBlockState(p)) != null && !p.equals(dig.offset(5, -3, 0)) && !p.equals(dig.offset(-9, 0, 4))) {
+				level.setBlock(p, Blocks.STONE.defaultBlockState(), 2);
+			}
+		}
+		level.setBlock(dig.offset(0, 0, 3), Blocks.IRON_ORE.defaultBlockState(), 2);
+		level.setBlock(dig.offset(-6, 2, 0), Blocks.DEEPSLATE_DIAMOND_ORE.defaultBlockState(), 2);
+		ItemStack pick = new ItemStack(dev.rubymod.registry.ModItems.PROSPECTOR_PICK);
+		check("pick: a new one looks for Ruby Ore", dev.rubymod.item.ProspectorPickItem.mode(pick) == dev.rubymod.item.ProspectorPickItem.Mode.RUBY);
+		dev.rubymod.item.ProspectorPickItem.setMode(pick, dev.rubymod.item.ProspectorPickItem.Mode.DIAMOND);
+		check("pick: set to Diamonds, it finds diamonds", dev.rubymod.item.ProspectorPickItem.mode(pick) == dev.rubymod.item.ProspectorPickItem.Mode.DIAMOND
+				&& dig.offset(-6, 2, 0).equals(dev.rubymod.item.ProspectorPickItem.nearest(level, dig, dev.rubymod.item.ProspectorPickItem.mode(pick))));
+		check("pick: set to any ore, it finds the nearest of anything", dig.offset(0, 0, 3).equals(
+				dev.rubymod.item.ProspectorPickItem.nearest(level, dig, dev.rubymod.item.ProspectorPickItem.Mode.ANY)));
+		// Warmer and colder only against a recent try from nearby.
+		var who = java.util.UUID.randomUUID();
+		var here = net.minecraft.world.phys.Vec3.atCenterOf(dig);
+		var R = dev.rubymod.item.ProspectorPickItem.Mode.RUBY;
+		dev.rubymod.item.ProspectorPickItem.trend(who, 10, here, 1000, R);
+		String warmer = dev.rubymod.item.ProspectorPickItem.trend(who, 8, here.add(2, 0, 0), 1100, R);
+		String stale = dev.rubymod.item.ProspectorPickItem.trend(who, 5, here, 1100 + 2 * 60 * 20, R);
+		String away = dev.rubymod.item.ProspectorPickItem.trend(who, 3, here.add(40, 0, 0), 1100 + 2 * 60 * 20 + 20, R);
+		check("pick: warmer against a try just now (" + warmer.trim() + ")", warmer.startsWith("Warmer"));
+		check("pick: a try from minutes ago, or far away, doesn't count", stale.isEmpty() && away.isEmpty());
 		// Geodes always hold something; minerals go in your Rock Collection.
 		var random = net.minecraft.util.RandomSource.create(7);
 		boolean geodes = true;
@@ -291,11 +348,33 @@ public final class SelfTest {
 			geodes &= !dev.rubymod.item.GeodeItem.crack(random).isEmpty();
 		}
 		check("geode: there's always something inside", geodes);
+		var got = new java.util.LinkedHashMap<net.minecraft.world.item.Item, Integer>();
+		got.put(ModItems.RUBY, 2);
+		got.put(net.minecraft.world.item.Items.AMETHYST_SHARD, 14);
+		got.put(net.minecraft.world.item.Items.DIAMOND, 1);
+		String said = dev.rubymod.item.GeodeItem.summary(got);
+		check("geode: a whole stack says what came out (" + said + ")", said.equals("14 Amethyst Shards, 2 Rubies and 1 Diamond"));
 		alpha.getInventory().add(new ItemStack(net.minecraft.world.item.Items.RAW_GOLD));
 		dev.rubymod.game.Minerals.check(alpha);
 		check("rocks: raw gold in your inventory goes in your Rock Collection", dev.rubymod.game.Minerals.found(alpha).contains("minecraft:raw_gold")
 				|| !dev.rubymod.game.Hub.inRubyWarsWorld(alpha));
 		alpha.getInventory().clearContent();
+		// The whole collection: a firework of its own.
+		if (dev.rubymod.game.Hub.inRubyWarsWorld(alpha)) {
+			var rec = dev.rubymod.game.Stats.get(alpha);
+			if (rec.rocks == null) {
+				rec.rocks = new java.util.HashSet<>();
+			}
+			for (var m : dev.rubymod.game.Minerals.ALL) {
+				if (m.item() != net.minecraft.world.item.Items.FLINT) {
+					rec.rocks.add(m.id());
+				}
+			}
+			alpha.getInventory().add(new ItemStack(net.minecraft.world.item.Items.FLINT));
+			dev.rubymod.game.Minerals.check(alpha);
+			check("rocks: finding all 16 unlocks the Geode Glitter firework", rec.rocks.size() == dev.rubymod.game.Minerals.ALL.size() && rec.unlocked.contains("fw_geode"));
+			alpha.getInventory().clearContent();
+		}
 		for (BlockPos p : BlockPos.betweenClosed(spot, spot.offset(9, 0, 0))) {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
 		}

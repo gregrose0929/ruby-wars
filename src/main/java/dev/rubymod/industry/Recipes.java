@@ -201,6 +201,11 @@ public final class Recipes {
 			new AmmoRecipe("TNT", Items.GUNPOWDER, 5, Items.SAND, 4, Items.TNT, 1),
 			new AmmoRecipe("Bread", Items.WHEAT, 3, null, 0, Items.BREAD, 1));
 
+	/** Does {@code stack} do for the {@code want} part of recipe {@code r}? (Torches take charcoal as well as coal.) */
+	public static boolean fits(AmmoRecipe r, Item want, ItemStack stack) {
+		return want != null && (stack.is(want) || want == Items.COAL && r.result() == Items.TORCH && stack.is(Items.CHARCOAL));
+	}
+
 	/** The recipe list a machine picks from. */
 	public static List<AmmoRecipe> recipes(MachineKind kind) {
 		return kind == MachineKind.ASSEMBLER ? ASSEMBLY : AMMO;

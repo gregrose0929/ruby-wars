@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** The machine screen's server/client half: machine slots, the player's inventory, and live numbers. */
 public class MachineMenu extends AbstractContainerMenu {
-	public static final int DATA_SLOTS = 40;
+	public static final int DATA_SLOTS = 42;
 	public static final int WIDTH = 176;
 	public static final int HEIGHT = 190;
 	public static final int INVENTORY_Y = 108;
@@ -33,6 +33,8 @@ public class MachineMenu extends AbstractContainerMenu {
 	public static final int BUTTON_FOCUS = 6;
 	public static final int BUTTON_FOCUS_BACK = 7;
 	public static final int BUTTON_STONE = 8;
+	/** Assembler recipe picker: this plus the recipe's number picks it. */
+	public static final int BUTTON_PICK = 100;
 
 	/** Sent when the screen opens: which machine, and where. */
 	public record Opening(BlockPos pos, int kind) {
@@ -133,8 +135,8 @@ public class MachineMenu extends AbstractContainerMenu {
 		}
 		switch (id) {
 			case BUTTON_UPGRADE -> sp.sendOverlayMessage(net.minecraft.network.chat.Component.literal(blockEntity.upgrade(sp)));
-			case BUTTON_RECIPE -> blockEntity.cycleRecipe(1);
-			case BUTTON_RECIPE_BACK -> blockEntity.cycleRecipe(-1);
+			case BUTTON_RECIPE -> blockEntity.cycleRecipe(1, sp);
+			case BUTTON_RECIPE_BACK -> blockEntity.cycleRecipe(-1, sp);
 			case BUTTON_FOCUS -> blockEntity.cycleFocus(1);
 			case BUTTON_FOCUS_BACK -> blockEntity.cycleFocus(-1);
 			case BUTTON_STONE -> blockEntity.toggleStone();
@@ -142,6 +144,10 @@ public class MachineMenu extends AbstractContainerMenu {
 			case BUTTON_WITHDRAW_16 -> blockEntity.withdraw(sp, 16);
 			case BUTTON_WITHDRAW_64 -> blockEntity.withdraw(sp, 64);
 			default -> {
+				if (id >= BUTTON_PICK && id < BUTTON_PICK + Recipes.recipes(kind).size()) {
+					blockEntity.setRecipe(id - BUTTON_PICK, sp);
+					return true;
+				}
 				return false;
 			}
 		}

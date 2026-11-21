@@ -37,6 +37,8 @@ public final class Celebrations {
 	/** The rocket for a firework cosmetic ("" for none). */
 	public static ItemStack rocket(String id) {
 		List<FireworkExplosion> bursts = switch (id) {
+			case "fw_geode" -> List.of(burst(FireworkExplosion.Shape.STAR, ints(0xA060FF, 0xD0A0FF, 0x60E0FF), ints(0xFFFFFF), false, true),
+					burst(FireworkExplosion.Shape.SMALL_BALL, ints(0xE0203A, 0xFFD040), ints(0xA060FF), true, true));
 			case "fw_ruby" -> List.of(burst(FireworkExplosion.Shape.LARGE_BALL, ints(0xE0203A, 0xFFFFFF), ints(0xFF8090), true, false));
 			case "fw_stars" -> List.of(burst(FireworkExplosion.Shape.STAR, ints(0xFFD040, 0xFFF0A0), ints(0xFFFFFF), false, true));
 			case "fw_ocean" -> List.of(burst(FireworkExplosion.Shape.BURST, ints(0x2080FF, 0x40E0D0), ints(0xA0F0FF), false, true));
@@ -79,6 +81,26 @@ public final class Celebrations {
 		for (int i = 0; i < 3; i++) {
 			double a = i * Math.PI * 2 / 3;
 			QUEUE.add(new Shot(p.level().dimension(), p.position().add(Math.cos(a) * 4, 0, Math.sin(a) * 4), rocket, now + 10 + i * 12));
+		}
+	}
+
+	/** Found every mineral for the Rock Collection: a ring of rockets round you. */
+	public static void rocks(ServerPlayer p) {
+		if (!(p.level() instanceof ServerLevel level)) {
+			return;
+		}
+		if (!level.canSeeSky(p.blockPosition().above())) {
+			// Underground a rocket would burst against the ceiling, right on top of you: sparkles instead.
+			level.sendParticles(net.minecraft.core.particles.ParticleTypes.FIREWORK, p.getX(), p.getY() + 1.2, p.getZ(), 60, 1.2, 0.8, 1.2, 0.08);
+			level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD, p.getX(), p.getY() + 1.2, p.getZ(), 25, 1.0, 0.8, 1.0, 0.03);
+			level.playSound(null, p.blockPosition(), net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_TWINKLE, net.minecraft.sounds.SoundSource.PLAYERS, 0.8F, 1.2F);
+			return;
+		}
+		ItemStack rocket = rocket("fw_geode");
+		int now = p.level().getServer().getTickCount();
+		for (int i = 0; i < 6; i++) {
+			double a = i * Math.PI * 2 / 6;
+			QUEUE.add(new Shot(p.level().dimension(), p.position().add(Math.cos(a) * 5, 0, Math.sin(a) * 5), rocket, now + 10 + i * 10));
 		}
 	}
 
