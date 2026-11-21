@@ -676,9 +676,12 @@ public final class BattleDirector {
 				top = p;
 			}
 		}
-		if (top == null) {
-			return null;
-		}
+		return top == null ? null : meteorAt(level, top);
+	}
+
+	/** A ruby meteor comes down at {@code top} (the ground there). Returns the crater's middle. */
+	public static BlockPos meteorAt(ServerLevel level, BlockPos top) {
+		RandomSource random = level.getRandom();
 		// A crater, scorched round the rim, with the meteor in the bottom: ruby blocks and ore in a shell of magma.
 		BlockPos c = top.below(2);
 		for (BlockPos p : BlockPos.betweenClosed(c.offset(-6, -3, -6), c.offset(6, 6, 6))) {
@@ -741,7 +744,7 @@ public final class BattleDirector {
 		playToAll(level.getServer(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST_FAR, 0.8F);
 	}
 
-	private static List<ItemStack> supplyLoot(RandomSource random) {
+	static List<ItemStack> supplyLoot(RandomSource random) {
 		List<ItemStack> loot = new ArrayList<>();
 		loot.add(new ItemStack(ModItems.RUBY, 10 + random.nextInt(11)));
 		Item[][] picks = {

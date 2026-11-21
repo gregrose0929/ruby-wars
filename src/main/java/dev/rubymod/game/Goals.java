@@ -22,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Goals: a checklist of things to do in Ruby Wars, each worth stars (research points).
  * Upgrades come from doing things, never from how long or how often you play:
- * build up your base, make rubies, hold off raids, fight on Battle Day, get around.
+ * build up your base, make rubies, go to world events, fight on Battle Day, get around.
  * Each goal counts once per season. There are fewer stars than the whole tree
  * costs, so you still pick what to research.
  */
@@ -52,9 +52,9 @@ public final class Goals {
 			new Goal("mk3", "Machine to Mk III", 3, 2),
 			new Goal("bank500", "Bank 100 rubies", 100, 1),
 			new Goal("bank2000", "Bank 200 rubies", 200, 2),
-			// Raids and Battle Day
-			new Goal("raid", "Repel a raid", 1, 2),
-			new Goal("raidclean", "Repel a raid, lose nothing", 1, 2),
+			// World events and Battle Day
+			new Goal("cache", "Get to a Supply Cache", 1, 2),
+			new Goal("shrine", "Hold a Ruby Shrine longest", 1, 2),
 			new Goal("knockout", "Battle Day knockout", 1, 1),
 			new Goal("heartkill", "Damage an enemy Heart", 1, 2),
 			new Goal("sudden", "Make it to Sudden Death", 1, 2),
@@ -65,7 +65,7 @@ public final class Goals {
 			new Goal("dig", "Dig with a Tunnel Borer", 50, 1));
 
 	/** The J screen's headings: each starts just before its first goal. */
-	private static final Map<String, String> SECTIONS = Map.of("heart", "Your base", "ruby10", "Making rubies", "raid", "Raids and Battle Day",
+	private static final Map<String, String> SECTIONS = Map.of("heart", "Your base", "ruby10", "Making rubies", "cache", "World events and Battle Day",
 			"drive", "Getting around");
 
 	/** Machines that count as "working" for busy3 (makers, not power or defenses). */

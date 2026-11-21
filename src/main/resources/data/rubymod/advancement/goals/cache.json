@@ -10,9 +10,9 @@
 		"show_toast": false,
 		"frame": "goal",
 		"icon": {
-			"id": "minecraft:totem_of_undying"
+			"id": "minecraft:chest"
 		},
-		"title": "Repel a raid, lose nothing",
+		"title": "Get to a Supply Cache",
 		"description": "+2 stars to spend on upgrades"
 	},
 	"requirements": [

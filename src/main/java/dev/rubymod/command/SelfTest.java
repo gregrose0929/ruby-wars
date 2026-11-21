@@ -156,6 +156,12 @@ public final class SelfTest {
 		double i1 = share(1, 0, ironRich, 20000, net.minecraft.world.item.Items.RAW_IRON);
 		check(String.format(java.util.Locale.ROOT, "drill: iron in the ground brings up more iron (%.0f%% -> %.0f%%)", i0 * 100, i1 * 100), i1 > i0 * 1.6);
 		BlockPos far = spot.offset(0, -30, 0);
+		// Only the iron put there: the world's own ore round it (it's a different world each run) would muddle it.
+		for (BlockPos p : BlockPos.betweenClosed(far.offset(-7, -25, -7), far.offset(7, 3, 7))) {
+			if (dev.rubymod.industry.DrillSite.mineral(level.getBlockState(p)) != null) {
+				level.setBlock(p, Blocks.STONE.defaultBlockState(), 2);
+			}
+		}
 		for (int k = 0; k < 32; k++) {
 			level.setBlock(far.offset(k % 4 - 2, -2 - k / 16, k / 4 % 4 - 2), Blocks.IRON_ORE.defaultBlockState(), 2);
 		}
@@ -1409,6 +1415,9 @@ public final class SelfTest {
 		// ----- Duels -----
 		duelChecks(level, alpha, bravo, surface(level, base.offset(-40, 0, 40)));
 
+		// ----- World events -----
+		worldEventChecks(level, alpha, bravo, surface(level, base.offset(-160, 0, -160)));
+
 		// ----- Ore -----
 		int ore = 0;
 		for (BlockPos p : BlockPos.betweenClosed(spawn.getX() - 24, -60, spawn.getZ() - 24, spawn.getX() + 24, 0, spawn.getZ() + 24)) {
@@ -1423,6 +1432,85 @@ public final class SelfTest {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
 		}
 		Explosions.clearHits();
+	}
+
+	/** Build-phase world events: a fair spot, a Supply Cache that opens and goes, a Ruby Shrine held and contested. */
+	private void worldEventChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo, BlockPos spot) {
+		var server = level.getServer();
+		Phase before = SeasonData.get().phase;
+		SeasonData.get().phase = Phase.BUILD;
+		dev.rubymod.game.WorldEvents.reset();
+		try {
+			java.util.List<net.minecraft.server.level.ServerPlayer> both = java.util.List.of(alpha, bravo);
+			// Nobody gets an event for being alone, and raids are gone.
+			check("events: practice raids are gone", dev.rubymod.game.GameConfig.get().worldEventMinPlayers >= 2
+					&& level.getServer().getCommands().getDispatcher().getRoot().getChild("rubywars").getChild("raid") == null);
+			// A fair spot: clear of every claim.
+			var fair = dev.rubymod.game.WorldEvents.pickSpot(level, both);
+			boolean clear = fair != null;
+			for (SeasonData.Claim claim : SeasonData.get().claims.values()) {
+				if (fair != null && !claim.destroyed && Math.abs(claim.x - fair.getX()) < claim.radius() + 30 && Math.abs(claim.z - fair.getZ()) < claim.radius() + 30) {
+					clear = false;
+				}
+			}
+			check("events: they're put out between the bases, clear of every claim (" + (fair == null ? "nowhere" : fair.toShortString()) + ")", clear);
+			// Supply Cache: told, then open with chests of loot, then gone with the ground put back.
+			var groundBefore = level.getBlockState(spot.below());
+			var cornerBefore = level.getBlockState(spot.offset(3, -1, 3));
+			String told = dev.rubymod.game.WorldEvents.begin(server, both, dev.rubymod.game.WorldEvents.Kind.CACHE, spot, 2 * 60_000L);
+			dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			boolean waiting = told == null && !dev.rubymod.game.WorldEvents.isOpen() && !level.getBlockState(spot).is(Blocks.CHEST);
+			dev.rubymod.game.WorldEvents.advance(2 * 60_000L + 1000);
+			alpha.teleportTo(level, spot.getX() + 0.5, spot.getY(), spot.getZ() - 1.5, java.util.Set.of(), 0, 0, true);
+			dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			int chests = dev.rubymod.game.WorldEvents.chestsLeftForTest(level);
+			var middle = level.getBlockEntity(spot) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity c ? c : null;
+			int rubies = 0;
+			for (int i = 0; middle != null && i < middle.getContainerSize(); i++) {
+				rubies += middle.getItem(i).is(ModItems.RUBY) ? middle.getItem(i).getCount() : 0;
+			}
+			check("events: a Supply Cache is told 2 minutes ahead, then opens with 7 chests of loot (" + chests + " chests, " + rubies + " rubies in the middle)",
+					waiting && dev.rubymod.game.WorldEvents.isOpen() && chests == 7 && rubies >= 10);
+			var rec = SeasonData.get().players.get(alpha.getUUID().toString());
+			check("events: getting there counts for the Supply Cache goal", rec != null && (rec.goalsDone.contains("cache") || rec.goalProgress.getOrDefault("cache", 0) > 0));
+			dev.rubymod.game.WorldEvents.advance(9 * 60_000L);
+			dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			check("events: the cache crumbles after, and the ground is put back", dev.rubymod.game.WorldEvents.kind() == null
+					&& level.getBlockState(spot.below()) == groundBefore && level.getBlockState(spot.offset(3, -1, 3)) == cornerBefore
+					&& !level.getBlockState(spot).is(Blocks.CHEST));
+			// Ruby Shrine: alone in it, rubies; someone else in it, contested; longest holder gets the bonus.
+			BlockPos shrine = surface(level, spot.offset(40, 0, 0));
+			dev.rubymod.game.WorldEvents.begin(server, both, dev.rubymod.game.WorldEvents.Kind.SHRINE, shrine, 0);
+			alpha.teleportTo(level, shrine.getX() + 0.5, shrine.getY(), shrine.getZ() + 2.5, java.util.Set.of(), 0, 0, true);
+			bravo.teleportTo(level, shrine.getX() + 30.5, shrine.getY() + 1, shrine.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
+			long bank0 = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
+			for (int i = 0; i < 11; i++) {
+				dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			}
+			long bank1 = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
+			check("events: holding the Ruby Shrine alone puts rubies in your bank (+" + (bank1 - bank0) + " in 10 s)", bank1 - bank0 == 2);
+			bravo.teleportTo(level, shrine.getX() - 1.5, shrine.getY(), shrine.getZ() + 0.5, java.util.Set.of(), 0, 0, true);
+			for (int i = 0; i < 10; i++) {
+				dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			}
+			long bank2 = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
+			check("events: with someone else in it, it's contested: nobody gets any (+" + (bank2 - bank1) + ")", bank2 == bank1
+					&& dev.rubymod.industry.Grid.rubies(bravo.getUUID()) >= 0 && alpha.hasEffect(net.minecraft.world.effect.MobEffects.GLOWING));
+			dev.rubymod.game.WorldEvents.advance(5 * 60_000L);
+			dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			long bank3 = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
+			check("events: whoever held the shrine longest gets 15 more when it ends (+" + (bank3 - bank2) + ")", bank3 - bank2 == 15
+					&& dev.rubymod.game.WorldEvents.kind() == null && level.getBlockState(shrine.below()) != ModBlocks.RUBY_BLOCK.defaultBlockState());
+			// Battle Day starting ends whatever's on.
+			dev.rubymod.game.WorldEvents.begin(server, both, dev.rubymod.game.WorldEvents.Kind.CACHE, spot, 0);
+			dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			SeasonData.get().phase = Phase.LOCKDOWN;
+			dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			check("events: Battle Day ends a world event (and tidies it away)", dev.rubymod.game.WorldEvents.kind() == null && !level.getBlockState(spot).is(Blocks.CHEST));
+		} finally {
+			dev.rubymod.game.WorldEvents.reset();
+			SeasonData.get().phase = before;
+		}
 	}
 
 	private void duelChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo, BlockPos home) {

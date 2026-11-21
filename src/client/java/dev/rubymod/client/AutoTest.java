@@ -3936,7 +3936,7 @@ public final class AutoTest {
 			case "guns" -> gunsScript();
 			case "view" -> viewScript();
 			case "features" -> featuresScript();
-			case "raid" -> raidScript();
+			case "events" -> eventsScript();
 			case "gear" -> gearScript();
 			case "impact" -> impactScript();
 			case "follow" -> followScript();
@@ -9228,61 +9228,48 @@ public final class AutoTest {
 	}
 
 	/** A real raid on a defended base: Heart, a sentry turret, two guards. Logs the fight every 10 seconds. */
-	private static void raidScript() {
+	/** World events: the Supply Cache told, opened and looked at; then the Ruby Shrine held. */
+	private static void eventsScript() {
 		then(5, mc -> {
 			command(mc, "rubywars reset confirm");
 			command(mc, "rubywars start");
 		});
-		then(10, mc -> {
-			IntegratedServer server = mc.getSingleplayerServer();
-			server.execute(() -> {
-				var player = server.getPlayerList().getPlayers().get(0);
-				var level = player.level();
-				var base = player.blockPosition();
-				var heart = base.offset(0, 0, 8);
-				level.setBlockAndUpdate(heart, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
-				dev.rubymod.game.Claims.onHeartPlaced(level, player, heart);
-				var turret = heart.offset(2, 0, 2);
-				level.setBlockAndUpdate(turret, dev.rubymod.registry.ModBlocks.SENTRY_TURRET.defaultBlockState());
-				if (level.getBlockEntity(turret) instanceof dev.rubymod.block.DefenseBlockEntity d) {
-					d.ammo = 300;
-				}
-				level.addFreshEntity(dev.rubymod.entity.SoldierEntity.guard(level, player, heart.offset(-3, 0, 0), 0));
-				level.addFreshEntity(dev.rubymod.entity.SoldierEntity.guard(level, player, heart.offset(3, 0, -2), 1));
-				dev.rubymod.industry.Grid.deposit(player.getUUID(), 200_000L);
-				String error = dev.rubymod.game.Raids.force(player);
-				log("raid started: {}", error == null ? "ok" : error);
+		then(40, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			var spot = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.blockPosition().offset(0, 0, 12));
+			String error = dev.rubymod.game.WorldEvents.begin(server, java.util.List.of(p), dev.rubymod.game.WorldEvents.Kind.CACHE, spot, 4000);
+			log("cache: {} at {}", error == null ? "told" : error, spot.toShortString());
+			p.teleportTo(level, spot.getX() + 0.5, spot.getY() + 1, spot.getZ() - 7.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true);
+		}));
+		then(30, mc -> shot(mc, "event-told"));
+		then(240, mc -> shot(mc, "event-cache"));
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var at = dev.rubymod.game.WorldEvents.at();
+			log("cache open: {}, chests with loot: {}", dev.rubymod.game.WorldEvents.isOpen(), dev.rubymod.game.WorldEvents.chestsLeftForTest(server.overworld()));
+			p.teleportTo(server.overworld(), at.getX() + 0.5, at.getY(), at.getZ() - 1.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 60, true);
+		}));
+		then(15, mc -> clickBlock(mc, dev.rubymod.game.WorldEvents.at()));
+		then(20, mc -> shot(mc, "event-cache-chest"));
+		then(5, mc -> {
+			mc.player.closeContainer();
+			onServer(mc, server -> {
+				dev.rubymod.game.WorldEvents.stop(server);
+				var p = me(server);
+				var level = server.overworld();
+				var spot = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.blockPosition().offset(20, 0, 0));
+				String error = dev.rubymod.game.WorldEvents.begin(server, java.util.List.of(p), dev.rubymod.game.WorldEvents.Kind.SHRINE, spot, 3000);
+				log("shrine: {} at {}", error == null ? "told" : error, spot.toShortString());
+				p.teleportTo(level, spot.getX() + 0.5, spot.getY(), spot.getZ() - 3.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 20, true);
 			});
 		});
-		then(100, mc -> {
-			IntegratedServer server = mc.getSingleplayerServer();
-			server.execute(() -> {
-				var player = server.getPlayerList().getPlayers().get(0);
-				player.teleportTo(player.getX() + 18, player.getY(), player.getZ() + 8);
-				player.setYRot(-90);
-				player.setXRot(10);
-			});
-		});
-		then(20, mc -> shot(mc, "raid-claim-edge"));
-		for (int i = 0; i < 12; i++) {
-			int n = i;
-			then(200, mc -> {
-				IntegratedServer server = mc.getSingleplayerServer();
-				server.execute(() -> {
-					var player = server.getPlayerList().getPlayers().get(0);
-					var level = player.level();
-					var raiders = level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, player.getBoundingBox().inflate(200),
-							dev.rubymod.entity.SoldierEntity::isRaider);
-					var guards = level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, player.getBoundingBox().inflate(200), sol -> !sol.isRaider());
-					double nearest = raiders.stream().mapToDouble(r -> r.distanceTo(player)).min().orElse(-1);
-					log("t+{}s raiders {} (nearest {}m) guards {} bank {} tick {}ms fps {}", (n + 1) * 10, raiders.size(), Math.round(nearest), guards.size(),
-							dev.rubymod.industry.Grid.rubies(player.getUUID()), String.format("%.2f", server.getAverageTickTimeNanos() / 1e6), mc.getFps());
-				});
-				if (n % 3 == 0) {
-					shot(mc, "raid-" + (n + 1) * 10);
-				}
-			});
-		}
+		then(240, mc -> shot(mc, "event-shrine"));
+		then(5, mc -> onServer(mc, server -> {
+			log("shrine bank: {}", dev.rubymod.industry.Grid.rubies(me(server).getUUID()));
+			dev.rubymod.game.WorldEvents.stop(server);
+		}));
+		then(20, mc -> shot(mc, "event-over"));
 	}
 
 	/** The Armory's pages (do they fit?), turning a page in the same screen, the Drill keeping its finds and a belt to a chest. */
@@ -9482,18 +9469,14 @@ public final class AutoTest {
 			log("playthrough: bought a sentry turret: {}", mc.player.getInventory().countItem(dev.rubymod.registry.ModBlocks.SENTRY_TURRET.asItem()));
 			mc.player.closeContainer();
 		});
-		// A practice raid.
+		// A world event.
 		then(10, mc -> onServer(mc, server -> {
-			String error = dev.rubymod.game.Raids.force(me(server));
-			log("playthrough: raid called: {}", error == null ? "yes" : error);
+			String error = dev.rubymod.game.WorldEvents.begin(server, java.util.List.of(me(server)), dev.rubymod.game.WorldEvents.Kind.CACHE, null, 2000);
+			log("playthrough: supply cache: {}", error == null ? "told" : error);
 		}));
-		then(900, mc -> onServer(mc, server -> {
-			var raiders = me(server).level().getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, me(server).getBoundingBox().inflate(120),
-					s -> s.isRaider());
-			log("playthrough: raiders around: {}", raiders.size());
-			for (var r : raiders) {
-				r.discard();
-			}
+		then(200, mc -> onServer(mc, server -> {
+			log("playthrough: cache open {}, chests {}", dev.rubymod.game.WorldEvents.isOpen(), dev.rubymod.game.WorldEvents.chestsLeftForTest(server.overworld()));
+			dev.rubymod.game.WorldEvents.stop(server);
 		}));
 		// Battle Day, straight through.
 		then(40, mc -> command(mc, "rubywars battle 5"));

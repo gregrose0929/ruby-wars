@@ -145,6 +145,7 @@ public final class GameEvents {
 			Stats.load(server);
 			Cosmetics.reset();
 			Hub.reset();
+			WorldEvents.reset();
 			if (server.getLevel(Hub.HUB) != null) {
 				Hub.ensureBuilt(server.getLevel(Hub.HUB));
 			}
@@ -171,6 +172,7 @@ public final class GameEvents {
 			LagCompensation.record(server);
 			WhatsNew.tick(server);
 			dev.rubymod.industry.AwayTime.tick(server);
+			WorldEvents.tick(server);
 			BetweenSeasons.tick(server);
 			Celebrations.tick(server);
 			CannonRounds.tick();
@@ -230,7 +232,6 @@ public final class GameEvents {
 				}
 				TrainingGround.tick();
 				Waypoints.sync(server);
-				Raids.tick(server);
 				Goals.tickSecond(server);
 				Hub.tickSecond(server);
 				if (!GameConfig.get().hunger) {

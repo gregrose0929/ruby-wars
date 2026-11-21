@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import dev.rubymod.game.Armor;
 import dev.rubymod.game.GameConfig;
-import dev.rubymod.game.Raids;
 import dev.rubymod.game.Rules;
 import dev.rubymod.game.SeasonData;
 import dev.rubymod.game.Squads;
@@ -54,7 +53,7 @@ import net.minecraft.world.phys.Vec3;
  * A soldier. As a hired Guard (Armory: Guard Contract) it stands post at your
  * base or follows you, and fights anyone who isn't on your side: monsters any
  * time, enemy players and their guards when PvP is on. As a Raider (practice
- * raids in the build phase) it marches on a base and shoots its defenders.
+ * Horde, the Rift and the Convoy) it marches on an objective and shoots its defenders.
  *
  * Roles: Rifleman (rifle bursts) and AT Gunner (rockets at vehicles, aircraft and
  * clusters of enemies). Owners right-click a guard to switch between holding a
@@ -398,9 +397,6 @@ public class SoldierEntity extends PathfinderMob {
 			if (objective != null && tickCount % 40 == 0) {
 				getNavigation().moveTo(objective.getX() + 0.5, objective.getY(), objective.getZ() + 0.5, 1.0);
 			}
-			if (objective != null && blockPosition().closerThan(objective, 4.5) && tickCount % 20 == 0) {
-				Raids.loot(level, this);
-			}
 			return;
 		}
 		if (following()) {
@@ -695,9 +691,6 @@ public class SoldierEntity extends PathfinderMob {
 	@Override
 	public void die(DamageSource source) {
 		super.die(source);
-		if (level() instanceof ServerLevel level && isRaider()) {
-			Raids.raiderKilled(level, this, source.getEntity());
-		}
 	}
 
 	@Override

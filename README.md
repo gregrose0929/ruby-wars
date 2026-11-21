@@ -112,7 +112,7 @@ villages, rivers to the sea, and ruins to explore.
   barbed wire, landmines, claymores, anti-tank mines, Sentry Turrets, Tesla Coils, Flak
   Cannons, SAM Sites, Missile Interceptors, Shield Generators, Point Defense Guns, Heavy AA
   Guns and a Railgun, and Holo Camouflage that looks like any block. All of them follow one
-  rule: they go for raiders whenever a raid is on, monsters any time, and enemy players once
+  rule: they go for monsters any time, and enemy players once
   PvP is on.
 - **Security:** keycard doors and readers, security cameras with monitors, laser
   tripwires, seismic sensors, alarms and floodlights.
@@ -183,13 +183,13 @@ what's in them. Look at a silo or machine to see what it feeds or fills.
 ### Battle Day extras
 
 Night battles (the admin can switch them on) with searchlights, flares and night-vision
-goggles; sandstorms and blizzards over the desert and snow corners; practice raids by AI
-soldiers on a few build days so your defenses get tested; **War Graves** that keep your
+goggles; sandstorms and blizzards over the desert and snow corners; and, while you build,
+world events (a Supply Cache, a Ruby Shrine, a Ruby Meteor) that draw everyone out to fight over them; **War Graves** that keep your
 gear where you fell; and a kill feed, hit markers and kill-cam.
 
 ### Goals and upgrades
 
-Press **J** for goals (upgrade your Heart, sell at a Trade Depot, repel a raid, make it to Sudden Death, sail 500 blocks…).
+Press **J** for goals (upgrade your Heart, sell at a Trade Depot, get to a Supply Cache, make it to Sudden Death, sail 500 blocks…).
 Each earns stars to spend on unlocking advanced gear in four branches (Arms, Vehicles,
 Defense, Support). Upgrades come from doing things, never from how long you play.
 
@@ -275,12 +275,12 @@ Make yourself an operator (`op <yourname>` in the server console), then type
 
 Other admin commands (all start with `/rubywars`): `status`, `phase <name>`, `timer <minutes>`,
 `pause`, `resume`, `reload` (re-read the config), `backup`, `revive <player>`,
-`nightbattle on|off`, `raidnow <player>`, `research <player> <stars>`, `kit` (every item, for
+`nightbattle on|off`, `event cache|shrine|meteor|stop`, `research <player> <stars>`, `kit` (every item, for
 testing), `training` (build a practice ground here), `rearm` (refill your aircraft),
 `coasters` (who has which Coaster Park spot; `coasters free <name>` gives one up), and
 `selftest` (rule checks, on a test world only).
 
-Everything else (phase lengths, prices, claim sizes, the world border, raid days and more)
+Everything else (phase lengths, prices, claim sizes, the world border, how often world events come and more)
 is in `config/rubywars.json`.
 
 ### Running a server on Linux (Debian/Ubuntu)

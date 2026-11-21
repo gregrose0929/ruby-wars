@@ -10,9 +10,9 @@
 		"show_toast": false,
 		"frame": "goal",
 		"icon": {
-			"id": "minecraft:shield"
+			"id": "rubymod:ruby_block"
 		},
-		"title": "Repel a raid",
+		"title": "Hold a Ruby Shrine longest",
 		"description": "+2 stars to spend on upgrades"
 	},
 	"requirements": [

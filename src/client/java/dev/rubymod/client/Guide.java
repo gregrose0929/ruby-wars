@@ -21,11 +21,12 @@ public final class Guide {
 			new Step("Buy something at your Armory", "Right-click the Armory by your Heart. It spends the rubies you carry, then your bank.", "armory", false),
 			new Step("Upgrade your Heart", "At the Armory, the first tab (Your Heart): \"Upgrade Ruby Heart\", then Buy. "
 					+ "20 rubies for tier 2 (a bigger claim, more health, more drills), then 60 for tier 3.", "heart2", false),
-			new Step("Place a base defense", "Sentry Turrets, walls and mines from the Armory: raiders attack your Heart on days 3, 6, 9 and 12.",
+			new Step("Place a base defense", "Sentry Turrets, walls and mines from the Armory: everyone comes for your Heart on Battle Day.",
 					"defense", false),
 			new Step("Spend stars on an upgrade", "Goals give stars. Press J, open UPGRADES and pick one: it unlocks tanks, jets and more "
 					+ "in the Armory.", "#research", false),
-			new Step("Repel a raid", "Beat the raiders on a raid day, or call a practice raid any time with /rubywars raid.", "raid", false));
+			new Step("Get to a Supply Cache", "World events are told to everyone two minutes ahead and marked on your map (K). Get there first, and watch out for the others.",
+					"cache", false));
 
 	private Guide() {
 	}
@@ -84,7 +85,7 @@ public final class Guide {
 		}
 		if (phase == Phase.BUILD) {
 			int day = ClientState.hud == null ? 0 : ClientState.hud.day();
-			return "Build day " + day + ". Raids on days 3, 6, 9 and 12. Battle Day comes when the admin calls it (or on the date they set): last player standing wins.";
+			return "Build day " + day + ". Watch for world events (Supply Caches, Ruby Shrines, meteors). Battle Day comes when the admin calls it (or on the date they set): last player standing wins.";
 		}
 		if (phase == Phase.ENDED) {
 			return "The season is over. A new one starts soon.";

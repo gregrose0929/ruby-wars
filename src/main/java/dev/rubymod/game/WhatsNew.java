@@ -24,15 +24,14 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-21-belts";
+	private static final String VERSION = "2026-11-21-events";
 	private static final List<String> LINES = List.of(
-			"rubymod:ore_refinery|While you're away, Refineries, Assemblers and Trade Depots keep working (at half speed, like drills), even when nobody's on the server.",
-			"rubymod:conveyor|Belt lines carry things to the chest or machine at their end while you're away, too.",
-			"rubymod:battery|When you're back, one note says what all your machines made, and My Base shows it too.",
-			"rubymod:ore_silo|Ore Silos touching a drill fill up with what it digs, one kind each, so a few round a drill sort it. A silo against a Refinery or Assembler feeds it: no belts needed.",
-			"rubymod:ruby_wrench|Machines picked up with the Wrench keep their settings (a drill's Find and Stone, an Assembler's recipe), and it picks up Ore Silos with what's in them.",
-			"rubymod:prospector_pick|Look at a silo or machine to see what it feeds or fills. The Prospector's Pick, Assembler grid and Rock Collection are in the Field Manual.",
-			"minecraft:nether_star|Goals (J) fit in an evening or two: bank 100 and 200 rubies, mine 25 Ruby Ore, fly 500 blocks (jetpacks count), sail any boat, damage an enemy Heart.");
+			"minecraft:chest|New: world events while you build. A Supply Cache (a ring of chests full of Armory gear and rubies) turns up out between the bases: first there takes it.",
+			"rubymod:ruby_block|Ruby Shrine: stand in its ring alone and rubies go into your bank. Anyone else in it and it's contested. The longest holder gets a bonus.",
+			"rubymod:ruby_ore|Ruby Meteors take a turn too, told two minutes ahead so everyone can race for them.",
+			"minecraft:bell|Everyone is told two minutes ahead, it's on your map (K), and you can fight out there. They come when two or more of you are on.",
+			"minecraft:shield|Practice raids on your base are gone.",
+			"rubymod:ore_refinery|Machines keep working while you're away (even when nobody's on), belts carry things along, and the Wrench picks up silos.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

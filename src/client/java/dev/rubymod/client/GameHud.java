@@ -56,12 +56,9 @@ public class GameHud implements HudElement {
 		topLeft = w;
 		drawPhaseBanner(g, font, w);
 		drawRespawnStatus(g, font, w);
-		var raid = ClientState.raid;
-		if (raid != null && raid.raiders() > 0 && System.currentTimeMillis() - ClientState.raidAt < 2500) {
-			String text = "RAID  " + raid.raiders() + " raider" + (raid.raiders() == 1 ? "" : "s") + " left  " + formatTime(raid.seconds())
-					+ (raid.looted() > 0 ? "  -" + raid.looted() + " rubies" : "");
-			boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
-			topBanner(g, font, text, w, blink ? RED : 0xFFFF8080);
+		var event = ClientState.event;
+		if (event != null && !event.text().isEmpty() && System.currentTimeMillis() - ClientState.eventAt < 2500) {
+			topBanner(g, font, event.text(), w, event.color());
 		}
 		drawCorner(g, font, w);
 		drawAmmo(g, font, player, w, h);

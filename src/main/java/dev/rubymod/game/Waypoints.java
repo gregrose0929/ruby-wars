@@ -16,7 +16,7 @@ import net.minecraft.sounds.SoundSource;
 
 /**
  * Map markers: your own named waypoints, your War Grave, squad pings (30 s),
- * supply drops and practice raids for everyone, your Heart and your squad's
+ * supply drops and world events for everyone, your Heart and your squad's
  * Hearts. Sent to each player once a second with squadmates and nearby claims.
  */
 public final class Waypoints {
@@ -165,7 +165,7 @@ public final class Waypoints {
 		return e instanceof net.minecraft.world.entity.monster.Enemy;
 	}
 
-	/** Everyone sees this marker until it expires (supply drops, raids). */
+	/** Everyone sees this marker until it expires (supply drops, world events). */
 	public static void global(String name, BlockPos pos, int kind, int seconds) {
 		GLOBAL.removeIf(g -> g.pos.equals(pos));
 		GLOBAL.add(new Global(name, pos, kind, System.currentTimeMillis() + seconds * 1000L, null));

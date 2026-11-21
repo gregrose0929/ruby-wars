@@ -49,23 +49,14 @@ public final class RubyWarsCommand {
 				.then(Commands.literal("heart").executes(RubyWarsCommand::heart))
 				.then(Commands.literal("champions").executes(RubyWarsCommand::champions))
 				.then(Commands.literal("leaderboard").executes(RubyWarsCommand::leaderboard))
-				.then(Commands.literal("raid").executes(c -> {
-					String error = dev.rubymod.game.Raids.request(c.getSource().getPlayerOrException());
-					if (error != null) {
-						c.getSource().sendFailure(Component.literal(error));
-						return 0;
-					}
-					return ok(c, "Practice raid called. Defend your Heart!");
-				}))
-				.then(Commands.literal("raidnow").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-						.then(Commands.argument("player", EntityArgument.player()).executes(c -> {
-							String error = dev.rubymod.game.Raids.force(EntityArgument.getPlayer(c, "player"));
-							if (error != null) {
-								c.getSource().sendFailure(Component.literal(error));
-								return 0;
-							}
-							return ok(c, "Raid launched.");
-						})))
+				.then(Commands.literal("event").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.then(Commands.literal("stop").executes(c -> {
+							dev.rubymod.game.WorldEvents.stop(c.getSource().getServer());
+							return ok(c, "World event stopped.");
+						}))
+						.then(Commands.literal("cache").executes(c -> worldEvent(c, dev.rubymod.game.WorldEvents.Kind.CACHE)))
+						.then(Commands.literal("shrine").executes(c -> worldEvent(c, dev.rubymod.game.WorldEvents.Kind.SHRINE)))
+						.then(Commands.literal("meteor").executes(c -> worldEvent(c, dev.rubymod.game.WorldEvents.Kind.METEOR))))
 				.then(Commands.literal("research").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.argument("player", EntityArgument.player()).then(Commands.argument("points", IntegerArgumentType.integer(0))
 								.executes(c -> {
@@ -268,6 +259,21 @@ public final class RubyWarsCommand {
 		c.getSource().sendSystemMessage(Component.literal(on ? "Night Battle is on: Battle Day will be fought at night, with searchlights and flares."
 				: "Night Battle is off: Battle Day by daylight.").withStyle(ChatFormatting.GOLD));
 		return 1;
+	}
+
+	/** Admin: a world event now (told two minutes ahead, as usual), somewhere fair for everyone in Ruby Wars. */
+	private static int worldEvent(com.mojang.brigadier.context.CommandContext<CommandSourceStack> c, dev.rubymod.game.WorldEvents.Kind kind) {
+		var server = c.getSource().getServer();
+		var players = dev.rubymod.game.WorldEvents.inRubyWars(server);
+		if (players.isEmpty() && c.getSource().getPlayer() != null) {
+			players = java.util.List.of(c.getSource().getPlayer());
+		}
+		String error = dev.rubymod.game.WorldEvents.begin(server, players, kind, null, 2 * 60_000L);
+		if (error != null) {
+			c.getSource().sendFailure(Component.literal(error));
+			return 0;
+		}
+		return ok(c, kind.title + " coming in 2 minutes at " + dev.rubymod.game.WorldEvents.at().toShortString() + ".");
 	}
 
 	/** Admin testing kit: every gun loaded, ammo, raid gear, attachments, vehicles, and a full set of ruby armor. */

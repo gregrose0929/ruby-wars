@@ -17,7 +17,7 @@ import net.minecraft.sounds.SoundSource;
 
 /**
  * The research tree: advanced Armory gear starts locked. Research points (shown
- * as stars) come from finishing Goals (place your Heart, mine ruby, repel a raid,
+ * as stars) come from finishing Goals (place your Heart, mine ruby, get to a Supply Cache,
  * win a duel...), never from time played; spend them on unlocks in four branches.
  * You can't unlock everything in one season, so squads split the tree.
  *

@@ -114,7 +114,7 @@ public class DefenseBlockEntity extends BlockEntity {
 		SeasonData.Claim claim;
 		switch (block.kind()) {
 			case SENTRY_TURRET -> {
-				if (t % 4 == 0 && (claim = claimHere(serverLevel, pos)) != null && (Rules.phase().pvp() || dev.rubymod.game.Raids.active(claim))) {
+				if (t % 4 == 0 && (claim = claimHere(serverLevel, pos)) != null && Rules.phase().pvp()) {
 					be.tickTurret(serverLevel, pos, claim);
 				} else if (t % 4 == 0 && dev.rubymod.game.Horde.inOutpost(serverLevel, pos)) {
 					be.tickHordeTurret(serverLevel, pos);
