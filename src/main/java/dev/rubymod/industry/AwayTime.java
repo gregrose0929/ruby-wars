@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * What your machines did while nobody was near them. Machines catch up one by one as their chunks load, so this
  * gathers it all up and says it once ("While you were away") instead of once per machine, and keeps the latest
- * for My Base. Not saved.
+ * for My Base. The latest is saved, so a restart before you're back doesn't lose it.
  */
 public final class AwayTime {
 	/** Said once nothing more has come in for this long (machines nearby load within a tick or two of each other). */
@@ -75,6 +75,7 @@ public final class AwayTime {
 					Tally t = e.getValue();
 					t.madeAt = System.currentTimeMillis();
 					LAST.put(e.getKey(), t);
+					save(server);
 				}
 			}
 		}
@@ -83,6 +84,7 @@ public final class AwayTime {
 				Tally t = e.getValue();
 				if (!t.told && server.getPlayerList().getPlayer(e.getKey()) instanceof ServerPlayer player) {
 					t.told = true;
+					save(server);
 					dev.rubymod.game.Alerts.toast(player, "rubymod:ruby_drill", "While you were away", summary(t, 2), dev.rubymod.game.Alerts.GREEN);
 				}
 			}
@@ -138,6 +140,78 @@ public final class AwayTime {
 			rows.add("#away|" + BuiltInRegistries.ITEM.getKey(e.getKey()) + "|" + e.getValue());
 		}
 		return rows;
+	}
+
+	// ----- Saved -----
+
+	private static java.nio.file.Path file(MinecraftServer server) {
+		return server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("rubywars").resolve("away.txt");
+	}
+
+	/** One line each: owner|made at (ms)|told (1/0)|milli-rubies|item=count;item=count. */
+	private static void save(MinecraftServer server) {
+		List<String> lines = new ArrayList<>();
+		for (var e : LAST.entrySet()) {
+			Tally t = e.getValue();
+			StringBuilder items = new StringBuilder();
+			for (var m : t.made.entrySet()) {
+				if (items.length() > 0) {
+					items.append(';');
+				}
+				items.append(BuiltInRegistries.ITEM.getKey(m.getKey())).append('=').append(m.getValue());
+			}
+			lines.add(e.getKey() + "|" + t.madeAt + "|" + (t.told ? 1 : 0) + "|" + t.milliRubies + "|" + items);
+		}
+		try {
+			java.nio.file.Files.createDirectories(file(server).getParent());
+			java.nio.file.Files.write(file(server), lines);
+		} catch (java.io.IOException ex) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the away notes", ex);
+		}
+	}
+
+	/** On start: the notes from before the restart (told or not). */
+	public static void load(MinecraftServer server) {
+		LAST.clear();
+		java.nio.file.Path f = file(server);
+		if (!java.nio.file.Files.exists(f)) {
+			return;
+		}
+		try {
+			for (String line : java.nio.file.Files.readAllLines(f)) {
+				String[] w = line.split("\\|", -1);
+				if (w.length < 5) {
+					continue;
+				}
+				try {
+					Tally t = new Tally();
+					t.madeAt = Long.parseLong(w[1]);
+					t.told = "1".equals(w[2]);
+					t.milliRubies = Long.parseLong(w[3]);
+					for (String kv : w[4].split(";")) {
+						int eq = kv.lastIndexOf('=');
+						if (eq > 0) {
+							var id = net.minecraft.resources.Identifier.tryParse(kv.substring(0, eq));
+							Item item = id == null ? null : BuiltInRegistries.ITEM.getValue(id);
+							if (item != null && item != net.minecraft.world.item.Items.AIR) {
+								t.made.put(item, Long.parseLong(kv.substring(eq + 1)));
+							}
+						}
+					}
+					LAST.put(UUID.fromString(w[0]), t);
+				} catch (RuntimeException ex) {
+					// a line from a newer or older version: skip it
+				}
+			}
+		} catch (java.io.IOException ex) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the away notes", ex);
+		}
+	}
+
+	/** For tests: save what's there now, and read it back. */
+	public static void saveAndLoadForTest(MinecraftServer server) {
+		save(server);
+		load(server);
 	}
 
 	public static void reset() {

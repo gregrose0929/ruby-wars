@@ -55,18 +55,21 @@ import net.minecraft.world.level.levelgen.Heightmap;
  */
 public final class WorldEvents {
 	public enum Kind {
-		CACHE("Supply Cache", ChatFormatting.AQUA, 0xFF5FC8E8),
-		SHRINE("Ruby Shrine", ChatFormatting.LIGHT_PURPLE, 0xFFE05AF0),
-		METEOR("Ruby Meteor", ChatFormatting.RED, 0xFFFF5050);
+		CACHE("Supply Cache", ChatFormatting.AQUA, 0xFF5FC8E8, 8),
+		SHRINE("Ruby Shrine", ChatFormatting.LIGHT_PURPLE, 0xFFE05AF0, 9),
+		METEOR("Ruby Meteor", ChatFormatting.RED, 0xFFFF5050, 10);
 
 		public final String title;
 		final ChatFormatting chat;
 		final int color;
+		/** Its marker on the map (see the client's Markers). */
+		final int marker;
 
-		Kind(String title, ChatFormatting chat, int color) {
+		Kind(String title, ChatFormatting chat, int color, int marker) {
 			this.title = title;
 			this.chat = chat;
 			this.color = color;
+			this.marker = marker;
 		}
 	}
 
@@ -231,7 +234,7 @@ public final class WorldEvents {
 		holder = null;
 		contested = false;
 		int seconds = (int) (warning / 1000);
-		Waypoints.global(what.title, at, 3, seconds + 10 * 60);
+		Waypoints.global(what.title, at, what.marker, seconds + 10 * 60);
 		String when = seconds >= 60 ? "in " + (seconds + 30) / 60 + " minute" + ((seconds + 30) / 60 == 1 ? "" : "s") : "now";
 		String what2 = switch (what) {
 			case CACHE -> "Chests full of Armory gear and rubies. First there takes them.";
@@ -248,11 +251,15 @@ public final class WorldEvents {
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
 			if (!players.contains(p)) {
 				p.sendSystemMessage(Component.literal("★ In Ruby Wars: a " + what.title + " " + (seconds >= 60 ? "opens " + when : "is on") + " at "
-						+ at.getX() + ", " + at.getZ() + ".").withStyle(what.chat));
+						+ at.getX() + ", " + at.getZ() + ". ").withStyle(what.chat)
+						.append(Component.literal("[Go to Ruby Wars]").withStyle(style -> style.withColor(ChatFormatting.GREEN).withBold(true)
+								.withClickEvent(new net.minecraft.network.chat.ClickEvent.RunCommand("/play rubywars"))
+								.withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(Component.literal("Back to where you were in Ruby Wars"))))));
 			}
 		}
 		force(level);
 		beacon(level);
+		save(server);
 		dev.rubymod.RubyMod.LOGGER.info("World event: {} at {} (opens in {}s)", what.title, at.toShortString(), seconds);
 		return null;
 	}
@@ -377,6 +384,7 @@ public final class WorldEvents {
 		switch (kind) {
 			case CACHE -> {
 				buildCache(level);
+				save(server);
 				openedAt = now();
 				endsAt = openedAt + CACHE_OPEN;
 				tell(players, Component.literal("The Supply Cache is open at " + at.getX() + ", " + at.getZ() + "! The big chest in the middle opens in 2 minutes.")
@@ -385,12 +393,14 @@ public final class WorldEvents {
 			}
 			case SHRINE -> {
 				buildShrine(level);
+				save(server);
 				endsAt = now() + SHRINE_OPEN;
 				tell(players, Component.literal("The Ruby Shrine is lit at " + at.getX() + ", " + at.getZ() + ". Hold it alone!")
 						.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
 			}
 			case METEOR -> {
 				undo(level); // the beacon goes; the crater stays
+				forget(server);
 				BlockPos c = BattleDirector.meteorAt(level, at);
 				unforce(level);
 				Waypoints.clearGlobal(at);
@@ -546,6 +556,7 @@ public final class WorldEvents {
 		}
 		undo(level);
 		unforce(level);
+		forget(server);
 		if (at != null) {
 			Waypoints.clearGlobal(at);
 		}
@@ -591,6 +602,7 @@ public final class WorldEvents {
 			// The glass case opens into the big chest.
 			bigOpen = true;
 			chest(level, at, BattleDirector.supplyLoot(random));
+			save(server);
 			level.playSound(null, at, SoundEvents.CHEST_OPEN, SoundSource.BLOCKS, 4.0F, 0.5F);
 			level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, at.getX() + 0.5, at.getY() + 1, at.getZ() + 0.5, 40, 0.5, 0.8, 0.5, 0.3);
 			tell(players, Component.literal("The big chest in the Supply Cache is open!").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
@@ -691,12 +703,16 @@ public final class WorldEvents {
 			return;
 		}
 		int left = kind == Kind.CACHE && open && !players.isEmpty() ? chestsLeft(players.get(0).level().getServer().overworld()) : 0;
+		long ms = !open ? opensAt - t : endsAt == Long.MAX_VALUE ? 0 : endsAt - t;
+		Waypoints.global(kind.title + (ms > 0 ? " " + clock(ms) : ""), at, kind.marker, (int) (ms / 1000) + 60);
+		String leaders = kind == Kind.SHRINE && open && !players.isEmpty() ? leaders(players.get(0).level().getServer()) : "";
 		for (ServerPlayer p : players) {
 			String where;
+			int dist = Integer.MAX_VALUE;
 			if (p.level() == p.level().getServer().overworld()) {
 				double dx = at.getX() + 0.5 - p.getX();
 				double dz = at.getZ() + 0.5 - p.getZ();
-				int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
+				dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
 				where = dist < 12 ? "here" : dist + " m " + compass(dx, dz);
 			} else {
 				where = at.getX() + ", " + at.getZ();
@@ -712,10 +728,106 @@ public final class WorldEvents {
 			} else {
 				String who = contested ? "CONTESTED" : holder == null ? "nobody holds it" : holder.equals(p.getUUID()) ? "you hold it"
 						: "held by " + name(p.level().getServer(), holder);
-				text = "RUBY SHRINE   " + who + "   " + where + "   " + clock(endsAt - t);
+				// Close by, who's held it longest (the race for the bonus); further off, how to get there.
+				text = "RUBY SHRINE   " + who + "   " + (dist < 40 && !leaders.isEmpty() ? clock(endsAt - t) + "   " + leaders
+						: where + "   " + clock(endsAt - t));
 			}
 			dev.rubymod.net.Net.send(p, new dev.rubymod.net.MorePayloads.EventStatus(text, kind.color));
 		}
+	}
+
+	/** "Alice 1:20, Bob 0:40": who's held the shrine longest so far (top two). */
+	private static String leaders(MinecraftServer server) {
+		List<Map.Entry<UUID, Integer>> list = new ArrayList<>(HELD.entrySet());
+		list.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+		List<String> out = new ArrayList<>();
+		for (var e : list.subList(0, Math.min(2, list.size()))) {
+			var record = SeasonData.get().players.get(e.getKey().toString());
+			String n = server.getPlayerList().getPlayer(e.getKey()) instanceof ServerPlayer p ? p.getName().getString()
+					: record == null || record.name.isEmpty() ? "someone" : record.name;
+			out.add(n + " " + clock(e.getValue() * 1000L));
+		}
+		return String.join(", ", out);
+	}
+
+	public static String leadersForTest(MinecraftServer server) {
+		return leaders(server);
+	}
+
+	// ----- Saved, so a crash can't leave an event's build behind -----
+
+	private static java.nio.file.Path file(MinecraftServer server) {
+		return server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("rubywars").resolve("world_event.txt");
+	}
+
+	/** What the event has built over (and the chunks it holds), written down as it goes. */
+	private static void save(MinecraftServer server) {
+		List<String> lines = new ArrayList<>();
+		for (long chunk : FORCED) {
+			lines.add("chunk " + (int) (chunk >> 32) + " " + (int) chunk);
+		}
+		for (BlockPos pos : CHESTS) {
+			lines.add("chest " + pos.getX() + " " + pos.getY() + " " + pos.getZ());
+		}
+		for (var e : RESTORE.entrySet()) {
+			BlockPos pos = e.getKey();
+			lines.add("block " + pos.getX() + " " + pos.getY() + " " + pos.getZ() + " "
+					+ net.minecraft.commands.arguments.blocks.BlockStateParser.serialize(e.getValue()));
+		}
+		try {
+			java.nio.file.Files.createDirectories(file(server).getParent());
+			java.nio.file.Files.write(file(server), lines);
+		} catch (java.io.IOException ex) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't write down the world event", ex);
+		}
+	}
+
+	private static void forget(MinecraftServer server) {
+		try {
+			java.nio.file.Files.deleteIfExists(file(server));
+		} catch (java.io.IOException ex) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't clear the world event file", ex);
+		}
+	}
+
+	/** On start: an event the server went down in the middle of (a crash) is tidied away, as if it had ended. */
+	public static void recover(MinecraftServer server) {
+		java.nio.file.Path f = file(server);
+		if (!java.nio.file.Files.exists(f)) {
+			return;
+		}
+		ServerLevel level = server.overworld();
+		int blocks = 0;
+		try {
+			List<String> lines = java.nio.file.Files.readAllLines(f);
+			var lookup = level.holderLookup(net.minecraft.core.registries.Registries.BLOCK);
+			for (String line : lines) {
+				String[] w = line.split(" ", 5);
+				if (w[0].equals("chest") && level.getBlockEntity(new BlockPos(Integer.parseInt(w[1]), Integer.parseInt(w[2]), Integer.parseInt(w[3])))
+						instanceof ChestBlockEntity chest) {
+					chest.clearContent();
+				}
+			}
+			java.util.Collections.reverse(lines);
+			for (String line : lines) {
+				String[] w = line.split(" ", 5);
+				try {
+					if (w[0].equals("block")) {
+						BlockState state = net.minecraft.commands.arguments.blocks.BlockStateParser.parseForBlock(lookup, w[4], false).blockState();
+						level.setBlockAndUpdate(new BlockPos(Integer.parseInt(w[1]), Integer.parseInt(w[2]), Integer.parseInt(w[3])), state);
+						blocks++;
+					} else if (w[0].equals("chunk")) {
+						level.setChunkForced(Integer.parseInt(w[1]), Integer.parseInt(w[2]), false);
+					}
+				} catch (Exception ex) {
+					dev.rubymod.RubyMod.LOGGER.warn("World event tidy-up: skipped '{}'", line);
+				}
+			}
+		} catch (java.io.IOException ex) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the world event file", ex);
+		}
+		forget(server);
+		dev.rubymod.RubyMod.LOGGER.info("Tidied away a world event left from before the restart ({} blocks put back)", blocks);
 	}
 
 	private static String name(MinecraftServer server, UUID id) {

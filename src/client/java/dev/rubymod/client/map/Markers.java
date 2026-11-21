@@ -51,8 +51,13 @@ public class Markers implements HudElement {
 			}
 			int x = Mth.clamp(Math.round(s[0]), 10, w - 10);
 			int y = Mth.clamp(Math.round(s[1]), 18, h - 30);
-			diamond(g, x, y, color);
-			if (!edge || m.kind() == 2) {
+			var icon = icon(m.kind());
+			if (icon.isEmpty()) {
+				diamond(g, x, y, color);
+			} else {
+				g.item(icon, x - 8, y - 8);
+			}
+			if (!edge || m.kind() == 2 || !icon.isEmpty()) {
 				String label = m.name() + "  " + Math.round(dist) + "m";
 				int tw = font.width(label);
 				g.fill(x - tw / 2 - 4, y - 19, x + tw / 2 + 4, y - 6, 0x90000000);
@@ -85,7 +90,20 @@ public class Markers implements HudElement {
 			case 5 -> 0xFF5BE37D;    // squad Heart
 			case 6 -> 0xFFFF4040;    // raid
 			case 7 -> 0xFFFF2A2A;    // spotted enemy
+			case 8 -> 0xFF5FC8E8;    // world event: Supply Cache
+			case 9 -> 0xFFE05AF0;    // world event: Ruby Shrine
+			case 10 -> 0xFFFF5050;   // world event: Ruby Meteor
 			default -> 0xFF6FB6FF;   // waypoint
+		};
+	}
+
+	/** World events are drawn as what they are (a chest, a crystal, ruby ore); everything else as a dot. */
+	public static net.minecraft.world.item.ItemStack icon(byte kind) {
+		return switch (kind) {
+			case 8 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST);
+			case 9 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.AMETHYST_CLUSTER);
+			case 10 -> new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModBlocks.RUBY_ORE);
+			default -> net.minecraft.world.item.ItemStack.EMPTY;
 		};
 	}
 

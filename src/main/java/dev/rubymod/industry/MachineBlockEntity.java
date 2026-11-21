@@ -748,7 +748,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
 				new AABB(top, top).inflate(r), e -> e.isAlive() && !e.isSpectator())) {
 			boolean hostile = dev.rubymod.game.Horde.isEnemy(e) || (claim == null ? e instanceof net.minecraft.world.entity.monster.Enemy
-					: Rules.defenseTarget(claim, e));
+					: Rules.defenseTarget(claim, e) || dev.rubymod.game.Practice.isDummyFor(claim, e));
 			double d = e.position().distanceTo(top);
 			if (hostile && d < best && canSee(level, top, e.getEyePosition())) {
 				best = d;
@@ -779,7 +779,11 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			prev = p;
 		}
 		level.playSound(null, worldPosition, SoundEvents.TRIDENT_THUNDER.value(), SoundSource.BLOCKS, 0.5F, 1.8F);
-		target.hurtServer(level, dev.rubymod.registry.ModDamage.source(level, dev.rubymod.registry.ModDamage.TURRET, null, ownerPlayer(level)), 3.0F + tier);
+		if (dev.rubymod.game.Practice.isDummy(target)) {
+			dev.rubymod.game.Practice.hit(target, "Tesla Coil");
+		} else {
+			target.hurtServer(level, dev.rubymod.registry.ModDamage.source(level, dev.rubymod.registry.ModDamage.TURRET, null, ownerPlayer(level)), 3.0F + tier);
+		}
 	}
 
 	private boolean hostileAircraft(AircraftEntity a) {

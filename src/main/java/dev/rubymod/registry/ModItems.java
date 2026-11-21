@@ -71,6 +71,8 @@ public class ModItems {
 			new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	/** Turns machines and belts, and picks them up (machines keep their tier). */
 	public static final Item RUBY_WRENCH = register("ruby_wrench", dev.rubymod.item.WrenchItem::new, new Item.Properties().stacksTo(1));
+	/** Puts up a dummy in your base for your defenses to practise on. */
+	public static final Item PRACTICE_DUMMY = register("practice_dummy", dev.rubymod.item.PracticeDummyItem::new, new Item.Properties().stacksTo(1));
 	public static final Item REMODELER = register("remodeler", dev.rubymod.item.RemodelerItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	public static final Item BLUEPRINT = register("blueprint", dev.rubymod.item.BlueprintItem::new, new Item.Properties().stacksTo(1));
 	public static final Item GUARD_CONTRACT = register("guard_contract", p -> new dev.rubymod.item.GuardContractItem(0, p),

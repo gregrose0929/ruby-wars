@@ -9280,6 +9280,48 @@ public final class AutoTest {
 			dev.rubymod.game.WorldEvents.stop(server);
 		}));
 		then(20, mc -> shot(mc, "event-over"));
+		// Its icon on the map, and over the spot.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var spot = server.overworld().getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+					p.blockPosition().offset(-30, 0, 30));
+			dev.rubymod.game.WorldEvents.begin(server, java.util.List.of(p), dev.rubymod.game.WorldEvents.Kind.CACHE, spot, 90_000L);
+		}));
+		then(60, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));
+		then(30, mc -> shot(mc, "event-map"));
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(dev.rubymod.game.WorldEvents.at()));
+		});
+		then(30, mc -> shot(mc, "event-marker"));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.WorldEvents.stop(server)));
+		// The Practice Dummy: a Heart, a loaded Sentry Turret, a dummy in front of it.
+		then(10, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = server.overworld();
+			var heart = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.blockPosition().offset(90, 0, 90));
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(heart.offset(-12, -1, -12), heart.offset(12, -1, 12))) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState());
+			}
+			for (var q : net.minecraft.core.BlockPos.betweenClosed(heart.offset(-12, 0, -12), heart.offset(12, 5, 12))) {
+				level.setBlockAndUpdate(q, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			level.setBlockAndUpdate(heart, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+			dev.rubymod.game.Claims.onHeartPlaced(level, p, heart);
+			heartAt = heart;
+			var turret = heart.offset(-3, 0, -6);
+			level.setBlockAndUpdate(turret, dev.rubymod.registry.ModBlocks.SENTRY_TURRET.defaultBlockState());
+			if (level.getBlockEntity(turret) instanceof dev.rubymod.block.DefenseBlockEntity d) {
+				d.ammo = 100;
+			}
+			String error = dev.rubymod.game.Practice.place(p, level, heart.offset(3, 0, -6));
+			log("practice dummy: {}", error == null ? "up" : error);
+			p.getInventory().setItem(4, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.PRACTICE_DUMMY));
+			p.teleportTo(level, heart.getX() + 0.5, heart.getY(), heart.getZ() - 13.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 10, true);
+		}));
+		then(10, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(0, 1, -6))));
+		then(80, mc -> shot(mc, "practice-firing"));
+		then(1200, mc -> shot(mc, "practice-report"));
 	}
 
 	/** The Armory's pages (do they fit?), turning a page in the same screen, the Drill keeping its finds and a belt to a chest. */

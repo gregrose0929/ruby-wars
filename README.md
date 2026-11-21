@@ -162,7 +162,9 @@ carry what they make to the chest or machine at the end; when you're back one no
 they all made, and My Base shows it too. A drill fills the **Ore Silos** touching it (each takes one kind, so
 a few round a drill sort what it digs), and a Refinery or Assembler takes what it needs from a
 silo touching it, with no belts needed. Machines picked up with the Wrench keep their settings, and it picks up Ore Silos with
-what's in them. Look at a silo or machine to see what it feeds or fills.
+what's in them. Look at a silo or machine to see what it feeds or fills. A **Practice Dummy**
+(Armory, Defenses) stands in your base for a minute so you can watch your turrets and Tesla
+Coils work before Battle Day.
 
 ### Weapons and vehicles
 

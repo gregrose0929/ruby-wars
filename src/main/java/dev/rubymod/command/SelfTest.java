@@ -1432,6 +1432,7 @@ public final class SelfTest {
 
 		// ----- World events -----
 		worldEventChecks(level, alpha, bravo, surface(level, base.offset(-160, 0, -160)));
+		practiceChecks(level, alpha, bravo);
 
 		// ----- Ore -----
 		int ore = 0;
@@ -1447,6 +1448,96 @@ public final class SelfTest {
 			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
 		}
 		Explosions.clearHits();
+	}
+
+	/** The Practice Dummy: your turrets and Tesla Coils fire on it in your own base, for free; it goes after a minute. */
+	private void practiceChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo) {
+		var claim = SeasonData.get().claimOf(alpha.getUUID());
+		if (claim == null) {
+			check("practice: Alpha has a base to practise in", false);
+			return;
+		}
+		// Earlier checks knocked Alpha's Heart out: stand the base up again for this.
+		boolean wasDestroyed = claim.destroyed;
+		claim.destroyed = false;
+		Phase before = SeasonData.get().phase;
+		SeasonData.get().phase = Phase.BUILD;
+		dev.rubymod.game.Practice.reset();
+		BlockPos spot = surface(level, new BlockPos(claim.x - 12, 0, claim.z + 12));
+		try {
+			for (BlockPos p : BlockPos.betweenClosed(spot.offset(-5, 0, -2), spot.offset(5, 4, 2))) {
+				level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+			}
+			String outside = dev.rubymod.game.Practice.place(alpha, level, surface(level, new BlockPos(claim.x + claim.radius() + 40, 0, claim.z)));
+			String error = dev.rubymod.game.Practice.place(alpha, level, spot);
+			var dummies = level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ArmorStand.class, new net.minecraft.world.phys.AABB(spot).inflate(1),
+					a -> dev.rubymod.game.Practice.isDummy(a));
+			check("practice: a dummy goes up in your base, not outside it (" + error + ")", outside != null && error == null && dummies.size() == 1
+					&& dev.rubymod.game.Practice.active(claim));
+			if (dummies.isEmpty()) {
+				return;
+			}
+			var dummy = dummies.get(0);
+			// A Sentry Turret fires on it before Battle Day, without using its ammo.
+			BlockPos turretPos = spot.offset(-4, 0, 0);
+			level.setBlockAndUpdate(turretPos, ModBlocks.SENTRY_TURRET.defaultBlockState());
+			var turret = (dev.rubymod.block.DefenseBlockEntity) level.getBlockEntity(turretPos);
+			turret.ammo = 50;
+			for (int i = 0; i < 3; i++) {
+				turret.fireForTest(level, turretPos, claim);
+			}
+			int byTurret = dev.rubymod.game.Practice.hitsOn(dummy);
+			check("practice: your Sentry Turret fires on the dummy, and practice rounds are free (" + byTurret + " hits, ammo " + turret.ammo + ")",
+					byTurret >= 1 && turret.ammo == 50 && dummy.isAlive());
+			// A Tesla Coil too.
+			var tesla = machine(level, spot.offset(4, 0, 0), ModBlocks.TESLA_COIL, alpha);
+			dev.rubymod.industry.Grid.account(alpha.getUUID()).charge = 200_000;
+			runMachines(level, 31, tesla);
+			int byBoth = dev.rubymod.game.Practice.hitsOn(dummy);
+			check("practice: your Tesla Coil zaps it too (" + byTurret + " -> " + byBoth + ")", byBoth > byTurret && dummy.isAlive());
+			// Someone else's base doesn't count.
+			var other = SeasonData.get().claimOf(bravo.getUUID());
+			check("practice: other bases' defenses leave your dummy alone", other == null || !dev.rubymod.game.Practice.isDummyFor(other, dummy));
+			// A minute on, it's gone.
+			dev.rubymod.game.Practice.advance(61_000L);
+			dev.rubymod.game.Practice.tickSecond(level.getServer());
+			check("practice: after a minute the dummy goes", !dummy.isAlive() || dummy.isRemoved());
+			level.setBlockAndUpdate(turretPos, Blocks.AIR.defaultBlockState());
+			level.setBlockAndUpdate(spot.offset(4, 0, 0), Blocks.AIR.defaultBlockState());
+		} finally {
+			dev.rubymod.game.Practice.reset();
+			SeasonData.get().phase = before;
+			claim.destroyed = wasDestroyed;
+		}
+		// Saved things: the away note, and a world event the server crashed in the middle of.
+		var server = level.getServer();
+		dev.rubymod.industry.AwayTime.reset();
+		dev.rubymod.industry.AwayTime.made(alpha.getUUID(), new ItemStack(net.minecraft.world.item.Items.TORCH, 12));
+		dev.rubymod.industry.AwayTime.sold(alpha.getUUID(), 4000);
+		for (int i = 0; i < 45; i++) {
+			dev.rubymod.industry.AwayTime.tick(server);
+		}
+		String note = dev.rubymod.industry.AwayTime.latest(alpha.getUUID());
+		dev.rubymod.industry.AwayTime.saveAndLoadForTest(server);
+		String back = dev.rubymod.industry.AwayTime.latest(alpha.getUUID());
+		check("away: the note survives a restart (" + back + ")", !note.isEmpty() && note.equals(back) && back.contains("12 Torches"));
+		dev.rubymod.industry.AwayTime.reset();
+		SeasonData.get().phase = Phase.BUILD;
+		try {
+			BlockPos at = surface(level, new BlockPos(claim.x + claim.radius() + 60, 0, claim.z + 60));
+			var ground = level.getBlockState(at.below());
+			var players = java.util.List.<net.minecraft.server.level.ServerPlayer>of(alpha, bravo);
+			dev.rubymod.game.WorldEvents.begin(server, players, dev.rubymod.game.WorldEvents.Kind.CACHE, at, 0);
+			dev.rubymod.game.WorldEvents.tickSecond(server, players);
+			boolean built = level.getBlockState(at.below()).is(Blocks.BEACON) && dev.rubymod.game.WorldEvents.chestsLeftForTest(level) == 6;
+			dev.rubymod.game.WorldEvents.reset(); // the server "crashes": nothing in memory, the blocks still there
+			dev.rubymod.game.WorldEvents.recover(server); // ...and starts again
+			check("events: after a crash mid-event, the server tidies it away when it starts", built && level.getBlockState(at.below()) == ground
+					&& !level.getBlockState(at.offset(3, 0, 0)).is(Blocks.CHEST) && !level.getBlockState(at.offset(1, -2, 1)).is(Blocks.IRON_BLOCK));
+		} finally {
+			dev.rubymod.game.WorldEvents.reset();
+			SeasonData.get().phase = before;
+		}
 	}
 
 	/** Build-phase world events: a fair spot, a Supply Cache that opens and goes, a Ruby Shrine held and contested. */
@@ -1549,6 +1640,8 @@ public final class SelfTest {
 			dev.rubymod.game.WorldEvents.advance(5 * 60_000L);
 			dev.rubymod.game.WorldEvents.tickSecond(server, both);
 			long bank3 = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
+			String board = dev.rubymod.game.WorldEvents.leadersForTest(server);
+			check("events: the shrine's banner shows who's held it longest (" + board + ")", board.contains("0:11"));
 			check("events: whoever held the shrine longest gets 15 more when it ends (+" + (bank3 - bank2) + ")", bank3 - bank2 == 15
 					&& dev.rubymod.game.WorldEvents.kind() == null && !level.getBlockState(shrine.below()).is(Blocks.BEACON));
 			// Battle Day starting ends whatever's on.

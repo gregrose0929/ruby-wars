@@ -139,6 +139,7 @@ public final class Shop {
 			section("Turrets");
 			item(ModBlocks.SENTRY_TURRET, 1, 15);
 			item(ModBlocks.TESLA_COIL, 1, 35);
+			item(ModItems.PRACTICE_DUMMY, 1, 3);
 
 			cat("Air Defense");
 			section("Guns you man");

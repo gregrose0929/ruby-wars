@@ -114,7 +114,7 @@ public class DefenseBlockEntity extends BlockEntity {
 		SeasonData.Claim claim;
 		switch (block.kind()) {
 			case SENTRY_TURRET -> {
-				if (t % 4 == 0 && (claim = claimHere(serverLevel, pos)) != null && Rules.phase().pvp()) {
+				if (t % 4 == 0 && (claim = claimHere(serverLevel, pos)) != null && (Rules.phase().pvp() || dev.rubymod.game.Practice.active(claim))) {
 					be.tickTurret(serverLevel, pos, claim);
 				} else if (t % 4 == 0 && dev.rubymod.game.Horde.inOutpost(serverLevel, pos)) {
 					be.tickHordeTurret(serverLevel, pos);
@@ -222,6 +222,11 @@ public class DefenseBlockEntity extends BlockEntity {
 		}
 	}
 
+	/** For tests: one go at firing, as on a turret's tick. */
+	public void fireForTest(ServerLevel level, BlockPos pos, SeasonData.Claim claim) {
+		tickTurret(level, pos, claim);
+	}
+
 	private void tickTurret(ServerLevel level, BlockPos pos, SeasonData.Claim claim) {
 		if (ammo <= 0) {
 			return;
@@ -234,6 +239,8 @@ public class DefenseBlockEntity extends BlockEntity {
 		}
 		candidates.addAll(level.getEntitiesOfClass(dev.rubymod.entity.SoldierEntity.class, new AABB(gun, gun).inflate(range),
 				s -> s.isAlive() && s.isEnemyOfClaim(claim)));
+		candidates.addAll(level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ArmorStand.class, new AABB(gun, gun).inflate(range),
+				a -> dev.rubymod.game.Practice.isDummyFor(claim, a)));
 		Optional<net.minecraft.world.entity.LivingEntity> target = candidates.stream()
 				.filter(p -> canSee(level, gun, p.getEyePosition()) || canSee(level, gun, p.position().add(0, 1, 0)))
 				.min(Comparator.comparingDouble(p -> p.distanceToSqr(gun)));
@@ -244,8 +251,13 @@ public class DefenseBlockEntity extends BlockEntity {
 		Vec3 aim = victim.position().add(0, victim.getBbHeight() * 0.6, 0);
 		aimAt(level, pos, gun, aim);
 		victim.setInvulnerableTime(0);
-		victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, owner(level, claim)), TURRET_DAMAGE);
-		ammo--;
+		boolean practice = dev.rubymod.game.Practice.isDummy(victim);
+		if (practice) {
+			dev.rubymod.game.Practice.hit(victim, "Sentry Turret"); // practice rounds are free
+		} else {
+			victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, owner(level, claim)), TURRET_DAMAGE);
+			ammo--;
+		}
 		cooldown = 3;
 		setChanged();
 		level.playSound(null, pos, dev.rubymod.registry.ModSounds.RIFLE_SHOT, SoundSource.BLOCKS, 1.0F, 1.25F);

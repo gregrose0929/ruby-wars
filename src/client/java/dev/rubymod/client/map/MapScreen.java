@@ -74,9 +74,15 @@ public class MapScreen extends Screen {
 			for (MorePayloads.Marker m : map.markers()) {
 				int[] p = screen(m.x(), m.z(), x0, y0, size);
 				int color = Markers.color(m.kind());
-				g.fill(p[0] - 3, p[1] - 3, p[0] + 4, p[1] + 4, 0xFF101010);
-				g.fill(p[0] - 2, p[1] - 2, p[0] + 3, p[1] + 3, color);
-				g.text(font, m.name(), p[0] + 6, p[1] - 4, color, true);
+				var icon = Markers.icon(m.kind());
+				if (icon.isEmpty()) {
+					g.fill(p[0] - 3, p[1] - 3, p[0] + 4, p[1] + 4, 0xFF101010);
+					g.fill(p[0] - 2, p[1] - 2, p[0] + 3, p[1] + 3, color);
+					g.text(font, m.name(), p[0] + 6, p[1] - 4, color, true);
+				} else {
+					g.item(icon, p[0] - 8, p[1] - 8);
+					g.text(font, m.name(), p[0] + 10, p[1] - 4, color, true);
+				}
 			}
 			for (MorePayloads.Mate mate : map.mates()) {
 				int[] p = screen((int) mate.x(), (int) mate.z(), x0, y0, size);
@@ -101,12 +107,20 @@ public class MapScreen extends Screen {
 				: new String[] {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart"};
 		int lx = x0 + size + 10;
 		if (lx + 92 < w) {
-			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 40);
+			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 52);
 			for (int i = 0; i < names.length; i++) {
 				g.fill(lx + 2, y0 + i * 12 + 2, lx + 7, y0 + i * 12 + 7, Markers.color((byte) i));
 				g.text(font, names[i], lx + 11, y0 + i * 12, dev.rubymod.client.ui.Ui.DIM, false);
 			}
-			int cy = y0 + names.length * 12 + 6;
+			// World events: a chest, a crystal or ruby ore.
+			int ey = y0 + names.length * 12;
+			g.pose().pushMatrix();
+			g.pose().translate(lx + 1, ey);
+			g.pose().scale(0.5F, 0.5F);
+			g.item(Markers.icon((byte) 8), 0, 0);
+			g.pose().popMatrix();
+			g.text(font, "World event", lx + 11, ey, dev.rubymod.client.ui.Ui.DIM, false);
+			int cy = ey + 12 + 6;
 			g.text(font, "Claims", lx + 2, cy, dev.rubymod.client.ui.Ui.GOLD, false);
 			int[] cc = squads ? new int[] {0xFF5BE37D, 0xFF55AAFF, 0xFFFF5050} : new int[] {0xFF5BE37D, 0xFFFF5050};
 			String[] cn = squads ? new String[] {"Yours", "Squad", "Other"} : new String[] {"Yours", "Others"};
