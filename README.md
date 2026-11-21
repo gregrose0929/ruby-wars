@@ -184,7 +184,8 @@ what's in them. Look at a silo or machine to see what it feeds or fills.
 
 Night battles (the admin can switch them on) with searchlights, flares and night-vision
 goggles; sandstorms and blizzards over the desert and snow corners; and, while you build,
-world events (a Supply Cache, a Ruby Shrine, a Ruby Meteor) that draw everyone out to fight over them; **War Graves** that keep your
+world events (a Supply Cache that opens in waves, a Ruby Shrine to hold alone, a Ruby Meteor), marked by a
+beacon's beam and told to everyone two minutes ahead, that draw everyone out to fight over them; **War Graves** that keep your
 gear where you fell; and a kill feed, hit markers and kill-cam.
 
 ### Goals and upgrades

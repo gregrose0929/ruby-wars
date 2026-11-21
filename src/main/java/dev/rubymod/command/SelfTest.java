@@ -727,6 +727,10 @@ public final class SelfTest {
 		level.setBlockAndUpdate(stopper, AIR);
 		boolean restarted = !level.getBlockState(a).getValue(dev.rubymod.industry.ConveyorBlock.POWERED);
 		check("belts: redstone stops a belt (and starts it again): " + stopped + ", " + restarted, stopped && waits && restarted);
+		// Anything an earlier check left riding the belt would muddle this.
+		for (var stray : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(c).inflate(1))) {
+			stray.discard();
+		}
 		var crowd = new net.minecraft.world.entity.item.ItemEntity(level, c.getX() + 0.5, c.getY() + 0.3, c.getZ() + 0.5,
 				new ItemStack(net.minecraft.world.item.Items.COAL));
 		level.addFreshEntity(crowd);
@@ -1454,30 +1458,58 @@ public final class SelfTest {
 				}
 			}
 			check("events: they're put out between the bases, clear of every claim (" + (fair == null ? "nowhere" : fair.toShortString()) + ")", clear);
-			// Supply Cache: told, then open with chests of loot, then gone with the ground put back.
+			// Supply Cache: told (a beacon over the spot), then open in waves, then gone with the ground put back.
+			var W = new Object() {
+				int chests() {
+					return dev.rubymod.game.WorldEvents.chestsLeftForTest(level);
+				}
+			};
 			var groundBefore = level.getBlockState(spot.below());
 			var cornerBefore = level.getBlockState(spot.offset(3, -1, 3));
+			var ironBefore = level.getBlockState(spot.offset(1, -2, 1));
 			String told = dev.rubymod.game.WorldEvents.begin(server, both, dev.rubymod.game.WorldEvents.Kind.CACHE, spot, 2 * 60_000L);
 			dev.rubymod.game.WorldEvents.tickSecond(server, both);
 			boolean waiting = told == null && !dev.rubymod.game.WorldEvents.isOpen() && !level.getBlockState(spot).is(Blocks.CHEST);
+			check("events: a beacon's beam marks the spot while it's told, and nobody can mine it", waiting
+					&& level.getBlockState(spot.below()).is(Blocks.BEACON) && level.getBlockState(spot.offset(1, -2, 1)).is(Blocks.IRON_BLOCK)
+					&& level.getBlockState(spot).is(Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.LIGHT_BLUE)) && dev.rubymod.game.WorldEvents.protects(level, spot.below())
+					&& !Rules.canWeaponBreak(level, spot.offset(1, -2, 1), level.getBlockState(spot.offset(1, -2, 1))));
 			dev.rubymod.game.WorldEvents.advance(2 * 60_000L + 1000);
 			alpha.teleportTo(level, spot.getX() + 0.5, spot.getY(), spot.getZ() - 1.5, java.util.Set.of(), 0, 0, true);
 			dev.rubymod.game.WorldEvents.tickSecond(server, both);
-			int chests = dev.rubymod.game.WorldEvents.chestsLeftForTest(level);
+			int ring = W.chests();
+			check("events: a Supply Cache opens with 6 chests of loot round a sealed glass case (" + ring + " chests)",
+					dev.rubymod.game.WorldEvents.isOpen() && ring == 6 && !level.getBlockState(spot).is(Blocks.CHEST)
+							&& !dev.rubymod.game.WorldEvents.protects(level, spot.offset(3, 0, 0)));
+			var rec = SeasonData.get().players.get(alpha.getUUID().toString());
+			check("events: getting there counts for the Supply Cache goal", rec != null && (rec.goalsDone.contains("cache") || rec.goalProgress.getOrDefault("cache", 0) > 0));
+			dev.rubymod.game.WorldEvents.advance(2 * 60_000L);
+			dev.rubymod.game.WorldEvents.tickSecond(server, both);
 			var middle = level.getBlockEntity(spot) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity c ? c : null;
 			int rubies = 0;
 			for (int i = 0; middle != null && i < middle.getContainerSize(); i++) {
 				rubies += middle.getItem(i).is(ModItems.RUBY) ? middle.getItem(i).getCount() : 0;
 			}
-			check("events: a Supply Cache is told 2 minutes ahead, then opens with 7 chests of loot (" + chests + " chests, " + rubies + " rubies in the middle)",
-					waiting && dev.rubymod.game.WorldEvents.isOpen() && chests == 7 && rubies >= 10);
-			var rec = SeasonData.get().players.get(alpha.getUUID().toString());
-			check("events: getting there counts for the Supply Cache goal", rec != null && (rec.goalsDone.contains("cache") || rec.goalProgress.getOrDefault("cache", 0) > 0));
-			dev.rubymod.game.WorldEvents.advance(9 * 60_000L);
+			check("events: two minutes on, the case opens into the big chest (" + rubies + " rubies in it, " + W.chests() + " chests)", rubies >= 10 && W.chests() == 7);
+			// Everything taken: fresh supplies land five minutes in.
+			for (BlockPos pos : BlockPos.betweenClosed(spot.offset(-3, 0, -3), spot.offset(3, 0, 3))) {
+				if (level.getBlockEntity(pos) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity c) {
+					c.clearContent();
+				}
+			}
+			int emptied = W.chests();
+			dev.rubymod.game.WorldEvents.advance(3 * 60_000L);
 			dev.rubymod.game.WorldEvents.tickSecond(server, both);
-			check("events: the cache crumbles after, and the ground is put back", dev.rubymod.game.WorldEvents.kind() == null
+			check("events: five minutes in, fresh supplies land in 3 of the chests (" + emptied + " -> " + W.chests() + ")", emptied == 0 && W.chests() == 3);
+			dev.rubymod.game.WorldEvents.advance(4 * 60_000L);
+			dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			int spilled = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(spot).inflate(5)).size();
+			check("events: the cache crumbles after, what's left spills out, and the ground is put back (" + spilled + " items)", dev.rubymod.game.WorldEvents.kind() == null
 					&& level.getBlockState(spot.below()) == groundBefore && level.getBlockState(spot.offset(3, -1, 3)) == cornerBefore
-					&& !level.getBlockState(spot).is(Blocks.CHEST));
+					&& level.getBlockState(spot.offset(1, -2, 1)) == ironBefore && !level.getBlockState(spot).is(Blocks.CHEST) && spilled > 0);
+			for (var item : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(spot).inflate(5))) {
+				item.discard();
+			}
 			// Ruby Shrine: alone in it, rubies; someone else in it, contested; longest holder gets the bonus.
 			BlockPos shrine = surface(level, spot.offset(40, 0, 0));
 			dev.rubymod.game.WorldEvents.begin(server, both, dev.rubymod.game.WorldEvents.Kind.SHRINE, shrine, 0);
@@ -1500,7 +1532,7 @@ public final class SelfTest {
 			dev.rubymod.game.WorldEvents.tickSecond(server, both);
 			long bank3 = dev.rubymod.industry.Grid.rubies(alpha.getUUID());
 			check("events: whoever held the shrine longest gets 15 more when it ends (+" + (bank3 - bank2) + ")", bank3 - bank2 == 15
-					&& dev.rubymod.game.WorldEvents.kind() == null && level.getBlockState(shrine.below()) != ModBlocks.RUBY_BLOCK.defaultBlockState());
+					&& dev.rubymod.game.WorldEvents.kind() == null && !level.getBlockState(shrine.below()).is(Blocks.BEACON));
 			// Battle Day starting ends whatever's on.
 			dev.rubymod.game.WorldEvents.begin(server, both, dev.rubymod.game.WorldEvents.Kind.CACHE, spot, 0);
 			dev.rubymod.game.WorldEvents.tickSecond(server, both);

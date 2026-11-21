@@ -9243,7 +9243,17 @@ public final class AutoTest {
 			p.teleportTo(level, spot.getX() + 0.5, spot.getY() + 1, spot.getZ() - 7.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true);
 		}));
 		then(30, mc -> shot(mc, "event-told"));
-		then(240, mc -> shot(mc, "event-cache"));
+		then(5, mc -> onServer(mc, server -> {
+			var at = dev.rubymod.game.WorldEvents.at();
+			me(server).teleportTo(server.overworld(), at.getX() + 0.5, at.getY() + 2, at.getZ() - 70.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 0, true);
+		}));
+		then(100, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(dev.rubymod.game.WorldEvents.at().above(14))));
+		then(20, mc -> shot(mc, "event-beam"));
+		then(5, mc -> onServer(mc, server -> {
+			var at = dev.rubymod.game.WorldEvents.at();
+			me(server).teleportTo(server.overworld(), at.getX() + 0.5, at.getY() + 1, at.getZ() - 7.5, java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 25, true);
+		}));
+		then(120, mc -> shot(mc, "event-cache"));
 		then(5, mc -> onServer(mc, server -> {
 			var p = me(server);
 			var at = dev.rubymod.game.WorldEvents.at();

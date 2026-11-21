@@ -518,6 +518,10 @@ public final class GameEvents {
 				deny(player, "That's part of the battlefield.");
 				return false;
 			}
+			if (WorldEvents.protects(level, pos)) {
+				deny(player, "That's part of the world event: it goes when the event does.");
+				return false;
+			}
 			if (state.is(ModBlocks.RUBY_HEART)) {
 				return canBreakHeart((ServerPlayer) player, level, pos);
 			}
