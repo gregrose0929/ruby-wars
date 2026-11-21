@@ -24,15 +24,13 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-21-practice";
+	private static final String VERSION = "2026-11-21-together";
 	private static final List<String> LINES = List.of(
-			"minecraft:chest|New: world events while you build. A Supply Cache turns up out between the bases: a ring of chests now, the big chest in the middle 2 minutes later, fresh supplies at 5.",
-			"rubymod:ruby_block|Ruby Shrine: stand in its ring alone and rubies go into your bank. Anyone else in it and it's contested. The longest holder gets a bonus.",
-			"rubymod:ruby_ore|Ruby Meteors take a turn too, told two minutes ahead so everyone can race for them.",
-			"minecraft:beacon|Everyone is told two minutes ahead, a beacon's beam marks the spot, it's on your map (K), and you can fight out there. They come when two or more of you are on.",
-			"minecraft:armor_stand|New at the Armory: the Practice Dummy. Put it up in your base and watch your turrets and Tesla Coils fire on it (practice raids are gone).",
-			"minecraft:compass|World events have their own icons on the map, with the time left. In the hub? Click [Go to Ruby Wars] when one's announced.",
-			"rubymod:ore_refinery|Machines keep working while you're away (even when nobody's on), and the \"While you were away\" note now survives a restart.");
+			"minecraft:golden_apple|Knocked out on Battle Day? You can still help: send gifts (golden apples, ammo, grenades) to anyone still in, every 3 minutes. Click a name in the chat.",
+			"minecraft:oak_door|Open House: /rubywars openhouse lets everyone visit your base (they can look, not touch). Show off what you've built!",
+			"minecraft:writable_book|The Guide (J) now has three chapters, from your first Heart to being ready for Battle Day. Steps that need others on are optional.",
+			"minecraft:armor_stand|The Practice Dummy (Armory, Defenses): watch your turrets and Tesla Coils fire on it before Battle Day.",
+			"minecraft:chest|World events have their own map icons with the time left, and a [Go to Ruby Wars] button for anyone in the hub.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

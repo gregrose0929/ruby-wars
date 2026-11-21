@@ -15,7 +15,11 @@ public final class Guide {
 	public record Step(String title, String hint, String goal, boolean optional) {
 	}
 
-	public static final List<Step> STEPS = List.of(
+	/** A stretch of the season: its steps, in order. */
+	public record Chapter(String title, List<Step> steps) {
+	}
+
+	private static final List<Step> STARTED = List.of(
 			new Step("Place your Ruby Heart", "Pick a spot for your base (K opens the map) and place it. A starter base appears around it: "
 					+ "an Armory, and a Ruby Drill that digs ore into a chest (sell it at the Trade Depot).", "heart", false),
 			new Step("Buy something at your Armory", "Right-click the Armory by your Heart. It spends the rubies you carry, then your bank.", "armory", false),
@@ -25,8 +29,47 @@ public final class Guide {
 					"defense", false),
 			new Step("Spend stars on an upgrade", "Goals give stars. Press J, open UPGRADES and pick one: it unlocks tanks, jets and more "
 					+ "in the Armory.", "#research", false),
-			new Step("Get to a Supply Cache", "World events are told to everyone two minutes ahead and marked on your map (K). Get there first, and watch out for the others.",
-					"cache", false));
+			new Step("Get to a Supply Cache", "World events come when two or more of you are on: they're told two minutes ahead and marked on your map (K). Get there first, and watch out for the others.",
+					"cache", true));
+
+	private static final List<Step> GROW = List.of(
+			new Step("Build a generator", "A Combustion Generator (Armory, Machines) burns coal, charcoal or wood day and night. Solar panels rest at night.", "power", false),
+			new Step("Sell at a Trade Depot", "A Trade Depot buys anything. Put a belt from your drill's chest into it, or drop things in by hand.", "sell100", false),
+			new Step("3 machines busy at once", "A drill, a Refinery and an Assembler working together. An Ore Silo next to a machine feeds it, no belts needed.", "busy3", false),
+			new Step("Machine to Mk III", "Open a machine and press Upgrade (it spends rubies). Higher tiers work faster.", "mk3", false),
+			new Step("Bank 100 rubies", "Rubies from the Trade Depot go straight into your bank. A Vault keeps them safer.", "bank500", false),
+			new Step("Hold a Ruby Shrine longest", "When a Ruby Shrine lights up, stand in its ring alone: rubies go into your bank, and the longest holder gets a bonus.",
+					"shrine", true));
+
+	private static final List<Step> READY = List.of(
+			new Step("Heart to tier 3", "At the Armory, Your Heart tab: upgrade it again (60 rubies). A bigger claim, more health and more drills.", "heart3", false),
+			new Step("Place 5 base defenses", "Turrets, walls, mines and Tesla Coils. Try them on a Practice Dummy (Armory, Defenses) to see what they hit.", "defense5", false),
+			new Step("Build a Vault", "A Vault keeps your bank and pays a little interest each day. On Battle Day, guard it: a blown-open Vault spills rubies.", "vault", false),
+			new Step("Bank 200 rubies", "Rubies to spend on Battle Day: ammo, vehicles, missiles.", "bank2000", false),
+			new Step("Drive 300 blocks", "A Jeep, a Dirt Bike or a Quad from the Armory (Vehicles). Learn the roads before Battle Day.", "drive", false),
+			new Step("Fly 500 blocks", "Jetpacks count. Aircraft unlock with upgrade stars (J, UPGRADES).", "fly", true));
+
+	public static final List<Chapter> CHAPTERS = List.of(
+			new Chapter("Getting started", STARTED),
+			new Chapter("Grow your base", GROW),
+			new Chapter("Ready for Battle Day", READY));
+
+	/** The chapter you're on: the first with a step still to do (optional ones aside), or the last. */
+	public static int chapter() {
+		for (int c = 0; c < CHAPTERS.size(); c++) {
+			for (Step s : CHAPTERS.get(c).steps()) {
+				if (!s.optional() && !done(s)) {
+					return c;
+				}
+			}
+		}
+		return CHAPTERS.size() - 1;
+	}
+
+	/** This chapter's steps. */
+	public static List<Step> steps() {
+		return CHAPTERS.get(chapter()).steps();
+	}
 
 	private Guide() {
 	}
@@ -67,10 +110,11 @@ public final class Guide {
 		return null;
 	}
 
-	/** The first step still to do (optional ones skipped), or -1 when they're all done. */
+	/** The first step still to do in this chapter (optional ones skipped), or -1 when every chapter is done. */
 	public static int current() {
-		for (int i = 0; i < STEPS.size(); i++) {
-			if (!STEPS.get(i).optional() && !done(STEPS.get(i))) {
+		List<Step> steps = steps();
+		for (int i = 0; i < steps.size(); i++) {
+			if (!steps.get(i).optional() && !done(steps.get(i))) {
 				return i;
 			}
 		}
@@ -85,7 +129,7 @@ public final class Guide {
 		}
 		if (phase == Phase.BUILD) {
 			int day = ClientState.hud == null ? 0 : ClientState.hud.day();
-			return "Build day " + day + ". Watch for world events (Supply Caches, Ruby Shrines, meteors). Battle Day comes when the admin calls it (or on the date they set): last player standing wins.";
+			return "Build day " + day + ". Watch for world events. Battle Day comes when the admin calls it: last player standing wins.";
 		}
 		if (phase == Phase.ENDED) {
 			return "The season is over. A new one starts soon.";

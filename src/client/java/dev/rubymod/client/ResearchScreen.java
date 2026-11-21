@@ -190,12 +190,16 @@ public class ResearchScreen extends Screen {
 		int x0 = px + 10;
 		int y0 = py() + 12;
 		y0 = Ui.wrap(g, Guide.season(), x0, y0, total, Ui.alpha(Ui.DIM, fade), height) + 6;
-		int n = Guide.STEPS.size();
+		int chapter = Guide.chapter();
+		Ui.text(g, "Chapter " + (chapter + 1) + " of " + Guide.CHAPTERS.size() + ": " + Guide.CHAPTERS.get(chapter).title(), x0, y0, Ui.alpha(Ui.GOLD, fade));
+		y0 += 13;
+		List<Guide.Step> steps = Guide.steps();
+		int n = steps.size();
 		int rows = (n + cols - 1) / cols;
 		int rowH = 14;
 		List<String> tip = null;
 		for (int i = 0; i < n; i++) {
-			Guide.Step s = Guide.STEPS.get(i);
+			Guide.Step s = steps.get(i);
 			boolean done = Guide.done(s);
 			boolean now = i == current;
 			int x = x0 + (i / rows) * (colW + 8);
@@ -225,7 +229,7 @@ public class ResearchScreen extends Screen {
 		}
 		int y = y0 + rows * rowH + 6;
 		if (current >= 0) {
-			Guide.Step s = Guide.STEPS.get(current);
+			Guide.Step s = steps.get(current);
 			int lines = Ui.lines(s.hint(), total - 16);
 			int boxH = 22 + lines * 10;
 			Ui.inset(g, x0, y, total, boxH);
@@ -235,7 +239,7 @@ public class ResearchScreen extends Screen {
 			y += boxH + 6;
 		} else {
 			Ui.icon(g, Ui.Icon.CHECK, x0, y);
-			Ui.text(g, "Every step done! Keep growing your base and get ready for Battle Day.", x0 + 12, y + 1, Ui.GREEN);
+			Ui.text(g, "Every chapter done! Your base is ready for Battle Day.", x0 + 12, y + 1, Ui.GREEN);
 			y += 14;
 		}
 		Ui.wrap(g, "Any time, press H to try Free Roam, the party games, Co-op Horde, the Rift or the Convoy.", x0, y, total, Ui.MUTED, py() + panelH() - 4);

@@ -152,6 +152,8 @@ public final class GameEvents {
 			WorldEvents.reset();
 			WorldEvents.recover(server);
 			Practice.reset();
+			Gifts.reset();
+			OpenHouse.reset();
 			dev.rubymod.industry.AwayTime.load(server);
 			if (server.getLevel(Hub.HUB) != null) {
 				Hub.ensureBuilt(server.getLevel(Hub.HUB));
@@ -183,6 +185,8 @@ public final class GameEvents {
 			dev.rubymod.industry.AwayTime.tick(server);
 			WorldEvents.tick(server);
 			Practice.tick(server);
+			Gifts.tick(server);
+			OpenHouse.tick(server);
 			BetweenSeasons.tick(server);
 			Celebrations.tick(server);
 			CannonRounds.tick();

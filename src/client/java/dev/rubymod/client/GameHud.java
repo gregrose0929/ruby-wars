@@ -348,7 +348,7 @@ public class GameHud implements HudElement {
 
 	/** The guide's one-line form: "Next: ..." and the step's count ("" if none). */
 	private static String[] guideLine(int step) {
-		Guide.Step s = Guide.STEPS.get(step);
+		Guide.Step s = Guide.steps().get(step);
 		int[] progress = Guide.progress(s);
 		return new String[] {"Next: " + s.title(), progress != null && progress[1] > 1 ? progress[0] + "/" + progress[1] : ""};
 	}
@@ -362,7 +362,7 @@ public class GameHud implements HudElement {
 			guideStep = step;
 			guideChangedAt = System.currentTimeMillis();
 		}
-		Guide.Step s = Guide.STEPS.get(step);
+		Guide.Step s = Guide.steps().get(step);
 		int[] progress = Guide.progress(s);
 		boolean counted = progress != null && progress[1] > 1;
 		String count = counted ? progress[0] + "/" + progress[1] : "";
@@ -395,7 +395,7 @@ public class GameHud implements HudElement {
 		int height = 5 + 11 + 12 + lines * 10 + (counted ? 7 : 0) + 2 + 9 + 4;
 		panel(g, x, y, x + pw, y + height);
 		g.fill(x + 2, y + 2, x + 4, y + height - 2, GOLD);
-		g.text(font, dev.rubymod.client.ui.Ui.fit("Next step, " + (step + 1) + " of " + Guide.STEPS.stream().filter(st -> !st.optional()).count(), inner),
+		g.text(font, dev.rubymod.client.ui.Ui.fit(Guide.CHAPTERS.get(Guide.chapter()).title() + ": step " + (step + 1) + " of " + Guide.steps().stream().filter(st -> !st.optional()).count(), inner),
 				tx, ly, GOLD, true);
 		ly += 11;
 		g.text(font, dev.rubymod.client.ui.Ui.fit(s.title(), inner - (counted ? font.width(count) + 8 : 0)), tx, ly, WHITE, true);

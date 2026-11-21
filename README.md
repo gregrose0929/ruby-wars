@@ -164,7 +164,10 @@ a few round a drill sort what it digs), and a Refinery or Assembler takes what i
 silo touching it, with no belts needed. Machines picked up with the Wrench keep their settings, and it picks up Ore Silos with
 what's in them. Look at a silo or machine to see what it feeds or fills. A **Practice Dummy**
 (Armory, Defenses) stands in your base for a minute so you can watch your turrets and Tesla
-Coils work before Battle Day.
+Coils work before Battle Day. `/rubywars openhouse` opens your base for visitors (everyone gets
+a button to come and look, and one to go back), and on Battle Day players who've been knocked
+out can send gifts to those still in, every few minutes. The Guide (J) runs in three chapters,
+from your first Heart to being ready for Battle Day.
 
 ### Weapons and vehicles
 
