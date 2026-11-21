@@ -316,6 +316,8 @@ public final class SelfTest {
 		ironSilo.put(new ItemStack(net.minecraft.world.item.Items.RAW_IRON, 64));
 		ironSilo.put(new ItemStack(net.minecraft.world.item.Items.RAW_IRON, 36));
 		var awayRefinery = machine(level, awayAt.east(), ModBlocks.ORE_REFINERY, alpha);
+		check("look: a silo of raw iron against a Refinery feeds it", awayRefinery.takesFrom(ironSilo)
+				&& awayRefinery.takingFromSilo(level).is(net.minecraft.world.item.Items.RAW_IRON));
 		awayRefinery.catchUp(level, 24000);
 		int ingots = 0;
 		for (int i = 2; i < awayRefinery.getContainerSize(); i++) {
@@ -386,6 +388,64 @@ public final class SelfTest {
 				&& movedAsm.recipe() == torches && asmLines.contains("Set to make " + dev.rubymod.industry.Recipes.ASSEMBLY.get(torches).name()));
 		level.setBlockAndUpdate(awayAt, Blocks.AIR.defaultBlockState());
 		level.setBlockAndUpdate(awayAt.east(2), Blocks.AIR.defaultBlockState());
+		// Nobody on (the server's clock stopped): machines still catch up, by real time.
+		BlockPos lineAt = awayAt.offset(0, 0, 3);
+		for (BlockPos p : BlockPos.betweenClosed(lineAt.offset(-1, 0, -1), lineAt.offset(10, 2, 1))) {
+			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+		}
+		var pausedRefinery = machine(level, lineAt, ModBlocks.ORE_REFINERY, alpha);
+		pausedRefinery.setItem(0, new ItemStack(net.minecraft.world.item.Items.RAW_GOLD, 16));
+		dev.rubymod.industry.Grid.account(A).charge = 0;
+		runMachines(level, 1, pausedRefinery);
+		pausedRefinery.lastRanAgo(10 * 60 * 1000L);
+		runMachines(level, 1, pausedRefinery);
+		check("away: machines catch up for time the server was paused too (" + pausedRefinery.getItem(2) + ")",
+				pausedRefinery.getItem(2).is(net.minecraft.world.item.Items.GOLD_INGOT) && pausedRefinery.getItem(2).getCount() >= 2);
+		// A belt line carries what it makes while catching up: drill, two belts, a ramp up, a belt and a chest.
+		var lineDrill = machine(level, lineAt.east(2), ModBlocks.RUBY_DRILL, alpha);
+		lineDrill.setTier(5);
+		var beltEast = ModBlocks.CONVEYOR.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, net.minecraft.core.Direction.EAST);
+		level.setBlockAndUpdate(lineAt.east(3), beltEast);
+		level.setBlockAndUpdate(lineAt.east(4), beltEast);
+		level.setBlockAndUpdate(lineAt.east(5), ModBlocks.BELT_RAMP.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, net.minecraft.core.Direction.EAST));
+		level.setBlockAndUpdate(lineAt.east(6).above(), beltEast);
+		level.setBlockAndUpdate(lineAt.east(7).above(), Blocks.CHEST.defaultBlockState());
+		var end = dev.rubymod.industry.Belts.endOf(level, lineAt.east(3), new ItemStack(net.minecraft.world.item.Items.COBBLESTONE));
+		check("belts: a line is followed to the chest at its end (" + (end == null ? "nowhere" : end.pos()) + ")", end != null && end.pos().equals(lineAt.east(7).above()));
+		lineDrill.catchUp(level, 24000);
+		var lineChest = (net.minecraft.world.Container) level.getBlockEntity(lineAt.east(7).above());
+		int inChest = 0;
+		for (int i = 0; i < lineChest.getContainerSize(); i++) {
+			inChest += lineChest.getItem(i).getCount();
+		}
+		check("away: a drill catching up sends what it digs along its belt to the chest (" + inChest + " in the chest, " + lineDrill.loads() + " loads)",
+				inChest > 0);
+		// The Wrench picks up an Ore Silo with everything in it.
+		level.setBlockAndUpdate(lineAt.east(9), ModBlocks.ORE_SILO.defaultBlockState());
+		var wrenchSilo = (dev.rubymod.industry.SiloBlockEntity) level.getBlockEntity(lineAt.east(9));
+		wrenchSilo.setOwner(A);
+		wrenchSilo.put(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64));
+		wrenchSilo.put(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64));
+		alpha.getInventory().clearContent();
+		alpha.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.RUBY_WRENCH));
+		alpha.setShiftKeyDown(true);
+		BlockPos wrenchAt = lineAt.east(9);
+		ModItems.RUBY_WRENCH.useOn(new net.minecraft.world.item.context.UseOnContext(alpha, net.minecraft.world.InteractionHand.MAIN_HAND,
+				new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(wrenchAt), net.minecraft.core.Direction.UP, wrenchAt, false)));
+		alpha.setShiftKeyDown(false);
+		long carried = 0;
+		for (int i = 0; i < alpha.getInventory().getContainerSize(); i++) {
+			ItemStack s = alpha.getInventory().getItem(i);
+			if (s.is(ModBlocks.ORE_SILO.asItem())) {
+				var c = s.get(net.minecraft.core.component.DataComponents.CONTAINER);
+				carried = c == null ? 0 : c.nonEmptyItemCopyStream().mapToInt(ItemStack::getCount).sum();
+			}
+		}
+		check("wrench: it picks up an Ore Silo with what's in it (" + carried + ")", level.getBlockState(wrenchAt).isAir() && carried == 128);
+		alpha.getInventory().clearContent();
+		for (BlockPos p : BlockPos.betweenClosed(lineAt.offset(-1, 0, -1), lineAt.offset(10, 2, 1))) {
+			level.setBlockAndUpdate(p, Blocks.AIR.defaultBlockState());
+		}
 		dev.rubymod.industry.AwayTime.reset();
 		// Prospector's Pick: finds the nearest Ruby Ore.
 		BlockPos dig = spot.offset(3, -30, 2);

@@ -85,7 +85,7 @@ public class OreSiloBlock extends BaseEntityBlock {
 	}
 
 	/** Its owner, or someone trusted in its owner's base (or anyone, for one nobody owns). */
-	private static boolean mayUse(SiloBlockEntity be, Player player) {
+	public static boolean mayUse(SiloBlockEntity be, Player player) {
 		if (be.owner() == null || be.owner().equals(player.getUUID()) || Rules.isAdminBypass(player)) {
 			return true;
 		}
@@ -197,8 +197,8 @@ public class OreSiloBlock extends BaseEntityBlock {
 		return InteractionResult.SUCCESS;
 	}
 
-	/** The silo item, carrying what it holds. */
-	private ItemStack drop(SiloBlockEntity be) {
+	/** The silo item, carrying what it holds (the silo is left empty). */
+	public ItemStack drop(SiloBlockEntity be) {
 		ItemStack drop = new ItemStack(this);
 		var stacks = be.asStacks();
 		if (!stacks.isEmpty()) {

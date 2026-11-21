@@ -10171,6 +10171,16 @@ public final class AutoTest {
 					}
 				}
 			}
+			// Silos behind the drill (it fills it) and the Refinery (coal for it).
+			for (int k = 0; k < 2; k++) {
+				var at = heartAt.offset(-2 + k * 2, 0, -2);
+				level.setBlockAndUpdate(at, dev.rubymod.registry.ModBlocks.ORE_SILO.defaultBlockState());
+				var silo = (dev.rubymod.industry.SiloBlockEntity) level.getBlockEntity(at);
+				silo.setOwner(p.getUUID());
+				if (k == 1) {
+					silo.put(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 64));
+				}
+			}
 			// Some ore under the drill, and Ruby Ore for the pick to find.
 			for (int k = 0; k < 30; k++) {
 				level.setBlockAndUpdate(heartAt.offset(-2 + k % 5 - 2, -1 - k / 25, -3 + k / 5 % 5 - 2), net.minecraft.world.level.block.Blocks.GOLD_ORE.defaultBlockState());
@@ -10202,6 +10212,14 @@ public final class AutoTest {
 			var look = ClientState.look;
 			log("look panel (drill): {}", look == null ? "nothing" : look.lines());
 			shot(mc, "drill-look-new");
+		});
+		then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), heartAt.getX() + 1.5, heartAt.getY(), heartAt.getZ() - 1.5,
+				java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 20, true)));
+		then(10, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(heartAt.offset(0, 0, -2))));
+		then(60, mc -> {
+			var look = ClientState.look;
+			log("look panel (feeding silo): {}", look == null ? "nothing" : look.lines());
+			shot(mc, "silo-feeds");
 		});
 		then(5, mc -> onServer(mc, server -> me(server).teleportTo(server.overworld(), heartAt.getX() + 4.5, heartAt.getY(), heartAt.getZ() - 5.2,
 				java.util.Set.<net.minecraft.world.entity.Relative>of(), 0, 10, true)));

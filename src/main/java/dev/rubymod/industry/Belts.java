@@ -9,6 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.BlastFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
@@ -104,6 +105,90 @@ public final class Belts {
 			return taken;
 		}
 		return ItemStack.EMPTY;
+	}
+
+	/** Where a belt line ends: the container (or machine) there, and the side things go in by. */
+	public record End(BlockPos pos, Direction face) {
+	}
+
+	private static boolean splitRight;
+
+	/**
+	 * Follow the belt line starting at {@code start} the way {@code stack} would ride it (Sorters turn it off, Splitters
+	 * take turns, ramps go up or down, Tunnels jump), to the chest or machine at its end. Null when it doesn't reach one
+	 * (a dead end, a stopped belt, a loop, or too far). For machines catching up after time away, when nothing has been
+	 * riding the belts.
+	 */
+	public static End endOf(Level level, BlockPos start, ItemStack stack) {
+		java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+		BlockPos at = start;
+		for (int step = 0; step < 256; step++) {
+			if (!seen.add(at) || !level.isLoaded(at)) {
+				return null;
+			}
+			BlockState s = level.getBlockState(at);
+			Direction out;
+			BlockPos next;
+			if (s.getBlock() instanceof BeltTunnelBlock) {
+				Direction f = s.getValue(BeltTunnelBlock.FACING);
+				if (!s.getValue(BeltTunnelBlock.EXIT)) {
+					BlockPos exit = BeltTunnelBlock.exitFor(level, at, s);
+					if (exit == null) {
+						return null;
+					}
+					at = exit;
+					continue;
+				}
+				out = f;
+				next = at.relative(f);
+			} else if (s.getBlock() instanceof ConveyorBlock) {
+				if (s.getValue(ConveyorBlock.POWERED)) {
+					return null;
+				}
+				Direction f = s.getValue(ConveyorBlock.FACING);
+				out = f;
+				if (s.getBlock() instanceof BeltSorterBlock) {
+					if (level.getBlockEntity(at) instanceof FilterBlockEntity be && !be.filter().isEmpty() && matches(be.filter(), stack)) {
+						out = BeltSorterBlock.side(s);
+					}
+				} else if (s.getBlock() instanceof BeltSplitterBlock) {
+					Direction first = splitRight ? f.getClockWise() : f.getCounterClockWise();
+					splitRight = !splitRight;
+					out = outlet(level, at.relative(first)) ? first : first.getOpposite();
+				}
+				next = s.getBlock() instanceof BeltRampBlock && !s.getValue(BeltRampBlock.DOWN) ? at.relative(out).above() : at.relative(out);
+			} else {
+				return null;
+			}
+			BlockState ns = level.getBlockState(next);
+			if (ns.getBlock() instanceof ConveyorBlock) {
+				if (ns.getValue(ConveyorBlock.FACING) == out.getOpposite()) {
+					return null; // the next piece runs back the other way
+				}
+				at = next;
+				continue;
+			}
+			if (ns.getBlock() instanceof BeltTunnelBlock) {
+				at = next;
+				continue;
+			}
+			if (containerAt(level, next) != null) {
+				return new End(next.immutable(), out.getOpposite());
+			}
+			// Off the end onto a down ramp below.
+			BlockState below = level.getBlockState(next.below());
+			if (ns.isAir() && below.getBlock() instanceof BeltRampBlock && below.getValue(BeltRampBlock.DOWN)) {
+				at = next.below();
+				continue;
+			}
+			return null;
+		}
+		return null;
+	}
+
+	private static boolean outlet(Level level, BlockPos pos) {
+		return level.getBlockState(pos).getBlock() instanceof ConveyorBlock || level.getBlockState(pos).getBlock() instanceof BeltTunnelBlock
+				|| containerAt(level, pos) != null;
 	}
 
 	/** Does this stack match a filter (an empty filter takes anything)? */

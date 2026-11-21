@@ -39,7 +39,7 @@ public class BaseScreen extends Screen {
 		return switch (status) {
 			case MachineBlockEntity.WORKING -> "Working";
 			case MachineBlockEntity.NO_POWER -> "No power";
-			case MachineBlockEntity.OUTPUT_FULL -> kind.generator() ? "Grid full" : "Full: empty it, or add a belt";
+			case MachineBlockEntity.OUTPUT_FULL -> kind.generator() ? "Grid full" : "Full: collect it, or add a silo or belt";
 			case MachineBlockEntity.NO_INPUT -> switch (kind) {
 				case COMBUSTION_GENERATOR -> "Needs fuel";
 				case CONSTRUCTOR -> "Needs a Blueprint or blocks";

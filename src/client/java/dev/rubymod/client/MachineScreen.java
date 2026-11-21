@@ -114,7 +114,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		int bw = font.width(badge) + 8;
 		dev.rubymod.client.ui.Ui.tag(g, MachineKind.TIER_NAMES[Math.min(tier, MachineKind.MAX_TIER) - 1], imageWidth - bw - 6, 4, RUBY);
 
-		drawStatus(g);
+		drawStatus(g, mouseX - leftPos, mouseY - topPos);
 		// Only machines that make, store or use power show the grid.
 		if (usesPower(kind)) {
 			drawPowerGauge(g, mouseX - leftPos, mouseY - topPos);
@@ -160,7 +160,13 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		String making = "Making: " + new ItemStack(out).getHoverName().getString() + (n > 1 ? " x" + n : "");
 		int room = (int) ((imageWidth - 66 - 6) / 0.75F);
 		small(g, dev.rubymod.client.ui.Ui.fit(making, room), 66, 64, TEXT);
-		small(g, gunpowder ? "Cooks like a furnace too" : "Coal + sand: gunpowder", 66, 73, MUTED);
+		int fed = menu.get(42);
+		if (fed > 0) {
+			String what = new ItemStack(BuiltInRegistries.ITEM.byId(fed - 1)).getHoverName().getString();
+			small(g, dev.rubymod.client.ui.Ui.fit("Taking " + what + " from the silo", room), 66, 73, GREEN);
+		} else {
+			small(g, gunpowder ? "Cooks like a furnace too" : "Coal + sand: gunpowder", 66, 73, MUTED);
+		}
 	}
 
 	/** The Assembler's recipes as a grid of what they make: click one to pick it. */
@@ -228,7 +234,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		}
 	}
 
-	private void drawStatus(GuiGraphicsExtractor g) {
+	private void drawStatus(GuiGraphicsExtractor g, int mx, int my) {
 		int status = menu.get(14);
 		String text;
 		int color;
@@ -275,6 +281,12 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			g.pose().scale(0.75F, 0.75F);
 			g.text(font, dev.rubymod.client.ui.Ui.fit(hint, room), 0, 0, MUTED, false);
 			g.pose().popMatrix();
+			// Cut short? The whole of it when you point at it.
+			if (font.width(hint) > room && mx >= 26 && mx < 116 && my >= 90 && my < 102) {
+				g.setComponentTooltipForNextFrame(font, List.of(Component.literal(text).withStyle(net.minecraft.ChatFormatting.YELLOW),
+						Component.literal(Character.toUpperCase(hint.charAt(0)) + hint.substring(1)).withStyle(net.minecraft.ChatFormatting.GRAY)),
+						mx + leftPos, my + topPos);
+			}
 		}
 	}
 
@@ -284,7 +296,8 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		return switch (status) {
 			case MachineBlockEntity.NO_POWER -> "add solar panels or a generator";
 			case MachineBlockEntity.OUTPUT_FULL -> kind.generator() ? "add a Battery Bank to store more"
-					: kind == MachineKind.RUBY_DRILL ? "crouch-click to collect, or run a belt to a chest" : "take it out, or run a belt onward";
+					: kind == MachineKind.RUBY_DRILL ? "crouch-click to collect, or put an Ore Silo or a belt next to it"
+					: "take it out, or put an Ore Silo or a belt next to it";
 			case MachineBlockEntity.NO_INPUT -> switch (kind) {
 				case COMBUSTION_GENERATOR -> "coal, charcoal, wood or lava";
 				case ORE_REFINERY -> "ore, something to cook, or coal + sand";
@@ -294,7 +307,8 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			};
 			case MachineBlockEntity.NIGHT -> "solar panels rest at night";
 			case MachineBlockEntity.WORKING -> switch (kind) {
-				case RUBY_DRILL -> "keeps what it digs until you collect it";
+				case RUBY_DRILL -> menu.get(43) > 0 ? "fills the " + (menu.get(43) == 1 ? "silo" : menu.get(43) + " silos") + " next to it"
+						: "keeps what it digs until you collect it";
 				case TRADE_DEPOT -> "selling into your bank";
 				default -> "";
 			};
@@ -372,7 +386,12 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		drawArrow(g, 66, 58, true);
 		g.text(font, r.count() + "x", 140, 64, MUTED, false);
 		if (kind() == MachineKind.ASSEMBLER) {
-			small(g, "Click the recipe to pick another", 66, 80, MUTED);
+			int fed = menu.get(42);
+			if (fed > 0) {
+				small(g, new ItemStack(BuiltInRegistries.ITEM.byId(fed - 1)).getHoverName().getString() + " comes from the silo next to it", 66, 80, GREEN);
+			} else {
+				small(g, "Click the recipe to pick another", 66, 80, MUTED);
+			}
 		}
 		// Faint pictures of the parts it needs in empty input slots.
 		int[][] at = MachineMenu.layout(kind());

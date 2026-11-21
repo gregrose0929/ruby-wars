@@ -24,13 +24,14 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-21-away";
+	private static final String VERSION = "2026-11-21-belts";
 	private static final List<String> LINES = List.of(
-			"rubymod:ore_refinery|While you're away, Refineries, Assemblers and Trade Depots keep working (at half speed, like drills), not just drills.",
+			"rubymod:ore_refinery|While you're away, Refineries, Assemblers and Trade Depots keep working (at half speed, like drills), even when nobody's on the server.",
+			"rubymod:conveyor|Belt lines carry things to the chest or machine at their end while you're away, too.",
 			"rubymod:battery|When you're back, one note says what all your machines made, and My Base shows it too.",
 			"rubymod:ore_silo|Ore Silos touching a drill fill up with what it digs, one kind each, so a few round a drill sort it. A silo against a Refinery or Assembler feeds it: no belts needed.",
-			"rubymod:ruby_wrench|Machines picked up with the Wrench keep their settings: a drill's Find and Stone, an Assembler's recipe.",
-			"rubymod:prospector_pick|The Prospector's Pick, Assembler recipe grid, Ore Silo and Rock Collection from last time are all in the Field Manual.",
+			"rubymod:ruby_wrench|Machines picked up with the Wrench keep their settings (a drill's Find and Stone, an Assembler's recipe), and it picks up Ore Silos with what's in them.",
+			"rubymod:prospector_pick|Look at a silo or machine to see what it feeds or fills. The Prospector's Pick, Assembler grid and Rock Collection are in the Field Manual.",
 			"minecraft:nether_star|Goals (J) fit in an evening or two: bank 100 and 200 rubies, mine 25 Ruby Ore, fly 500 blocks (jetpacks count), sail any boat, damage an enemy Heart.");
 
 	/** Who's seen this update's card. */

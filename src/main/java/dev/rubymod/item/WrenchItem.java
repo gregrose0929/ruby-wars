@@ -37,7 +37,7 @@ public class WrenchItem extends Item {
 
 	private static boolean ours(Block block) {
 		return block instanceof MachineBlock || block instanceof dev.rubymod.industry.ConveyorBlock || block instanceof dev.rubymod.industry.BeltLoaderBlock
-				|| block instanceof dev.rubymod.industry.BeltTunnelBlock;
+				|| block instanceof dev.rubymod.industry.BeltTunnelBlock || block instanceof dev.rubymod.industry.OreSiloBlock;
 	}
 
 	@Override
@@ -51,7 +51,8 @@ public class WrenchItem extends Item {
 		if (level.isClientSide() || !(context.getPlayer() instanceof ServerPlayer player)) {
 			return InteractionResult.SUCCESS;
 		}
-		if (!Rules.canBuild(player, level, pos) || level.getBlockEntity(pos) instanceof MachineBlockEntity be && !be.canUse(player)) {
+		if (!Rules.canBuild(player, level, pos) || level.getBlockEntity(pos) instanceof MachineBlockEntity be && !be.canUse(player)
+				|| level.getBlockEntity(pos) instanceof dev.rubymod.industry.SiloBlockEntity silo && !dev.rubymod.industry.OreSiloBlock.mayUse(silo, player)) {
 			player.sendOverlayMessage(Component.literal("That's not yours to change.").withStyle(ChatFormatting.RED));
 			return InteractionResult.FAIL;
 		}
@@ -159,6 +160,15 @@ public class WrenchItem extends Item {
 
 	private static void pickUp(Level level, BlockPos pos, BlockState state, ServerPlayer player) {
 		ItemStack item = new ItemStack(state.getBlock());
+		if (level.getBlockEntity(pos) instanceof dev.rubymod.industry.SiloBlockEntity silo && state.getBlock() instanceof dev.rubymod.industry.OreSiloBlock block) {
+			// An Ore Silo comes with everything in it, on the item (like breaking it).
+			item = block.drop(silo);
+			level.removeBlockEntity(pos);
+			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+			give(player, item);
+			level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.7F, 0.8F);
+			return;
+		}
 		if (level.getBlockEntity(pos) instanceof MachineBlockEntity be) {
 			MachineBlock.released(be);
 			if (level instanceof net.minecraft.server.level.ServerLevel server) {
@@ -197,8 +207,8 @@ public class WrenchItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
-		builder.accept(Component.literal("Right-click a machine or belt to turn it").withStyle(ChatFormatting.GRAY));
-		builder.accept(Component.literal("Crouch + right-click to pick it up (it keeps its tier and settings)").withStyle(ChatFormatting.GRAY));
+		builder.accept(Component.literal("Right-click a machine, belt or silo to turn it").withStyle(ChatFormatting.GRAY));
+		builder.accept(Component.literal("Crouch + right-click to pick it up (it keeps its tier and settings; a silo keeps what's in it)").withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal("Do it again on the next belt to take the whole line").withStyle(ChatFormatting.GRAY));
 	}
 }

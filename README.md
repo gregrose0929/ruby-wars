@@ -157,10 +157,12 @@ each mineral; find all 16 for the Geode Glitter firework. My Base shows what you
 made this season and what's in your silos.
 
 While you're away, drills, Refineries, Assemblers, Ammo Factories and Trade Depots keep
-working at half speed (for up to a day); when you're back one note says what they all made,
-and My Base shows it too. A drill fills the **Ore Silos** touching it (each takes one kind, so
+working at half speed (for up to a day, even while nobody's on the server), and belt lines
+carry what they make to the chest or machine at the end; when you're back one note says what
+they all made, and My Base shows it too. A drill fills the **Ore Silos** touching it (each takes one kind, so
 a few round a drill sort what it digs), and a Refinery or Assembler takes what it needs from a
-silo touching it, with no belts needed. Machines picked up with the Wrench keep their settings.
+silo touching it, with no belts needed. Machines picked up with the Wrench keep their settings, and it picks up Ore Silos with
+what's in them. Look at a silo or machine to see what it feeds or fills.
 
 ### Weapons and vehicles
 

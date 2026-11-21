@@ -76,6 +76,10 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	private ItemStack refining = ItemStack.EMPTY;
 	private int status;
 	private long lastTick = -1;
+	/** Real time it last ran (ms): the server stops its clock while nobody's on, and machines still catch up for that. */
+	private long lastReal = -1;
+	/** Catching up: belts are followed to their end instead of having things put on them. */
+	private boolean catchingUp;
 	private int aux;
 	/** Constructor: raw id + 1 of the block item it's waiting for (0 = none). */
 	private int missing;
@@ -256,10 +260,16 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		MachineKind kind = kind();
 		long now = level.getGameTime();
 		ticks++;
-		if (lastTick >= 0 && now - lastTick > 200) {
-			catchUp(level, now - lastTick);
+		long nowMs = System.currentTimeMillis();
+		long away = lastTick >= 0 ? now - lastTick : 0;
+		if (lastTick >= 0 && lastReal > 0 && nowMs > lastReal) {
+			away = Math.max(away, (nowMs - lastReal) / 50);
+		}
+		if (away > 200) {
+			catchUp(level, away);
 		}
 		lastTick = now;
+		lastReal = nowMs;
 		switch (kind) {
 			case COMBUSTION_GENERATOR -> tickGenerator(level);
 			case SOLAR_PANEL -> tickSolar(level);
@@ -325,6 +335,25 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			}
 		}
 		long cycles = (long) (Math.min(elapsed, 24000) * OFFLINE_RATE / Math.max(1, kind.cycle(tier)));
+		catchingUp = true;
+		try {
+			catchUpCycles(level, kind, cycles);
+		} finally {
+			catchingUp = false;
+		}
+		progress = 0;
+		setChanged();
+	}
+
+	/** For tests: as if this machine last ran {@code ms} of real time ago, with the world's clock stopped meanwhile. */
+	public void lastRanAgo(long ms) {
+		if (level != null) {
+			lastTick = level.getGameTime();
+		}
+		lastReal = System.currentTimeMillis() - ms;
+	}
+
+	private void catchUpCycles(ServerLevel level, MachineKind kind, long cycles) {
 		for (long i = 0; i < cycles; i++) {
 			if (kind == MachineKind.TRADE_DEPOT) {
 				long earned = sellOnce(level);
@@ -346,8 +375,6 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			}
 			AwayTime.made(owner, made);
 		}
-		progress = 0;
-		setChanged();
 	}
 
 	/** One finished job while away (no power needed): what it made (empty for rock a drill leaves), or null when it couldn't. */
@@ -835,7 +862,11 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			for (Direction dir : Direction.values()) {
 				BlockPos side = worldPosition.relative(dir);
 				if (pass == 0 && dir.getAxis().isHorizontal() && ConveyorBlock.leadsAway(level.getBlockState(side), dir)) {
-					dropOnBelt(level, side);
+					if (catchingUp) {
+						alongBelt(level, side);
+					} else {
+						dropOnBelt(level, side);
+					}
 					continue;
 				}
 				if (beltsOnly) {
@@ -955,6 +986,53 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		}
 	}
 
+	/** Does this machine take what's in this silo (it's touching, may use it, and it's something it works on)? */
+	public boolean takesFrom(SiloBlockEntity silo) {
+		switch (kind()) {
+			case ORE_REFINERY, AMMO_FACTORY, ASSEMBLER -> {
+			}
+			default -> {
+				return false;
+			}
+		}
+		ItemStack type = silo.type();
+		if (type.isEmpty() || !mayUse(silo) || makes(type)) {
+			return false;
+		}
+		for (int slot = 0; slot < kind().inputs; slot++) {
+			if (canPlaceItem(slot, type)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Is this a drill that fills this silo? */
+	public boolean fills(SiloBlockEntity silo) {
+		return kind() == MachineKind.RUBY_DRILL && mayUse(silo);
+	}
+
+	/** What it takes from a silo touching it right now (a slot it goes in is free or holds the same; empty when nothing). */
+	public ItemStack takingFromSilo(ServerLevel level) {
+		for (SiloBlockEntity silo : silos(level)) {
+			if (takesFrom(silo)) {
+				ItemStack type = silo.type();
+				for (int slot = 0; slot < kind().inputs; slot++) {
+					ItemStack in = items.get(slot);
+					if (canPlaceItem(slot, type) && (in.isEmpty() || ItemStack.isSameItemSameComponents(in, type))) {
+						return type;
+					}
+				}
+			}
+		}
+		return ItemStack.EMPTY;
+	}
+
+	/** How many silos touching this drill it fills. */
+	public int silosFilled(ServerLevel level) {
+		return kind() == MachineKind.RUBY_DRILL ? silos(level).size() : 0;
+	}
+
 	/** Is this something this machine has made (it's in an output slot, or it's the recipe's result)? */
 	private boolean makes(ItemStack stack) {
 		for (int i = firstOutput(); i < items.size(); i++) {
@@ -1031,6 +1109,25 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			}
 		}
 		return lines;
+	}
+
+	/** Catching up: what it made goes straight to wherever the belt line next to it ends. */
+	private void alongBelt(ServerLevel level, BlockPos belt) {
+		for (int i = firstOutput(); i < items.size(); i++) {
+			ItemStack s = items.get(i);
+			if (s.isEmpty()) {
+				continue;
+			}
+			Belts.End end = Belts.endOf(level, belt, s);
+			if (end == null || end.pos().equals(worldPosition)) {
+				continue;
+			}
+			ItemStack rest = Belts.insert(level, end.pos(), end.face(), s.copy());
+			if (rest.getCount() != s.getCount()) {
+				items.set(i, rest);
+				setChanged();
+			}
+		}
 	}
 
 	/** A few items at a time onto a conveyor belt. */
@@ -1185,6 +1282,12 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 				// 40-41: what the Refinery is making (item id + 1, how many).
 				case 40 -> kind() == MachineKind.ORE_REFINERY && !refining.isEmpty() ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(refining.getItem()) + 1 : 0;
 				case 41 -> kind() == MachineKind.ORE_REFINERY ? refining.getCount() : 0;
+				// 42: what it takes from a silo touching it (item id + 1); 43: how many silos a drill fills.
+				case 42 -> {
+					ItemStack from = level instanceof ServerLevel server ? takingFromSilo(server) : ItemStack.EMPTY;
+					yield from.isEmpty() ? 0 : net.minecraft.core.registries.BuiltInRegistries.ITEM.getId(from.getItem()) + 1;
+				}
+				case 43 -> level instanceof ServerLevel server ? silosFilled(server) : 0;
 				default -> {
 					// 19-30: the Trade Depot's last four sales, newest first: item id + 1, how many, what it paid (milli-rubies, capped).
 					int k = index - 19;
@@ -1258,6 +1361,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		burnMax = input.getIntOr("burn_max", 0);
 		recipe = input.getIntOr("recipe", 0);
 		lastTick = input.getLongOr("last_tick", -1L);
+		lastReal = input.getLongOr("last_real", -1L);
 		aux = input.getIntOr("aux", 0);
 		loads = input.getLongOr("loads", 0L);
 		rubiesFound = input.getLongOr("rubies_found", 0L);
@@ -1294,6 +1398,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		output.putInt("burn_max", burnMax);
 		output.putInt("recipe", recipe);
 		output.putLong("last_tick", lastTick);
+		output.putLong("last_real", lastReal);
 		output.putInt("aux", aux);
 		output.putLong("loads", loads);
 		output.putLong("rubies_found", rubiesFound);

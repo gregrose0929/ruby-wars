@@ -103,6 +103,16 @@ public final class LookInfo {
 					lines.add("Finds: " + dev.rubymod.industry.Recipes.FOCUS_NAMES[m.focus()] + (m.leavesStone() ? ", leaves stone behind" : "")
 							+ ". " + m.site().describe());
 				}
+				if (player.level() instanceof net.minecraft.server.level.ServerLevel server) {
+					int silos = m.silosFilled(server);
+					if (silos > 0) {
+						lines.add("Fills the " + (silos == 1 ? "Ore Silo" : silos + " Ore Silos") + " next to it");
+					}
+					var from = m.takingFromSilo(server);
+					if (!from.isEmpty()) {
+						lines.add("Takes " + from.getHoverName().getString() + " from the silo next to it");
+					}
+				}
 				if (kind == MachineKind.BATTERY || kind.output(m.tier()) > 0 || kind.draw(m.tier()) > 0) {
 					UUID owner = m.power();
 					long cap = Grid.capacity(owner);
@@ -114,6 +124,15 @@ public final class LookInfo {
 				lines.add(dev.rubymod.industry.OreSiloBlock.describe(silo));
 				lines.add("Owner: " + (silo.owner() == null ? "nobody" : name(silo.owner())));
 				lines.add(silo.total() > 0 ? "Empty hand: take a stack (crouch: one)" : "Right-click with something to store it");
+				for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+					if (player.level().getBlockEntity(pos.relative(d)) instanceof MachineBlockEntity next) {
+						if (next.fills(silo)) {
+							lines.add("Filled by the " + next.kind().title + " next to it");
+						} else if (next.takesFrom(silo)) {
+							lines.add("Feeds the " + next.kind().title + " next to it");
+						}
+					}
+				}
 				bar = silo.total() > 0 ? (float) silo.total() / silo.capacity() : 0;
 				color = BLUE;
 			} else if (state.getBlock() instanceof dev.rubymod.industry.BeltLoaderBlock) {
@@ -324,7 +343,7 @@ public final class LookInfo {
 		return switch (status) {
 			case MachineBlockEntity.WORKING -> "Working";
 			case MachineBlockEntity.NO_POWER -> "No power: add solar panels or a generator";
-			case MachineBlockEntity.OUTPUT_FULL -> "Full: empty it, or add a conveyor belt";
+			case MachineBlockEntity.OUTPUT_FULL -> "Full: collect it, or put an Ore Silo or a belt next to it";
 			case MachineBlockEntity.NO_INPUT -> "Waiting for input";
 			case MachineBlockEntity.NIGHT -> "Night: no sun";
 			default -> "Idle";
