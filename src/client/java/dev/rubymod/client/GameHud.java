@@ -465,8 +465,8 @@ public class GameHud implements HudElement {
 		// On a narrow screen the corner is where the hotbar and food bar are: the panel goes above them.
 		int y = x < w / 2 + 95 ? h - ph - 54 : h - ph - 4;
 		panel(g, x, y, x + pw, y + ph);
-		String name = font.plainSubstrByWidth(held.getHoverName().getString(), pw - 18 - font.width(mode));
-		g.text(font, name, x + 7, y + 5, 0xFFAAB0BA, false);
+		// The weapon's whole name (smaller letters if it's long) rather than "Rocket Launc".
+		dev.rubymod.client.ui.Ui.shrinkText(g, held.getHoverName().getString(), x + 7, y + 5, pw - 18 - font.width(mode), 0xFFAAB0BA);
 		g.text(font, mode, x + pw - 7 - font.width(mode), y + 5, 0xFF6E7480, false);
 		boolean low = ammo == 0 || magazine > 1 && ammo <= magazine / 4;
 		boolean blink = (System.currentTimeMillis() / 300) % 2 == 0;

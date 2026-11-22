@@ -117,8 +117,9 @@ public class MapScreen extends Screen {
 		}
 		g.disableScissor();
 		dev.rubymod.client.ui.Ui.heading(g, "Map", x0 - 6, 6, dev.rubymod.client.ui.Ui.TEXT, 1.0F, false);
-		String help = "Scroll to zoom, drag to move, right-click for a waypoint. " + (int) Math.round(span) + " blocks across";
-		g.text(font, font.plainSubstrByWidth(help, x0 + size - (x0 + 24)), x0 + 24, 6, dev.rubymod.client.ui.Ui.MUTED, false);
+		String help = "Scroll: zoom, drag: move, right-click: waypoint";
+		// All of it (smaller, or on two small lines) rather than cut short: "right-click for a waypoint" is the useful part.
+		dev.rubymod.client.ui.Ui.shrinkText(g, help, x0 + 30, 6, size - 30, dev.rubymod.client.ui.Ui.DIM);
 		// Legend
 		// Squad things only when squads are on.
 		boolean squads = dev.rubymod.client.ClientState.hud != null && dev.rubymod.client.ClientState.hud.squads();
@@ -126,7 +127,7 @@ public class MapScreen extends Screen {
 				: new String[] {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart"};
 		int lx = x0 + size + 10;
 		if (lx + 92 < w) {
-			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 64);
+			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 76);
 			for (int i = 0; i < names.length; i++) {
 				var icon = Markers.icon((byte) i);
 				if (icon.isEmpty()) {
@@ -160,6 +161,7 @@ public class MapScreen extends Screen {
 				g.text(font, cn[i], cx + 7, cy + 12, dev.rubymod.client.ui.Ui.DIM, false);
 				cx += font.width(cn[i]) + 11;
 			}
+			dev.rubymod.client.ui.Ui.shrinkText(g, (int) Math.round(span) + " blocks across", lx + 2, cy + 26, 86, dev.rubymod.client.ui.Ui.MUTED);
 		}
 	}
 

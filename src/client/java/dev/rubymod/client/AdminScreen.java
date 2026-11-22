@@ -38,6 +38,11 @@ public class AdminScreen extends Screen {
 		actions.add(new Action("Battle Day", "Call it off", "rubywars battle cancel", false, "Stop a Battle Day countdown"));
 		actions.add(new Action("Battle Day", "Pause timer", "rubywars pause", false, "Stop the clock"));
 		actions.add(new Action("Battle Day", "Resume timer", "rubywars resume", false, "Start the clock again"));
+		actions.add(new Action("World events", "Supply Cache", "rubywars event cache", false, "A Supply Cache, told two minutes ahead (while building)"));
+		actions.add(new Action("World events", "Ruby Shrine", "rubywars event shrine", false, "A Ruby Shrine, told two minutes ahead (while building)"));
+		actions.add(new Action("World events", "Ruby Meteor", "rubywars event meteor", false, "A Ruby Meteor, told two minutes ahead (while building)"));
+		actions.add(new Action("World events", "Supply drop", "rubywars event supplydrop", false, "A supply drop in 30 seconds (Battle Day)"));
+		actions.add(new Action("World events", "Stop the event", "rubywars event stop", false, "End the world event that's on (the ground goes back)"));
 		actions.add(new Action("Options", "Night Battle on", "rubywars nightbattle on", false, "Battle Day fought at night"));
 		actions.add(new Action("Options", "Night Battle off", "rubywars nightbattle off", false, "Battle Day by daylight"));
 		actions.add(new Action("New season", "New season", "rubywars reset confirm", true,
@@ -79,11 +84,11 @@ public class AdminScreen extends Screen {
 			Action a = actions.get(i);
 			if (!a.section().equals(section)) {
 				if (col != 0) {
-					cy += 20;
+					cy += 18;
 				}
 				section = a.section();
 				Ui.section(g, section, x + 10, cy, w - 20);
-				cy += 13;
+				cy += 11;
 				col = 0;
 			}
 			int bx = x + 10 + col * (bw + 4);
@@ -96,7 +101,7 @@ public class AdminScreen extends Screen {
 			col++;
 			if (col == 3) {
 				col = 0;
-				cy += 20;
+				cy += 18;
 			}
 		}
 		String foot = System.currentTimeMillis() - ranAt < 3000 ? "Ran /" + lastRan : "Buttons run /rubywars commands  -  Esc to close";

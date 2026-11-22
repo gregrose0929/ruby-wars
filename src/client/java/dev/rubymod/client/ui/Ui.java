@@ -112,9 +112,19 @@ public final class Ui {
 		g.blitSprite(RenderPipelines.GUI_TEXTURED, sprite("button"), x, y, w, h, tint);
 		Font font = font();
 		int ty = y + (h - 2 - 8) / 2;
-		String shown = font.width(label) <= w - 4 ? label : font.plainSubstrByWidth(label, w - 4);
-		g.centeredText(font, shown, x + w / 2, ty + 1, 0x60000000);
-		g.centeredText(font, shown, x + w / 2, ty, enabled ? 0xFFFFFFFF : 0xFF9AA0AA);
+		if (font.width(label) <= w - 4) {
+			g.centeredText(font, label, x + w / 2, ty + 1, 0x60000000);
+			g.centeredText(font, label, x + w / 2, ty, enabled ? 0xFFFFFFFF : 0xFF9AA0AA);
+		} else {
+			// A long label in smaller letters, not cut short ("Repair wher").
+			String shown = fit(label, Math.round((w - 4) / 0.75F));
+			g.pose().pushMatrix();
+			g.pose().translate(x + w / 2.0F, ty + 1.5F);
+			g.pose().scale(0.75F, 0.75F);
+			g.centeredText(font, shown, 0, 1, 0x60000000);
+			g.centeredText(font, shown, 0, 0, enabled ? 0xFFFFFFFF : 0xFF9AA0AA);
+			g.pose().popMatrix();
+		}
 		return over;
 	}
 
