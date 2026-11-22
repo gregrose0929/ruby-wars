@@ -1747,6 +1747,16 @@ public final class SelfTest {
 			dev.rubymod.game.Practice.advance(61_000L);
 			dev.rubymod.game.Practice.tickSecond(level.getServer());
 			check("practice: after a minute the dummy goes", !dummy.isAlive() || dummy.isRemoved());
+			// Battle Day: one still up comes down, and none can go up (turrets have real attackers to shoot).
+			dev.rubymod.game.Practice.place(alpha, level, spot);
+			var second = level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ArmorStand.class, new net.minecraft.world.phys.AABB(spot).inflate(1),
+					a -> dev.rubymod.game.Practice.isDummy(a));
+			SeasonData.get().phase = Phase.WAR;
+			dev.rubymod.game.Practice.tickSecond(level.getServer());
+			String inBattle = dev.rubymod.game.Practice.place(alpha, level, spot);
+			check("practice: on Battle Day dummies come down and can't go up (" + inBattle + ")", second.size() == 1
+					&& (!second.get(0).isAlive() || second.get(0).isRemoved()) && inBattle != null && !dev.rubymod.game.Practice.active(claim));
+			SeasonData.get().phase = Phase.BUILD;
 			level.setBlockAndUpdate(turretPos, Blocks.AIR.defaultBlockState());
 			level.setBlockAndUpdate(spot.offset(4, 0, 0), Blocks.AIR.defaultBlockState());
 		} finally {
@@ -1834,6 +1844,16 @@ public final class SelfTest {
 					&& level.getBlockState(spot.below()).is(Blocks.BEACON) && level.getBlockState(spot.offset(1, -2, 1)).is(Blocks.IRON_BLOCK)
 					&& level.getBlockState(spot).is(Blocks.STAINED_GLASS.pick(net.minecraft.world.item.DyeColor.LIGHT_BLUE)) && dev.rubymod.game.WorldEvents.protects(level, spot.below())
 					&& !Rules.canWeaponBreak(level, spot.offset(1, -2, 1), level.getBlockState(spot.offset(1, -2, 1))));
+			// Paused: it waits, and carries on once the game's back on (three paused seconds: three more to wait).
+			long pausedBefore = SeasonData.get().pausedRemaining;
+			SeasonData.get().pausedRemaining = 60_000L;
+			for (int i = 0; i < 3; i++) {
+				dev.rubymod.game.WorldEvents.tickSecond(server, both);
+			}
+			boolean kept = dev.rubymod.game.WorldEvents.kind() == dev.rubymod.game.WorldEvents.Kind.CACHE && !dev.rubymod.game.WorldEvents.isOpen();
+			SeasonData.get().pausedRemaining = pausedBefore;
+			check("events: pausing the game doesn't end a world event; it waits", kept);
+			dev.rubymod.game.WorldEvents.advance(3000);
 			dev.rubymod.game.WorldEvents.advance(2 * 60_000L + 1000);
 			alpha.teleportTo(level, spot.getX() + 0.5, spot.getY(), spot.getZ() - 1.5, java.util.Set.of(), 0, 0, true);
 			dev.rubymod.game.WorldEvents.tickSecond(server, both);
@@ -1993,6 +2013,15 @@ public final class SelfTest {
 			int left = arena.getEntitiesOfClass(dev.rubymod.entity.AircraftEntity.class, new net.minecraft.world.phys.AABB(BlockPos.ZERO).inflate(1500)).size();
 			check("duels: the arena is cleared afterwards (" + jets + " jets, " + left + " left)", jets == 2 && left == 0
 					&& alpha.getInventory().countItem(ModItems.RUBY) == 5);
+			// Sudden Death: a duel still going with someone in the season ends, and they're sent back.
+			dev.rubymod.game.Duels.startForTest(alpha, bravo, dev.rubymod.game.Duels.Mode.GUNS, 10);
+			boolean inArena = alpha.level() == arena;
+			SeasonData.get().player(alpha.getUUID(), alpha.getName().getString()).eliminated = false;
+			SeasonData.get().phase = Phase.SUDDEN_DEATH;
+			dev.rubymod.game.Duels.tick(level.getServer());
+			SeasonData.get().phase = Phase.BUILD;
+			check("duels: when Sudden Death begins a duel still going ends and both go back", inArena && !dev.rubymod.game.Duels.inDuel(alpha)
+					&& alpha.level() == level && bravo.level() == level);
 		} finally {
 			SeasonData.get().phase = before;
 			dev.rubymod.game.Duels.endTest();

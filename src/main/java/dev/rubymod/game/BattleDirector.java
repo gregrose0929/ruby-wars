@@ -170,6 +170,9 @@ public final class BattleDirector {
 		}
 		SupplyDrops.tick(server);
 		// The build phase's world event: a ruby meteor, somewhere nobody has claimed. Worth racing for (and fighting over, come Battle Day).
+		if (data.phase == Phase.BUILD && data.pausedRemaining >= 0 && data.nextMeteorAt != 0) {
+			data.nextMeteorAt += 1000; // paused: the meteor's clock waits too
+		}
 		if (data.phase == Phase.BUILD && data.pausedRemaining < 0 && GameConfig.get().meteorIntervalHours > 0) {
 			if (data.nextMeteorAt == 0) {
 				data.nextMeteorAt = SeasonTicker.now() + 30 * 60_000L;

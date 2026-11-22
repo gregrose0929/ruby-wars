@@ -26,6 +26,28 @@ public final class SafeFiles {
 		write(file, out.toByteArray());
 	}
 
+	/** Lines of text, one per line. */
+	public static void writeLines(Path file, java.util.List<String> lines) throws IOException {
+		write(file, String.join("\n", lines) + (lines.isEmpty() ? "" : "\n"));
+	}
+
+	/**
+	 * A save file that couldn't be read: a copy is kept beside it (name.unreadable-date) before the game starts afresh
+	 * and saves over it, so what was in it isn't lost for good.
+	 */
+	public static void keepUnreadable(Path file, Exception why) {
+		try {
+			if (file != null && Files.exists(file)) {
+				Path copy = file.resolveSibling(file.getFileName() + ".unreadable-"
+						+ java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss")));
+				Files.copy(file, copy, StandardCopyOption.REPLACE_EXISTING);
+				dev.rubymod.RubyMod.LOGGER.error("Couldn't read {} ({}). A copy is kept at {}; starting afresh.", file, why.toString(), copy);
+			}
+		} catch (IOException e) {
+			dev.rubymod.RubyMod.LOGGER.error("Couldn't keep a copy of unreadable {}", file, e);
+		}
+	}
+
 	public static void write(Path file, byte[] bytes) throws IOException {
 		Path dir = file.toAbsolutePath().getParent();
 		if (dir != null) {

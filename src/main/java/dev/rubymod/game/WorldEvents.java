@@ -155,6 +155,17 @@ public final class WorldEvents {
 	public static void tickSecond(MinecraftServer server, List<ServerPlayer> players) {
 		SeasonData data = SeasonData.get();
 		boolean building = data.phase == Phase.BUILD && data.pausedRemaining < 0;
+		if (kind != null && data.phase == Phase.BUILD && data.pausedRemaining >= 0) {
+			// Paused: the event waits (it carries on from where it was once the game's back on).
+			opensAt += 1000;
+			if (open) {
+				openedAt += 1000;
+			}
+			if (endsAt != Long.MAX_VALUE) {
+				endsAt += 1000;
+			}
+			return;
+		}
 		if (kind != null && !building) {
 			finish(server, players, "");
 			return;
@@ -823,7 +834,7 @@ public final class WorldEvents {
 		}
 		try {
 			java.nio.file.Files.createDirectories(file(server).getParent());
-			java.nio.file.Files.write(file(server), lines);
+			SafeFiles.writeLines(file(server), lines);
 		} catch (java.io.IOException ex) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't write down the world event", ex);
 		}

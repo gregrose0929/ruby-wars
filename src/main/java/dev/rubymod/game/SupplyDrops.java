@@ -286,7 +286,7 @@ public final class SupplyDrops {
 		}
 		try {
 			java.nio.file.Files.createDirectories(file(server).getParent());
-			java.nio.file.Files.write(file(server), lines);
+			SafeFiles.writeLines(file(server), lines);
 		} catch (java.io.IOException ex) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't write down the supply drops", ex);
 		}

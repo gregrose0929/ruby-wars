@@ -62,6 +62,10 @@ public final class Practice {
 
 	/** Put a dummy up at {@code at} (the block above the one clicked). Returns why not, or null. */
 	public static String place(ServerPlayer player, ServerLevel level, BlockPos at) {
+		if (Rules.phase().isBattle()) {
+			// Turrets shoot whatever's nearest: a dummy now would draw their fire away from real attackers.
+			return "Practice is for before Battle Day: your defenses are needed for real now.";
+		}
 		SeasonData.Claim claim = SeasonData.get().claimAt(Rules.dim(level), at);
 		if (claim == null || claim.destroyed || !claim.owner.equals(player.getUUID().toString())) {
 			return "Put the Practice Dummy up inside your own base: your defenses only fire on things there.";
@@ -150,11 +154,13 @@ public final class Practice {
 
 	public static void tickSecond(MinecraftServer server) {
 		long t = now();
+		// Battle Day started: any still up come down (the defenses have real work to do).
+		boolean battle = Rules.phase().isBattle();
 		for (Iterator<Map.Entry<UUID, Session>> it = SESSIONS.entrySet().iterator(); it.hasNext();) {
 			var e = it.next();
 			Session s = e.getValue();
 			ServerPlayer owner = server.getPlayerList().getPlayer(s.owner);
-			if (t < s.ends && owner != null) {
+			if (t < s.ends && owner != null && !battle) {
 				continue;
 			}
 			it.remove();

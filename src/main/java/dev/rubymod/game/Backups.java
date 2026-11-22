@@ -62,7 +62,11 @@ public final class Backups {
 		Thread thread = new Thread(() -> {
 			try {
 				Files.createDirectories(backups);
-				zip(world, backups.resolve(name));
+				// Written under a temporary name and renamed once it's whole: a server stopped part-way through
+				// (an update, say) leaves a ".part" that's tidied away, never a broken backup counted as a good one.
+				Path part = backups.resolve(name + ".part");
+				zip(world, part);
+				Files.move(part, backups.resolve(name), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 				prune(backups, GameConfig.get().backupsToKeep);
 				RubyMod.LOGGER.info("World backup saved to {}", backups.resolve(name));
 			} catch (Exception e) {
@@ -95,6 +99,11 @@ public final class Backups {
 	}
 
 	private static void prune(Path dir, int keep) throws IOException {
+		try (Stream<Path> parts = Files.list(dir)) {
+			for (Path p : (Iterable<Path>) parts.filter(p -> p.toString().endsWith(".zip.part"))::iterator) {
+				Files.deleteIfExists(p); // left from a backup the server stopped in the middle of
+			}
+		}
 		try (Stream<Path> files = Files.list(dir)) {
 			List<Path> zips = files.filter(p -> p.toString().endsWith(".zip"))
 					.sorted(Comparator.comparing((Path p) -> p.toFile().lastModified()).reversed())

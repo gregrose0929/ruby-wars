@@ -693,7 +693,14 @@ public final class Duels {
 		now++;
 		CHALLENGES.values().removeIf(c -> c.expires() < now);
 		ServerLevel arena = server.getLevel(ARENA);
+		boolean lateBattle = Rules.phase() == Phase.SUDDEN_DEATH || Rules.phase() == Phase.FINAL_CIRCLE;
 		for (Duel duel : new ArrayList<>(DUELS)) {
+			// Sudden Death (no duels then): one still going with someone in the season ends, and they're sent back.
+			if (lateBattle && duel.endIn < 0 && seasonPlayerIn(duel)) {
+				announce(server, duel, "Sudden Death has begun: the duel's off. Back to Ruby Wars!");
+				finish(server, duel);
+				continue;
+			}
 			if (duel.endIn >= 0) {
 				if (--duel.endIn <= 0) {
 					finish(server, duel);
@@ -735,6 +742,17 @@ public final class Duels {
 				}
 			}
 		}
+	}
+
+	/** Someone in the duel is still in this season's battle (not knocked out). */
+	private static boolean seasonPlayerIn(Duel duel) {
+		for (UUID id : duel.players) {
+			SeasonData.PlayerRecord record = id == null ? null : SeasonData.get().player(id);
+			if (record != null && !record.eliminated) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static void updateBar(Duel duel) {

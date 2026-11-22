@@ -183,6 +183,7 @@ public final class Grid {
 			}
 		} catch (Exception e) {
 			RubyMod.LOGGER.error("Couldn't read power grids from {}", file, e);
+			dev.rubymod.game.SafeFiles.keepUnreadable(file, e);
 		}
 		dirty = false;
 	}

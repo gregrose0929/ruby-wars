@@ -276,19 +276,27 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 			}
 		}
 		g.fill(26, 95, 30, 99, color);
-		g.text(font, text, 34, 93, color, false);
-		// What to do about it, in small letters beside it.
+		// Up to the Upgrade button: smaller letters if the status is long ("Needs a Blueprint").
+		boolean small = font.width(text) > 114 - 34;
+		if (small) {
+			dev.rubymod.client.ui.Ui.shrinkText(g, text, 34, 93, 114 - 34, color);
+		} else {
+			g.text(font, text, 34, 93, color, false);
+		}
+		int textW = small ? Math.min(114 - 34, Math.round(font.width(text) * 0.75F)) : font.width(text);
+		// What to do about it, in small letters beside it (left off when there's only room for a scrap of it).
 		String hint = hint(status);
 		if (!hint.isEmpty()) {
-			int hx = 38 + font.width(text);
-			// Up to the Upgrade button.
+			int hx = 38 + textW;
 			int room = (int) ((114 - hx) / 0.75F);
-			g.pose().pushMatrix();
-			g.pose().translate(hx, 94);
-			g.pose().scale(0.75F, 0.75F);
-			g.text(font, dev.rubymod.client.ui.Ui.fit(hint, room), 0, 0, MUTED, false);
-			g.pose().popMatrix();
-			// Cut short? The whole of it when you point at it.
+			if (room >= 60) {
+				g.pose().pushMatrix();
+				g.pose().translate(hx, 94);
+				g.pose().scale(0.75F, 0.75F);
+				g.text(font, dev.rubymod.client.ui.Ui.fit(hint, room), 0, 0, MUTED, false);
+				g.pose().popMatrix();
+			}
+			// Cut short, or not shown? The whole of it when you point at it.
 			if (font.width(hint) > room && mx >= 26 && mx < 116 && my >= 90 && my < 102) {
 				g.setComponentTooltipForNextFrame(font, List.of(Component.literal(text).withStyle(net.minecraft.ChatFormatting.YELLOW),
 						Component.literal(Character.toUpperCase(hint.charAt(0)) + hint.substring(1)).withStyle(net.minecraft.ChatFormatting.GRAY)),
@@ -634,15 +642,16 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		g.fill(x, y, x + 102, y + 8, SLOT_BG);
 		g.fillGradient(x + 1, y + 1, x + 1 + 100 * Math.min(done, total) / total, y + 7, 0xFFFF4D7A, 0xFFB0103E);
 		g.text(font, "Plan", 26, 32, MUTED, false);
-		g.text(font, menu.get(44) == 2 ? "Repairing: watching for holes" : Math.min(100, 100 * done / total) + "% built", 66, 30, TEXT, false);
+		// Kept inside the panel: smaller letters (or two small lines) for the longer ones.
+		dev.rubymod.client.ui.Ui.shrinkWrap(g, menu.get(44) == 2 ? "Repairing: watching for holes" : Math.min(100, 100 * done / total) + "% built", 66, 30, 104, TEXT);
 		int missing = menu.get(15);
 		if (missing > 0) {
 			Item item = BuiltInRegistries.ITEM.byId(missing - 1);
 			g.text(font, "Needs:", 66, 62, AMBER, false);
 			g.item(new ItemStack(item), 100, 58);
-			g.text(font, item.getName(item.getDefaultInstance()).getString(), 118, 62, AMBER, false);
+			dev.rubymod.client.ui.Ui.shrinkWrap(g, item.getName(item.getDefaultInstance()).getString(), 118, 62, 52, AMBER);
 		} else {
-			g.text(font, "Pulls blocks from chests next to it", 66, 62, MUTED, false);
+			dev.rubymod.client.ui.Ui.shrinkWrap(g, "Pulls blocks from chests next to it", 66, 62, 104, MUTED);
 		}
 	}
 

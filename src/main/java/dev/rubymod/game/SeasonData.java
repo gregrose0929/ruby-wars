@@ -161,6 +161,7 @@ public class SeasonData {
 			}
 		} catch (Exception e) {
 			RubyMod.LOGGER.error("Couldn't read season data from {}", file, e);
+			SafeFiles.keepUnreadable(file, e);
 		}
 		dirty = false;
 	}

@@ -128,6 +128,7 @@ public final class Stats {
 			}
 		} catch (IOException | RuntimeException e) {
 			RubyMod.LOGGER.error("Couldn't read player stats", e);
+			SafeFiles.keepUnreadable(file, e);
 		}
 	}
 

@@ -170,7 +170,7 @@ public final class AwayTime {
 		}
 		try {
 			java.nio.file.Files.createDirectories(file(server).getParent());
-			java.nio.file.Files.write(file(server), lines);
+			dev.rubymod.game.SafeFiles.writeLines(file(server), lines);
 		} catch (java.io.IOException ex) {
 			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the away notes", ex);
 		}
