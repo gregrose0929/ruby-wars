@@ -84,7 +84,7 @@ public class LookPanel implements HudElement {
 		int lines = info.lines().size();
 		int height = lines * 10 + 6 + (info.bar() >= 0 ? 5 : 0);
 		int x = dev.rubymod.client.HudScale.width(g) / 2 - width / 2;
-		// Under whatever is at the top centre (the phase banner, respawns, a raid).
+		// Under whatever is at the top centre (the phase banner, respawns, the final circle, a world event).
 		int y = Math.max(20, dev.rubymod.client.GameHud.topCentreBottom() + 3);
 		// Clear of the Guide line on the left: beside it if there's room, or else under it.
 		if (dev.rubymod.client.GameHud.guideR > 0 && x < dev.rubymod.client.GameHud.guideR + 2 && y < dev.rubymod.client.GameHud.guideB

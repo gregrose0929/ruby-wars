@@ -40,8 +40,8 @@ public final class SupplyDrops {
 
 	private static final class Drop {
 		final BlockPos at;
-		final long landsAt;
-		final long until;
+		long landsAt;
+		long until;
 		boolean landed;
 		long emptiedAt = -1;
 		final Map<BlockPos, BlockState> restore = new LinkedHashMap<>();
@@ -153,6 +153,17 @@ public final class SupplyDrops {
 			clear(server);
 			return;
 		}
+		if (SeasonData.get().pausedRemaining >= 0) {
+			// Paused: they wait too (nothing lands or goes while everyone's away).
+			for (Drop drop : DROPS) {
+				drop.landsAt += 1000;
+				drop.until += 1000;
+				if (drop.emptiedAt >= 0) {
+					drop.emptiedAt += 1000;
+				}
+			}
+			return;
+		}
 		long t = now();
 		boolean changed = false;
 		for (var it = DROPS.iterator(); it.hasNext();) {
@@ -206,8 +217,7 @@ public final class SupplyDrops {
 		level.sendParticles(ParticleTypes.FIREWORK, true, false, x, y + 2, z, 40, 0.6, 0.6, 0.6, 0.15);
 		level.playSound(null, drop.at, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.BLOCKS, 2.0F, 1.4F);
 		level.playSound(null, drop.at, SoundEvents.FIREWORK_ROCKET_LARGE_BLAST_FAR, SoundSource.BLOCKS, 6.0F, 0.8F);
-		Alerts.broadcast(level.getServer(), Component.literal("The SUPPLY DROP has landed at " + drop.at.getX() + ", " + drop.at.getZ() + "!")
-				.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+		Alerts.broadcast(level.getServer(), Component.literal("\u2605 Supply drop down at " + drop.at.getX() + ", " + drop.at.getZ()).withStyle(ChatFormatting.AQUA));
 	}
 
 	/** Done with: what's left spills out, and the ground goes back. */

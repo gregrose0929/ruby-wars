@@ -43,8 +43,14 @@ public class Minimap implements HudElement {
 		}
 	}
 
+	/** How far in from the right edge, and how far down, the map (with its coordinates) reaches this frame, in HUD units (0: not shown). */
+	public static int shownWidth;
+	public static int shownBottom;
+
 	/** Drawn at the HUD's size (see HudScale). */
 	private void draw(GuiGraphicsExtractor g, DeltaTracker delta) {
+		shownWidth = 0;
+		shownBottom = 0;
 		Minecraft mc = Minecraft.getInstance();
 		if (!enabled || mc.player == null || mc.level == null || dev.rubymod.client.GameHud.menuOpen() || Vehicles.inVehicle(mc) && dev.rubymod.client.Targeting.piloting(mc) != null) {
 			return;
@@ -138,6 +144,8 @@ public class Minimap implements HudElement {
 		// As wide as the map, or wider (right-aligned with it) when the numbers are long.
 		int cw = Math.max(SIZE + 4, font.width(coords) + 8);
 		g.fill(x0 + SIZE + 2 - cw, y0 + SIZE + 2, x0 + SIZE + 2, y0 + SIZE + 14, 0xC0101418);
+		shownWidth = w - (x0 + SIZE + 2 - cw);
+		shownBottom = y0 + SIZE + 14;
 		g.centeredText(font, coords, x0 + SIZE + 2 - cw / 2, y0 + SIZE + 4, 0xFFDDE6EE);
 		g.text(font, "N", x0 + SIZE / 2 - 2, y0 + 1, 0xFFFF6060, true);
 	}

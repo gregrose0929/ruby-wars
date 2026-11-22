@@ -24,14 +24,36 @@ public final class Alerts {
 	private Alerts() {
 	}
 
+	/** To everyone in Ruby Wars (the season's worlds): not the hub, a duel, or the other games. */
 	public static void broadcast(MinecraftServer server, Component message) {
-		server.getPlayerList().broadcastSystemMessage(message, false);
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			if (Hub.inRubyWarsWorld(player)) {
+				player.sendSystemMessage(message);
+			}
+		}
 	}
 
+	/** A big title for everyone in Ruby Wars (not the hub or the other games). */
 	public static void broadcastTitle(MinecraftServer server, String title, String subtitle, ChatFormatting color) {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-			title(player, title, subtitle, color);
+			if (Hub.inRubyWarsWorld(player)) {
+				title(player, title, subtitle, color);
+			}
 		}
+	}
+
+	/** To everyone outside Ruby Wars (the hub, a duel, the other games). */
+	public static void outside(MinecraftServer server, Component message) {
+		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			if (!Hub.inRubyWarsWorld(player)) {
+				player.sendSystemMessage(message);
+			}
+		}
+	}
+
+	/** One short line for everyone outside Ruby Wars, for its big moments only (Battle Day, a new season, the winner). */
+	public static void news(MinecraftServer server, String text) {
+		outside(server, Component.literal("\u2605 In Ruby Wars: " + text).withStyle(ChatFormatting.GOLD));
 	}
 
 	public static void title(ServerPlayer player, String title, String subtitle, ChatFormatting color) {

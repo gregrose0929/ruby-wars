@@ -51,7 +51,7 @@ public class GameHud implements HudElement {
 		if (menuOpen()) {
 			return;
 		}
-		// The top centre stacks downward (phase, respawns, raid); the top-left column steps under it if they'd meet.
+		// The top centre stacks downward (phase, respawns, the final circle, a world event); the top-left column steps under it if they'd meet.
 		topBottom = 0;
 		topLeft = w;
 		drawPhaseBanner(g, font, w);
@@ -102,7 +102,7 @@ public class GameHud implements HudElement {
 		}
 	}
 
-	/** Bottom of the top-centre stack this frame (phase banner, respawns, raid), and its left edge. */
+	/** Bottom of the top-centre stack this frame (phase banner, respawns, the final circle, a world event), and its left edge. */
 	private static int topBottom;
 	private static int topLeft;
 
@@ -236,7 +236,13 @@ public class GameHud implements HudElement {
 	 * and power (what it's making or using); then the guide's next step on one line. Nothing runs into the minimap or
 	 * the banner at the top centre (on a narrow screen it starts under the banner).
 	 */
+	/** The top-left column's right edge and bottom this frame, in HUD units (0: nothing there). */
+	public static int cornerR;
+	public static int cornerB;
+
 	private void drawCorner(GuiGraphicsExtractor g, Font font, int w) {
+		cornerR = cornerB = 0;
+		guideL = guideT = guideR = guideB = 0;
 		if (!ClientState.inRubyWarsWorld()) {
 			return;
 		}
@@ -274,6 +280,8 @@ public class GameHud implements HudElement {
 			int rows = (heart ? 1 : 0) + (bank ? 2 : 0);
 			int h = 6 + rows * 11;
 			panel(g, 4, y, 4 + colW, y + h);
+			cornerR = 4 + colW;
+			cornerB = y + h;
 			int right = 4 + colW - 6;
 			int ry = y + 5;
 			if (heart) {
@@ -310,6 +318,10 @@ public class GameHud implements HudElement {
 			y += h + 2;
 		}
 		drawGuide(g, font, y, colW, maxW);
+		if (guideR > 0) {
+			cornerR = Math.max(cornerR, guideR);
+			cornerB = Math.max(cornerB, guideB);
+		}
 	}
 
 	/**
@@ -398,6 +410,16 @@ public class GameHud implements HudElement {
 			// One line: the next step, and its count if it has one.
 			String text = guideLine(step)[0];
 			int pw = Math.min(maxW, Math.max(colW, 9 + font.width(text) + (counted ? 8 + font.width(count) : 0) + 7));
+			// It would run into the banner at the top centre: narrower (smaller letters) if that still reads, or else under it.
+			if (topBottom > 0 && y < topBottom + 2 && x + pw + 4 > topLeft) {
+				int room = topLeft - 4 - x;
+				int needSmall = 9 + Math.round(font.width(text) * 0.75F) + (counted ? 8 + font.width(count) : 0) + 7;
+				if (room >= Math.max(colW, needSmall)) {
+					pw = room;
+				} else {
+					y = topBottom + 3;
+				}
+			}
 			int right = x + pw - 7;
 			panel(g, x, y, x + pw, y + 17);
 			guideL = x;
@@ -405,8 +427,12 @@ public class GameHud implements HudElement {
 			guideR = x + pw;
 			guideB = y + 17;
 			g.fill(x + 2, y + 2, x + 4, y + 15, GOLD);
-			g.text(font, dev.rubymod.client.ui.Ui.fit(text, right - tx - (counted ? font.width(count) + 8 : 0)), tx, y + 5,
-					dev.rubymod.client.ui.Ui.mix(WHITE, GOLD, fresh), true);
+			int room = right - tx - (counted ? font.width(count) + 8 : 0);
+			if (font.width(text) <= room) {
+				g.text(font, text, tx, y + 5, dev.rubymod.client.ui.Ui.mix(WHITE, GOLD, fresh), true);
+			} else {
+				dev.rubymod.client.ui.Ui.shrinkText(g, text, tx, y + 5, room, dev.rubymod.client.ui.Ui.mix(WHITE, GOLD, fresh));
+			}
 			if (counted) {
 				g.text(font, count, right - font.width(count), y + 5, GOLD, true);
 			}
@@ -418,21 +444,40 @@ public class GameHud implements HudElement {
 		var hint = font.split(Component.literal(s.hint()), inner);
 		int lines = Math.min(6, hint.size());
 		int ly = y + 5;
-		int height = 5 + 11 + 12 + lines * 10 + (counted ? 7 : 0) + 2 + 9 + 4;
+		// A narrow card (a big HUD size): the chapter line in smaller letters, on two small lines if need be; the
+		// step's name on two lines rather than cut short. The card grows to fit.
+		String head = Guide.CHAPTERS.get(Guide.chapter()).title() + ": step " + (step + 1) + " of "
+				+ Guide.steps().stream().filter(st -> !st.optional()).count();
+		boolean headTwo = font.width(head) > Math.round(inner / 0.75F);
+		int titleRoom = inner - (counted ? font.width(count) + 8 : 0);
+		var titleLines = font.split(Component.literal(s.title()), Math.max(20, titleRoom));
+		int titleN = Math.min(2, titleLines.size());
+		int height = 5 + 11 + (headTwo ? 7 : 0) + 2 + titleN * 10 + lines * 10 + (counted ? 7 : 0) + 2 + 9 + 4;
 		panel(g, x, y, x + pw, y + height);
 		guideL = x;
 		guideT = y;
 		guideR = x + pw;
 		guideB = y + height;
 		g.fill(x + 2, y + 2, x + 4, y + height - 2, GOLD);
-		g.text(font, dev.rubymod.client.ui.Ui.fit(Guide.CHAPTERS.get(Guide.chapter()).title() + ": step " + (step + 1) + " of " + Guide.steps().stream().filter(st -> !st.optional()).count(), inner),
-				tx, ly, GOLD, true);
-		ly += 11;
-		g.text(font, dev.rubymod.client.ui.Ui.fit(s.title(), inner - (counted ? font.width(count) + 8 : 0)), tx, ly, WHITE, true);
+		dev.rubymod.client.ui.Ui.shrinkWrap(g, head, tx, ly + (headTwo ? 3 : 0), inner, GOLD);
+		ly += 11 + (headTwo ? 7 : 0);
 		if (counted) {
 			g.text(font, count, right - font.width(count), ly, GOLD, true);
 		}
-		ly += 12;
+		for (int i = 0; i < titleN; i++) {
+			if (i == 1 && titleLines.size() > 2) {
+				StringBuilder rest = new StringBuilder();
+				titleLines.get(1).accept((index, style, cp) -> {
+					rest.appendCodePoint(cp);
+					return true;
+				});
+				g.text(font, dev.rubymod.client.ui.Ui.fit(rest + " ...", titleRoom), tx, ly, WHITE, true);
+			} else {
+				g.text(font, titleLines.get(i), tx, ly, WHITE, true);
+			}
+			ly += 10;
+		}
+		ly += 2;
 		for (int i = 0; i < lines; i++) {
 			g.text(font, hint.get(i), tx, ly, 0xFFB4BAC4, false);
 			ly += 10;

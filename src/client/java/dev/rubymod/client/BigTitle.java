@@ -70,19 +70,38 @@ public class BigTitle implements HudElement {
 			return;
 		}
 		int w = g.guiWidth();
-		int room = w - 24;
-		// The title: as big as fits, up to three times the size of ordinary text.
-		float scale = title.isEmpty() ? 0 : Math.max(1.0F, Math.min(3.0F, room / (float) Math.max(1, font.width(title))));
-		int titleH = Math.round(9 * scale);
-		// The line under it: half again as big as ordinary text if that fits on one line, ordinary size and wrapped if not.
-		float subScale = font.width(subtitle) * 1.5F <= room ? 1.5F : 1.0F;
-		List<String> lines = subtitle.isEmpty() ? List.of() : wrap(font, subtitle, Math.round(room / subScale));
-		int lineH = Math.round(11 * subScale);
-		int total = titleH + (lines.isEmpty() ? 0 : 5 + lines.size() * lineH);
 		// A quarter of the way down, or under the how-to card when that's up (on a narrow screen the card steps aside
 		// instead); never so low it reaches the hotbar or the ammo panel.
-		int y = HowToCard.narrow(w) ? g.guiHeight() / 4 : Math.max(g.guiHeight() / 4, HowToCard.bottom() + 8);
-		y = Math.max(4, Math.min(y, g.guiHeight() - 104 - total));
+		int top = HowToCard.narrow(w) ? g.guiHeight() / 4 : Math.max(g.guiHeight() / 4, HowToCard.bottom() + 8);
+		// Down the sides at the top: your Heart and rubies on the left, the minimap on the right (in GUI pixels).
+		float k = HudScale.factor();
+		int sides = Math.round(Math.max(GameHud.cornerR, dev.rubymod.client.map.Minimap.shownWidth) * k) + 6;
+		int sidesBottom = Math.round(Math.max(GameHud.cornerB, dev.rubymod.client.map.Minimap.shownBottom) * k);
+		int room = w - 24;
+		float scale = 0;
+		float subScale = 1;
+		List<String> lines = List.of();
+		int titleH = 0;
+		int lineH = 11;
+		int total = 0;
+		int y = top;
+		for (int pass = 0; pass < 2; pass++) {
+			// The title: as big as fits, up to three times the size of ordinary text.
+			scale = title.isEmpty() ? 0 : Math.max(1.0F, Math.min(3.0F, room / (float) Math.max(1, font.width(title))));
+			titleH = Math.round(9 * scale);
+			// The line under it: half again as big as ordinary text if that fits on one line, ordinary size and wrapped if not.
+			subScale = font.width(subtitle) * 1.5F <= room ? 1.5F : 1.0F;
+			lines = subtitle.isEmpty() ? List.of() : wrap(font, subtitle, Math.round(room / subScale));
+			lineH = Math.round(11 * subScale);
+			total = titleH + (lines.isEmpty() ? 0 : 5 + lines.size() * lineH);
+			y = Math.max(4, Math.min(top, g.guiHeight() - 104 - total));
+			// It would reach in over the side panels: fitted between them instead.
+			if (pass == 0 && y < sidesBottom && w - 2 * sides >= 120 && w - 2 * sides < room) {
+				room = w - 2 * sides;
+			} else {
+				break;
+			}
+		}
 		if (!title.isEmpty()) {
 			Ui.heading(g, title, w / 2, y, Ui.alpha(color, alpha), scale, true);
 		}

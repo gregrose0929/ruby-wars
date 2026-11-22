@@ -31,7 +31,6 @@ public final class ClientState {
 	public static long lookAt;
 	/** When the current combat tag runs out (ms). */
 	public static long combatUntil;
-	/** The raid on your side, if any, and when we last heard. */
 	/** Battle Day's final circle, for the map and the "outside it" warning (null or not shown: nothing). */
 	public static dev.rubymod.net.MorePayloads.BorderPlan borderPlan;
 

@@ -32,7 +32,8 @@ public final class WhatsNew {
 			"rubymod:blueprint|Ready-made Blueprints at the Armory (Building): a Watchtower, a Bunker, a Gatehouse and a Wall Section, for your Constructor to build.",
 			"rubymod:constructor|A Constructor can repair your base: give it a Blueprint of your walls, switch it to Repair in place, and it fills holes back in.",
 			"rubymod:architect_wand|The Architect's Wand builds round towers, domes and staircases too.",
-			"minecraft:beacon|Battle Day supply drops are told 30 seconds before they land, with a beam over the spot and a marker on your map. They stay until someone empties them.");
+			"minecraft:beacon|Battle Day supply drops are told 30 seconds before they land, with a beam over the spot and a marker on your map. They stay until someone empties them, and wait while the game is paused.",
+			"minecraft:bell|Ruby Wars news stays in Ruby Wars: people playing the other games only hear the big moments (Battle Day, a new season, the winner).");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;

@@ -77,9 +77,50 @@ public class RubyToast implements Toast {
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(RubyToast::tick);
 	}
 
+	/** Cards made and waiting for room on screen (only as many show as fit above the hotbar; the rest take turns). */
+	private static final java.util.ArrayDeque<RubyToast> READY = new java.util.ArrayDeque<>();
+	/** The cards on screen now. */
+	private static final java.util.List<RubyToast> SHOWN = new java.util.ArrayList<>();
+	/** Room kept free at the bottom, in GUI pixels: the hotbar, hearts and food. */
+	private static final int BOTTOM = 50;
+
 	/** Show what's waiting once nothing more has come for a moment, and nothing's open on screen (chat aside). */
 	private static void tick(Minecraft mc) {
-		if (WAITING.isEmpty() || System.currentTimeMillis() - lastIn < GATHER_MS || GameHud.menuOpen()) {
+		if (GameHud.menuOpen()) {
+			return;
+		}
+		gather(mc);
+		release(mc);
+	}
+
+	/** How many 32-pixel slots fit between the top (or under the minimap) and the hotbar: at least two. */
+	private static int capacity(Minecraft mc) {
+		boolean map = dev.rubymod.client.map.Minimap.enabled && ClientState.inRubyWarsWorld();
+		int top = HudScale.toGui(map ? dev.rubymod.client.map.Minimap.SIZE + 20 : 0);
+		int slot = Math.max(1, HudScale.toGui(SLOT));
+		return Math.max(2, (mc.getWindow().getGuiScaledHeight() - BOTTOM - top) / slot);
+	}
+
+	private static void release(Minecraft mc) {
+		long now = System.currentTimeMillis();
+		// Gone (slid away), or never got going: no longer taking room.
+		SHOWN.removeIf(t -> t.visibility == Visibility.HIDE && now - t.hidAt > 1000 || now - t.lastSeen > 2000);
+		int used = 0;
+		for (RubyToast t : SHOWN) {
+			used += t.height() / SLOT;
+		}
+		int room = capacity(mc);
+		while (!READY.isEmpty() && used + READY.peek().height() / SLOT <= room) {
+			RubyToast next = READY.poll();
+			next.lastSeen = now;
+			SHOWN.add(next);
+			used += next.height() / SLOT;
+			mc.gui.toastManager().addToast(next);
+		}
+	}
+
+	private static void gather(Minecraft mc) {
+		if (WAITING.isEmpty() || System.currentTimeMillis() - lastIn < GATHER_MS) {
 			return;
 		}
 		java.util.List<MorePayloads.Note> goals = new java.util.ArrayList<>();
@@ -96,12 +137,12 @@ public class RubyToast implements Toast {
 				stars += (int) n.title().chars().filter(ch -> ch == '\u2605').count();
 				names.add(n.body());
 			}
-			mc.gui.toastManager().addToast(new RubyToast("minecraft:nether_star", goals.size() + " goals done! +" + stars + (stars == 1 ? " star" : " stars") + " (J)",
+			READY.add(new RubyToast("minecraft:nether_star", goals.size() + " goals done! +" + stars + (stars == 1 ? " star" : " stars") + " (J)",
 					String.join(", ", names), goals.get(0).color()));
 		}
 		for (MorePayloads.Note n : WAITING) {
 			if (goals.size() < 2 || !goals.contains(n)) {
-				mc.gui.toastManager().addToast(new RubyToast(n.icon(), n.title(), n.body(), n.color()));
+				READY.add(new RubyToast(n.icon(), n.title(), n.body(), n.color()));
 			}
 		}
 		WAITING.clear();
@@ -115,9 +156,13 @@ public class RubyToast implements Toast {
 	/** Time spent out of sight behind an open menu (it doesn't count toward its five seconds). */
 	private long hidden;
 	private long hiddenFrom = -1;
+	/** When the toast manager last looked at it, and when it started sliding away. */
+	private long lastSeen;
+	private long hidAt;
 
 	@Override
 	public void update(ToastManager manager, long visibleTime) {
+		lastSeen = System.currentTimeMillis();
 		if (GameHud.menuOpen()) {
 			if (hiddenFrom < 0) {
 				hiddenFrom = visibleTime;
@@ -127,7 +172,11 @@ public class RubyToast implements Toast {
 			hiddenFrom = -1;
 		}
 		long shown = visibleTime - hidden - (hiddenFrom >= 0 ? visibleTime - hiddenFrom : 0);
+		Visibility was = visibility;
 		visibility = shown >= SHOW_MS * manager.getNotificationDisplayTimeMultiplier() ? Visibility.HIDE : Visibility.SHOW;
+		if (visibility == Visibility.HIDE && was != Visibility.HIDE) {
+			hidAt = lastSeen;
+		}
 	}
 
 	/** Below the minimap (when it's showing), not on top of it. */

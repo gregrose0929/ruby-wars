@@ -17,7 +17,7 @@ public final class MorePayloads {
 	private MorePayloads() {
 	}
 
-	/** A map marker. kind: 0 waypoint, 1 grave, 2 ping, 3 supply drop, 4 your Heart, 5 squadmate's Heart, 6 raid, 7 spotted enemy. */
+	/** A map marker. kind: 0 waypoint, 1 grave, 2 ping, 3 supply drop, 4 your Heart, 5 squadmate's Heart, 7 spotted enemy, 8 Supply Cache, 9 Ruby Shrine, 10 Ruby Meteor (6 is no longer used). */
 	public record Marker(String name, int x, int y, int z, byte kind) {
 		public static final StreamCodec<RegistryFriendlyByteBuf, Marker> CODEC = StreamCodec.composite(
 				ByteBufCodecs.STRING_UTF8, Marker::name,

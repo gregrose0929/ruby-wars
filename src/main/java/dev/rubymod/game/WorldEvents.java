@@ -222,6 +222,7 @@ public final class WorldEvents {
 		}
 		kind = what;
 		at = spot.immutable();
+		toldAt = now();
 		opensAt = now() + warning;
 		endsAt = Long.MAX_VALUE;
 		open = false;
@@ -378,9 +379,13 @@ public final class WorldEvents {
 		}
 	}
 
+	/** When the event was announced (it opening straight after doesn't say it all again). */
+	private static long toldAt;
+
 	private static void openUp(MinecraftServer server, List<ServerPlayer> players) {
 		ServerLevel level = server.overworld();
 		open = true;
+		boolean justTold = now() - toldAt < 5000;
 		dev.rubymod.RubyMod.LOGGER.info("World event open: {} at {}", kind.title, at.toShortString());
 		switch (kind) {
 			case CACHE -> {
@@ -388,16 +393,20 @@ public final class WorldEvents {
 				save(server);
 				openedAt = now();
 				endsAt = openedAt + CACHE_OPEN;
-				tell(players, Component.literal("The Supply Cache is open at " + at.getX() + ", " + at.getZ() + "! The big chest in the middle opens in 2 minutes.")
-						.withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+				if (!justTold) {
+					tell(players, Component.literal("\u2605 Supply Cache open at " + at.getX() + ", " + at.getZ() + ": the big chest opens in 2 min")
+							.withStyle(ChatFormatting.AQUA));
+				}
 				level.playSound(null, at, SoundEvents.CHEST_OPEN, SoundSource.BLOCKS, 4.0F, 0.6F);
 			}
 			case SHRINE -> {
 				buildShrine(level);
 				save(server);
 				endsAt = now() + SHRINE_OPEN;
-				tell(players, Component.literal("The Ruby Shrine is lit at " + at.getX() + ", " + at.getZ() + ". Hold it alone!")
-						.withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD));
+				if (!justTold) {
+					tell(players, Component.literal("\u2605 Ruby Shrine lit at " + at.getX() + ", " + at.getZ() + ": hold it alone for rubies")
+							.withStyle(ChatFormatting.LIGHT_PURPLE));
+				}
 			}
 			case METEOR -> {
 				undo(level); // the beacon goes; the crater stays
@@ -416,7 +425,7 @@ public final class WorldEvents {
 		}
 		for (ServerPlayer p : players) {
 			p.level().playSound(null, p.blockPosition(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST_FAR, SoundSource.PLAYERS, 0.8F, 0.8F);
-			if (!near(p, 24)) {
+			if (!near(p, 24) && !justTold) {
 				Alerts.title(p, kind.title.toUpperCase(java.util.Locale.ROOT) + " IS OPEN", at.getX() + ", " + at.getZ(), kind.chat);
 			}
 		}

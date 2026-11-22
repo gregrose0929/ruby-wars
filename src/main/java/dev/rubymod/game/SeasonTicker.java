@@ -78,6 +78,7 @@ public final class SeasonTicker {
 		Alerts.broadcastTitle(server, "BATTLE DAY IS COMING", "It begins in " + seconds + " seconds. Get to your base!", ChatFormatting.RED);
 		Alerts.broadcast(server, Component.literal("Battle Day has been called! It begins in " + seconds + " seconds. Finish what you're doing and get to your base.")
 				.withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		Alerts.news(server, "Battle Day begins in " + seconds + " seconds.");
 		return null;
 	}
 
@@ -88,6 +89,7 @@ public final class SeasonTicker {
 		}
 		battleAt = 0;
 		Alerts.broadcast(server, Component.literal("Battle Day has been called off. Keep building!").withStyle(ChatFormatting.GOLD));
+		Alerts.news(server, "Battle Day has been called off.");
 		return true;
 	}
 

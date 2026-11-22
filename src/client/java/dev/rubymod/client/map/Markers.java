@@ -88,7 +88,6 @@ public class Markers implements HudElement {
 			case 3 -> 0xFF40E0FF;    // supply drop
 			case 4 -> 0xFFFF3D6E;    // your Heart
 			case 5 -> 0xFF5BE37D;    // squad Heart
-			case 6 -> 0xFFFF4040;    // raid
 			case 7 -> 0xFFFF2A2A;    // spotted enemy
 			case 8 -> 0xFF5FC8E8;    // world event: Supply Cache
 			case 9 -> 0xFFE05AF0;    // world event: Ruby Shrine

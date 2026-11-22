@@ -381,7 +381,7 @@ public final class Duels {
 					+ " kills wins. /duel leave to quit; you'll get your own gear back.").withStyle(ChatFormatting.GOLD));
 		}
 		updateBar(duel);
-		Alerts.broadcast(server, Component.literal(duel.names[0] + " and " + duel.names[1] + " started a " + mode.title + ".")
+		Alerts.outside(server, Component.literal(duel.names[0] + " and " + duel.names[1] + " started a " + mode.title + ".")
 				.withStyle(ChatFormatting.GRAY));
 	}
 
@@ -490,7 +490,7 @@ public final class Duels {
 						SoundSource.PLAYERS, 1.0F, 1.0F);
 			}
 		}
-		Alerts.broadcast(server, Component.literal(duel.mode.title + ": " + result + ".").withStyle(ChatFormatting.GOLD));
+		Alerts.outside(server, Component.literal(duel.mode.title + ": " + result + ".").withStyle(ChatFormatting.GOLD));
 		for (int i = 0; i < 2; i++) {
 			ServerPlayer p = online(server, duel.players[i]);
 			if (p != null) {

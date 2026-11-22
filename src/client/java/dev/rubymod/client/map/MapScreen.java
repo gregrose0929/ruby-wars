@@ -63,13 +63,14 @@ public class MapScreen extends Screen {
 		g.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, x0, y0, 0.0F, 0.0F, size, size, size, size);
 		g.enableScissor(x0, y0, x0 + size, y0 + size);
 		MorePayloads.MapSync map = ClientState.map;
+		labels.clear();
 		if (map != null) {
 			for (MorePayloads.ClaimInfo c : map.claims()) {
 				int color = c.relation() == 0 ? 0xFF5BE37D : c.relation() == 1 ? 0xFF55AAFF : 0xFFFF5050;
 				int[] a = screen(c.x() - c.radius(), c.z() - c.radius(), x0, y0, size);
 				int s = (int) Math.round((c.radius() * 2 + 1) / zoom);
 				g.outline(a[0], a[1], Math.max(2, s), Math.max(2, s), color);
-				g.centeredText(font, c.name(), a[0] + s / 2, a[1] + 2, color);
+				label(c.name(), a[0] + s / 2 - font.width(c.name()) / 2, a[1] + 2, color, 3);
 			}
 			var plan = dev.rubymod.client.ClientState.borderPlan;
 			if (plan != null && plan.show()) {
@@ -78,7 +79,7 @@ public class MapScreen extends Screen {
 				int s = Math.max(3, (int) Math.round(plan.size() / zoom));
 				g.outline(a[0], a[1], s, s, 0xFFFFB040);
 				g.outline(a[0] + 1, a[1] + 1, s - 2, s - 2, 0xFFFFB040);
-				g.text(font, "Final circle", a[0] + 3, a[1] + 3, 0xFFFFB040, true);
+				label("Final circle", a[0] + 3, a[1] + 3, 0xFFFFB040, 0);
 				// Off the edge of the map as it's showing: point to it from the edge.
 				int[] mid = screen(plan.x(), plan.z(), x0, y0, size);
 				boolean off = a[0] + s < x0 || a[1] + s < y0 || a[0] > x0 + size || a[1] > y0 + size;
@@ -97,17 +98,18 @@ public class MapScreen extends Screen {
 				if (icon.isEmpty()) {
 					g.fill(p[0] - 3, p[1] - 3, p[0] + 4, p[1] + 4, 0xFF101010);
 					g.fill(p[0] - 2, p[1] - 2, p[0] + 3, p[1] + 3, color);
-					g.text(font, m.name(), p[0] + 6, p[1] - 4, color, true);
+					label(m.name(), p[0] + 6, p[1] - 4, color, 1);
 				} else {
 					g.item(icon, p[0] - 8, p[1] - 8);
-					g.text(font, m.name(), p[0] + 10, p[1] - 4, color, true);
+					label(m.name(), p[0] + 10, p[1] - 4, color, 1);
 				}
 			}
 			for (MorePayloads.Mate mate : map.mates()) {
 				int[] p = screen((int) mate.x(), (int) mate.z(), x0, y0, size);
 				g.fill(p[0] - 2, p[1] - 2, p[0] + 3, p[1] + 3, 0xFF5BE37D);
-				g.text(font, mate.name(), p[0] + 5, p[1] - 4, 0xFF7CF59A, true);
+				label(mate.name(), p[0] + 5, p[1] - 4, 0xFF7CF59A, 2);
 			}
+			drawLabels(g);
 		}
 		var player = Minecraft.getInstance().player;
 		if (player != null) {
@@ -162,6 +164,44 @@ public class MapScreen extends Screen {
 				cx += font.width(cn[i]) + 11;
 			}
 			dev.rubymod.client.ui.Ui.shrinkText(g, (int) Math.round(span) + " blocks across", lx + 2, cy + 26, 86, dev.rubymod.client.ui.Ui.MUTED);
+		}
+	}
+
+	/** A name on the map, put down once everything's drawn so none lands on another. Lower {@code rank} goes first. */
+	private record Label(String text, int x, int y, int color, int rank) {
+	}
+
+	private final java.util.List<Label> labels = new java.util.ArrayList<>();
+
+	private void label(String text, int x, int y, int color, int rank) {
+		if (text != null && !text.isEmpty()) {
+			labels.add(new Label(text, x, y, color, rank));
+		}
+	}
+
+	/** Each where it was meant to go, or nudged up or down a line if that's taken; left off if there's nowhere near. */
+	private void drawLabels(GuiGraphicsExtractor g) {
+		java.util.List<Label> order = new java.util.ArrayList<>(labels);
+		order.sort(java.util.Comparator.comparingInt(Label::rank));
+		java.util.List<int[]> taken = new java.util.ArrayList<>();
+		int[] nudges = {0, -10, 10, -20, 20};
+		for (Label l : order) {
+			int lw = font.width(l.text());
+			for (int dy : nudges) {
+				int[] r = {l.x() - 1, l.y() + dy - 1, l.x() + lw + 1, l.y() + dy + 9};
+				boolean clear = true;
+				for (int[] t : taken) {
+					if (r[0] < t[2] && t[0] < r[2] && r[1] < t[3] && t[1] < r[3]) {
+						clear = false;
+						break;
+					}
+				}
+				if (clear) {
+					taken.add(r);
+					g.text(font, l.text(), l.x(), l.y() + dy, l.color(), true);
+					break;
+				}
+			}
 		}
 	}
 

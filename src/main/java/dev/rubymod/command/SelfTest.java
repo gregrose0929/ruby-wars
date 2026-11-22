@@ -1497,6 +1497,21 @@ public final class SelfTest {
 			dev.rubymod.game.SupplyDrops.tick(server);
 			check("supply drops: emptied, it goes half a minute later and the ground is put back", stays && dev.rubymod.game.SupplyDrops.count() == 0
 					&& level.getBlockState(spot.below()) == ground && level.getBlockState(spot.offset(1, -2, 1)) == iron && !level.getBlockState(spot).is(Blocks.CHEST));
+			// Paused: one on its way waits (it doesn't land, or go, while everyone's away).
+			long pausedBefore = SeasonData.get().pausedRemaining;
+			dev.rubymod.game.SupplyDrops.incomingAt(level, spot, 2000L);
+			SeasonData.get().pausedRemaining = 60_000L;
+			for (int i = 0; i < 3; i++) {
+				dev.rubymod.game.SupplyDrops.tick(server);
+			}
+			dev.rubymod.game.SupplyDrops.advance(2500L);
+			dev.rubymod.game.SupplyDrops.tick(server);
+			boolean waited = !dev.rubymod.game.SupplyDrops.landed(spot);
+			SeasonData.get().pausedRemaining = pausedBefore;
+			dev.rubymod.game.SupplyDrops.advance(5000L); // it waited four seconds (four paused ticks)
+			dev.rubymod.game.SupplyDrops.tick(server);
+			check("supply drops: paused, one on its way waits, and lands once it's back on", waited && dev.rubymod.game.SupplyDrops.landed(spot));
+			dev.rubymod.game.SupplyDrops.clear(server);
 			// Battle Day over: any still standing go.
 			dev.rubymod.game.SupplyDrops.incomingAt(level, spot, 0);
 			SeasonData.get().phase = Phase.ENDED;

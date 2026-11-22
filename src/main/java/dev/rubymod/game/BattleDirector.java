@@ -73,6 +73,7 @@ public final class BattleDirector {
 						ChatFormatting.RED);
 				Alerts.broadcast(server, Component.literal("The season has begun! Place your Ruby Heart to claim land, mine rubies, "
 						+ "and get ready for Battle Day.").withStyle(ChatFormatting.GOLD));
+				Alerts.news(server, "Season " + data.season + " has begun.");
 			}
 			case LOCKDOWN -> {
 				FinalCircle.plan(server);
@@ -160,6 +161,9 @@ public final class BattleDirector {
 	public static void tickSecond(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
 		FinalCircle.tick(server);
+		if (data.phase == Phase.WAR && data.pausedRemaining >= 0) {
+			data.nextSupplyDropAt += 1000; // paused: the next drop waits too, so one doesn't come the moment it's back on
+		}
 		if (data.phase == Phase.WAR && SeasonTicker.now() >= data.nextSupplyDropAt && data.pausedRemaining < 0) {
 			data.nextSupplyDropAt = SeasonTicker.now() + GameConfig.get().supplyDropIntervalMinutes * 60_000L;
 			SupplyDrops.incoming(server.overworld());
@@ -411,6 +415,7 @@ public final class BattleDirector {
 		countSeason(server);
 		if (data.winner.isEmpty()) {
 			Alerts.broadcastTitle(server, "NO SURVIVORS", "Season " + data.season + " ends in a draw", ChatFormatting.GRAY);
+			Alerts.news(server, "Season " + data.season + " ended in a draw.");
 			sendRecapToAll(server);
 			return;
 		}
@@ -421,6 +426,7 @@ public final class BattleDirector {
 			}
 		}
 		Alerts.broadcastTitle(server, data.winner.toUpperCase() + " WINS", "Champion of Season " + data.season, ChatFormatting.GOLD);
+		Alerts.news(server, data.winner + " won Season " + data.season + "!");
 		playToAll(server, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0F);
 		Alerts.broadcast(server, Component.literal("=== Season " + data.season + " results ===").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 		Alerts.broadcast(server, Component.literal("Champion: " + data.winner).withStyle(ChatFormatting.GOLD));
@@ -652,8 +658,12 @@ public final class BattleDirector {
 		playToAll(level.getServer(), SoundEvents.FIREWORK_ROCKET_LARGE_BLAST_FAR, 0.5F);
 	}
 
+	/** A sound for everyone in Ruby Wars (not the hub or the other games). */
 	private static void playToAll(MinecraftServer server, net.minecraft.sounds.SoundEvent sound, float pitch) {
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+			if (!Hub.inRubyWarsWorld(player)) {
+				continue;
+			}
 			player.level().playSound(null, player.getX(), player.getY(), player.getZ(), sound, SoundSource.MASTER, 1.0F, pitch);
 		}
 	}
