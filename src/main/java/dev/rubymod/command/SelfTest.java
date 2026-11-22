@@ -1766,6 +1766,19 @@ public final class SelfTest {
 		dev.rubymod.industry.AwayTime.saveAndLoadForTest(server);
 		String back = dev.rubymod.industry.AwayTime.latest(alpha.getUUID());
 		check("away: the note survives a restart (" + back + ")", !note.isEmpty() && note.equals(back) && back.contains("12 Torches"));
+		// Away twice before you're back (someone passed your base, then again later): the note has both.
+		java.util.UUID away = java.util.UUID.randomUUID();
+		dev.rubymod.industry.AwayTime.made(away, new ItemStack(net.minecraft.world.item.Items.TORCH, 5));
+		for (int i = 0; i < 45; i++) {
+			dev.rubymod.industry.AwayTime.tick(server);
+		}
+		dev.rubymod.industry.AwayTime.made(away, new ItemStack(net.minecraft.world.item.Items.TORCH, 7));
+		dev.rubymod.industry.AwayTime.sold(away, 3000);
+		for (int i = 0; i < 45; i++) {
+			dev.rubymod.industry.AwayTime.tick(server);
+		}
+		String both = dev.rubymod.industry.AwayTime.latest(away);
+		check("away: two catch-ups before you're back add up (" + both + ")", both.contains("12 Torches") && both.contains("3 rubies"));
 		dev.rubymod.industry.AwayTime.reset();
 		SeasonData.get().phase = Phase.BUILD;
 		try {

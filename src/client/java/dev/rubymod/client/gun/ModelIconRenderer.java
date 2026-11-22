@@ -32,11 +32,11 @@ public final class ModelIconRenderer implements NoDataSpecialModelRenderer {
 	private final Vector3f center;
 	private final float scale;
 
-	private ModelIconRenderer(ModelPart root, Identifier texture) {
+	private ModelIconRenderer(ModelPart root, Identifier texture, Identifier layer) {
 		this.model = new Model<>(root, RenderTypes::entityCutout) {
 		};
 		this.texture = texture;
-		this.glow = Identifier.fromNamespaceAndPath(texture.getNamespace(), texture.getPath().replace(".png", "_glow.png"));
+		this.glow = glowFor(texture, layer);
 		// Bounds of every cube, in blocks, in model space.
 		Vector3f lo = new Vector3f(Float.MAX_VALUE);
 		Vector3f hi = new Vector3f(-Float.MAX_VALUE);
@@ -56,6 +56,21 @@ public final class ModelIconRenderer implements NoDataSpecialModelRenderer {
 		this.scale = 1.0F / Math.max(0.01F, Math.max(size.x, Math.max(size.y, size.z)));
 	}
 
+	/**
+	 * The lights that glow in the dark: the texture's own "_glow" if it has one, or else the model's (every paint of the
+	 * Convoy truck shares the red one's lights); none if neither is there (never Minecraft's pink "missing" squares).
+	 */
+	private static Identifier glowFor(Identifier texture, Identifier layer) {
+		var resources = net.minecraft.client.Minecraft.getInstance().getResourceManager();
+		Identifier own = Identifier.fromNamespaceAndPath(texture.getNamespace(), texture.getPath().replace(".png", "_glow.png"));
+		if (resources.getResource(own).isPresent()) {
+			return own;
+		}
+		String dir = texture.getPath().contains("/") ? texture.getPath().substring(0, texture.getPath().lastIndexOf('/') + 1) : "";
+		Identifier shared = Identifier.fromNamespaceAndPath(texture.getNamespace(), dir + layer.getPath() + "_glow.png");
+		return resources.getResource(shared).isPresent() ? shared : null;
+	}
+
 	@Override
 	public void submit(PoseStack pose, SubmitNodeCollector collector, int light, int overlay, boolean foil, int outline) {
 		pose.pushPose();
@@ -64,7 +79,9 @@ public final class ModelIconRenderer implements NoDataSpecialModelRenderer {
 		pose.scale(-1.0F, -1.0F, 1.0F);
 		pose.translate(-center.x, -center.y, -center.z);
 		collector.submitModel(model, Boolean.TRUE, pose, RenderTypes.entityCutout(texture), light, overlay, outline);
-		collector.submitModel(model, Boolean.TRUE, pose, RenderTypes.eyes(glow), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
+		if (glow != null) {
+			collector.submitModel(model, Boolean.TRUE, pose, RenderTypes.eyes(glow), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
+		}
 		pose.popPose();
 	}
 
@@ -83,7 +100,7 @@ public final class ModelIconRenderer implements NoDataSpecialModelRenderer {
 		@Override
 		public ModelIconRenderer bake(SpecialModelRenderer.BakingContext context) {
 			ModelPart root = context.entityModelSet().bakeLayer(new ModelLayerLocation(Identifier.parse(layer), "main"));
-			return new ModelIconRenderer(root, Identifier.parse(texture));
+			return new ModelIconRenderer(root, Identifier.parse(texture), Identifier.parse(layer));
 		}
 
 		@Override

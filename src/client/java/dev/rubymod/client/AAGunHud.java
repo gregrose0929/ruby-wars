@@ -27,8 +27,12 @@ public final class AAGunHud {
 	private AAGunHud() {
 	}
 
+	/** The targets' range labels, kept off each other when they bunch up. */
+	private static final dev.rubymod.client.ui.LabelSpacer LABELS = new dev.rubymod.client.ui.LabelSpacer();
+
 	public static void draw(GuiGraphicsExtractor g, Minecraft mc, HeavyAAGunEntity gun) {
 		Font font = mc.font;
+		LABELS.clear();
 		int w = g.guiWidth();
 		int h = g.guiHeight();
 		int cx = w / 2;
@@ -66,7 +70,11 @@ public final class AAGunHud {
 			float[] l = project(camera, lead, w, h);
 			if (p != null) {
 				g.outline((int) p[0] - 7, (int) p[1] - 7, 14, 14, AMBER);
-				g.text(font, Math.round(e.distanceTo(gun)) + "m", (int) p[0] + 9, (int) p[1] - 10, AMBER, false);
+				String range = Math.round(e.distanceTo(gun)) + "m";
+				int ly = LABELS.place((int) p[0] + 9, (int) p[1] - 10, font.width(range));
+				if (ly != Integer.MIN_VALUE) {
+					g.text(font, range, (int) p[0] + 9, ly, AMBER, false);
+				}
 			}
 			if (l != null) {
 				boolean on = Math.hypot(l[0] - cx, l[1] - cy) < 6;
@@ -76,7 +84,10 @@ public final class AAGunHud {
 					dotted(g, p[0], p[1], l[0], l[1], DIM);
 				}
 				if (on) {
-					g.text(font, "FIRE", (int) l[0] + 7, (int) l[1] + 2, RED, false);
+					int fy = LABELS.place((int) l[0] + 7, (int) l[1] + 2, font.width("FIRE"));
+					if (fy != Integer.MIN_VALUE) {
+						g.text(font, "FIRE", (int) l[0] + 7, fy, RED, false);
+					}
 				}
 			}
 		}

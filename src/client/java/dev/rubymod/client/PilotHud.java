@@ -534,7 +534,10 @@ public class PilotHud implements HudElement {
 	// ----- Long-range contacts -----
 
 	/** Aircraft and vehicles beyond render distance: a small diamond, type and range. */
+	private final dev.rubymod.client.ui.LabelSpacer contactLabels = new dev.rubymod.client.ui.LabelSpacer();
+
 	private void drawContacts(GuiGraphicsExtractor g, Font font, Camera camera, Minecraft mc, int w, int h) {
+		contactLabels.clear();
 		for (Contacts.Target t : Contacts.remote(mc)) {
 			float[] p = project(camera, t.pos(), w, h);
 			if (p == null || p[0] < 0 || p[0] > w || p[1] < 0 || p[1] > h) {
@@ -543,7 +546,10 @@ public class PilotHud implements HudElement {
 			int col = t.airborne() ? 0xFFFF9050 : 0xFFD0D060;
 			diamond(g, (int) p[0], (int) p[1], 3, col);
 			String s = t.name() + " " + Math.round(t.pos().distanceTo(camera.position())) + "m";
-			g.text(font, s, (int) p[0] + 6, (int) p[1] - 4, col, false);
+			int ly = contactLabels.place((int) p[0] + 6, (int) p[1] - 4, font.width(s));
+			if (ly != Integer.MIN_VALUE) {
+				g.text(font, s, (int) p[0] + 6, ly, col, false);
+			}
 		}
 	}
 

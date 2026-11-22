@@ -73,6 +73,12 @@ public final class AwayTime {
 				if (now - e.getValue().lastAdd >= QUIET_TICKS) {
 					it.remove();
 					Tally t = e.getValue();
+					// One you haven't been told about yet (someone else passed by your base earlier): add them together.
+					Tally before = LAST.get(e.getKey());
+					if (before != null && !before.told) {
+						before.made.forEach((item, count) -> t.made.merge(item, count, Long::sum));
+						t.milliRubies += before.milliRubies;
+					}
 					t.madeAt = System.currentTimeMillis();
 					LAST.put(e.getKey(), t);
 					save(server);

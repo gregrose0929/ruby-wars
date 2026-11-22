@@ -53,6 +53,15 @@ public final class AutoTest {
 
 	private static int at;
 
+	/** The script waits here until this is true (or {@link #holdLeft} ticks go by): a busy server can be slow to answer. */
+	private static java.util.function.Predicate<Minecraft> holdUntil;
+	private static int holdLeft;
+
+	private static void hold(java.util.function.Predicate<Minecraft> done, int maxTicks) {
+		holdUntil = done;
+		holdLeft = maxTicks;
+	}
+
 	private static void then(int delay, Consumer<Minecraft> action) {
 		at += delay;
 		STEPS.add(new Step(at, action));
@@ -11407,18 +11416,28 @@ public final class AutoTest {
 			int index = i;
 			then(5, mc -> {
 				IntegratedServer server = mc.getSingleplayerServer();
+				java.util.UUID me = mc.player.getUUID();
 				server.execute(() -> {
-					var p = server.getPlayerList().getPlayers().get(0);
-					var pos = net.minecraft.core.BlockPos.containing(origin.x - 5 + index * 2, origin.y, origin.z + 6);
+					// This player (not whoever's first on the list), stood right in front of the machine so the screen stays open.
+					var p = server.getPlayerList().getPlayer(me);
+					var pos = net.minecraft.core.BlockPos.containing(Math.floor(origin.x) - 5 + index * 2, Math.floor(origin.y), Math.floor(origin.z) + 6);
+					if (p == null) {
+						log("industry: no player to open {}", machines[index]);
+						return;
+					}
+					p.teleportTo(pos.getX() + 0.5, pos.getY(), pos.getZ() - 1.5);
 					if (p.level().getBlockEntity(pos) instanceof dev.rubymod.industry.MachineBlockEntity be) {
 						if (index == 0) {
 							be.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 12));
 						}
 						p.openMenu(be);
+					} else {
+						log("industry: no machine at {} for {} ({})", pos.toShortString(), machines[index], p.level().getBlockState(pos));
 					}
 				});
 			});
-			then(20, mc -> shot(mc, "industry-screen-" + machines[index]));
+			then(1, mc -> hold(m -> m.player.containerMenu instanceof dev.rubymod.industry.MachineMenu, 200));
+			then(10, mc -> shot(mc, "industry-screen-" + machines[index]));
 			then(2, mc -> mc.player.closeContainer());
 		}
 		// Architect's Wand: a hollow room of stone bricks.
@@ -12060,6 +12079,13 @@ public final class AutoTest {
 				}
 			}
 			return;
+		}
+		if (holdUntil != null) {
+			if (holdUntil.test(mc) || --holdLeft <= 0) {
+				holdUntil = null;
+			} else {
+				return;
+			}
 		}
 		tick++;
 		if (track != null && track.isAlive()) {

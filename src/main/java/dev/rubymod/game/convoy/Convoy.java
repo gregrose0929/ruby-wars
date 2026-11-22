@@ -1358,12 +1358,13 @@ public final class Convoy {
 		switch (state) {
 			case STAGING -> {
 				header = "Loading up";
-				objective = ready ? "Pick your job. The truck rolls out in " + Math.max(0, timer / 20) + "s." : "Building the road...";
+				// The countdown itself is over the hotbar: said once.
+				objective = ready ? "Pick your job before the truck rolls out." : "Building the road...";
 				seconds = ready ? timer / 20 : -1;
 			}
 			case DEPOT -> {
 				header = "Depot " + stage + ", next: " + ConvoyRoute.NAMES[stage];
-				objective = "Repairs and new vehicles. Pick an upgrade! Rolling out in " + Math.max(0, timer / 20) + "s.";
+				objective = "Repairs and new vehicles. Pick an upgrade before you roll out!";
 				seconds = timer / 20;
 			}
 			case WRECKED -> {

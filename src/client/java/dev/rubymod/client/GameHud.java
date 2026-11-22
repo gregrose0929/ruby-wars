@@ -398,17 +398,19 @@ public class GameHud implements HudElement {
 		}
 		Guide.Step s = Guide.steps().get(step);
 		int[] progress = Guide.progress(s);
-		boolean counted = progress != null && progress[1] > 1;
+		// Between seasons there's no Heart to place yet: the guide says what to do meanwhile.
+		boolean lobby = ClientState.phase() == Phase.LOBBY;
+		boolean counted = !lobby && progress != null && progress[1] > 1;
 		String count = counted ? progress[0] + "/" + progress[1] : "";
 		// One line unless Settings asks for the full card (J has the whole guide); a new step glows gold for a moment.
-		boolean open = "full".equals(ClientSettings.guide);
+		boolean open = "full".equals(ClientSettings.guide) && !lobby;
 		float fresh = Math.max(0.0F, 1.0F - (System.currentTimeMillis() - guideChangedAt) / 4000.0F);
 		// A gold stripe down the left (inside the frame), the text 8 past it.
 		int x = 4;
 		int tx = x + 9;
 		if (!open) {
 			// One line: the next step, and its count if it has one.
-			String text = guideLine(step)[0];
+			String text = lobby ? "Next: wait for the season to start (H: party games)" : guideLine(step)[0];
 			int pw = Math.min(maxW, Math.max(colW, 9 + font.width(text) + (counted ? 8 + font.width(count) : 0) + 7));
 			// It would run into the banner at the top centre: narrower (smaller letters) if that still reads, or else under it.
 			if (topBottom > 0 && y < topBottom + 2 && x + pw + 4 > topLeft) {
