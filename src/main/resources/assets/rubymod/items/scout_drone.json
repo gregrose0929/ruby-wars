@@ -1,6 +1,6 @@
 {
 	"model": {
 		"type": "minecraft:model",
-		"model": "rubymod:item/recon_drone"
+		"model": "rubymod:item/scout_drone"
 	}
 }

@@ -24,6 +24,12 @@ public abstract class MinecraftMixin {
 	@Inject(method = "handleKeybinds", at = @At("HEAD"))
 	private void rubymod$designateNotChat(CallbackInfo ci) {
 		Minecraft mc = (Minecraft) (Object) this;
+		// Flying a Scout Drone: Q brings it home (your own hands are back where you're standing).
+		if (dev.rubymod.client.DronePilot.flying()) {
+			while (mc.options.keyDrop.consumeClick()) {
+				dev.rubymod.client.DronePilot.dropKey();
+			}
+		}
 		var designate = dev.rubymod.client.RubyModClient.designateKey;
 		if (designate != null && dev.rubymod.client.Targeting.piloting(mc) != null && mc.options.keyChat.same(designate)) {
 			while (mc.options.keyChat.consumeClick()) {

@@ -52,12 +52,15 @@ public class Markers implements HudElement {
 			int x = Mth.clamp(Math.round(s[0]), 10, w - 10);
 			int y = Mth.clamp(Math.round(s[1]), 18, h - 30);
 			var icon = icon(m.kind());
-			if (icon.isEmpty()) {
+			boolean meteor = m.kind() == 10;
+			if (meteor) {
+				meteor(g, x, y);
+			} else if (icon.isEmpty()) {
 				diamond(g, x, y, color);
 			} else {
 				g.item(icon, x - 8, y - 8);
 			}
-			if (!edge || m.kind() == 2 || !icon.isEmpty()) {
+			if (!edge || m.kind() == 2 || meteor || !icon.isEmpty()) {
 				String label = m.name() + "  " + Math.round(dist) + "m";
 				int tw = font.width(label);
 				if (dev.rubymod.client.HowToCard.overlaps(x - tw / 2 - 4, y - 19, x + tw / 2 + 4, y - 6)) {
@@ -103,12 +106,29 @@ public class Markers implements HudElement {
 	}
 
 	/** World events are drawn as what they are (a chest, a crystal, ruby ore); everything else as a dot. */
+	/**
+	 * The Ruby Meteor's marker: a little falling rock (a red head, an orange and yellow tail up to the right), about
+	 * half the size of an item picture, centred on ({@code x}, {@code y}).
+	 */
+	public static void meteor(GuiGraphicsExtractor g, int x, int y) {
+		// The tail, fading as it goes.
+		g.fill(x + 5, y - 6, x + 6, y - 5, 0x80FFE080);
+		g.fill(x + 4, y - 5, x + 5, y - 4, 0xC0FFD040);
+		g.fill(x + 3, y - 4, x + 4, y - 3, 0xE0FFB030);
+		g.fill(x + 2, y - 3, x + 4, y - 2, 0xFFFF8C2A);
+		g.fill(x + 1, y - 2, x + 3, y - 1, 0xFFFF7020);
+		// The rock: a dark edge, ruby red, a bright glint.
+		g.fill(x - 3, y - 2, x + 2, y + 3, 0xFF2A0A10);
+		g.fill(x - 2, y - 1, x + 1, y + 2, 0xFFE0303A);
+		g.fill(x - 2, y - 1, x - 1, y, 0xFFFF9A9A);
+	}
+
 	public static net.minecraft.world.item.ItemStack icon(byte kind) {
 		return switch (kind) {
 			case 3 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BARREL);
 			case 8 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST);
 			case 9 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.AMETHYST_CLUSTER);
-			case 10 -> new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModBlocks.RUBY_ORE);
+			case 10 -> net.minecraft.world.item.ItemStack.EMPTY; // drawn small by meteor() instead
 			default -> net.minecraft.world.item.ItemStack.EMPTY;
 		};
 	}

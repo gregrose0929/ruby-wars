@@ -155,7 +155,7 @@ public class ScoutDroneEntity extends ReconDroneEntity {
 		if (flown % 10 == 0 && flown > 0) {
 			int left = batteryLeft() / 20;
 			int far = (int) Math.round(out);
-			p.sendOverlayMessage(Component.literal("Scout Drone  •  battery " + left + "s  •  " + far + " m  •  right-click to bring it home")
+			p.sendOverlayMessage(Component.literal("Scout Drone  •  battery " + left + "s  •  " + far + " m  •  right-click or Q: bring it home")
 					.withStyle(left <= 10 ? ChatFormatting.YELLOW : ChatFormatting.AQUA));
 		}
 		return true;

@@ -41,7 +41,7 @@ public final class DronePilots {
 		FLYING.put(p.getUUID(), drone);
 		Net.send(p, new MorePayloads.DroneView(drone.getId(), false));
 		level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.BEEHIVE_EXIT, SoundSource.PLAYERS, 1.0F, 1.8F);
-		p.sendSystemMessage(Component.literal("Scout Drone up! W A S D to fly, Space up, Shift down. Enemies it sees glow for you. Right-click to bring it home.")
+		p.sendSystemMessage(Component.literal("Scout Drone up! W A S D to fly, Space up, Shift down. Enemies it sees glow for you. Right-click (or Q) to bring it home.")
 				.withStyle(ChatFormatting.AQUA));
 		return true;
 	}
@@ -72,6 +72,8 @@ public final class DronePilots {
 		if (!p.getInventory().add(back)) {
 			p.drop(back, false, net.minecraft.util.Prediction.SERVER_ONLY);
 		}
+		// A moment before it can go up again, so the click that brought it home can't send it straight back out.
+		p.getCooldowns().addCooldown(new ItemStack(ModItems.SCOUT_DRONE), 20);
 		p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.BEEHIVE_ENTER, SoundSource.PLAYERS, 1.0F, 1.8F);
 		p.sendOverlayMessage(Component.literal("Drone home.").withStyle(ChatFormatting.AQUA));
 	}

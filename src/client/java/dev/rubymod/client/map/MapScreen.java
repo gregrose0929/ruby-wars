@@ -95,7 +95,10 @@ public class MapScreen extends Screen {
 				int[] p = screen(m.x(), m.z(), x0, y0, size);
 				int color = Markers.color(m.kind());
 				var icon = Markers.icon(m.kind());
-				if (icon.isEmpty()) {
+				if (m.kind() == 10) {
+					Markers.meteor(g, p[0], p[1]);
+					label(m.name(), p[0] + 7, p[1] - 4, color, 1);
+				} else if (icon.isEmpty()) {
 					g.fill(p[0] - 3, p[1] - 3, p[0] + 4, p[1] + 4, 0xFF101010);
 					g.fill(p[0] - 2, p[1] - 2, p[0] + 3, p[1] + 3, color);
 					label(m.name(), p[0] + 6, p[1] - 4, color, 1);

@@ -32,6 +32,11 @@ public final class DronePilot {
 	/** Watching a base's security cameras (not flying a drone). */
 	private static boolean camera;
 	private static boolean exitSent;
+	/**
+	 * A flight just ended with right-click still held: it does nothing until the button's let go. (Held, Minecraft
+	 * "uses" what's in your hand every few ticks, and the drone that just came home is in your hand: it'd launch again.)
+	 */
+	private static boolean swallowUse;
 	/** Entity id -> when its glow ends (client ms). */
 	private static final Map<Integer, Long> GLOWING = new HashMap<>();
 
@@ -67,6 +72,9 @@ public final class DronePilot {
 	}
 
 	private static void stop(Minecraft mc) {
+		if (droneId >= 0) {
+			swallowUse = true;
+		}
 		if (droneId >= 0 && mc.player != null) {
 			mc.setCameraEntity(mc.player);
 			if (cameraBefore != null) {
@@ -81,6 +89,21 @@ public final class DronePilot {
 	/** Right-click while flying: bring it home (instead of using whatever's in your hand). */
 	public static boolean useKey() {
 		if (!flying()) {
+			if (swallowUse) {
+				if (Minecraft.getInstance().options.keyUse.isDown()) {
+					return true; // still the click that brought it home
+				}
+				swallowUse = false;
+			}
+			return false;
+		}
+		recall = true;
+		return true;
+	}
+
+	/** Q while flying: bring it home too (instead of dropping what's in your hand where you're standing). */
+	public static boolean dropKey() {
+		if (!flying()) {
 			return false;
 		}
 		recall = true;
@@ -88,6 +111,9 @@ public final class DronePilot {
 	}
 
 	public static void tick(Minecraft mc) {
+		if (swallowUse && !flying() && !mc.options.keyUse.isDown()) {
+			swallowUse = false;
+		}
 		if (!flying()) {
 			return;
 		}

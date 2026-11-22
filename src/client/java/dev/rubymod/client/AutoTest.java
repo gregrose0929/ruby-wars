@@ -5705,8 +5705,13 @@ public final class AutoTest {
 			log("drone: turned and flew: {}", droneLine(mc));
 			shot(mc, "drone-3-turned");
 		});
-		then(2, mc -> DronePilot.useKey());
-		then(30, mc -> log("drone: brought home: {}", droneLine(mc)));
+		// Right-click held down like a real player (Minecraft repeats it): it comes home, and doesn't go straight back up.
+		then(2, mc -> mc.options.keyUse.setDown(true));
+		then(30, mc -> {
+			mc.options.keyUse.setDown(false);
+			log("drone: brought home with right-click held: {}", droneLine(mc));
+		});
+		then(10, mc -> log("drone: after letting go: {}", droneLine(mc)));
 		then(5, mc -> {
 			mc.player.setYRot(0);
 			mc.player.setXRot(0);
@@ -9398,6 +9403,21 @@ public final class AutoTest {
 		});
 		then(30, mc -> shot(mc, "event-marker"));
 		then(5, mc -> onServer(mc, server -> dev.rubymod.game.WorldEvents.stop(server)));
+		// A Ruby Meteor on its way: its little marker over the spot, and on the map.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var spot = server.overworld().getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+					p.blockPosition().offset(30, 0, 30));
+			dev.rubymod.game.WorldEvents.begin(server, java.util.List.of(p), dev.rubymod.game.WorldEvents.Kind.METEOR, spot, 90_000L);
+		}));
+		then(40, mc -> lookAt(mc, net.minecraft.world.phys.Vec3.atCenterOf(dev.rubymod.game.WorldEvents.at())));
+		then(20, mc -> shot(mc, "event-meteor-marker"));
+		then(5, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));
+		then(30, mc -> shot(mc, "event-meteor-map"));
+		then(5, mc -> {
+			mc.gui.setScreen(null);
+			onServer(mc, server -> dev.rubymod.game.WorldEvents.stop(server));
+		});
 		// The Practice Dummy: a Heart, a loaded Sentry Turret, a dummy in front of it.
 		then(10, mc -> onServer(mc, server -> {
 			var p = me(server);

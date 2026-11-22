@@ -379,7 +379,7 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			ny += 10;
 		}
 		String cost = lock ? "Locked" : price < 0 ? "Max tier" : price + (price == 1 ? " ruby" : " rubies") + (stack.getCount() > 1 ? " for " + stack.getCount() : "");
-		g.text(font, Ui.fit(cost, pw - 38), tx, TOP + 28, lock || price < 0 ? Ui.MUTED : creative() || have >= price ? Ui.GOLD : Ui.RED, false);
+		Ui.shrinkText(g, cost, tx, TOP + 28, pw - 38, lock || price < 0 ? Ui.MUTED : creative() || have >= price ? Ui.GOLD : Ui.RED);
 		int y = TOP + 44;
 		// Tags: what kind of thing it is.
 		int tagX = px;
@@ -395,6 +395,16 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			y += 15;
 		}
 		int textBottom = buttons ? bottom - 20 : bottom - 11;
+		// Locked: how to unlock it, first.
+		String unlock = lore(stack, "Unlock: ");
+		if (lock && unlock != null) {
+			y = Ui.wrap(g, unlock.replace("Unlock: ", "Unlock it with ") + ".", px, y, pw, 0xFF5FC8E8, textBottom);
+		}
+		// What it's for, in plain words, and what it works with.
+		ArmoryGuide.Entry guide = guideFor(stack);
+		if (guide != null) {
+			y = guide(g, guide, px, y, pw, textBottom, lock, mx, my);
+		}
 		// Numbers for guns.
 		if (stack.getItem() instanceof GunItem gun && y + 44 < textBottom) {
 			GunStats s = gun.stats(stack);
@@ -404,16 +414,14 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			y = bar(g, px, y, pw, "Range", (float) s.range(), 512.0F, (int) s.range() + "m");
 			y += 2;
 		}
-		// What it does: its description (and, if locked, how to unlock it).
-		String unlock = lore(stack, "Unlock: ");
-		if (lock && unlock != null) {
-			y = Ui.wrap(g, unlock.replace("Unlock: ", "Unlock it with ") + ".", px, y, pw, 0xFF5FC8E8, textBottom);
-		}
-		for (Component c : about(stack)) {
-			if (y + 9 > textBottom) {
-				break;
+		// Nothing written for it here: its own tooltip.
+		if (guide == null) {
+			for (Component c : about(stack)) {
+				if (y + 9 > textBottom) {
+					break;
+				}
+				y = Ui.wrap(g, c.getString(), px, y, pw, lock ? Ui.MUTED : Ui.DIM, textBottom);
 			}
-			y = Ui.wrap(g, c.getString(), px, y, pw, lock ? Ui.MUTED : Ui.DIM, textBottom);
 		}
 		if (!buttons) {
 			g.text(font, "Click it to choose it", px, bottom - 9, Ui.MUTED, false);
@@ -436,6 +444,71 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			set(ammo, px + bw + 4, by, pw - bw - 4, 16);
 			Ui.button(g, "Buy ammo", px + bw + 4, by, pw - bw - 4, 16, mx, my, 0xFF8A6A2A, true);
 		}
+	}
+
+	/** The guide's words for what's shown (the Heart upgrade card has its own; ready-made plans keep their own list). */
+	private static ArmoryGuide.Entry guideFor(ItemStack stack) {
+		if (stack.is(net.minecraft.world.item.Items.NETHER_STAR) && name(stack).contains("Upgrade Ruby Heart")) {
+			return ArmoryGuide.get("heart_upgrade");
+		}
+		if (stack.is(dev.rubymod.registry.ModItems.BLUEPRINT) && name(stack).startsWith("Blueprint: ")) {
+			return null;
+		}
+		return ArmoryGuide.get(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+	}
+
+	/**
+	 * A line or two on what it's for (the first sentence of the guide; point at it for the whole of it), then "Works
+	 * with" and a small picture of each thing it works with (point at one for its name). Kept short, so the panel
+	 * stays as it was.
+	 */
+	private int guide(GuiGraphicsExtractor g, ArmoryGuide.Entry guide, int x, int y, int w, int bottom, boolean lock, int mx, int my) {
+		String full = guide.text();
+		int stop = full.indexOf(". ");
+		String brief = stop > 0 ? full.substring(0, stop + 1) : full;
+		int top = y;
+		y = Ui.wrap(g, brief, x, y, w, lock ? Ui.MUTED : Ui.TEXT, bottom);
+		if (!brief.equals(full) && mx >= x && mx < x + w && my >= top && my < y) {
+			List<Component> tip = new ArrayList<>();
+			for (FormattedCharSequence line : font.split(Component.literal(full), 180)) {
+				StringBuilder t = new StringBuilder();
+				line.accept((index, style, cp) -> {
+					t.appendCodePoint(cp);
+					return true;
+				});
+				tip.add(Component.literal(t.toString()));
+			}
+			g.setComponentTooltipForNextFrame(font, tip, mx + leftPos, my + topPos);
+		}
+		y += 2;
+		List<ItemStack> works = new ArrayList<>();
+		for (String id : guide.works()) {
+			var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.parse(id.contains(":") ? id : "rubymod:" + id));
+			if (item != net.minecraft.world.item.Items.AIR) {
+				works.add(new ItemStack(item));
+			}
+		}
+		if (works.isEmpty() || y + 12 > bottom) {
+			return y;
+		}
+		String label = "Works with";
+		small(g, label, x, y + 3, Ui.GOLD);
+		int cx = x + Math.round(font.width(label) * 0.75F) + 4;
+		for (ItemStack stack : works) {
+			if (cx + 12 > x + w) {
+				break;
+			}
+			g.pose().pushMatrix();
+			g.pose().translate(cx, y);
+			g.pose().scale(0.75F, 0.75F);
+			g.item(stack, 0, 0);
+			g.pose().popMatrix();
+			if (mx >= cx && mx < cx + 12 && my >= y && my < y + 12) {
+				g.setComponentTooltipForNextFrame(font, List.of(Component.literal(name(stack))), mx + leftPos, my + topPos);
+			}
+			cx += 13;
+		}
+		return y + 14;
 	}
 
 	private static void set(int[] r, int x, int y, int w, int h) {
