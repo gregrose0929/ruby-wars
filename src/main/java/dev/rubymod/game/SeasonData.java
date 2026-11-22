@@ -45,6 +45,15 @@ public class SeasonData {
 	public long nextSupplyDropAt;
 	/** Build phase: when the next ruby meteor comes down (0: not set yet). */
 	public long nextMeteorAt;
+	/** Battle Day's final circle (picked when Battle Day starts), and the border closing on it. */
+	public int finalX;
+	public int finalZ;
+	public boolean finalSet;
+	public double closeFromX;
+	public double closeFromZ;
+	public double closeFromSize;
+	public long closeStart;
+	public long closeMs;
 	public long lastBackupAt;
 	public String winner = "";
 

@@ -444,7 +444,7 @@ public abstract class PartyGame {
 
 	public String status() {
 		return switch (phase) {
-			case IDLE -> "Nobody playing";
+			case IDLE -> "Nobody yet";
 			case LOBBY -> players.size() < minPlayers && !bots ? "Waiting for players (" + players.size() + "/" + minPlayers + ")"
 					: "Starting soon  •  " + players.size() + " in";
 			case PLAYING -> roundStatus();

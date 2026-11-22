@@ -1381,8 +1381,8 @@ public final class Hub {
 				playing++;
 			}
 		}
-		String phase = Rules.phase() == Phase.LOBBY ? "Waiting for the season to start" : Rules.phase().title();
-		return phase + "  •  " + playing + " playing";
+		String phase = Rules.phase() == Phase.LOBBY ? "Season not started" : Rules.phase().title();
+		return playing == 0 ? phase : phase + "  •  " + playing + " playing";
 	}
 
 	/** Make sure each sign exists exactly once, and refresh what it says. */

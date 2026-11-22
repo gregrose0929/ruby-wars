@@ -186,6 +186,50 @@ public final class Ui {
 		g.text(font(), fit(s, w), x, y, color, false);
 	}
 
+	/** Text in {@code w} pixels: as it is if it fits, in smaller letters if that makes it fit, cut short only if even that doesn't. */
+	public static void shrinkText(GuiGraphicsExtractor g, String s, int x, int y, int w, int color) {
+		if (font().width(s) <= w) {
+			g.text(font(), s, x, y, color, false);
+			return;
+		}
+		g.pose().pushMatrix();
+		g.pose().translate(x, y + 1);
+		g.pose().scale(0.75F, 0.75F);
+		g.text(font(), fit(s, Math.round(w / 0.75F)), 0, 0, color, false);
+		g.pose().popMatrix();
+	}
+
+	/**
+	 * Like {@link #shrinkText}, but when even smaller letters don't fit on one line, two small lines (a little above and
+	 * below where the one line would be), cut short only after that.
+	 */
+	public static void shrinkWrap(GuiGraphicsExtractor g, String s, int x, int y, int w, int color) {
+		Font font = font();
+		int small = Math.round(w / 0.75F);
+		if (font.width(s) <= w || font.width(s) <= small) {
+			shrinkText(g, s, x, y, w, color);
+			return;
+		}
+		var lines = font.split(net.minecraft.network.chat.Component.literal(s), small);
+		g.pose().pushMatrix();
+		g.pose().translate(x, y - 3);
+		g.pose().scale(0.75F, 0.75F);
+		for (int i = 0; i < Math.min(2, lines.size()); i++) {
+			if (i == 1 && lines.size() > 2) {
+				// The rest doesn't fit: the second line, cut short.
+				StringBuilder rest = new StringBuilder();
+				lines.get(1).accept((index, style, cp) -> {
+					rest.appendCodePoint(cp);
+					return true;
+				});
+				g.text(font, fit(rest + " ...", small), 0, 9, color, false);
+			} else {
+				g.text(font, lines.get(i), 0, i * 9, color, false);
+			}
+		}
+		g.pose().popMatrix();
+	}
+
 	public static String fit(String s, int w) {
 		Font font = font();
 		if (font.width(s) <= w) {

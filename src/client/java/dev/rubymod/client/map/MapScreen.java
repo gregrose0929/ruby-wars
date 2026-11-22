@@ -71,6 +71,25 @@ public class MapScreen extends Screen {
 				g.outline(a[0], a[1], Math.max(2, s), Math.max(2, s), color);
 				g.centeredText(font, c.name(), a[0] + s / 2, a[1] + 2, color);
 			}
+			var plan = dev.rubymod.client.ClientState.borderPlan;
+			if (plan != null && plan.show()) {
+				int half = plan.size() / 2;
+				int[] a = screen(plan.x() - half, plan.z() - half, x0, y0, size);
+				int s = Math.max(3, (int) Math.round(plan.size() / zoom));
+				g.outline(a[0], a[1], s, s, 0xFFFFB040);
+				g.outline(a[0] + 1, a[1] + 1, s - 2, s - 2, 0xFFFFB040);
+				g.text(font, "Final circle", a[0] + 3, a[1] + 3, 0xFFFFB040, true);
+				// Off the edge of the map as it's showing: point to it from the edge.
+				int[] mid = screen(plan.x(), plan.z(), x0, y0, size);
+				boolean off = a[0] + s < x0 || a[1] + s < y0 || a[0] > x0 + size || a[1] > y0 + size;
+				if (off) {
+					int ex = Math.max(x0 + 4, Math.min(x0 + size - 70, mid[0]));
+					int ey = Math.max(y0 + 4, Math.min(y0 + size - 12, mid[1]));
+					String arrow = (mid[1] < y0 ? "↑" : mid[1] > y0 + size ? "↓" : "") + (mid[0] < x0 ? "←" : mid[0] > x0 + size ? "→" : "");
+					g.fill(ex - 2, ey - 2, ex + font.width(arrow + " Final circle") + 2, ey + 9, 0xB0000000);
+					g.text(font, arrow + " Final circle", ex, ey, 0xFFFFB040, false);
+				}
+			}
 			for (MorePayloads.Marker m : map.markers()) {
 				int[] p = screen(m.x(), m.z(), x0, y0, size);
 				int color = Markers.color(m.kind());
@@ -107,7 +126,7 @@ public class MapScreen extends Screen {
 				: new String[] {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart"};
 		int lx = x0 + size + 10;
 		if (lx + 92 < w) {
-			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 52);
+			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 64);
 			for (int i = 0; i < names.length; i++) {
 				var icon = Markers.icon((byte) i);
 				if (icon.isEmpty()) {
@@ -129,7 +148,9 @@ public class MapScreen extends Screen {
 			g.item(Markers.icon((byte) 8), 0, 0);
 			g.pose().popMatrix();
 			g.text(font, "World event", lx + 11, ey, dev.rubymod.client.ui.Ui.DIM, false);
-			int cy = ey + 12 + 6;
+			g.outline(lx + 2, ey + 14, 5, 5, 0xFFFFB040);
+			g.text(font, "Final circle", lx + 11, ey + 12, dev.rubymod.client.ui.Ui.DIM, false);
+			int cy = ey + 24 + 6;
 			g.text(font, "Claims", lx + 2, cy, dev.rubymod.client.ui.Ui.GOLD, false);
 			int[] cc = squads ? new int[] {0xFF5BE37D, 0xFF55AAFF, 0xFFFF5050} : new int[] {0xFF5BE37D, 0xFFFF5050};
 			String[] cn = squads ? new String[] {"Yours", "Squad", "Other"} : new String[] {"Yours", "Others"};

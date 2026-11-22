@@ -141,7 +141,7 @@ public class ModeScreen extends Screen {
 				Ui.text(g, game.about(), tx, y + 19, cardH >= 50 ? textW + 56 : textW, Ui.DIM);
 			}
 			Ui.icon(g, Ui.Icon.DOT, tx - 2, y + cardH - 14);
-			Ui.text(g, status(game.id()), tx + 8, y + cardH - 13, textW, here ? Ui.GREEN : Ui.GOLD);
+			Ui.shrinkWrap(g, status(game.id()), tx + 8, y + cardH - 13, textW, here ? Ui.GREEN : Ui.GOLD);
 			int bx = x + colW - 58;
 			int by = y + cardH - 20;
 			if (choose) {
@@ -231,7 +231,7 @@ public class ModeScreen extends Screen {
 			Ui.text(g, f[1], rightX + 25, y + (rowH - 8) / 2, room, here ? Ui.GREEN : Ui.TEXT);
 			String s = here ? "You're here" : f[2];
 			if (room - nameW > 30) {
-				Ui.text(g, s, rightX + 31 + nameW, y + (rowH - 8) / 2, room - nameW - 6, Ui.MUTED);
+				Ui.shrinkText(g, s, rightX + 31 + nameW, y + (rowH - 8) / 2, room - nameW - 6, Ui.MUTED);
 			}
 			if (over) {
 				tooltip = List.of(f[1], f[4]);

@@ -75,6 +75,7 @@ public final class BattleDirector {
 						+ "and get ready for Battle Day.").withStyle(ChatFormatting.GOLD));
 			}
 			case LOCKDOWN -> {
+				FinalCircle.plan(server);
 				for (SeasonData.PlayerRecord record : data.players.values()) {
 					record.missilesUsed = 0;
 					record.killstreak = 0;
@@ -105,10 +106,9 @@ public final class BattleDirector {
 						Goals.add(server, UUID.fromString(entry.getKey()), "sudden", 1);
 					}
 				}
-				WorldBorder border = overworld.getWorldBorder();
-				border.setCenter(config.borderCenterX, config.borderCenterZ);
-				border.lerpSizeBetween(border.getSize(), config.borderEndSize, config.suddenDeathMinutes * 60L * 20L, overworld.getGameTime());
-				Alerts.broadcastTitle(server, "SUDDEN DEATH", "No more respawns. The border is closing.", ChatFormatting.DARK_RED);
+				// The border closes on the final circle (on your map), sliding over as it shrinks.
+				FinalCircle.close(server, config.suddenDeathMinutes * 60_000L);
+				Alerts.broadcastTitle(server, "SUDDEN DEATH", "No more respawns. The border is closing on the final circle (your map).", ChatFormatting.DARK_RED);
 				playToAll(server, SoundEvents.WITHER_SPAWN, 1.0F);
 			}
 			case FINAL_CIRCLE -> {
@@ -116,9 +116,9 @@ public final class BattleDirector {
 				if (border.getSize() > config.borderEndSize + 1) {
 					// Sudden Death cut short (an admin skipped ahead): close the rest of the way over a minute, so nobody
 					// outside it is killed by the border on the spot.
-					border.lerpSizeBetween(border.getSize(), config.borderEndSize, 60L * 20L, overworld.getGameTime());
+					FinalCircle.close(server, 60_000L);
 				} else {
-					border.setSize(config.borderEndSize);
+					FinalCircle.snap(server);
 				}
 				Alerts.broadcastTitle(server, "FINAL CIRCLE", "Everyone is glowing. Artillery incoming.", ChatFormatting.GOLD);
 				Alerts.broadcast(server, Component.literal("Artillery will shell the circle every 15 seconds. Keep moving!")
@@ -151,6 +151,7 @@ public final class BattleDirector {
 		border.setCenter(config.borderCenterX, config.borderCenterZ);
 		border.setSize(startBorder(server));
 		data.winner = "";
+		FinalCircle.forget();
 		enterPhase(server, Phase.BUILD);
 	}
 
@@ -158,6 +159,7 @@ public final class BattleDirector {
 
 	public static void tickSecond(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
+		FinalCircle.tick(server);
 		if (data.phase == Phase.WAR && SeasonTicker.now() >= data.nextSupplyDropAt && data.pausedRemaining < 0) {
 			data.nextSupplyDropAt = SeasonTicker.now() + GameConfig.get().supplyDropIntervalMinutes * 60_000L;
 			SupplyDrops.incoming(server.overworld());

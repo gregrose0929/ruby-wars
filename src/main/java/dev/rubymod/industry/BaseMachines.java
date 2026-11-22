@@ -40,6 +40,7 @@ public final class BaseMachines {
 		return switch (status) {
 			case MachineBlockEntity.NO_POWER -> true;
 			case MachineBlockEntity.OUTPUT_FULL -> !kind.generator();
+			case MachineBlockEntity.BACKED_UP -> true;
 			case MachineBlockEntity.NO_INPUT -> kind == MachineKind.COMBUSTION_GENERATOR;
 			default -> false;
 		};

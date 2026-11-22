@@ -87,6 +87,14 @@ public class Minimap implements HudElement {
 			}
 		}
 		MorePayloads.MapSync map = ClientState.map;
+		var plan = ClientState.borderPlan;
+		if (plan != null && plan.show() && ClientState.inRubyWarsWorld()) {
+			int half = plan.size() / 2;
+			int fx = x0 + Math.round((plan.x() - half - px) * scale + SIZE / 2.0F);
+			int fz = y0 + Math.round((plan.z() - half - pz) * scale + SIZE / 2.0F);
+			int fs = Math.max(2, Math.round(plan.size() * scale));
+			g.outline(fx, fz, fs, fs, 0xFFFFB040);
+		}
 		if (map != null && ClientState.inRubyWarsWorld()) {
 			for (MorePayloads.ClaimInfo c : map.claims()) {
 				int color = c.relation() == 0 ? 0xFF5BE37D : c.relation() == 1 ? 0xFF55AAFF : 0xFFFF5050;

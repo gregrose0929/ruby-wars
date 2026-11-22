@@ -1445,6 +1445,8 @@ public final class SelfTest {
 		worldEventChecks(level, alpha, bravo, surface(level, base.offset(-160, 0, -160)));
 		practiceChecks(level, alpha, bravo);
 		buildingChecks(level, alpha);
+		finalCircleChecks(level);
+		backedUpChecks(level, alpha, surface(level, base.offset(-260, 0, -60)));
 		supplyDropChecks(level, surface(level, base.offset(-220, 0, 160)));
 
 		// ----- Ore -----
@@ -1504,6 +1506,92 @@ public final class SelfTest {
 			dev.rubymod.game.SupplyDrops.clear(server);
 			dev.rubymod.game.SupplyDrops.reset();
 			SeasonData.get().phase = before;
+		}
+	}
+
+	/** The final circle: somewhere inside the border, and the border closes on it smoothly, never past anyone. */
+	private void finalCircleChecks(ServerLevel level) {
+		var server = level.getServer();
+		var data = SeasonData.get();
+		var border = level.getWorldBorder();
+		double cx = border.getCenterX();
+		double cz = border.getCenterZ();
+		double size = border.getSize();
+		boolean wasSet = data.finalSet;
+		int fx = data.finalX;
+		int fz = data.finalZ;
+		long closeMs = data.closeMs;
+		try {
+			data.finalSet = false;
+			dev.rubymod.game.FinalCircle.plan(server);
+			int end = dev.rubymod.game.GameConfig.get().borderEndSize;
+			boolean inside = Math.abs(data.finalX - cx) + end / 2.0 <= size / 2 && Math.abs(data.finalZ - cz) + end / 2.0 <= size / 2;
+			check("final circle: picked somewhere inside the border (" + data.finalX + ", " + data.finalZ + ")", data.finalSet && inside);
+			dev.rubymod.game.FinalCircle.close(server, 100_000L);
+			data.closeStart -= 50_000L;
+			dev.rubymod.game.FinalCircle.tick(server);
+			double midSize = border.getSize();
+			double midX = border.getCenterX();
+			double midZ = border.getCenterZ();
+			// Halfway, the border is inside where it started (it never jumps past anyone) and around the final circle.
+			boolean nested = Math.abs(midX - cx) + midSize / 2 <= size / 2 + 0.01 && Math.abs(midZ - cz) + midSize / 2 <= size / 2 + 0.01
+					&& Math.abs(data.finalX + 0.5 - midX) + end / 2.0 <= midSize / 2 + 0.01;
+			check("final circle: halfway, the border's half closed, still inside where it was and round the circle (" + Math.round(midSize) + ")",
+					midSize < size && midSize > end && nested);
+			data.closeStart -= 60_000L;
+			dev.rubymod.game.FinalCircle.tick(server);
+			check("final circle: at the end, the border is the final circle", Math.abs(border.getSize() - end) < 0.01
+					&& Math.abs(border.getCenterX() - (data.finalX + 0.5)) < 0.01 && data.closeMs == 0);
+		} finally {
+			data.finalSet = wasSet;
+			data.finalX = fx;
+			data.finalZ = fz;
+			data.closeMs = closeMs;
+			border.setCenter(cx, cz);
+			border.setSize(size);
+		}
+	}
+
+	/** A machine whose belt runs into a full chest says the belt's backed up (not just "full"). */
+	private void backedUpChecks(ServerLevel level, FakePlayer alpha, BlockPos spot) {
+		for (BlockPos q : BlockPos.betweenClosed(spot.offset(-1, 0, -2), spot.offset(5, 3, 2))) {
+			level.setBlockAndUpdate(q, Blocks.AIR.defaultBlockState());
+		}
+		var refinery = machine(level, spot, ModBlocks.ORE_REFINERY, alpha);
+		refinery.setItem(0, new ItemStack(net.minecraft.world.item.Items.RAW_IRON, 10));
+		for (int i = 2; i < refinery.getContainerSize(); i++) {
+			refinery.setItem(i, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64));
+		}
+		var east = ModBlocks.CONVEYOR.defaultBlockState().setValue(dev.rubymod.industry.ConveyorBlock.FACING, net.minecraft.core.Direction.EAST);
+		level.setBlockAndUpdate(spot.east(), east);
+		level.setBlockAndUpdate(spot.east(2), east);
+		BlockPos chestPos = spot.east(3);
+		level.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
+		var chest = (net.minecraft.world.level.block.entity.ChestBlockEntity) level.getBlockEntity(chestPos);
+		for (int i = 0; i < chest.getContainerSize(); i++) {
+			chest.setItem(i, new ItemStack(Blocks.DIRT, 64));
+		}
+		dev.rubymod.industry.Grid.account(alpha.getUUID()).charge = 100_000;
+		// Its belt gets a few ingots on it, then the end's full: it stops and says why.
+		runMachines(level, 200, refinery);
+		// (Items on the belt don't move during the test: the belt stays busy, as a jammed one would.)
+		for (int i = 2; i < refinery.getContainerSize(); i++) {
+			refinery.setItem(i, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 64));
+		}
+		runMachines(level, 45, refinery);
+		check("belts: a machine whose belt ends at a full chest says it's backed up (status " + refinery.status() + ")",
+				refinery.status() == dev.rubymod.industry.MachineBlockEntity.BACKED_UP
+						&& dev.rubymod.industry.Belts.full(level, chestPos, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)));
+		chest.clearContent();
+		runMachines(level, 45, refinery);
+		check("belts: room at the end again, and it's not backed up any more (status " + refinery.status() + ")",
+				refinery.status() != dev.rubymod.industry.MachineBlockEntity.BACKED_UP
+						&& !dev.rubymod.industry.Belts.full(level, chestPos, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)));
+		for (var item : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(spot).inflate(4))) {
+			item.discard();
+		}
+		for (BlockPos q : BlockPos.betweenClosed(spot.offset(-1, 0, -2), spot.offset(5, 3, 2))) {
+			level.setBlockAndUpdate(q, Blocks.AIR.defaultBlockState());
 		}
 	}
 

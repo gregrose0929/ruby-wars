@@ -413,6 +413,19 @@ public final class MorePayloads {
 		}
 	}
 
+	/** Server -> client, every second on Battle Day: where the final circle is (its middle and size), and whether to show it. */
+	public record BorderPlan(int x, int z, int size, boolean show) implements CustomPacketPayload {
+		public static final Type<BorderPlan> TYPE = new Type<>(RubyMod.id("border_plan"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BorderPlan> CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, BorderPlan::x, ByteBufCodecs.VAR_INT, BorderPlan::z, ByteBufCodecs.VAR_INT, BorderPlan::size,
+				ByteBufCodecs.BOOL, BorderPlan::show, BorderPlan::new);
+
+		@Override
+		public Type<BorderPlan> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client, every second while a world event is on: the banner along the top (empty text: it's over). */
 	public record EventStatus(String text, int color) implements CustomPacketPayload {
 		public static final Type<EventStatus> TYPE = new Type<>(RubyMod.id("event_status"));
@@ -749,6 +762,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(DeathInfo.TYPE, DeathInfo.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Autopilot.TYPE, Autopilot.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(EventStatus.TYPE, EventStatus.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(BorderPlan.TYPE, BorderPlan.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(CombatTagged.TYPE, CombatTagged.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BulletHole.TYPE, BulletHole.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(Ping.TYPE, Ping.CODEC);

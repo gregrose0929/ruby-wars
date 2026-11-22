@@ -71,7 +71,7 @@ public class ManualScreen extends Screen {
 					"Build until everyone's ready, then survive one Battle Day. Everyone plays on their own: the last player standing wins.",
 					"Place your Ruby Heart to claim land: nobody else can build there, and you're safe inside it until Battle Day. Outside the bases you can fight.",
 					"Battle Day: Lockdown (defenses arm), Open War (PvP, Hearts can be breached, you respawn at your Heart, and a supply drop every 15 minutes: told 30 seconds ahead, with a beam over the spot), "
-							+ "Sudden Death (Hearts shatter, the border shrinks), Final Circle.",
+							+ "Sudden Death (Hearts shatter, the border closes on the final circle), Final Circle. The final circle is somewhere different each season: it's on your map (K) from Open War, and the top of the screen says if you're outside it.",
 					"Respawns: in Lockdown and Open War you come back at your Heart while it stands (the line under the timer says so). "
 							+ "Heart gone, or Sudden Death: your next death knocks you out.",
 					"Knocked out? Watch: click for the next player, right-click for the one before, crouch to fly free. Or press H and play party games in the hub.",

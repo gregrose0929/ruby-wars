@@ -254,6 +254,10 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 				text = kind().generator() ? "Grid full" : "Output full";
 				color = AMBER;
 			}
+			case MachineBlockEntity.BACKED_UP -> {
+				text = "Backed up";
+				color = AMBER;
+			}
 			case MachineBlockEntity.NO_INPUT -> {
 				text = switch (kind()) {
 					case COMBUSTION_GENERATOR -> "Needs fuel";
@@ -298,6 +302,7 @@ public class MachineScreen extends AbstractContainerScreen<MachineMenu> {
 		MachineKind kind = kind();
 		return switch (status) {
 			case MachineBlockEntity.NO_POWER -> "add solar panels or a generator";
+			case MachineBlockEntity.BACKED_UP -> "the chest at the end of its belt is full: empty it, or add another";
 			case MachineBlockEntity.OUTPUT_FULL -> kind.generator() ? "add a Battery Bank to store more"
 					: kind == MachineKind.RUBY_DRILL ? "crouch-click to collect, or put an Ore Silo or a belt next to it"
 					: "take it out, or put an Ore Silo or a belt next to it";

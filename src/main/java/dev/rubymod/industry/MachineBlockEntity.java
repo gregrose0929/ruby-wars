@@ -60,6 +60,8 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	public static final int OUTPUT_FULL = 3;
 	public static final int NO_INPUT = 4;
 	public static final int NIGHT = 5;
+	/** Full because the belt line it puts things on is backed up (whatever's at its end is full). */
+	public static final int BACKED_UP = 6;
 
 	private static final UUID NOBODY = new UUID(0, 0);
 	/** Machines keep working at this fraction of their speed while unloaded (up to a day). */
@@ -302,6 +304,15 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		if (kind.outputs > 0 && ticks % 10 == 0) {
 			pushOutputs(level);
 			pullFromSilos(level);
+		}
+		// Full, with a belt carrying things away: is the belt line backed up (its end full)? Checked now and then.
+		if (status == OUTPUT_FULL) {
+			if (ticks % 20 == 0) {
+				backedUp = beltBackedUp(level);
+			}
+			if (backedUp) {
+				status = BACKED_UP;
+			}
 		}
 		showWorking(level);
 		if (ticks % 20 == 0) {
@@ -1128,6 +1139,26 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 			}
 		}
 		return lines;
+	}
+
+	private boolean backedUp;
+
+	/** A belt next to it leads away, and the chest or machine at that line's end can't take what this has. */
+	private boolean beltBackedUp(ServerLevel level) {
+		ItemStack sample = ItemStack.EMPTY;
+		for (int i = firstOutput(); i < items.size() && sample.isEmpty(); i++) {
+			sample = items.get(i);
+		}
+		for (Direction dir : Direction.Plane.HORIZONTAL) {
+			BlockPos side = worldPosition.relative(dir);
+			if (ConveyorBlock.leadsAway(level.getBlockState(side), dir)) {
+				Belts.End end = Belts.endOf(level, side, sample);
+				if (end != null && Belts.full(level, end.pos(), sample)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/** Catching up: what it made goes straight to wherever the belt line next to it ends. */

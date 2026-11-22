@@ -56,6 +56,18 @@ public class GameHud implements HudElement {
 		topLeft = w;
 		drawPhaseBanner(g, font, w);
 		drawRespawnStatus(g, font, w);
+		var plan = ClientState.borderPlan;
+		if (plan != null && plan.show() && ClientState.inRubyWarsWorld() && !player.isSpectator()) {
+			double half = plan.size() / 2.0;
+			double dx = Math.max(Math.abs(player.getX() - plan.x()) - half, 0) * Math.signum(plan.x() - player.getX());
+			double dz = Math.max(Math.abs(player.getZ() - plan.z()) - half, 0) * Math.signum(plan.z() - player.getZ());
+			if (dx != 0 || dz != 0) {
+				int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
+				String[] names = {"E", "SE", "S", "SW", "W", "NW", "N", "NE"};
+				String way = names[Math.floorMod(Math.round((float) Math.toDegrees(Math.atan2(dz, dx)) / 45.0F), 8)];
+				topBanner(g, font, "Outside the final circle: " + dist + " m " + way + " (your map)", w, 0xFFFFB040);
+			}
+		}
 		var event = ClientState.event;
 		if (event != null && !event.text().isEmpty() && System.currentTimeMillis() - ClientState.eventAt < 2500) {
 			// A line or two, each kept clear of the minimap.

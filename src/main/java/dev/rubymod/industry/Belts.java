@@ -191,6 +191,29 @@ public final class Belts {
 				|| containerAt(level, pos) != null;
 	}
 
+	/**
+	 * Is the container at {@code pos} too full to take {@code stack} (or, with an empty stack, anything at all)? For
+	 * belts and machines to say they're backed up.
+	 */
+	public static boolean full(Level level, BlockPos pos, ItemStack stack) {
+		Container container = containerAt(level, pos);
+		if (container == null) {
+			return false;
+		}
+		for (int i = 0; i < container.getContainerSize(); i++) {
+			ItemStack there = container.getItem(i);
+			if (stack.isEmpty()) {
+				if (there.isEmpty()) {
+					return false;
+				}
+			} else if (container.canPlaceItem(i, stack) && (there.isEmpty()
+					|| ItemStack.isSameItemSameComponents(there, stack) && there.getCount() < Math.min(there.getMaxStackSize(), container.getMaxStackSize()))) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/** Does this stack match a filter (an empty filter takes anything)? */
 	public static boolean matches(ItemStack filter, ItemStack stack) {
 		return filter.isEmpty() || ItemStack.isSameItem(filter, stack);

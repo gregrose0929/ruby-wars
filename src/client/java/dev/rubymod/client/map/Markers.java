@@ -100,7 +100,8 @@ public class Markers implements HudElement {
 	/** World events are drawn as what they are (a chest, a crystal, ruby ore); everything else as a dot. */
 	public static net.minecraft.world.item.ItemStack icon(byte kind) {
 		return switch (kind) {
-			case 3, 8 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST);
+			case 3 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BARREL);
+			case 8 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST);
 			case 9 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.AMETHYST_CLUSTER);
 			case 10 -> new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModBlocks.RUBY_ORE);
 			default -> net.minecraft.world.item.ItemStack.EMPTY;

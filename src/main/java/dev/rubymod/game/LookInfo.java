@@ -198,7 +198,14 @@ public final class LookInfo {
 				if (stopped) {
 					lines.add("Stopped by redstone");
 				} else if (!(state.getBlock() instanceof dev.rubymod.industry.BeltSplitterBlock)) {
-					lines.add(feeds ? "Feeds the " + frontState.getBlock().getName().getString()
+					net.minecraft.world.item.ItemStack sample = net.minecraft.world.item.ItemStack.EMPTY;
+					for (var item : player.level().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(pos).inflate(0.1))) {
+						sample = item.getItem();
+						break;
+					}
+					boolean jammed = feeds && dev.rubymod.industry.Belts.full(player.level(), ahead, sample);
+					lines.add(jammed ? "Feeds the " + frontState.getBlock().getName().getString() + ", but it's full: things are waiting"
+							: feeds ? "Feeds the " + frontState.getBlock().getName().getString()
 							: belt ? "Feeds the next belt"
 									: frontState.isFaceSturdy(player.level(), ahead, facing.getOpposite()) ? "Nothing at the end: items stop there (anyone can take them)"
 											: "Nothing at the end: items fall off");
@@ -352,6 +359,7 @@ public final class LookInfo {
 			case MachineBlockEntity.WORKING -> "Working";
 			case MachineBlockEntity.NO_POWER -> "No power: add solar panels or a generator";
 			case MachineBlockEntity.OUTPUT_FULL -> "Full: collect it, or put an Ore Silo or a belt next to it";
+			case MachineBlockEntity.BACKED_UP -> "Backed up: the chest at the end of its belt is full";
 			case MachineBlockEntity.NO_INPUT -> "Waiting for input";
 			case MachineBlockEntity.NIGHT -> "Night: no sun";
 			default -> "Idle";

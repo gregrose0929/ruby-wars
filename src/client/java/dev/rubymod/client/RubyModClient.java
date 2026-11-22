@@ -218,6 +218,7 @@ public class RubyModClient implements ClientModInitializer {
 			player.setXRot(Math.max(-90, player.getXRot() - payload.pitch()));
 			player.setYRot(player.getYRot() + payload.yaw());
 		});
+		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.BorderPlan.TYPE, (payload, context) -> ClientState.borderPlan = payload);
 		ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.EventStatus.TYPE, (payload, context) -> {
 			ClientState.event = payload;
 			ClientState.eventAt = System.currentTimeMillis();

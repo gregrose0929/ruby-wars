@@ -119,8 +119,9 @@ public class PilotHud implements HudElement {
 		}
 		if (tip != null) {
 			int tw = font.width(tip) + 14;
-			dev.rubymod.client.ui.Ui.panel(g, w / 2 - tw / 2, h - 86, tw, 18);
-			dev.rubymod.client.ui.Ui.text(g, tip, w / 2 - tw / 2 + 7, h - 81, tipColor);
+			// Above the line Minecraft shows over the hotbar ("Press Left Shift to dismount"), not on top of it.
+			dev.rubymod.client.ui.Ui.panel(g, w / 2 - tw / 2, h - 104, tw, 18);
+			dev.rubymod.client.ui.Ui.text(g, tip, w / 2 - tw / 2 + 7, h - 99, tipColor);
 		}
 	}
 

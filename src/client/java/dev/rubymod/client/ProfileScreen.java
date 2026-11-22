@@ -89,13 +89,13 @@ public class ProfileScreen extends Screen {
 				}
 				String[] f = line.split("[|]", 2);
 				boolean sub = f[0].startsWith("  ");
-				int split = colW * 9 / 20;
+				int split = colW * 2 / 5;
 				if (!sub && row++ % 2 == 0) {
 					g.fill(leftX + 6, y - 2, leftX + colW - 6, y + 9, 0x18FFFFFF);
 				}
-				Ui.text(g, f[0].trim(), leftX + (sub ? 16 : 10), y, split - 14, sub ? Ui.MUTED : Ui.DIM);
+				Ui.shrinkText(g, f[0].trim(), leftX + (sub ? 16 : 10), y, split - 14, sub ? Ui.MUTED : Ui.DIM);
 				String value = f.length > 1 ? f[1] : "";
-				Ui.text(g, value, leftX + split, y, colW - split - 10, sub ? Ui.MUTED : Ui.TEXT);
+				Ui.shrinkWrap(g, value, leftX + split, y, colW - split - 10, sub ? Ui.MUTED : Ui.TEXT);
 				y += sub ? 10 : 12;
 				if (y > bottom - 12) {
 					break;

@@ -24,14 +24,15 @@ public final class WhatsNew {
 	private WhatsNew() {
 	}
 
-	private static final String VERSION = "2026-11-21-building";
+	private static final String VERSION = "2026-11-21-circle";
 	private static final List<String> LINES = List.of(
+			"minecraft:compass|Battle Day's final circle is somewhere different each season. It's on your map from Open War, and you're told if you're outside it.",
+			"rubymod:conveyor|Belts and machines say when a belt's backed up because the chest at its end is full.",
 			"rubymod:reinforced_concrete|Reinforced Concrete really is the toughest wall now: 6 blasts (Concrete Wall takes 4). Damaged walls crack, and looking at one says how many blasts it's taken.",
 			"rubymod:blueprint|Ready-made Blueprints at the Armory (Building): a Watchtower, a Bunker, a Gatehouse and a Wall Section, for your Constructor to build.",
 			"rubymod:constructor|A Constructor can repair your base: give it a Blueprint of your walls, switch it to Repair in place, and it fills holes back in.",
 			"rubymod:architect_wand|The Architect's Wand builds round towers, domes and staircases too.",
-			"minecraft:beacon|Battle Day supply drops are told 30 seconds before they land, with a beam over the spot and a chest on your map. They stay until someone empties them.",
-			"minecraft:magenta_carpet|The Ruby Shrine's edge is laid in magenta carpet, and the banner counts down to your next ruby while you hold it.");
+			"minecraft:beacon|Battle Day supply drops are told 30 seconds before they land, with a beam over the spot and a marker on your map. They stay until someone empties them.");
 
 	/** Who's seen this update's card. */
 	private static Set<UUID> seen;
