@@ -720,8 +720,11 @@ public final class BattleDirector {
 		ACTIVE_DROPS.add(c.above(2));
 		dropsVisibleUntil = Math.max(dropsVisibleUntil, SeasonTicker.now() + 15 * 60_000L);
 		Waypoints.global("Ruby meteor", c.above(2), 3, 15 * 60);
-		Alerts.broadcast(level.getServer(), Component.literal("☄ A RUBY METEOR has come down at " + c.getX() + ", " + c.getZ()
-				+ "! It's full of rubies, and it's on nobody's land. First there keeps them.").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+		for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
+			if (Hub.inRubyWarsWorld(p)) {
+				p.sendSystemMessage(Component.literal("★ Ruby Meteor down at " + c.getX() + ", " + c.getZ() + ": full of rubies").withStyle(ChatFormatting.RED));
+			}
+		}
 		for (ServerPlayer player : level.players()) {
 			Alerts.title(player, "RUBY METEOR", "It's on your map (K): " + c.getX() + ", " + c.getZ(), ChatFormatting.RED);
 		}

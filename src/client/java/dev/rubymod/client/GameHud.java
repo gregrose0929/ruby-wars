@@ -368,7 +368,14 @@ public class GameHud implements HudElement {
 		return new String[] {"Next: " + s.title(), progress != null && progress[1] > 1 ? progress[0] + "/" + progress[1] : ""};
 	}
 
+	/** Where the Guide line was last drawn (left, top, right, bottom; all 0 when it isn't), so the look panel can keep clear. */
+	public static int guideL;
+	public static int guideT;
+	public static int guideR;
+	public static int guideB;
+
 	private void drawGuide(GuiGraphicsExtractor g, Font font, int y, int colW, int maxW) {
+		guideL = guideT = guideR = guideB = 0;
 		int step = guideShown();
 		if (step < 0) {
 			return;
@@ -393,6 +400,10 @@ public class GameHud implements HudElement {
 			int pw = Math.min(maxW, Math.max(colW, 9 + font.width(text) + (counted ? 8 + font.width(count) : 0) + 7));
 			int right = x + pw - 7;
 			panel(g, x, y, x + pw, y + 17);
+			guideL = x;
+			guideT = y;
+			guideR = x + pw;
+			guideB = y + 17;
 			g.fill(x + 2, y + 2, x + 4, y + 15, GOLD);
 			g.text(font, dev.rubymod.client.ui.Ui.fit(text, right - tx - (counted ? font.width(count) + 8 : 0)), tx, y + 5,
 					dev.rubymod.client.ui.Ui.mix(WHITE, GOLD, fresh), true);
@@ -409,6 +420,10 @@ public class GameHud implements HudElement {
 		int ly = y + 5;
 		int height = 5 + 11 + 12 + lines * 10 + (counted ? 7 : 0) + 2 + 9 + 4;
 		panel(g, x, y, x + pw, y + height);
+		guideL = x;
+		guideT = y;
+		guideR = x + pw;
+		guideB = y + height;
 		g.fill(x + 2, y + 2, x + 4, y + height - 2, GOLD);
 		g.text(font, dev.rubymod.client.ui.Ui.fit(Guide.CHAPTERS.get(Guide.chapter()).title() + ": step " + (step + 1) + " of " + Guide.steps().stream().filter(st -> !st.optional()).count(), inner),
 				tx, ly, GOLD, true);

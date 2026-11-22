@@ -191,9 +191,9 @@ public final class Ui {
 		g.text(font(), s, x, y, color, false);
 	}
 
-	/** Text cut to {@code w} pixels (with "..." when it doesn't fit). */
+	/** Text in {@code w} pixels: smaller letters if it's too long, cut short (with "...") only if even that doesn't fit. */
 	public static void text(GuiGraphicsExtractor g, String s, int x, int y, int w, int color) {
-		g.text(font(), fit(s, w), x, y, color, false);
+		shrinkText(g, s, x, y, w, color);
 	}
 
 	/** Text in {@code w} pixels: as it is if it fits, in smaller letters if that makes it fit, cut short only if even that doesn't. */
