@@ -18,7 +18,10 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 
-/** Right-click throws a sticky charge; with charges out, right-click (sneaking) sets them all off. */
+/**
+ * Right-click throws a sticky charge; with charges out, right-click (sneaking) sets them all off. Throw your last one and a
+ * Detonator is left in your hand to set them off with.
+ */
 public class C4Item extends Item {
 	public C4Item(Properties properties) {
 		super(properties);
@@ -28,7 +31,7 @@ public class C4Item extends Item {
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
 		if (level instanceof ServerLevel serverLevel) {
-			if (StickyChargeEntity.hasCharges(player) && (player.isShiftKeyDown() || stack.getCount() <= 1 && !player.isCreative())) {
+			if (StickyChargeEntity.hasCharges(player) && player.isShiftKeyDown()) {
 				StickyChargeEntity.detonateAll(serverLevel, player);
 				level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.LEVER_CLICK, SoundSource.PLAYERS, 1.0F, 1.5F);
 				return InteractionResult.SUCCESS;
@@ -38,7 +41,13 @@ public class C4Item extends Item {
 			if (!player.isCreative()) {
 				stack.shrink(1);
 			}
-			player.sendOverlayMessage(Component.literal("C4 placed. Sneak + right-click with C4 to detonate."));
+			if (stack.isEmpty()) {
+				// The last one: what's left in your hand is the detonator.
+				DetonatorItem.give(player, hand);
+				player.sendOverlayMessage(Component.literal("C4 placed. Right-click the Detonator to set them off."));
+			} else {
+				player.sendOverlayMessage(Component.literal("C4 placed. Sneak + right-click with C4 to detonate."));
+			}
 		}
 		return InteractionResult.SUCCESS;
 	}
@@ -48,5 +57,6 @@ public class C4Item extends Item {
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
 		builder.accept(Component.literal("Right-click: throw a sticky charge (sticks to vehicles)").withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal("Sneak + right-click: detonate all your charges").withStyle(ChatFormatting.GRAY));
+		builder.accept(Component.literal("Throw your last one and you're left holding a Detonator").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

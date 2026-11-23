@@ -139,7 +139,11 @@ public class HeavyAAGunEntity extends Mob {
 
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-		if (player.isSecondaryUseActive() || isVehicle()) {
+		if (player.isSecondaryUseActive()) {
+			// Crouch-right-click: pack it back up (your own).
+			return PackUp.tryPackUp(this, player, 0) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+		}
+		if (isVehicle()) {
 			return InteractionResult.PASS;
 		}
 		if (!level().isClientSide()) {

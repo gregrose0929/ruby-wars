@@ -990,6 +990,64 @@ public final class SelfTest {
 			alpha.getInventory().clearContent();
 		}
 
+		// ----- C4: the last one leaves a detonator -----
+		{
+			alpha.getInventory().clearContent();
+			alpha.teleportTo(base.getX() + 40.5, base.getY() + 30, base.getZ() + 40.5);
+			alpha.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ModItems.C4, 1));
+			ModItems.C4.use(level, alpha, net.minecraft.world.InteractionHand.MAIN_HAND);
+			boolean out = dev.rubymod.entity.StickyChargeEntity.hasCharges(alpha);
+			ItemStack held = alpha.getMainHandItem();
+			check("c4: throwing your last one leaves a Detonator in your hand (" + held.getItem() + ")", out && held.is(ModItems.C4_DETONATOR));
+			ModItems.C4_DETONATOR.use(level, alpha, net.minecraft.world.InteractionHand.MAIN_HAND);
+			check("c4: the Detonator sets them off, and is used up", !dev.rubymod.entity.StickyChargeEntity.hasCharges(alpha) && alpha.getMainHandItem().isEmpty());
+			alpha.getInventory().clearContent();
+		}
+
+		// ----- Night goggles only while they're on -----
+		{
+			alpha.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(ModItems.NIGHT_GOGGLES));
+			dev.rubymod.game.NightBattle.goggles(alpha);
+			boolean on = alpha.hasEffect(net.minecraft.world.effect.MobEffects.NIGHT_VISION);
+			alpha.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, ItemStack.EMPTY);
+			dev.rubymod.game.NightBattle.goggles(alpha);
+			check("goggles: night vision on with them, gone as soon as they're off", on && !alpha.hasEffect(net.minecraft.world.effect.MobEffects.NIGHT_VISION));
+		}
+
+		// ----- Paint kit: back a step, and only your own -----
+		{
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(base.getX() + 30.5, base.getY() + 1, base.getZ() - 30.5, 0, 0);
+			dev.rubymod.entity.PackUp.own(jeep, alpha);
+			jeep.setPaint(2);
+			level.addFreshEntity(jeep);
+			ItemStack kit = new ItemStack(ModItems.PAINT_KIT);
+			alpha.setShiftKeyDown(true);
+			ModItems.PAINT_KIT.interactLivingEntity(kit, alpha, jeep, net.minecraft.world.InteractionHand.MAIN_HAND);
+			alpha.setShiftKeyDown(false);
+			int back = jeep.paint();
+			ModItems.PAINT_KIT.interactLivingEntity(kit, alpha, jeep, net.minecraft.world.InteractionHand.MAIN_HAND);
+			int forward = jeep.paint();
+			ModItems.PAINT_KIT.interactLivingEntity(kit, bravo, jeep, net.minecraft.world.InteractionHand.MAIN_HAND);
+			check("paint kit: crouching goes back one, right-click forward one, others can't repaint yours (" + back + ", " + forward + ", " + jeep.paint() + ")",
+					back == 1 && forward == 2 && jeep.paint() == 2);
+			jeep.discard();
+		}
+
+		// ----- Packing up an AA gun -----
+		{
+			var gun = dev.rubymod.registry.ModEntities.HEAVY_AA_GUN.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			gun.snapTo(base.getX() - 30.5, base.getY() + 1, base.getZ() + 30.5, 0, 0);
+			dev.rubymod.entity.PackUp.own(gun, alpha);
+			level.addFreshEntity(gun);
+			alpha.getInventory().clearContent();
+			alpha.setShiftKeyDown(true);
+			boolean packed = dev.rubymod.entity.PackUp.tryPackUp(gun, alpha, 0);
+			alpha.setShiftKeyDown(false);
+			check("pack up: an AA gun goes back in your inventory", packed && gun.isRemoved() && alpha.getInventory().contains(st -> st.is(ModItems.HEAVY_AA_GUN)));
+			alpha.getInventory().clearContent();
+		}
+
 		// ----- The flamethrower refills -----
 		{
 			ItemStack flamer = new ItemStack(ModItems.FLAMETHROWER);

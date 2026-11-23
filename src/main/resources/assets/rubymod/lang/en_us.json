@@ -115,6 +115,7 @@
 	"item.rubymod.aa_missile": "Skyhammer Missile",
 	"item.rubymod.at_missile": "Lancer Missile",
 	"item.rubymod.c4": "Sticky C4",
+	"item.rubymod.c4_detonator": "C4 Detonator",
 	"entity.rubymod.sticky_charge": "Sticky C4",
 	"entity.rubymod.wreck": "Wreck",
 	"block.rubymod.at_mine": "Anti-Tank Mine",

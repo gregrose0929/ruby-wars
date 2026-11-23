@@ -4584,6 +4584,7 @@ public final class AutoTest {
 			case "familycheck" -> familyCheckScript();
 			case "hostsweep" -> hostSweepScript();
 			case "boatcheck" -> boatCheckScript();
+			case "jetcheck" -> jetCheckScript();
 			case "lightcheck" -> lightCheckScript();
 			case "basecheck" -> baseCheckScript();
 			case "bridgecheck" -> bridgeCheckScript();
@@ -5981,6 +5982,55 @@ public final class AutoTest {
 			mc.player.setXRot(10);
 		});
 		then(20, mc -> shot(mc, "borer-3-out"));
+	}
+
+		/** The jetpack: climb until the landing reserve, drop and let it soften the landing; climb again and float down crouching. */
+	private static void jetCheckScript() {
+		double[] start = new double[1];
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "effect clear @a");
+			command(mc, "item replace entity @p armor.chest with rubymod:jetpack");
+		});
+		then(200, mc -> {
+			start[0] = mc.player.getY();
+			mc.player.jumpFromGround();
+		});
+		then(2, mc -> mc.options.keyJump.setDown(true));
+		then(80, mc -> {
+			log("jet: climbed +{} on fuel down to {} (reserve {})", String.format("%.1f", mc.player.getY() - start[0]), mc.player == null ? 0 : Jetpack.fuel(), Jetpack.RESERVE);
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			shot(mc, "jet-1-top");
+		});
+		then(2, mc -> mc.options.keyJump.setDown(false));
+		double[] fastest = {0};
+		for (int i = 0; i < 60; i++) {
+			then(1, mc -> fastest[0] = Math.min(fastest[0], mc.player.getDeltaMovement().y));
+		}
+		then(20, mc -> log("jet: dropped (fastest fall {}), landed: health {} fuel {}", String.format("%.2f", fastest[0]), mc.player.getHealth(), Jetpack.fuel()));
+		then(60, mc -> {
+			start[0] = mc.player.getY();
+			mc.player.jumpFromGround();
+		});
+		then(2, mc -> mc.options.keyJump.setDown(true));
+		then(30, mc -> {
+			mc.options.keyJump.setDown(false);
+			mc.options.keyShift.setDown(true);
+		});
+		double[] seen = {0, 0};
+		for (int i = 0; i < 40; i++) {
+			then(1, mc -> {
+				seen[0] = Math.min(seen[0], mc.player.getDeltaMovement().y);
+				seen[1]++;
+			});
+		}
+		then(1, mc -> shot(mc, "jet-2-floating"));
+		then(60, mc -> {
+			mc.options.keyShift.setDown(false);
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			log("jet: floating down crouched: fastest fall {}, landed health {}", String.format("%.2f", seen[0]), mc.player.getHealth());
+		});
 	}
 
 		/** The season Grappling Hook: hook the top of a tall pillar and get pulled up, without hurting yourself. */

@@ -22,8 +22,8 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 
 /**
- * Paint Kit: right-click a vehicle or aircraft to respray it in the next scheme
- * (woodland, desert, arctic, urban, night, ruby). Reusable.
+ * Paint Kit: right-click your vehicle or aircraft to respray it in the next scheme
+ * (woodland, desert, arctic, urban, night, ruby); crouch to go back one. Only your own (or your squad's). Reusable.
  */
 public class PaintKitItem extends Item {
 	/** Texture suffixes; index 0 is the factory paint (no suffix). */
@@ -45,7 +45,13 @@ public class PaintKitItem extends Item {
 			return InteractionResult.PASS;
 		}
 		if (player instanceof ServerPlayer sp && player.level() instanceof ServerLevel level) {
-			int next = ((target instanceof VehicleEntity v ? v.paint() : ((AircraftEntity) target).paint()) + 1) % SCHEMES.length;
+			if (!mayPaint((net.minecraft.world.entity.Mob) target, player)) {
+				sp.sendOverlayMessage(Component.literal("That's not yours to repaint.").withStyle(ChatFormatting.YELLOW));
+				return InteractionResult.SUCCESS;
+			}
+			// Right-click: the next paint; crouching, back one.
+			int step = player.isSecondaryUseActive() ? SCHEMES.length - 1 : 1;
+			int next = ((target instanceof VehicleEntity v ? v.paint() : ((AircraftEntity) target).paint()) + step) % SCHEMES.length;
 			if (target instanceof VehicleEntity v) {
 				v.setPaint(next);
 			} else {
@@ -59,10 +65,17 @@ public class PaintKitItem extends Item {
 		return InteractionResult.SUCCESS;
 	}
 
+	/** Your own vehicle, your squad's, or one nobody's known to own. */
+	public static boolean mayPaint(net.minecraft.world.entity.Mob vehicle, Player player) {
+		java.util.UUID owner = dev.rubymod.entity.PackUp.owner(vehicle);
+		return owner == null || owner.equals(player.getUUID()) || dev.rubymod.game.Squads.same(owner, player.getUUID());
+	}
+
 	@Override
 	@SuppressWarnings("deprecation")
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
-		builder.accept(Component.literal("Right-click a vehicle or aircraft to repaint it").withStyle(ChatFormatting.GRAY));
+		builder.accept(Component.literal("Right-click your vehicle or aircraft to repaint it").withStyle(ChatFormatting.GRAY));
+		builder.accept(Component.literal("Crouch + right-click: back one paint").withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal("Woodland, Desert, Arctic, Urban, Night, Ruby").withStyle(ChatFormatting.DARK_GRAY));
 	}
 }

@@ -129,6 +129,7 @@ public class ModItems {
 	public static final Item AA_MISSILE = register("aa_missile", Item::new, new Item.Properties().stacksTo(8));
 	public static final Item AT_MISSILE = register("at_missile", Item::new, new Item.Properties().stacksTo(8));
 	public static final Item C4 = register("c4", dev.rubymod.item.C4Item::new, new Item.Properties().stacksTo(8).rarity(Rarity.RARE));
+	public static final Item C4_DETONATOR = register("c4_detonator", dev.rubymod.item.DetonatorItem::new, new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
 	public static final Item BREACHING_CHARGE = register("breaching_charge", BreachingChargeItem::new, new Item.Properties().stacksTo(8).rarity(Rarity.RARE));
 
 	// --- Gun attachments ---

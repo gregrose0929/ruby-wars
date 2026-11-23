@@ -77,7 +77,7 @@ public final class ArmoryGuide {
 				"aa_missile");
 		add("breaching_charge", "Right-click a block to stick it there: it blows 5 seconds later. The only thing that can damage an enemy's Ruby Heart.",
 				"ruby_heart");
-		add("c4", "Right-click to throw a sticky charge: it sticks to walls and vehicles. Crouch and right-click to set off all of yours at once.");
+		add("c4", "Right-click to throw a sticky charge: it sticks to walls and vehicles. Crouch and right-click to set off all of yours at once. Throw your last one and you're left holding a Detonator to set them off.");
 		add("mortar", "Place it in your base. Mark a target with the Rangefinder, then right-click the Mortar holding Mortar Shells: it lobs them there.",
 				"mortar_shell", "rangefinder");
 		add("rangefinder", "Right-click to mark the block you're looking at (up to 400 blocks away) as the target for your Mortar and Missile Silo.",
@@ -210,7 +210,7 @@ public final class ArmoryGuide {
 		add("field_pack", "A backpack with 27 more slots. Right-click to open it.");
 		add("heavy_rucksack", "A big backpack with 54 more slots. Right-click to open it.");
 		add("field_radio", "Talk to anyone on the same channel, anywhere on the map. Right-click to change channel. Needs Simple Voice Chat.");
-		add("jetpack", "Wear it in your chest slot. Jump, then hold Space to fly; W A S D to steer. It refills on the ground.");
+		add("jetpack", "Wear it in your chest slot. Jump, then hold Space to fly; W A S D to steer; crouch in the air to float gently down. It keeps a little fuel back to soften your landing, and refills on the ground.");
 		add("grappling_hook", "Right-click a block up to 40 blocks away and you're pulled up to it: cliffs, walls, mountains. Crouch to let go.");
 		add("night_goggles", "Wear them on your head to see in the dark.");
 		add("ruby_helmet", "Ruby armor: a little stronger than iron. Repair it with rubies.", "ruby_chestplate", "ruby_leggings", "ruby_boots");
@@ -227,6 +227,6 @@ public final class ArmoryGuide {
 				"scout_drone");
 		add("scout_drone", "A little drone you fly yourself for a minute: W A S D, Space and Shift. Enemies it sees glow for you. Right-click or Q brings it home to use again.",
 				"recon_drone");
-		add("paint_kit", "Right-click a vehicle or aircraft to repaint it: Woodland, Desert, Arctic, Urban, Night or Ruby.", "jeep", "tank", "fighter_jet");
+		add("paint_kit", "Right-click your vehicle or aircraft to repaint it: Woodland, Desert, Arctic, Urban, Night or Ruby. Crouch and right-click to go back one.", "jeep", "tank", "fighter_jet");
 	}
 }

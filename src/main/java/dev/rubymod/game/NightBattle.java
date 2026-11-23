@@ -50,15 +50,25 @@ public final class NightBattle {
 		return forced || GameConfig.get().nightBattle && Rules.phase().isBattle();
 	}
 
+	/** Night vision from the goggles: topped up while they're on, taken away as soon as they're off (a potion's left alone). */
+	public static void goggles(ServerPlayer p) {
+		MobEffectInstance now = p.getEffect(MobEffects.NIGHT_VISION);
+		if (p.getItemBySlot(EquipmentSlot.HEAD).is(ModItems.NIGHT_GOGGLES)) {
+			if (now == null || now.isAmbient() && now.getDuration() < 260) {
+				p.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 300, 0, true, false, true));
+			}
+		} else if (now != null && now.isAmbient() && now.getDuration() <= 300) {
+			p.removeEffect(MobEffects.NIGHT_VISION);
+		}
+	}
+
 	public static void tick(MinecraftServer server) {
 		tick++;
 		ServerLevel world = server.overworld();
-		// Goggles: night vision while they're on.
-		if (tick % 40 == 0) {
+		// Goggles: night vision while they're on, and only then (it goes the moment they come off).
+		if (tick % 5 == 0) {
 			for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-				if (p.getItemBySlot(EquipmentSlot.HEAD).is(ModItems.NIGHT_GOGGLES)) {
-					p.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 300, 0, true, false, true));
-				}
+				goggles(p);
 			}
 		}
 		if (!active()) {

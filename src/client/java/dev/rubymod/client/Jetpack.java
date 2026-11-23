@@ -32,7 +32,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * The jetpack (worn in the chest slot), client side: hold Space in the air to fire the
- * jets (WASD steers), watch the fuel bar; it refuels on the ground. The player moves
+ * jets (WASD steers), crouch to float gently down, watch the fuel bar; it refuels on the ground. The last of the fuel
+ * (below the line on the bar) is kept for landing: coming down fast near the ground, the jets fire on their own. The player moves
  * themselves, so the flying happens here; the server is told when the jets fire (no
  * fall damage then, and everyone sees the exhaust).
  */
@@ -58,26 +59,36 @@ public final class Jetpack {
 		return player != null && player.getItemBySlot(EquipmentSlot.CHEST).is(ModItems.JETPACK);
 	}
 
+	/** Fuel kept back for landing: Space won't climb on it, but it always softens a fall. */
+	public static final float RESERVE = 16.0F;
+
 	/** Every client tick. */
 	public static void tick(Minecraft mc) {
 		LocalPlayer p = mc.player;
 		boolean firing = false;
 		if (wearing(p) && p.getVehicle() == null && !p.isSpectator() && !p.getAbilities().flying && !p.isFallFlying()) {
-			boolean held = mc.gui.screen() == null && mc.options.keyJump.isDown();
-			if (held && !p.onGround() && !p.isInWater() && fuel > 0) {
+			boolean free = mc.gui.screen() == null;
+			boolean held = free && mc.options.keyJump.isDown();
+			boolean easing = free && mc.options.keyShift.isDown();
+			boolean air = !p.onGround() && !p.isInWater();
+			Vec3 v = p.getDeltaMovement();
+			if (air && held && fuel > RESERVE) {
+				// Climbing.
 				firing = true;
-				fuel = Math.max(0, fuel - 1.0F);
-				Vec3 v = p.getDeltaMovement();
-				double vy = Math.min(MAX_CLIMB, v.y + LIFT);
-				// WASD pushes you along where you're looking.
-				Vec3 forward = Vec3.directionFromRotation(0, p.getYRot());
-				Vec3 right = new Vec3(-forward.z, 0, forward.x);
-				Vec3 push = forward.scale(p.zza).add(right.scale(-p.xxa));
-				Vec3 h = new Vec3(v.x, 0, v.z).add(push.lengthSqr() > 0 ? push.normalize().scale(PUSH) : Vec3.ZERO);
-				if (h.length() > MAX_SPEED) {
-					h = h.normalize().scale(MAX_SPEED);
-				}
-				p.setDeltaMovement(h.x, vy, h.z);
+				fuel = Math.max(RESERVE, fuel - 1.0F);
+				p.setDeltaMovement(steer(p, v, Math.min(MAX_CLIMB, v.y + LIFT)));
+				p.resetFallDistance();
+			} else if (air && easing && fuel > 0 && v.y < -0.1) {
+				// Crouching: the jets let you float gently down (and you can still steer).
+				firing = true;
+				fuel = Math.max(0, fuel - 0.4F);
+				p.setDeltaMovement(steer(p, v, Math.max(v.y, -0.15)));
+				p.resetFallDistance();
+			} else if (air && fuel > 0 && v.y < -0.45 && nearGround(p, 4 + (int) (-v.y * 8))) {
+				// Coming down fast near the ground: the jets fire on their own to soften the landing.
+				firing = true;
+				fuel = Math.max(0, fuel - 0.6F);
+				p.setDeltaMovement(v.x, Math.max(v.y + 0.18, -0.3), v.z);
 				p.resetFallDistance();
 			} else if (p.onGround()) {
 				fuel = Math.min(MAX_FUEL, fuel + 1.6F);
@@ -89,6 +100,35 @@ public final class Jetpack {
 			thrusting = firing;
 			ClientPlayNetworking.send(new MorePayloads.JetpackThrust(firing));
 		}
+	}
+
+	/** WASD pushes you along where you're looking (up to a top speed), with this upward speed. */
+	private static Vec3 steer(LocalPlayer p, Vec3 v, double vy) {
+		Vec3 forward = Vec3.directionFromRotation(0, p.getYRot());
+		Vec3 right = new Vec3(-forward.z, 0, forward.x);
+		Vec3 push = forward.scale(p.zza).add(right.scale(-p.xxa));
+		Vec3 h = new Vec3(v.x, 0, v.z).add(push.lengthSqr() > 0 ? push.normalize().scale(PUSH) : Vec3.ZERO);
+		if (h.length() > MAX_SPEED) {
+			h = h.normalize().scale(MAX_SPEED);
+		}
+		return new Vec3(h.x, vy, h.z);
+	}
+
+	/** Solid ground within this many blocks under their feet? */
+	private static boolean nearGround(LocalPlayer p, int blocks) {
+		net.minecraft.core.BlockPos at = p.blockPosition();
+		for (int d = 0; d <= blocks; d++) {
+			net.minecraft.core.BlockPos q = at.below(d);
+			if (!p.level().getBlockState(q).getCollisionShape(p.level(), q).isEmpty()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** For the autotest: the fuel left. */
+	public static float fuel() {
+		return fuel;
 	}
 
 	/** The fuel bar, beside the hotbar while you wear one. */
@@ -104,8 +144,11 @@ public final class Jetpack {
 			int h = 30;
 			int filled = Math.round(h * fuel / MAX_FUEL);
 			g.fill(x, y, x + 7, y + h, 0xA0000000);
-			int color = fuel < 25 ? 0xFFFF5050 : thrusting ? 0xFFFFB040 : 0xFF50C8FF;
+			int color = fuel <= RESERVE ? 0xFFFF5050 : thrusting ? 0xFFFFB040 : 0xFF50C8FF;
 			g.fill(x + 1, y + h - filled, x + 6, y + h, color);
+			// The landing reserve: a line where climbing stops.
+			int r = y + h - Math.round(h * RESERVE / MAX_FUEL);
+			g.fill(x, r, x + 7, r + 1, 0xC0FFFFFF);
 			g.text(mc.font, "JET", x - 1, y - 9, 0xFFDDE6EE, true);
 		}
 	}
