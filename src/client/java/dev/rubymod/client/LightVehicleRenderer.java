@@ -24,6 +24,7 @@ public class LightVehicleRenderer extends ModelVehicleRenderer<LightVehicleEntit
 		state.ramp = entity.isBike() ? 1 : 0;
 		state.steer *= 2.0F;
 		if (!entity.isBike()) {
+			state.roll = entity.lean(partialTicks);
 			return;
 		}
 		state.roll = entity.lean(partialTicks);

@@ -86,6 +86,17 @@ public class LightVehicleEntity extends VehicleEntity {
 		return getPassengers().size() < (isBike() ? 1 : 2);
 	}
 
+	@Override
+	protected boolean drivesLikeACar() {
+		return !isBike();
+	}
+
+	/** The Quad's nimbler than the jeep. */
+	@Override
+	protected float carTurn() {
+		return 6.0F;
+	}
+
 	// ----- The Dirt Bike's riding -----
 
 	private static final float ACCEL = 0.02F;
@@ -151,13 +162,7 @@ public class LightVehicleEntity extends VehicleEntity {
 	@Override
 	protected void tickRidden(Player controller, Vec3 riddenInput) {
 		if (!isBike()) {
-			super.tickRidden(controller, riddenInput);
-			// Nimbler than the jeep (VehicleEntity turns 5 degrees a tick): a little extra turn on top.
-			float yaw = getYRot() - controller.xxa * 1.0F;
-			setYRot(yaw);
-			yRotO = yaw;
-			yBodyRot = yaw;
-			yHeadRot = yaw;
+			super.tickRidden(controller, riddenInput); // the Quad drives like a (nimble) car: see VehicleEntity
 			return;
 		}
 		steer += (Mth.clamp(controller.xxa, -1, 1) - steer) * 0.25F;
@@ -191,12 +196,14 @@ public class LightVehicleEntity extends VehicleEntity {
 	@Override
 	public void tick() {
 		super.tick();
-		if (isBike() && level().isClientSide()) {
+		if (level().isClientSide()) {
 			// Leaning into the turn as far as a real bike would: more the faster it goes and the tighter it turns.
 			double yawRad = Math.toRadians(getYRot());
 			double ahead = -(getX() - xo) * Math.sin(yawRad) + (getZ() - zo) * Math.cos(yawRad);
 			float yawRate = Mth.wrapDegrees(getYRot() - yRotO);
-			float target = Mth.clamp((float) (yawRate * ahead * 22.0), -35.0F, 35.0F) * (onGround() ? 1.0F : 0.3F);
+			// (The Quad's body rolls the other way, a little, out of the turn.)
+			float target = isBike() ? Mth.clamp((float) (yawRate * ahead * 22.0), -35.0F, 35.0F) * (onGround() ? 1.0F : 0.3F)
+					: Mth.clamp((float) (-yawRate * ahead * 6.0), -7.0F, 7.0F);
 			leanO = lean;
 			lean += (target - lean) * 0.3F;
 			liftO = lift;

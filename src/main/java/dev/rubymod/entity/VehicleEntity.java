@@ -197,7 +197,14 @@ public class VehicleEntity extends Mob {
 
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-		if (player.isSecondaryUseActive() || isVehicle() && getPassengers().size() >= seats() || player.getItemInHand(hand).is(dev.rubymod.registry.ModItems.PAINT_KIT)) {
+		if (player.getItemInHand(hand).is(dev.rubymod.registry.ModItems.PAINT_KIT)) {
+			return InteractionResult.PASS;
+		}
+		if (player.isSecondaryUseActive()) {
+			// Crouch-right-click: pack it back up (your own).
+			return PackUp.tryPackUp(this, player, paint()) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+		}
+		if (isVehicle() && getPassengers().size() >= seats()) {
 			return InteractionResult.PASS;
 		}
 		if (!level().isClientSide()) {
@@ -216,8 +223,78 @@ public class VehicleEntity extends Mob {
 		return getFirstPassenger() instanceof Player driver ? driver : null;
 	}
 
+	// ----- Driving like a car (the Jeep and the Quad) -----
+
+	/** The car's speed along its heading, blocks a tick (negative: reversing). Worked out where it's driven. */
+	protected float carSpeed;
+	/** The steering wheel, -1 (full right) to 1 (full left), easing towards the keys. */
+	protected float carSteer;
+
+	/** Does it drive like a car (gathering speed, coasting, braking, steering only while it rolls)? The Jeep and the Quad. */
+	protected boolean drivesLikeACar() {
+		return getType() == ModEntities.JEEP;
+	}
+
+	/** Degrees a tick with the wheel full over, at its best (a medium speed). */
+	protected float carTurn() {
+		return 5.0F;
+	}
+
+	/** Does it drive like a car? (For the self-test.) */
+	public boolean isCar() {
+		return drivesLikeACar();
+	}
+
+	/** For the self-test: the car's speed now, blocks a tick. */
+	public float carSpeed() {
+		return carSpeed;
+	}
+
+	/** For the self-test: one tick of the pedals (1 accelerator, -1 brake and reverse, 0 neither). */
+	public void testPedals(float input, boolean grounded) {
+		pedals(input, grounded);
+	}
+
+	/** For the self-test: how far it turns in a tick at this speed with the wheel full over. */
+	public float testCarTurn(float atSpeed) {
+		return carTurnRate(atSpeed, true);
+	}
+
+	private float top() {
+		return (float) getAttributeValue(Attributes.MOVEMENT_SPEED);
+	}
+
+	private void pedals(float input, boolean grounded) {
+		float top = top();
+		if (input > 0) {
+			carSpeed = carSpeed < 0 ? Math.min(0, carSpeed + top * 0.09F) : Math.min(top, carSpeed + top * 0.045F * (1.0F - 0.6F * carSpeed / top));
+		} else if (input < 0) {
+			carSpeed = carSpeed > 0.01F ? Math.max(0, carSpeed - top * 0.09F) : Math.max(-top * 0.35F, carSpeed - top * 0.03F);
+		} else if (grounded) {
+			float roll = top * 0.012F;
+			carSpeed = carSpeed > 0 ? Math.max(0, carSpeed - roll) : Math.min(0, carSpeed + roll * 2);
+		}
+	}
+
+	/** Nothing standing still (wheels don't turn a parked car), tightest at a medium speed, wider flat out, none in the air. */
+	private float carTurnRate(float atSpeed, boolean grounded) {
+		if (!grounded) {
+			return 0;
+		}
+		float f = Math.min(1.0F, Math.abs(atSpeed) / top());
+		float best = carTurn();
+		return f < 0.3F ? best * (f / 0.3F) : best - best * 0.45F * ((f - 0.3F) / 0.7F);
+	}
+
 	@Override
 	protected Vec3 getRiddenInput(Player controller, Vec3 selfInput) {
+		if (drivesLikeACar()) {
+			pedals(Math.signum(controller.zza), onGround());
+			if (horizontalCollision && Math.abs(carSpeed) > 0.08F) {
+				carSpeed *= 0.5F; // ran into something
+			}
+			return new Vec3(0, 0, carSpeed == 0 ? 0 : Math.signum(carSpeed));
+		}
 		float forward = controller.zza;
 		if (forward < 0) {
 			forward *= 0.5F;
@@ -228,6 +305,18 @@ public class VehicleEntity extends Mob {
 	@Override
 	protected void tickRidden(Player controller, Vec3 riddenInput) {
 		super.tickRidden(controller, riddenInput);
+		if (drivesLikeACar()) {
+			carSteer += (Mth.clamp(controller.xxa, -1, 1) - carSteer) * 0.25F;
+			if (Math.abs(carSteer) < 0.01F) {
+				carSteer = 0;
+			}
+			// Reversing, it swings the other way (like a real car backing up).
+			float yaw = getYRot() - carSteer * carTurnRate(carSpeed, onGround()) * Math.signum(carSpeed);
+			setYRot(yaw);
+			yBodyRot = yaw;
+			yHeadRot = yaw;
+			return;
+		}
 		float turnRate = isTank() ? 3.0F : 5.0F;
 		float yaw = getYRot() - controller.xxa * turnRate;
 		setYRot(yaw);
@@ -238,7 +327,7 @@ public class VehicleEntity extends Mob {
 
 	@Override
 	protected float getRiddenSpeed(Player controller) {
-		return (float) getAttributeValue(Attributes.MOVEMENT_SPEED);
+		return drivesLikeACar() ? Math.abs(carSpeed) : (float) getAttributeValue(Attributes.MOVEMENT_SPEED);
 	}
 
 	@Override
@@ -353,6 +442,10 @@ public class VehicleEntity extends Mob {
 	@Override
 	public void tick() {
 		super.tick();
+		if (drivesLikeACar() && getControllingPassenger() == null) {
+			carSpeed = 0;
+			carSteer = 0;
+		}
 		if (smokeCooldown > 0) {
 			smokeCooldown--;
 		}

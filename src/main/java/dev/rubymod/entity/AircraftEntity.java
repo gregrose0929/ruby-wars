@@ -296,7 +296,13 @@ public class AircraftEntity extends Mob {
 
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-		if (player.isSecondaryUseActive() || isVehicle() || player.getItemInHand(hand).is(dev.rubymod.registry.ModItems.PAINT_KIT)) {
+		if (player.getItemInHand(hand).is(dev.rubymod.registry.ModItems.PAINT_KIT)) {
+			return InteractionResult.PASS;
+		}
+		if (player.isSecondaryUseActive()) {
+			return PackUp.tryPackUp(this, player, paint()) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+		}
+		if (isVehicle()) {
 			return InteractionResult.PASS;
 		}
 		if (!level().isClientSide()) {

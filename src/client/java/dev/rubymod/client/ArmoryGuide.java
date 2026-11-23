@@ -44,7 +44,7 @@ public final class ArmoryGuide {
 				"sniper_round", "suppressor", "red_dot_sight");
 		add("ruby_blaster", "An automatic energy gun. Its bolts bounce once off walls, so you can hit someone round a corner.",
 				"ruby_cell", "extended_mag", "vertical_grip");
-		add("flamethrower", "Hold right-click to spray fire a short way. Whatever it touches catches fire. Twenty seconds of flame.");
+		add("flamethrower", "Hold right-click to spray fire a short way. Whatever it touches catches fire. Twenty seconds of flame, and it refills by itself in about a minute.");
 		add("extended_mag", "Fits on a gun: half as many bullets again before you have to reload. Hold it with the gun in your other hand and right-click.",
 				"arr_rifle", "service_pistol", "ruby_blaster");
 		add("red_dot_sight", "Fits on a gun: tighter shots and more zoom when you aim. Hold it with the gun in your other hand and right-click.",

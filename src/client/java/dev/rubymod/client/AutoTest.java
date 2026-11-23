@@ -6010,7 +6010,14 @@ public final class AutoTest {
 		});
 		then(10, mc -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
 		int[] best = {-999};
-		for (int i = 0; i < 30; i++) {
+		then(1, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT));
+		then(5, mc -> {
+			best[0] = Math.max(best[0], mc.player.getBlockY());
+			log("grapple: on the rope at {}", mc.player.position());
+			shot(mc, "grapple-0-rope");
+		});
+		then(2, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		for (int i = 0; i < 26; i++) {
 			then(2, mc -> best[0] = Math.max(best[0], mc.player.getBlockY()));
 		}
 		then(2, mc -> shot(mc, "grapple-1-flying"));

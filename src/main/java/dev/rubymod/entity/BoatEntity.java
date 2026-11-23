@@ -139,7 +139,13 @@ public class BoatEntity extends VehicleEntity {
 
 	@Override
 	protected net.minecraft.world.InteractionResult mobInteract(Player player, net.minecraft.world.InteractionHand hand) {
-		if (player.isSecondaryUseActive() || !canAddPassenger(player)) {
+		if (player.getItemInHand(hand).is(dev.rubymod.registry.ModItems.PAINT_KIT)) {
+			return net.minecraft.world.InteractionResult.PASS;
+		}
+		if (player.isSecondaryUseActive()) {
+			return PackUp.tryPackUp(this, player, paint()) ? net.minecraft.world.InteractionResult.SUCCESS : net.minecraft.world.InteractionResult.PASS;
+		}
+		if (!canAddPassenger(player)) {
 			return net.minecraft.world.InteractionResult.PASS;
 		}
 		if (!level().isClientSide()) {
@@ -224,6 +230,32 @@ public class BoatEntity extends VehicleEntity {
 		setDeltaMovement(next);
 		move(MoverType.SELF, next);
 		resetFallDistance();
+	}
+
+	/**
+	 * Steering: a boat turns by its rudder, so it only really turns while it's moving through the water (tightest at a
+	 * good speed, a slow drift round when it's nearly stopped), the other way round when going astern, and hardly at all
+	 * beached.
+	 */
+	@Override
+	protected void tickRidden(Player controller, Vec3 riddenInput) {
+		float rate = turnRate(getDeltaMovement(), afloat());
+		float yaw = getYRot() - Mth.clamp(controller.xxa, -1, 1) * rate;
+		setYRot(yaw);
+		yBodyRot = yaw;
+		yHeadRot = yaw;
+	}
+
+	/** Degrees a tick with the helm hard over, moving like this. (Negative going astern: it swings the other way.) */
+	public float turnRate(Vec3 motion, boolean water) {
+		double yaw = Math.toRadians(getYRot());
+		double ahead = motion.x * -Math.sin(yaw) + motion.z * Math.cos(yaw);
+		if (!water) {
+			return 0.6F;
+		}
+		double cruise = getAttributeValue(Attributes.MOVEMENT_SPEED) * 3.0;
+		float f = (float) Math.min(1.0, Math.abs(ahead) / (cruise * 0.35));
+		return (0.6F + 4.4F * f) * (ahead < -0.02 ? -1 : 1);
 	}
 
 	@Override

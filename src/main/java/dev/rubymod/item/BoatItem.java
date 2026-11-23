@@ -55,6 +55,7 @@ public class BoatItem extends Item {
 			sp.sendOverlayMessage(Component.literal("Not enough room here: put it in open water.").withStyle(ChatFormatting.RED));
 			return InteractionResult.FAIL;
 		}
+		dev.rubymod.entity.PackUp.placed(boat, player, player.getItemInHand(hand));
 		server.addFreshEntity(boat);
 		server.playSound(null, at, SoundEvents.PLAYER_SPLASH, SoundSource.PLAYERS, 1.0F, 0.8F);
 		player.getItemInHand(hand).consume(1, player);

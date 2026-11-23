@@ -15,15 +15,26 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 
-/** Right-click the ground to deploy a Jeep, Tank, or Jet. Right-click the vehicle to get in. */
+/** Right-click the ground to deploy a Jeep, Tank, or Jet. Right-click the vehicle to get in; crouch-right-click it to pack it back up. */
 public class VehicleItem extends Item {
 	private final Supplier<? extends EntityType<? extends Mob>> type;
 
 	public VehicleItem(Supplier<? extends EntityType<? extends Mob>> type, Properties properties) {
 		super(properties);
 		this.type = type;
+	}
+
+	@Override
+	public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,
+			java.util.function.Consumer<Component> builder, net.minecraft.world.item.TooltipFlag flag) {
+		var attributes = net.minecraft.world.entity.ai.attributes.DefaultAttributes.getSupplier(type.get());
+		Component condition = dev.rubymod.entity.PackUp.condition(stack, (float) attributes.getValue(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH));
+		if (condition != null) {
+			builder.accept(condition);
+		}
 	}
 
 	@Override
@@ -43,6 +54,7 @@ public class VehicleItem extends Item {
 			player.sendOverlayMessage(Component.literal("Not enough room here.").withStyle(ChatFormatting.RED));
 			return InteractionResult.FAIL;
 		}
+		dev.rubymod.entity.PackUp.placed(vehicle, player, context.getItemInHand());
 		level.addFreshEntity(vehicle);
 		level.playSound(null, pos, SoundEvents.IRON_GOLEM_REPAIR, SoundSource.PLAYERS, 1.0F, 0.8F);
 		context.getItemInHand().consume(1, player);

@@ -29,7 +29,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Flamethrower (Armory): hold right-click to spray fire about {@link #REACH} blocks. Whatever it touches catches fire;
  * blocks only burn where a weapon could break them (inside a claim, that's Battle Day). Its fuel is the bar under it:
- * twenty seconds of flame.
+ * twenty seconds of flame, and it refills by itself while it's not firing (empty to full in about a minute).
  */
 public class FlamethrowerItem extends Item {
 	public static final double REACH = 7;
@@ -43,12 +43,38 @@ public class FlamethrowerItem extends Item {
 		ItemStack stack = player.getItemInHand(hand);
 		if (stack.getDamageValue() >= stack.getMaxDamage() - 1) {
 			if (player instanceof ServerPlayer sp) {
-				sp.sendOverlayMessage(Component.literal("Out of fuel.").withStyle(ChatFormatting.GRAY));
+				sp.sendOverlayMessage(Component.literal("Out of fuel: it refills by itself in a little while.").withStyle(ChatFormatting.GRAY));
 			}
 			return InteractionResult.FAIL;
 		}
 		player.startUsingItem(hand);
 		return InteractionResult.CONSUME;
+	}
+
+	/** When each player last fired one (the tank only refills once they've stopped for a couple of seconds). */
+	private static final java.util.Map<java.util.UUID, Long> LAST_FLAME = new java.util.HashMap<>();
+
+	/** It refills by itself while it's not in use: empty to full in about a minute. */
+	@Override
+	public void inventoryTick(ItemStack stack, ServerLevel level, net.minecraft.world.entity.Entity owner, net.minecraft.world.entity.EquipmentSlot slot) {
+		if (level.getGameTime() % 3 == 0) {
+			refill(stack, level, owner);
+		}
+	}
+
+	/** One step of refilling (if it's not being fired, and hasn't been for a couple of seconds). Whether it went up. */
+	public static boolean refill(ItemStack stack, ServerLevel level, net.minecraft.world.entity.Entity owner) {
+		if (stack.getDamageValue() <= 0) {
+			return false;
+		}
+		if (owner instanceof LivingEntity user && user.isUsingItem() && user.getUseItem() == stack) {
+			return false;
+		}
+		if (level.getGameTime() - LAST_FLAME.getOrDefault(owner.getUUID(), -1000L) < 40) {
+			return false;
+		}
+		stack.setDamageValue(stack.getDamageValue() - 1);
+		return true;
 	}
 
 	@Override
@@ -68,10 +94,11 @@ public class FlamethrowerItem extends Item {
 		}
 		if (stack.getDamageValue() >= stack.getMaxDamage() - 1) {
 			p.stopUsingItem();
-			p.sendOverlayMessage(Component.literal("Out of fuel.").withStyle(ChatFormatting.GRAY));
+			p.sendOverlayMessage(Component.literal("Out of fuel: it refills by itself in a little while.").withStyle(ChatFormatting.GRAY));
 			return;
 		}
 		spray(server, p);
+		LAST_FLAME.put(p.getUUID(), server.getGameTime());
 		stack.hurtAndBreak(1, p, p.getUsedItemHand() == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
 	}
 

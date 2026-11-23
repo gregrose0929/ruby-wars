@@ -927,6 +927,77 @@ public final class SelfTest {
 			}
 		}
 
+		// ----- The Jeep and the Quad drive like cars; boats steer by their rudder -----
+		{
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.testPedals(1, true);
+			float first = jeep.carSpeed();
+			for (int i = 0; i < 80; i++) {
+				jeep.testPedals(1, true);
+			}
+			float top = jeep.carSpeed();
+			check("jeep: speed builds up (" + first + ", then " + top + ")", first > 0 && first < top * 0.1F && top > 0.31F);
+			for (int i = 0; i < 6; i++) {
+				jeep.testPedals(-1, true);
+			}
+			check("jeep: brakes (" + jeep.carSpeed() + ")", jeep.carSpeed() < top * 0.6F && jeep.carSpeed() >= 0);
+			check("jeep: doesn't turn standing still (" + jeep.testCarTurn(0) + ")", jeep.testCarTurn(0) == 0);
+			check("jeep: turns tighter at a medium speed than flat out", jeep.testCarTurn(top * 0.35F) > jeep.testCarTurn(top));
+			var quad = dev.rubymod.registry.ModEntities.QUAD.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			check("quad: drives like a car too, and turns tighter than the jeep", quad.testCarTurn(0) == 0 && quad.testCarTurn(0.12F) > jeep.testCarTurn(0.12F));
+			var tank = dev.rubymod.registry.ModEntities.TANK.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			check("tank: drives as it always has", !tank.isCar() && jeep.isCar() && quad.isCar());
+			var boat = dev.rubymod.registry.ModEntities.PATROL_BOAT.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			boat.setYRot(0);
+			float still = boat.turnRate(Vec3.ZERO, true);
+			float going = boat.turnRate(new Vec3(0, 0, 0.6), true);
+			float astern = boat.turnRate(new Vec3(0, 0, -0.3), true);
+			check("boat: barely turns stopped, turns properly under way, the other way astern (" + still + ", " + going + ", " + astern + ")",
+					still < 1 && going > 4 && astern < 0);
+			jeep.discard();
+			quad.discard();
+			tank.discard();
+			boat.discard();
+		}
+
+		// ----- Packing a vehicle back up -----
+		{
+			BlockPos spot = base.offset(-30, 1, -30);
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+			dev.rubymod.entity.PackUp.own(jeep, alpha);
+			jeep.setPaint(3);
+			jeep.setHealth(25);
+			level.addFreshEntity(jeep);
+			check("pack up: someone else can't pack up your jeep", dev.rubymod.entity.PackUp.refusal(jeep, bravo) != null);
+			check("pack up: you can pack up your own", dev.rubymod.entity.PackUp.refusal(jeep, alpha) == null);
+			alpha.getInventory().clearContent();
+			alpha.setShiftKeyDown(true);
+			boolean packed = dev.rubymod.entity.PackUp.tryPackUp(jeep, alpha, jeep.paint());
+			alpha.setShiftKeyDown(false);
+			ItemStack back = ItemStack.EMPTY;
+			for (int i = 0; i < alpha.getInventory().getContainerSize(); i++) {
+				if (alpha.getInventory().getItem(i).is(ModItems.JEEP)) {
+					back = alpha.getInventory().getItem(i);
+				}
+			}
+			check("pack up: crouch-right-click puts it in your inventory", packed && jeep.isRemoved() && !back.isEmpty());
+			var again = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			dev.rubymod.entity.PackUp.placed(again, alpha, back);
+			check("pack up: put back down, it keeps its paint and its damage (" + again.paint() + ", " + again.getHealth() + ")",
+					again.paint() == 3 && Math.abs(again.getHealth() - 25) < 0.01F && alpha.getUUID().equals(dev.rubymod.entity.PackUp.owner(again)));
+			again.discard();
+			alpha.getInventory().clearContent();
+		}
+
+		// ----- The flamethrower refills -----
+		{
+			ItemStack flamer = new ItemStack(ModItems.FLAMETHROWER);
+			flamer.setDamageValue(flamer.getMaxDamage() - 1);
+			boolean up = dev.rubymod.item.FlamethrowerItem.refill(flamer, level, bravo);
+			check("flamethrower: an empty one refills by itself", up && flamer.getDamageValue() == flamer.getMaxDamage() - 2);
+		}
+
 		// ----- The Dirt Bike rides like a motorbike -----
 		{
 			var bike = dev.rubymod.registry.ModEntities.DIRT_BIKE.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);

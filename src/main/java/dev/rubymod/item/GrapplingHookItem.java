@@ -26,8 +26,8 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Grappling Hook (Armory): right-click a block up to {@link #RANGE} blocks away and you're reeled up to it and over
- * the edge, for the mountains, cliffs and ruins. Crouch to let go. No fall damage until you land. A short cooldown; it
+ * Grappling Hook (Armory): right-click a block up to {@link #RANGE} blocks away and you're reeled in along the rope
+ * (which you can see until you're there) and up over the edge, for the mountains, cliffs and ruins. Crouch to let go. No fall damage until you land. A short cooldown; it
  * wears out after a while.
  */
 public class GrapplingHookItem extends Item {
@@ -71,10 +71,7 @@ public class GrapplingHookItem extends Item {
 		double dist = to.length();
 		PULLED.put(p.getUUID(), new Line(hit.getLocation()));
 		reel(p, PULLED.get(p.getUUID()));
-		for (double d = 0; d < dist; d += 0.7) {
-			Vec3 q = eye.add(to.normalize().scale(d));
-			server.sendParticles(new DustParticleOptions(0xFF8A8A96, 0.7F), q.x, q.y - 0.3, q.z, 1, 0, 0, 0, 0);
-		}
+		rope(server, p, hit.getLocation());
 		server.playSound(null, p.blockPosition(), SoundEvents.FISHING_BOBBER_THROW, SoundSource.PLAYERS, 1.0F, 0.6F);
 		server.playSound(null, BlockPos.containing(hit.getLocation()), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 1.2F, 1.3F);
 		held.hurtAndBreak(1, p, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
@@ -82,27 +79,50 @@ public class GrapplingHookItem extends Item {
 	}
 
 	/**
-	 * Reeling in: up toward the hook (sliding up a cliff face if there's one in the way), and once you're above it, a
-	 * push over the edge so you land on top. Off the line when you land, let go (crouch), or after a few seconds.
+	 * Reeling in: pulled along the rope toward the hook (up a cliff face, the rope scrapes you up it; to a hook below
+	 * you, you're let down to it), aiming just over the top of where it's hooked, and at the end a little push on over
+	 * the edge so you land on top. Off the line when you land, let go (crouch), or after a few seconds.
 	 */
 	private static void reel(ServerPlayer p, Line line) {
-		Vec3 to = line.hook.subtract(p.position());
+		if (line.over) {
+			return;
+		}
+		Vec3 target = line.hook.add(0, 1.1, 0);
+		Vec3 to = target.subtract(p.position());
+		double dist = to.length();
 		double across = Math.hypot(to.x, to.z);
 		Vec3 flat = across < 1e-6 ? Vec3.ZERO : new Vec3(to.x / across, 0, to.z / across);
-		if (!line.over && p.getY() < line.hook.y + 1.3 && line.age < 60) {
-			// Climbing: fast up, and across toward it (slowing as you get under it).
-			double climb = to.y > 0 ? 1.0 : 0.4;
-			p.setDeltaMovement(flat.scale(Math.min(0.9, across * 0.25)).add(0, climb, 0));
-			p.syncVelocity = true;
-		} else if (!line.over) {
-			// Up and over the edge.
+		if (dist < 1.4 || line.age >= 80 || across < 0.8 && p.getY() >= line.hook.y + 0.6) {
+			// There: over the edge and onto the top.
 			line.over = true;
-			p.setDeltaMovement(flat.scale(0.3).add(0, 0.15, 0));
+			p.setDeltaMovement(flat.scale(0.35).add(0, to.y > -0.5 ? 0.25 : 0, 0));
 			p.syncVelocity = true;
+			return;
+		}
+		Vec3 dir = to.scale(1 / dist);
+		double speed = Math.min(1.1, 0.45 + dist * 0.06);
+		Vec3 v = dir.scale(speed);
+		if (p.horizontalCollision && to.y > 0) {
+			// Against a wall: straight up it, still leaning in.
+			v = new Vec3(flat.x * 0.15, Math.max(v.y, 0.75), flat.z * 0.15);
+		}
+		p.setDeltaMovement(v);
+		p.syncVelocity = true;
+	}
+
+	/** The rope, from the hand to the hook (everyone nearby sees it). */
+	private static void rope(ServerLevel level, ServerPlayer p, Vec3 hook) {
+		Vec3 hand = p.getEyePosition().add(0, -0.45, 0).add(p.getLookAngle().scale(0.4));
+		Vec3 to = hook.subtract(hand);
+		double dist = to.length();
+		DustParticleOptions dust = new DustParticleOptions(0xFF6E6457, 0.6F);
+		for (double d = 0; d < dist; d += 0.5) {
+			Vec3 q = hand.add(to.scale(d / dist));
+			level.sendParticles(dust, q.x, q.y, q.z, 1, 0, 0, 0, 0);
 		}
 	}
 
-	/** Every tick: no fall damage while on the line (until you land, or ten seconds). */
+	/** Every tick: the rope, the pull, and no fall damage while on the line (until you land, or ten seconds). */
 	public static void tick(MinecraftServer server) {
 		for (Iterator<Map.Entry<UUID, Line>> it = PULLED.entrySet().iterator(); it.hasNext();) {
 			Map.Entry<UUID, Line> e = it.next();
@@ -119,6 +139,9 @@ public class GrapplingHookItem extends Item {
 				line.over = true; // let go
 			}
 			reel(p, line);
+			if (!line.over && p.level() instanceof ServerLevel level) {
+				rope(level, p, line.hook);
+			}
 		}
 	}
 
