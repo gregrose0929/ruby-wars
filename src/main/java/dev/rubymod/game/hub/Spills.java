@@ -16,8 +16,8 @@ import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.FluidState;
 
 /**
- * No waterfalls off the islands: after the park's built, every bit of water pouring over an edge is found (a chunk at a
- * time, so start-up isn't held up). A little stray spring is taken away altogether; a pool that's leaking over its edge
+ * No waterfalls off the islands: once the park's built (and someone's in the hub, so it's ticking), every bit of water
+ * pouring over an edge is found (a chunk at a time, so nothing's held up). A little stray spring is taken away altogether; a pool that's leaking over its edge
  * gets the leak stopped up with a stone. Either way the water falling down below goes too.
  */
 final class Spills {
@@ -44,9 +44,7 @@ final class Spills {
 		for (int k = 0; k < PER_TICK && next < side * side; k++, next++) {
 			int cx = next % side - R;
 			int cz = next / side - R;
-			if (level.hasChunk(cx, cz)) {
-				chunk(level, level.getChunk(cx, cz));
-			}
+			chunk(level, level.getChunk(cx, cz)); // (loads it if need be: the whole park gets looked over)
 		}
 		if (next >= side * side && removed + plugged > 0) {
 			dev.rubymod.RubyMod.LOGGER.info("Spills: {} stray waterfalls taken away, {} leaking pools stopped up", removed, plugged);
