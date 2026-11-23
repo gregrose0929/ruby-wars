@@ -37,6 +37,10 @@ public class BuildersWandItem extends Item {
 		if (!(context.getLevel() instanceof ServerLevel level) || !(context.getPlayer() instanceof ServerPlayer player)) {
 			return InteractionResult.SUCCESS;
 		}
+		if (context.getItemInHand().getDamageValue() >= context.getItemInHand().getMaxDamage() - 1) {
+			player.sendSystemMessage(Component.literal("The wand's worn out: it mends itself in a little while.").withStyle(ChatFormatting.GRAY), true);
+			return InteractionResult.FAIL;
+		}
 		BlockPos origin = context.getClickedPos();
 		BlockState state = level.getBlockState(origin);
 		Item blockItem = state.getBlock().asItem();
@@ -60,7 +64,9 @@ public class BuildersWandItem extends Item {
 		}
 		if (placed > 0) {
 			level.playSound(null, origin, state.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 1.0F);
-			context.getItemInHand().hurtAndBreak(1, player, context.getHand());
+			// It wears with use, but never breaks: it mends itself (see inventoryTick).
+			ItemStack wand = context.getItemInHand();
+			wand.setDamageValue(Math.min(wand.getMaxDamage() - 1, wand.getDamageValue() + 1));
 		} else {
 			player.sendSystemMessage(Component.literal("Nothing placed. You need more " + blockItem.getName(blockItem.getDefaultInstance()).getString()
 					+ " or there's no room."), true);
@@ -77,6 +83,22 @@ public class BuildersWandItem extends Item {
 			}
 		}
 		return false;
+	}
+
+	/** It mends itself: a use back every half second, whenever it's not being used. */
+	@Override
+	public void inventoryTick(ItemStack stack, ServerLevel level, net.minecraft.world.entity.Entity owner, net.minecraft.world.entity.EquipmentSlot slot) {
+		if (level.getGameTime() % 10 == 0) {
+			mend(stack);
+		}
+	}
+
+	public static boolean mend(ItemStack stack) {
+		if (stack.getDamageValue() <= 0) {
+			return false;
+		}
+		stack.setDamageValue(stack.getDamageValue() - 1);
+		return true;
 	}
 
 	@Override

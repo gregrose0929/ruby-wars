@@ -99,7 +99,7 @@ public final class ArmoryGuide {
 		add("landmine", "Hide it in the ground: it goes off when an enemy steps on it.");
 		add("claymore", "Goes off when an enemy walks in front of it.");
 		add("at_mine", "Blows up enemy vehicles that drive over it.", "tank", "jeep");
-		add("sentry_turret", "Shoots monsters, and enemy players from Open War on. Load it with Heavy Ammo (right-click it). Needs no power.",
+		add("sentry_turret", "Shoots monsters, and enemy players from Open War on. Load it with Heavy Ammo (right-click it, or run a belt of it in). It tells you when it runs low. Needs no power.",
 				"heavy_ammo", "practice_dummy");
 		add("tesla_coil", "Zaps monsters, and enemies inside your base on Battle Day. Runs on power from your generators.",
 				"combustion_generator", "solar_panel", "battery");
@@ -111,7 +111,7 @@ public final class ArmoryGuide {
 				"heavy_ammo");
 		add("railgun", "A big gun you sit in: each shot crosses 400 blocks at once and goes through up to three targets. Each shot uses a lot of power.",
 				"battery", "combustion_generator", "solar_panel");
-		add("flak_cannon", "Fires bursting shells at enemy aircraft within 80 blocks, all by itself. Load it with Heavy Ammo.", "heavy_ammo");
+		add("flak_cannon", "Fires bursting shells at enemy aircraft within 80 blocks, all by itself. Load it with Heavy Ammo (by hand or by belt); it tells you when it runs low.", "heavy_ammo");
 		add("sam_site", "Fires missiles at enemy aircraft within 180 blocks, all by itself. Reload it with rubies (right-click it).", "ruby");
 		add("point_defense", "A fast automatic gun that shreds missiles, bombs and drones near it. Runs on power.", "battery", "combustion_generator");
 		add("missile_interceptor", "Shoots down missiles and shells headed for your base. Recharge it with rubies (right-click it).", "ruby");
@@ -182,7 +182,7 @@ public final class ArmoryGuide {
 				"minecraft:stone_bricks", "concrete_wall");
 		add("remodeler", "Swaps a whole 5x5x5 patch of one block for the block in your other hand: change a wall's material at once. Crouch to swap just one.",
 				"concrete_wall", "reinforced_concrete");
-		add("builders_wand", "Right-click a block to stretch it 16 blocks forward; crouch and right-click to build straight up.");
+		add("builders_wand", "Right-click a block to stretch it 16 blocks forward; crouch and right-click to build straight up. It never breaks: it mends itself.");
 		add("excavator", "A pickaxe that digs a 3x3 hole at once: quick for rooms, basements and tunnels.");
 		add("blueprint", "Right-click two opposite corners of a building (up to 24 blocks across) to copy it. Then put it in a Constructor to build a copy.",
 				"constructor");
@@ -221,7 +221,7 @@ public final class ArmoryGuide {
 		add("ruby_pickaxe", "Mines everything an iron pickaxe can, a bit faster, and lasts much longer.", "excavator");
 
 		// ----- Support -----
-		add("guard_contract", "Hires a rifleman: right-click the ground to post them. They guard your base or follow you, and fight monsters (and enemy players once PvP is on).");
+		add("guard_contract", "Hires a rifleman: right-click the ground to post them. They guard your base or follow you (riding along in your vehicle if there's a seat), and fight monsters (and enemy players once PvP is on).");
 		add("at_guard_contract", "Hires an anti-tank gunner: right-click the ground to post them. They fire rockets at enemy vehicles and aircraft.");
 		add("recon_drone", "Throw it up (right-click): it circles high over you for 90 seconds and marks every enemy within 56 blocks on your map and screen. Used up after.",
 				"scout_drone");

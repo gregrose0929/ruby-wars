@@ -186,6 +186,116 @@ public class DefenseBlockEntity extends BlockEntity {
 		return hit.getType() == HitResult.Type.MISS;
 	}
 
+	/** Rounds left when its owner's told it's running low. */
+	public static final int LOW_AMMO = 32;
+
+	/** Just fired one: tell the base's owner (once) when it's running low, and when it's run out. */
+	private void ammoWarning(ServerLevel level, BlockPos pos, SeasonData.Claim claim, String name) {
+		if (ammo != LOW_AMMO && ammo != 0) {
+			return;
+		}
+		ServerPlayer owner = owner(level, claim);
+		if (owner == null) {
+			return;
+		}
+		String where = " at " + pos.getX() + ", " + pos.getZ();
+		owner.sendSystemMessage(net.minecraft.network.chat.Component.literal(ammo == 0
+				? "Your " + name + where + " is out of ammo! Load it with Heavy Ammo, or run a belt into it."
+				: "Your " + name + where + " is running low (" + LOW_AMMO + " rounds left).")
+				.withStyle(ammo == 0 ? net.minecraft.ChatFormatting.RED : net.minecraft.ChatFormatting.GOLD));
+	}
+
+	/**
+	 * A belt running into a Sentry Turret or Flak Cannon: it takes the Heavy Ammo the belt brings (one round each, up to
+	 * full), like loading it by hand.
+	 */
+	public Feed beltLoader() {
+		return new Feed(this);
+	}
+
+	/** What a belt sees at a turret: room for Heavy Ammo, and nothing to take out. */
+	public static final class Feed implements net.minecraft.world.Container {
+		private final DefenseBlockEntity be;
+
+		Feed(DefenseBlockEntity be) {
+			this.be = be;
+		}
+
+		/** Load what fits; what's left over stays on the belt. */
+		public net.minecraft.world.item.ItemStack take(net.minecraft.world.item.ItemStack stack) {
+			if (!canPlaceItem(0, stack)) {
+				return stack;
+			}
+			net.minecraft.world.item.ItemStack rest = stack.copy();
+			int n = Math.min(rest.getCount(), space());
+			be.ammo += n;
+			rest.shrink(n);
+			be.setChanged();
+			return rest;
+		}
+
+			private int space() {
+				return Math.max(0, MAX_TURRET_AMMO - be.ammo);
+			}
+
+			@Override
+			public int getContainerSize() {
+				return 1;
+			}
+
+			@Override
+			public boolean isEmpty() {
+				return true;
+			}
+
+			@Override
+			public net.minecraft.world.item.ItemStack getItem(int slot) {
+				return net.minecraft.world.item.ItemStack.EMPTY;
+			}
+
+			@Override
+			public net.minecraft.world.item.ItemStack removeItem(int slot, int count) {
+				return net.minecraft.world.item.ItemStack.EMPTY;
+			}
+
+			@Override
+			public net.minecraft.world.item.ItemStack removeItemNoUpdate(int slot) {
+				return net.minecraft.world.item.ItemStack.EMPTY;
+			}
+
+			@Override
+			public void setItem(int slot, net.minecraft.world.item.ItemStack stack) {
+				if (stack.is(dev.rubymod.registry.ModItems.HEAVY_AMMO)) {
+					be.ammo = Math.min(MAX_TURRET_AMMO, be.ammo + stack.getCount());
+					be.setChanged();
+				}
+			}
+
+			@Override
+			public int getMaxStackSize() {
+				return Math.min(64, space());
+			}
+
+			@Override
+			public boolean canPlaceItem(int slot, net.minecraft.world.item.ItemStack stack) {
+				return stack.is(dev.rubymod.registry.ModItems.HEAVY_AMMO) && space() > 0;
+			}
+
+			@Override
+			public void setChanged() {
+				be.setChanged();
+			}
+
+			@Override
+			public boolean stillValid(net.minecraft.world.entity.player.Player player) {
+				return false;
+			}
+
+			@Override
+			public void clearContent() {
+			}
+	}
+
 	private static ServerPlayer owner(ServerLevel level, SeasonData.Claim claim) {
 		return level.getServer().getPlayerList().getPlayer(java.util.UUID.fromString(claim.owner));
 	}
@@ -257,6 +367,7 @@ public class DefenseBlockEntity extends BlockEntity {
 		} else {
 			victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, owner(level, claim)), TURRET_DAMAGE);
 			ammo--;
+			ammoWarning(level, pos, claim, "Sentry Turret");
 		}
 		cooldown = 3;
 		setChanged();
@@ -496,6 +607,9 @@ public class DefenseBlockEntity extends BlockEntity {
 		level.playSound(null, pos, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.BLOCKS, 2.0F, 0.6F);
 		dev.rubymod.game.Armor.blast(level, null, claim != null ? owner(level, claim) : null, burst, 14.0F, null);
 		ammo--;
+		if (claim != null) {
+			ammoWarning(level, pos, claim, "Flak Cannon");
+		}
 		setChanged();
 	}
 

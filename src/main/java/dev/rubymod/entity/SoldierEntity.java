@@ -402,13 +402,48 @@ public class SoldierEntity extends PathfinderMob {
 		if (following()) {
 			ServerPlayer leader = level.getServer().getPlayerList().getPlayer(owner);
 			if (leader != null && leader.level() == level) {
-				double d = distanceTo(leader);
-				if (d > 24) {
-					snapTo(leader.getX(), leader.getY(), leader.getZ(), getYRot(), 0);
-				} else if (d > 5 && tickCount % 10 == 0) {
-					getNavigation().moveTo(leader, 1.1);
+				follow(leader, leader.getRootVehicle());
+			}
+		}
+	}
+
+	/**
+	 * Following its owner: in their vehicle with them if there's a free seat (it climbs in when they get in, and out when
+	 * they get out); if there isn't (or they're flying), it waits and catches up once they're back on their feet. It only
+	 * ever jumps to them when they're standing on the ground, never into the air.
+	 */
+	/** For the self-test (its stand-in players can't ride): set to following, and one step of following this leader, in this (or null). */
+	public void testFollow(ServerPlayer leader, net.minecraft.world.entity.Entity in) {
+		entityData.set(FOLLOWING, true);
+		tickCount = 0;
+		follow(leader, in == null ? leader : in);
+	}
+
+	/** {@code ride}: what the leader's in (or the leader themself, on foot). */
+	private void follow(ServerPlayer leader, net.minecraft.world.entity.Entity ride) {
+		if (ride != leader) {
+			if (getVehicle() == ride) {
+				return; // riding along
+			}
+			if (getVehicle() == null && tickCount % 10 == 0 && distanceTo(ride) < 16 && (ride instanceof VehicleEntity) && ride.isAlive()) {
+				if (startRiding(ride)) {
+					return;
 				}
 			}
+			getNavigation().stop(); // no room (or flying): wait here
+			return;
+		}
+		if (getVehicle() instanceof VehicleEntity) {
+			// They got out: so do we, beside them.
+			stopRiding();
+			snapTo(leader.getX() + (getRandom().nextDouble() - 0.5) * 2, leader.getY(), leader.getZ() + (getRandom().nextDouble() - 0.5) * 2, getYRot(), 0);
+			return;
+		}
+		double d = distanceTo(leader);
+		if (d > 24 && leader.onGround()) {
+			snapTo(leader.getX(), leader.getY(), leader.getZ(), getYRot(), 0);
+		} else if (d > 5 && tickCount % 10 == 0) {
+			getNavigation().moveTo(leader, 1.1);
 		}
 	}
 

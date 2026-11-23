@@ -1071,6 +1071,48 @@ public final class SelfTest {
 			check("grappling hook: a worn one mends itself", dev.rubymod.item.GrapplingHookItem.mend(hook, bravo) && hook.getDamageValue() == hook.getMaxDamage() - 2);
 		}
 
+		// ----- Belts load turrets; guards ride along; the Builder's Wand mends -----
+		{
+			BlockPos t = base.offset(5, 1, -5);
+			level.setBlockAndUpdate(t, dev.rubymod.registry.ModBlocks.SENTRY_TURRET.defaultBlockState());
+			var turret = (dev.rubymod.block.DefenseBlockEntity) level.getBlockEntity(t);
+			turret.ammo = 0;
+			ItemStack rest = dev.rubymod.industry.Belts.insert(level, t, net.minecraft.core.Direction.WEST, new ItemStack(ModItems.HEAVY_AMMO, 64));
+			boolean first = rest.isEmpty() && turret.ammo == 64;
+			turret.ammo = dev.rubymod.block.DefenseBlockEntity.MAX_TURRET_AMMO - 12;
+			rest = dev.rubymod.industry.Belts.insert(level, t, net.minecraft.core.Direction.WEST, new ItemStack(ModItems.HEAVY_AMMO, 64));
+			ItemStack other = dev.rubymod.industry.Belts.insert(level, t, net.minecraft.core.Direction.WEST, new ItemStack(ModItems.LIGHT_AMMO, 5));
+			check("turrets: a belt loads Heavy Ammo, keeps what doesn't fit, and refuses anything else (" + rest.getCount() + " left)",
+					first && rest.getCount() == 52 && turret.ammo == dev.rubymod.block.DefenseBlockEntity.MAX_TURRET_AMMO && other.getCount() == 5);
+			level.setBlockAndUpdate(t, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+
+			BlockPos g = base.offset(-6, 1, 6);
+			var guard = dev.rubymod.entity.SoldierEntity.guard(level, alpha, g, 0);
+			level.addFreshEntity(guard);
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(g.getX() + 3.5, g.getY(), g.getZ() + 0.5, 0, 0);
+			level.addFreshEntity(jeep);
+			guard.testFollow(alpha, jeep);
+			boolean rode = guard.getVehicle() == jeep;
+			guard.testFollow(alpha, null);
+			boolean out = guard.getVehicle() == null;
+			// Their leader up in the air, far off: the guard stays where it is.
+			guard.snapTo(alpha.getX() + 60.5, alpha.getY(), alpha.getZ() + 0.5, 0, 0);
+			boolean grounded = alpha.onGround();
+			alpha.setOnGround(false);
+			double before = guard.getX();
+			guard.testFollow(alpha, null);
+			alpha.setOnGround(grounded);
+			check("guards: ride along in your jeep, hop out with you, and don't jump into the air after you (" + rode + ", " + out + ", "
+					+ Math.round(guard.getX() - before) + ")", rode && out && Math.abs(guard.getX() - before) < 2);
+			guard.discard();
+			jeep.discard();
+
+			ItemStack wand = new ItemStack(ModItems.BUILDERS_WAND);
+			wand.setDamageValue(wand.getMaxDamage() - 1);
+			check("builder's wand: a worn one mends itself", dev.rubymod.item.BuildersWandItem.mend(wand) && wand.getDamageValue() == wand.getMaxDamage() - 2);
+		}
+
 		// ----- The flamethrower refills -----
 		{
 			ItemStack flamer = new ItemStack(ModItems.FLAMETHROWER);

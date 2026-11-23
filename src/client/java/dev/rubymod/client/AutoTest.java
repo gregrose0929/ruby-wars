@@ -4586,6 +4586,7 @@ public final class AutoTest {
 			case "boatcheck" -> boatCheckScript();
 			case "jetcheck" -> jetCheckScript();
 			case "aimcheck" -> aimCheckScript();
+			case "guardcheck" -> guardCheckScript();
 			case "lightcheck" -> lightCheckScript();
 			case "basecheck" -> baseCheckScript();
 			case "bridgecheck" -> bridgeCheckScript();
@@ -5983,6 +5984,58 @@ public final class AutoTest {
 			mc.player.setXRot(10);
 		});
 		then(20, mc -> shot(mc, "borer-3-out"));
+	}
+
+		/** A guard following you climbs into your jeep with you, rides along, and gets out when you do. */
+	private static dev.rubymod.entity.SoldierEntity testGuard;
+
+	private static void guardCheckScript() {
+		int[] mark = {0};
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "kill @e[type=rubymod:target_dummy]");
+			command(mc, "kill @e[type=rubymod:soldier]");
+			command(mc, "kill @e[type=#minecraft:skeletons]");
+			command(mc, "kill @e[type=minecraft:zombie]");
+		});
+		then(200, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) p.level();
+			testGuard = dev.rubymod.entity.SoldierEntity.guard(level, p, p.blockPosition().offset(-3, 0, 0), 0);
+			level.addFreshEntity(testGuard);
+			testGuard.testFollow(p, null);
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(p.getX() + 2, p.getY(), p.getZ(), 0, 0);
+			level.addFreshEntity(jeep);
+			p.startRiding(jeep);
+		}));
+		// (Wait on the server: it can be well behind just after a teleport.)
+		then(1, mc -> hold(m -> testGuard != null && testGuard.tickCount > 60, 1200));
+		then(1, mc -> onServer(mc, server -> {
+			var p = me(server);
+			log("guard: in the jeep with me: {} (my vehicle {}, guard's {})", testGuard.getVehicle() != null && testGuard.getVehicle() == p.getVehicle(),
+					p.getVehicle(), testGuard.getVehicle());
+		}));
+		then(5, mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
+		then(20, mc -> shot(mc, "guard-1-riding"));
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+			mc.options.keyUp.setDown(true);
+		});
+		then(60, mc -> mc.options.keyUp.setDown(false));
+		then(30, mc -> onServer(mc, server -> {
+			var p = me(server);
+			log("guard: still riding after driving: {}", testGuard.getVehicle() != null && testGuard.getVehicle() == p.getVehicle());
+			mark[0] = testGuard.tickCount;
+			p.stopRiding();
+		}));
+		then(1, mc -> hold(m -> testGuard.tickCount > mark[0] + 40, 1200));
+		then(1, mc -> onServer(mc, server -> {
+			var p = me(server);
+			log("guard: after I got out: riding {}, {} blocks from me", testGuard.getVehicle() != null, Math.round(testGuard.distanceTo(p)));
+		}));
+		then(5, mc -> shot(mc, "guard-2-out"));
 	}
 
 		/** Grenades thrown with a tap and with a full wind-up (how far each lands); the Rangefinder looked through and marked. */

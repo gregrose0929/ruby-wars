@@ -143,7 +143,7 @@ public class DefenseBlock extends BaseEntityBlock {
 		}
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof DefenseBlockEntity be) {
 			String status = switch (kind) {
-				case SENTRY_TURRET -> "Sentry Turret: " + be.ammo + " rounds. Load it with Heavy Ammo.";
+				case SENTRY_TURRET -> "Sentry Turret: " + be.ammo + " rounds. Load it with Heavy Ammo (or run a belt of it in).";
 				case INTERCEPTOR -> "Missile Interceptor: " + be.charges + "/" + DefenseBlockEntity.MAX_CHARGES + " charges. Recharge with rubies.";
 				case RADAR -> "Radar Station: online. Contacts within 96 blocks show on your HUD.";
 				case ALARM -> "Alarm Block: armed. Alerts you when enemies come within 12 blocks.";
@@ -152,7 +152,7 @@ public class DefenseBlock extends BaseEntityBlock {
 				case LASER -> "Laser Tripwire: armed. Enemies who cross the beam set off this base's alarms and turrets.";
 				case SEISMIC -> "Seismic Sensor: listening. Warns you when an enemy Tunnel Borer digs within 48 blocks.";
 				case CLAYMORE -> "Claymore: armed on Battle Day. Fires at enemies in front of it.";
-				case FLAK -> "Flak Cannon: " + be.ammo + " shells. Fires bursting shells at enemy aircraft within 80 blocks. Load with Heavy Ammo.";
+				case FLAK -> "Flak Cannon: " + be.ammo + " shells. Fires bursting shells at enemy aircraft within 80 blocks. Load with Heavy Ammo (or run a belt of it in).";
 				case SAM -> "SAM Site: " + be.charges + "/" + DefenseBlockEntity.MAX_CHARGES + " missiles. Shoots down enemy aircraft within 180 blocks. Reload with rubies.";
 				case AIRFIELD_PAD -> "Airfield Pad: park an aircraft within 12 blocks and stop to rearm and repair it.";
 			};

@@ -26,6 +26,12 @@ public final class Belts {
 
 	/** The container at {@code pos} (both halves of a double chest), or null. */
 	public static Container containerAt(Level level, BlockPos pos) {
+		// A Sentry Turret or Flak Cannon takes Heavy Ammo off a belt.
+		if (level.getBlockState(pos).getBlock() instanceof dev.rubymod.block.DefenseBlock d
+				&& (d.kind() == dev.rubymod.block.DefenseBlock.Kind.SENTRY_TURRET || d.kind() == dev.rubymod.block.DefenseBlock.Kind.FLAK)
+				&& level.getBlockEntity(pos) instanceof dev.rubymod.block.DefenseBlockEntity be) {
+			return be.beltLoader();
+		}
 		return HopperBlockEntity.getContainerAt(level, pos);
 	}
 
@@ -34,6 +40,9 @@ public final class Belts {
 		Container container = containerAt(level, pos);
 		if (container == null || stack.isEmpty()) {
 			return stack;
+		}
+		if (container instanceof dev.rubymod.block.DefenseBlockEntity.Feed feed) {
+			return feed.take(stack);
 		}
 		if (container instanceof AbstractFurnaceBlockEntity furnace) {
 			int slot = cookable(level, furnace, stack) ? 0 : furnace.canPlaceItem(1, stack) ? 1 : -1;

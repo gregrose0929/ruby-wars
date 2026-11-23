@@ -112,7 +112,7 @@ public class BoatEntity extends VehicleEntity {
 	private int people() {
 		int n = 0;
 		for (Entity e : getPassengers()) {
-			if (e instanceof Player) {
+			if (e instanceof Player || e instanceof SoldierEntity) {
 				n++;
 			}
 		}
@@ -175,7 +175,7 @@ public class BoatEntity extends VehicleEntity {
 			if (e == passenger) {
 				break;
 			}
-			if (e instanceof Player) {
+			if (e instanceof Player || e instanceof SoldierEntity) {
 				seat++;
 			}
 		}
