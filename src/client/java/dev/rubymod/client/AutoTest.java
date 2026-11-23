@@ -4587,6 +4587,7 @@ public final class AutoTest {
 			case "jetcheck" -> jetCheckScript();
 			case "aimcheck" -> aimCheckScript();
 			case "guardcheck" -> guardCheckScript();
+			case "realcheck" -> realCheckScript();
 			case "lightcheck" -> lightCheckScript();
 			case "basecheck" -> baseCheckScript();
 			case "bridgecheck" -> bridgeCheckScript();
@@ -5984,6 +5985,94 @@ public final class AutoTest {
 			mc.player.setXRot(10);
 		});
 		then(20, mc -> shot(mc, "borer-3-out"));
+	}
+
+		/** Ramming a zombie with the jeep, driving into deep water (out you get), and a landmine drawn where it's seen. */
+	private static void realCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "kill @e[type=rubymod:target_dummy]");
+			command(mc, "kill @e[type=rubymod:soldier]");
+			command(mc, "difficulty easy");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 0");
+		});
+		then(200, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) p.level();
+			var at = p.blockPosition();
+			// A landmine to look at, just ahead and off to the side (out of the jeep's way).
+			level.setBlockAndUpdate(at.offset(2, 0, 5), dev.rubymod.registry.ModBlocks.LANDMINE.defaultBlockState());
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(p.getX(), p.getY(), p.getZ(), 0, 0);
+			level.addFreshEntity(jeep);
+			p.startRiding(jeep);
+			var zombie = net.minecraft.world.entity.EntityTypes.HUSK.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			zombie.addTag("rubymod_horde");
+			zombie.setNoAi(true);
+			zombie.snapTo(p.getX(), p.getY(), p.getZ() + 14, 0, 0);
+			level.addFreshEntity(zombie);
+		}));
+		then(10, mc -> {
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			mc.player.setYRot(0);
+			mc.player.setXRot(30);
+		});
+		then(5, mc -> shot(mc, "real-0-mine"));
+		then(5, mc -> {
+			mc.player.setXRot(5);
+			mc.options.keyUp.setDown(true);
+		});
+		then(50, mc -> onServer(mc, server -> {
+			var p = me(server);
+			for (var z : p.level().getEntitiesOfClass(net.minecraft.world.entity.monster.zombie.Zombie.class, p.getBoundingBox().inflate(40))) {
+				log("real: zombie after the jeep hit it: health {}, alive {}, {} blocks off", z.getHealth(), z.isAlive(), Math.round(z.distanceTo(p)));
+			}
+		}));
+		then(5, mc -> mc.options.keyUp.setDown(false));
+		then(30, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) p.level();
+			// A deep pool right ahead.
+			var c = p.blockPosition().offset(0, 0, 4);
+			for (int x = -3; x <= 3; x++) {
+				for (int z = 0; z <= 8; z++) {
+					for (int y = -3; y <= 0; y++) {
+						level.setBlockAndUpdate(c.offset(x, y, z), net.minecraft.world.level.block.Blocks.WATER.defaultBlockState());
+					}
+					level.setBlockAndUpdate(c.offset(x, -4, z), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+				}
+			}
+			log("real: still driving before the pool: {}", p.getVehicle() != null);
+		}));
+		then(5, mc -> mc.options.keyUp.setDown(true));
+		then(80, mc -> mc.options.keyUp.setDown(false));
+		then(20, mc -> onServer(mc, server -> {
+			var p = me(server);
+			for (var v : p.level().getEntitiesOfClass(dev.rubymod.entity.VehicleEntity.class, p.getBoundingBox().inflate(20))) {
+				log("real: in the pool: jeep flooded {}, me riding {}, my y {}", v.flooded(), p.getVehicle() != null, Math.round(p.getY()));
+			}
+		}));
+		then(5, mc -> shot(mc, "real-1-flooded"));
+		then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
+		// Driven off a big drop: the jeep takes a dent.
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var level = (net.minecraft.server.level.ServerLevel) p.level();
+			p.teleportTo(p.getX() - 20, -61, p.getZ() - 20);
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(p.getX(), -61 + 20, p.getZ(), 0, 0);
+			level.addFreshEntity(jeep);
+			p.startRiding(jeep);
+		}));
+		then(80, mc -> onServer(mc, server -> {
+			var p = me(server);
+			if (p.getVehicle() instanceof dev.rubymod.entity.VehicleEntity v) {
+				log("real: after a 20-block drop: jeep armor {} / {}", v.getHealth(), v.getMaxHealth());
+			} else {
+				log("real: after the drop: not riding");
+			}
+		}));
 	}
 
 		/** A guard following you climbs into your jeep with you, rides along, and gets out when you do. */

@@ -10,6 +10,11 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 public class ModBlockEntities {
+	public static final BlockEntityType<dev.rubymod.block.MineBlockEntity> MINE = Registry.register(
+			BuiltInRegistries.BLOCK_ENTITY_TYPE,
+			RubyMod.id("mine"),
+			new BlockEntityType<>(dev.rubymod.block.MineBlockEntity::new, Set.of(ModBlocks.LANDMINE, ModBlocks.AT_MINE)));
+
 	public static final BlockEntityType<DefenseBlockEntity> DEFENSE = Registry.register(
 			BuiltInRegistries.BLOCK_ENTITY_TYPE,
 			RubyMod.id("defense"),

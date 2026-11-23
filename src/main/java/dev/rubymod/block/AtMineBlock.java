@@ -23,7 +23,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * heavy damage (130, most of a tank). Inside a claim it only fires at enemies on
  * Battle Day; outside claims it fires at any driven vehicle.
  */
-public class AtMineBlock extends Block {
+public class AtMineBlock extends Block implements net.minecraft.world.level.block.EntityBlock {
 	private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 3, 15);
 
 	public AtMineBlock(Properties properties) {
@@ -32,7 +32,25 @@ public class AtMineBlock extends Block {
 
 	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		return SHAPE;
+		// Buried out of sight (and out of reach) for anyone it's hidden from: see MineBlockEntity.
+		return MineBlockEntity.shape(SHAPE, level, pos, context);
+	}
+
+	@Override
+	protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+		// Drawn by its block entity's renderer, only for those who can see it.
+		return net.minecraft.world.level.block.RenderShape.INVISIBLE;
+	}
+
+	@Override
+	public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new MineBlockEntity(pos, state);
+	}
+
+	@Override
+	public <T extends net.minecraft.world.level.block.entity.BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(
+			Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
+		return MineBlockEntity.ticker(level, type);
 	}
 
 	@Override

@@ -376,6 +376,7 @@ public class RubyModClient implements ClientModInitializer {
 		ModelVehicleRenderer.registerLayers();
 		net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry.register(dev.rubymod.registry.ModBlockEntities.DEFENSE, SentryRenderer::new);
 		net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry.register(dev.rubymod.registry.ModBlockEntities.HOLO, HoloRenderer::new);
+		net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry.register(dev.rubymod.registry.ModBlockEntities.MINE, MineRenderer::new);
 		net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry.register(dev.rubymod.registry.ModBlockEntities.SILO, SiloRenderer::new);
 		DroneRenderer.registerLayer();
 		EntityRendererRegistry.register(ModEntities.SOLDIER, SoldierRenderer::new);

@@ -207,6 +207,11 @@ public class VehicleEntity extends Mob {
 		if (isVehicle() && getPassengers().size() >= seats()) {
 			return InteractionResult.PASS;
 		}
+		if (flooded()) {
+			player.sendOverlayMessage(Component.literal("It's flooded: it won't go in deep water. Crouch + right-click to pack it up.")
+					.withStyle(net.minecraft.ChatFormatting.AQUA));
+			return InteractionResult.SUCCESS;
+		}
 		if (!level().isClientSide()) {
 			player.startRiding(this);
 		}
@@ -354,9 +359,107 @@ public class VehicleEntity extends Mob {
 		return false;
 	}
 
+	// ----- Water, falls and running into things -----
+
+	/** Does it float (boats)? Everything else is flooded by deep water. */
+	protected boolean floats() {
+		return false;
+	}
+
+	/** Deep water over its wheels (not riding aboard a Landing Craft). */
+	public boolean flooded() {
+		return !floats() && !isPassenger() && isInWater() && getFluidHeight(net.minecraft.tags.FluidTags.WATER) > getBbHeight() * 0.55;
+	}
+
+	/** Underwater, its riders get out (Minecraft's own rule, as for horses). */
+	@Override
+	public boolean dismountsUnderwater() {
+		return !floats();
+	}
+
+	/** Blocks fallen through that it takes without a dent (a bike off a bump, a jeep down a bank). */
+	public static final double SAFE_DROP = 8.0;
+
+	/**
+	 * A big drop dents it (more the further it fell): small hops and jumps are free. Boats and the tank are left as they
+	 * were; the riders aren't hurt by it.
+	 */
 	@Override
 	public boolean causeFallDamage(double fallDistance, float damageModifier, DamageSource damageSource) {
-		return false;
+		if (floats() || isTank() || fallDistance <= SAFE_DROP || !(level() instanceof ServerLevel level)) {
+			return false;
+		}
+		float dent = (float) ((fallDistance - SAFE_DROP + 2) * getMaxHealth() * 0.04);
+		boolean hurt = hurtServer(level, level.damageSources().fall(), dent);
+		if (hurt) {
+			level.playSound(null, getX(), getY(), getZ(), SoundEvents.ANVIL_LAND, SoundSource.NEUTRAL, 0.8F, 0.6F);
+			level.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 0.2, getZ(), 12, getBbWidth() * 0.5, 0.1, getBbWidth() * 0.5, 0.02);
+			if (getControllingPassenger() instanceof ServerPlayer driver) {
+				driver.sendOverlayMessage(Component.literal("Hard landing! " + vehicleName() + " armor: " + (int) getHealth() + " / " + (int) getMaxHealth()));
+			}
+		}
+		return hurt;
+	}
+
+	/** Does it knock down what it runs into? The jeep, the quad and the dirt bike. */
+	protected boolean rams() {
+		return getType() == ModEntities.JEEP || getType() == ModEntities.QUAD || getType() == ModEntities.DIRT_BIKE;
+	}
+
+	/** Who it last ran into, and when (game time), so one bump counts once. */
+	private final java.util.Map<java.util.UUID, Long> rammed = new java.util.HashMap<>();
+
+	/** Blocks a tick it has to be doing to hurt what it hits. */
+	public static final double RAM_SPEED = 0.18;
+
+	/**
+	 * Running into something at speed: it's hurt and knocked away (more the faster), if it's something you're allowed to
+	 * hurt (monsters, and enemies once PvP's on, never your squad); anything else (animals, friends) is just nudged
+	 * aside. The vehicle takes a small bump too.
+	 */
+	/** Where it was a tick ago (the driver's game moves it between ticks, so this is how fast it's really going). */
+	private Vec3 lastTickPos;
+
+	private void ram(ServerLevel level, ServerPlayer driver) {
+		Vec3 was = lastTickPos == null ? position() : lastTickPos;
+		lastTickPos = position();
+		Vec3 motion = new Vec3(getX() - was.x, 0, getZ() - was.z);
+		double speed = motion.length();
+		if (speed < RAM_SPEED) {
+			return;
+		}
+		Vec3 dir = motion.scale(1 / speed);
+		net.minecraft.world.phys.AABB box = getBoundingBox().inflate(0.3, 0, 0.3).expandTowards(motion.scale(1.5));
+		long now = level.getGameTime();
+		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box, e -> e != this && e.isAlive() && !hasPassenger(e) && !e.isPassenger()
+				&& !(e instanceof VehicleEntity) && !(e instanceof AircraftEntity) && !(e instanceof HeavyAAGunEntity)
+				&& !(e instanceof net.minecraft.world.entity.decoration.ArmorStand) && !(e instanceof Player p && p.isSpectator()))) {
+			if (e.position().subtract(position()).dot(dir) < 0 || now - rammed.getOrDefault(e.getUUID(), -100L) < 15) {
+				continue;
+			}
+			rammed.put(e.getUUID(), now);
+			hit(level, driver, e, dir, speed);
+		}
+		if (rammed.size() > 50) {
+			rammed.values().removeIf(t -> now - t > 100);
+		}
+	}
+
+	/** Bump {@code e} at this speed, heading this way. Whether it hurt it. */
+	public boolean hit(ServerLevel level, ServerPlayer driver, LivingEntity e, Vec3 dir, double speed) {
+		boolean may = e instanceof SoldierEntity s ? s.isHostileTo(driver)
+				: e instanceof Player ? dev.rubymod.game.Rules.canHurt(driver, e)
+				: e instanceof net.minecraft.world.entity.monster.Enemy;
+		Vec3 shove = dir.scale(may ? speed * 2.2 : 0.5).add(0, may ? 0.35 : 0.1, 0);
+		e.push(shove.x, shove.y, shove.z);
+		e.syncVelocity = true;
+		if (!may) {
+			return false;
+		}
+		boolean hurt = e.hurtServer(level, level.damageSources().playerAttack(driver), (float) (speed * 22));
+		level.playSound(null, e.getX(), e.getY(), e.getZ(), SoundEvents.PLAYER_ATTACK_KNOCKBACK, SoundSource.PLAYERS, 1.2F, 0.7F);
+		setHealth(Math.max(1, getHealth() - 1));
+		return hurt;
 	}
 
 	// ----- Combat -----
@@ -449,6 +552,24 @@ public class VehicleEntity extends Mob {
 			carSpeed = 0;
 			carSteer = 0;
 		}
+		if (level() instanceof ServerLevel here) {
+			if (flooded()) {
+				carSpeed = 0;
+				if (isVehicle()) {
+					for (Entity rider : java.util.List.copyOf(getPassengers())) {
+						if (rider instanceof ServerPlayer p) {
+							p.sendOverlayMessage(Component.literal("The " + vehicleName() + " is flooded! Swim for it (crouch + right-click it to pack it up).")
+									.withStyle(net.minecraft.ChatFormatting.AQUA));
+						}
+					}
+					ejectPassengers();
+				}
+			} else if (rams() && getControllingPassenger() instanceof ServerPlayer driver) {
+				ram(here, driver);
+			} else {
+				lastTickPos = null;
+			}
+		}
 		if (smokeCooldown > 0) {
 			smokeCooldown--;
 		}
@@ -479,7 +600,7 @@ public class VehicleEntity extends Mob {
 		}
 	}
 
-	/** What you get back if you pick the vehicle up (sneak + attack is not supported; vehicles are permanent until destroyed). */
+	/** What you get back if you pack the vehicle up (crouch-right-click: see PackUp). */
 	public ItemStack asItem() {
 		return new ItemStack(isTank() ? ModItems.TANK : ModItems.JEEP);
 	}

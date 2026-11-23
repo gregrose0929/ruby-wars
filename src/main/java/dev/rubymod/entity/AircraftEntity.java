@@ -305,6 +305,11 @@ public class AircraftEntity extends Mob {
 		if (isVehicle()) {
 			return InteractionResult.PASS;
 		}
+		if (inDeepWater()) {
+			player.sendOverlayMessage(Component.literal("It's down in the water: pack it up (crouch + right-click) to get it back.")
+					.withStyle(net.minecraft.ChatFormatting.AQUA));
+			return InteractionResult.SUCCESS;
+		}
 		if (!level().isClientSide()) {
 			player.startRiding(this);
 			if (player instanceof ServerPlayer sp) {
@@ -363,6 +368,16 @@ public class AircraftEntity extends Mob {
 	@Override
 	public void travel(Vec3 input) {
 		LivingEntity pilot = getControllingPassenger();
+		if (pilot == null && isInWater()) {
+			// Ditched: it floats, low in the water, and drifts to a stop.
+			Vec3 v = getDeltaMovement();
+			double vy = Mth.clamp((getFluidHeight(net.minecraft.tags.FluidTags.WATER) - 0.7) * 0.15, -0.1, 0.1);
+			Vec3 next = new Vec3(v.x * 0.85, vy, v.z * 0.85);
+			setDeltaMovement(next);
+			move(net.minecraft.world.entity.MoverType.SELF, next);
+			resetFallDistance();
+			return;
+		}
 		if (pilot != null && kind.rotorcraft()) {
 			flyRotor(pilot, input);
 		} else if (pilot != null) {
@@ -813,6 +828,26 @@ public class AircraftEntity extends Mob {
 		return super.hurtServer(level, source, amount);
 	}
 
+	/** Coming down in the water: a hard knock (a quarter of its hull), and everyone aboard has to swim for it. */
+	public void ditch(ServerLevel level) {
+		ditched = true;
+		hurtServer(level, level.damageSources().generic(), getMaxHealth() * 0.25F);
+		level.sendParticles(ParticleTypes.SPLASH, getX(), getY() + 0.5, getZ(), 80, getBbWidth() * 0.4, 0.3, getBbWidth() * 0.4, 0.3);
+		level.playSound(null, getX(), getY(), getZ(), SoundEvents.GENERIC_SPLASH, SoundSource.NEUTRAL, 2.0F, 0.6F);
+		for (Entity rider : List.copyOf(getPassengers())) {
+			if (rider instanceof ServerPlayer p) {
+				p.sendOverlayMessage(Component.literal("Ditched in the water! Swim for it (crouch + right-click it to pack it up).")
+						.withStyle(net.minecraft.ChatFormatting.AQUA));
+			}
+		}
+		ejectPassengers();
+	}
+
+	/** For the self-test. */
+	public boolean ditched() {
+		return ditched;
+	}
+
 	@Override
 	public boolean causeFallDamage(double fallDistance, float damageModifier, DamageSource damageSource) {
 		return false;
@@ -925,6 +960,14 @@ public class AircraftEntity extends Mob {
 		}
 	}
 
+	/** Down in deep water (the crew have had to get out); cleared once it's back on dry ground. */
+	private boolean ditched;
+
+	/** In water deep enough to swamp it. */
+	public boolean inDeepWater() {
+		return isInWater() && getFluidHeight(net.minecraft.tags.FluidTags.WATER) > 0.4;
+	}
+
 	@Override
 	public void tick() {
 		super.tick();
@@ -933,6 +976,13 @@ public class AircraftEntity extends Mob {
 		}
 		if (!(level() instanceof ServerLevel level)) {
 			return;
+		}
+		if (inDeepWater()) {
+			if (!ditched) {
+				ditch(level);
+			}
+		} else if (onGround()) {
+			ditched = false;
 		}
 		Vec3 previousVelocity = serverVelocity;
 		recentPositions.addLast(position());

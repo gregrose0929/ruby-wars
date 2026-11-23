@@ -1113,6 +1113,94 @@ public final class SelfTest {
 			check("builder's wand: a worn one mends itself", dev.rubymod.item.BuildersWandItem.mend(wand) && wand.getDamageValue() == wand.getMaxDamage() - 2);
 		}
 
+		// ----- Water, falls and ramming; aircraft ditching; hidden mines -----
+		{
+			var stoneB = net.minecraft.world.level.block.Blocks.STONE.defaultBlockState();
+			var waterB = net.minecraft.world.level.block.Blocks.WATER.defaultBlockState();
+			BlockPos pool = new BlockPos(base.getX() + 500, 200, base.getZ() + 500);
+			for (int x = -2; x <= 2; x++) {
+				for (int z = -2; z <= 2; z++) {
+					level.setBlock(pool.offset(x, -1, z), stoneB, 18);
+					for (int y = 0; y < 3; y++) {
+						level.setBlock(pool.offset(x, y, z), waterB, 18);
+					}
+				}
+			}
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(pool.getX() + 0.5, pool.getY(), pool.getZ() + 0.5, 0, 0);
+			level.addFreshEntity(jeep);
+			jeep.tick();
+			boolean flooded = jeep.flooded();
+			var boat = dev.rubymod.registry.ModEntities.PATROL_BOAT.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			boat.snapTo(pool.getX() + 0.5, pool.getY() + 2, pool.getZ() + 0.5, 0, 0);
+			level.addFreshEntity(boat);
+			boat.tick();
+			check("water: a jeep in deep water is flooded, a boat never is (" + flooded + ", " + boat.flooded() + ")", flooded && !boat.flooded() && jeep.dismountsUnderwater());
+			var heli = dev.rubymod.registry.ModEntities.ATTACK_HELI.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			heli.snapTo(pool.getX() + 0.5, pool.getY(), pool.getZ() + 0.5, 0, 0);
+			level.addFreshEntity(heli);
+			float heliBefore = heli.getHealth();
+			heli.tick();
+			check("water: an aircraft down in deep water is ditched and damaged (" + heli.ditched() + ", " + heliBefore + " -> " + heli.getHealth() + ")",
+					heli.ditched() && heli.getHealth() < heliBefore);
+			jeep.discard();
+			boat.discard();
+			heli.discard();
+			for (int x = -2; x <= 2; x++) {
+				for (int z = -2; z <= 2; z++) {
+					for (int y = -1; y < 3; y++) {
+						level.setBlock(pool.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
+					}
+				}
+			}
+
+			var car = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			car.snapTo(base.getX() + 0.5, base.getY() + 1, base.getZ() + 12.5, 0, 0);
+			float full = car.getMaxHealth();
+			car.causeFallDamage(4, 1, level.damageSources().fall());
+			boolean hop = car.getHealth() >= full;
+			car.causeFallDamage(20, 1, level.damageSources().fall());
+			boolean drop = car.getHealth() < full;
+			var tank = dev.rubymod.registry.ModEntities.TANK.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			tank.causeFallDamage(20, 1, level.damageSources().fall());
+			check("falls: a small hop's free, a big drop dents the jeep (" + car.getHealth() + "), the tank's as it was",
+					hop && drop && tank.getHealth() >= tank.getMaxHealth());
+			car.setHealth(full);
+			level.addFreshEntity(car);
+			var zombie = net.minecraft.world.entity.EntityTypes.ZOMBIE.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			zombie.snapTo(base.getX() + 0.5, base.getY() + 1, base.getZ() + 14.5, 0, 0);
+			level.addFreshEntity(zombie);
+			float zBefore = zombie.getHealth();
+			car.hit(level, alpha, zombie, new Vec3(0, 0, 1), 0.4);
+			var cow = net.minecraft.world.entity.EntityTypes.COW.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			cow.snapTo(base.getX() + 2.5, base.getY() + 1, base.getZ() + 14.5, 0, 0);
+			level.addFreshEntity(cow);
+			boolean cowHurt = car.hit(level, alpha, cow, new Vec3(0, 0, 1), 0.4);
+			check("ramming: a zombie hit at speed is hurt (" + zBefore + " -> " + zombie.getHealth() + "), a cow is only nudged",
+					zombie.getHealth() < zBefore && !cowHurt && cow.getHealth() >= cow.getMaxHealth());
+			zombie.discard();
+			cow.discard();
+			car.discard();
+			tank.discard();
+
+			BlockPos minePos = base.offset(4, 1, 7);
+			level.setBlockAndUpdate(minePos, dev.rubymod.registry.ModBlocks.LANDMINE.defaultBlockState());
+			var mine = (dev.rubymod.block.MineBlockEntity) level.getBlockEntity(minePos);
+			mine.claimFromPosition();
+			var mineState = level.getBlockState(minePos);
+			boolean ownSees = mine.visibleTo(alpha) && !mineState.getShape(level, minePos, net.minecraft.world.phys.shapes.CollisionContext.of(alpha)).isEmpty();
+			boolean enemyBlind = !mine.visibleTo(bravo) && mineState.getShape(level, minePos, net.minecraft.world.phys.shapes.CollisionContext.of(bravo)).isEmpty();
+			level.setBlockAndUpdate(minePos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			BlockPos wild = base.offset(400, 1, 400);
+			level.setBlockAndUpdate(wild, dev.rubymod.registry.ModBlocks.AT_MINE.defaultBlockState());
+			var wildMine = (dev.rubymod.block.MineBlockEntity) level.getBlockEntity(wild);
+			wildMine.claimFromPosition();
+			boolean wildSeen = wildMine.visibleTo(bravo);
+			level.setBlockAndUpdate(wild, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			check("mines: you see yours, an enemy can't see or point at it, and one in nobody's base is seen by all (" + ownSees + ", " + enemyBlind + ", " + wildSeen + ")",
+					ownSees && enemyBlind && wildSeen);
+		}
+
 		// ----- The flamethrower refills -----
 		{
 			ItemStack flamer = new ItemStack(ModItems.FLAMETHROWER);

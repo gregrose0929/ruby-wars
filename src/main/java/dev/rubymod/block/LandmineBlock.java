@@ -20,7 +20,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * A pressure mine. On Battle Day (once PvP is on), an enemy stepping on it
  * inside its claim sets it off.
  */
-public class LandmineBlock extends Block {
+public class LandmineBlock extends Block implements net.minecraft.world.level.block.EntityBlock {
 	private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 2, 14);
 
 	public LandmineBlock(Properties properties) {
@@ -29,7 +29,25 @@ public class LandmineBlock extends Block {
 
 	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		return SHAPE;
+		// Buried out of sight (and out of reach) for anyone it's hidden from: see MineBlockEntity.
+		return MineBlockEntity.shape(SHAPE, level, pos, context);
+	}
+
+	@Override
+	protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+		// Drawn by its block entity's renderer, only for those who can see it.
+		return net.minecraft.world.level.block.RenderShape.INVISIBLE;
+	}
+
+	@Override
+	public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new MineBlockEntity(pos, state);
+	}
+
+	@Override
+	public <T extends net.minecraft.world.level.block.entity.BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(
+			Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
+		return MineBlockEntity.ticker(level, type);
 	}
 
 	@Override

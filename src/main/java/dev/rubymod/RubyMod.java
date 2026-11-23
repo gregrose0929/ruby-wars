@@ -56,6 +56,7 @@ public class RubyMod implements ModInitializer {
 		GameConfig.load();
 		GameEvents.register();
 		dev.rubymod.world.Springs.register();
+		dev.rubymod.world.MineBackfill.register();
 		CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {
 			RubyWarsCommand.register(dispatcher);
 			dev.rubymod.command.SquadCommand.register(dispatcher);

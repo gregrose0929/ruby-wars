@@ -96,9 +96,9 @@ public final class ArmoryGuide {
 		add("barbed_wire", "Slows down anyone who walks through it. Put it outside your walls.");
 		add("holo_camo", "Copies the look of any block. You can walk through it; enemies just see a wall.");
 		add("camo_net", "Hides what's under it from aircraft flying over.");
-		add("landmine", "Hide it in the ground: it goes off when an enemy steps on it.");
+		add("landmine", "Hide it in the ground: it goes off when an enemy steps on it. Only you and your squad can see it; to enemies it's buried out of sight.");
 		add("claymore", "Goes off when an enemy walks in front of it.");
-		add("at_mine", "Blows up enemy vehicles that drive over it.", "tank", "jeep");
+		add("at_mine", "Blows up enemy vehicles that drive over it. Hidden from enemies, like a Landmine.", "tank", "jeep");
 		add("sentry_turret", "Shoots monsters, and enemy players from Open War on. Load it with Heavy Ammo (right-click it, or run a belt of it in). It tells you when it runs low. Needs no power.",
 				"heavy_ammo", "practice_dummy");
 		add("tesla_coil", "Zaps monsters, and enemies inside your base on Battle Day. Runs on power from your generators.",

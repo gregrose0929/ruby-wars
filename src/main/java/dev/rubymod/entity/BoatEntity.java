@@ -259,6 +259,11 @@ public class BoatEntity extends VehicleEntity {
 	}
 
 	@Override
+	protected boolean floats() {
+		return true;
+	}
+
+	@Override
 	public boolean isPushedByFluid() {
 		return false;
 	}
