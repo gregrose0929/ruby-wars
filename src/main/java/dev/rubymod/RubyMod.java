@@ -55,6 +55,7 @@ public class RubyMod implements ModInitializer {
 		net.minecraft.core.Registry.register(net.minecraft.core.registries.BuiltInRegistries.BIOME_SOURCE, id("warzone"), dev.rubymod.world.WarzoneBiomeSource.CODEC);
 		GameConfig.load();
 		GameEvents.register();
+		dev.rubymod.world.Springs.register();
 		CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {
 			RubyWarsCommand.register(dispatcher);
 			dev.rubymod.command.SquadCommand.register(dispatcher);

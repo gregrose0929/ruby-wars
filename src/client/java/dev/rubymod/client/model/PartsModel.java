@@ -25,6 +25,15 @@ public class PartsModel extends EntityModel<PartsModel.State> {
 		/** 0 up, 1 down. */
 		public float ramp;
 		public float yaw;
+		/** Degrees leaning over (positive: to its right), at the ground. */
+		public float roll;
+		/** Degrees nose up, about a point this far back from the middle (blocks). */
+		public float pitch;
+		public float pitchPivot;
+		/** Blocks it's being shaken about this frame (a drill hard at work). */
+		public float shakeX;
+		public float shakeY;
+		public float shakeZ;
 	}
 
 	private final List<ModelPart> wheels = new ArrayList<>();

@@ -253,6 +253,7 @@ public final class HubPark {
 		int models = KEEP.size();
 		dev.rubymod.RubyMod.LOGGER.info("[park] {} signs, {} park entities, {} hosts, {} rides", signs, models, HubHosts.count(), TrackRide.ALL.size());
 		out.put("not too many park entities (" + models + ")", models < 8000);
+		Spills.selfTest(level, out);
 		return out;
 	}
 
@@ -711,6 +712,7 @@ public final class HubPark {
 		// (the green arrows on the ground are gone: they looked messy)
 		plazaLights(level);
 		Dressing.build(level);
+		Spills.start();
 		Wonder.build(level, new Vec3(60.5, FLOOR + 16, -96.5));
 
 	}
@@ -887,7 +889,7 @@ public final class HubPark {
 		}
 	}
 
-	/** Each island's own sounds, for whoever's on it: carnival music, waves and gulls, a spooky drone, rushing water. */
+	/** Each island's own sounds, for whoever's on it: carnival music, the waves. */
 	private static void ambience(ServerLevel level) {
 		if (tick % 20 != 0) {
 			return;
@@ -905,9 +907,6 @@ public final class HubPark {
 			} else if (at.distanceTo(new Vec3(SplashIsland.MX, FLOOR, SplashIsland.MZ)) < 55) {
 				if (tick % 180 == 0) {
 					hear(p, dev.rubymod.registry.ModSounds.PARK_WAVES, at.add(random.nextDouble() * 10 - 5, 0, random.nextDouble() * 10 - 5), 0.6F);
-				}
-				if (random.nextInt(9) == 0) {
-					hear(p, dev.rubymod.registry.ModSounds.PARK_GULLS, at.add(random.nextDouble() * 16 - 8, 8, random.nextDouble() * 16 - 8), 0.6F);
 				}
 			} else if (false) {
 				// (the Haunted Mansion's gone)
@@ -1105,6 +1104,7 @@ public final class HubPark {
 		Pets.tick(level, tick);
 		SkyTours.tick(level);
 		Dressing.tick(level, tick);
+		Spills.tick(level);
 		Wonder.tick(level);
 		Plunge.tick(level);
 		Seasons.tick(level, tick);
@@ -1260,21 +1260,17 @@ public final class HubPark {
 		}
 	}
 
-	/** The plaza's critters: three parrots, a cat, fish in the fountain. Kept there, and replaced if they go missing. */
+	/** The plaza's critters: a cat, fish in the fountain. Kept there, and replaced if they go missing. (No birds: the parrots went.) */
 	private static void critters(ServerLevel level) {
 		if (level.players().isEmpty()) {
 			return;
 		}
 		List<Entity> have = level.getEntities((Entity) null, new AABB(-60, FLOOR - 30, -60, 60, FLOOR + 40, 60), e -> e.entityTags().contains(CRITTER));
-		int parrots = 0;
 		int cats = 0;
 		int fish = 0;
 		for (Entity e : have) {
 			if (e.getType() == EntityTypes.PARROT) {
-				parrots++;
-				if (e.position().horizontalDistance() > 30 || e.getY() < FLOOR - 5) {
-					e.teleportTo(level.getRandom().nextInt(16) - 8, FLOOR + 6, level.getRandom().nextInt(16) - 8);
-				}
+				e.discard();
 			} else if (e.getType() == EntityTypes.CAT) {
 				cats++;
 				if (e.position().horizontalDistance() > 21) {
@@ -1286,9 +1282,6 @@ public final class HubPark {
 					e.teleportTo(0.5 + level.getRandom().nextInt(3) - 1, FLOOR + 0.3, 1.8);
 				}
 			}
-		}
-		for (int i = parrots; i < 3; i++) {
-			critter(level, EntityTypes.PARROT.create(level, EntitySpawnReason.EVENT), new Vec3(level.getRandom().nextInt(16) - 8, FLOOR + 5, level.getRandom().nextInt(16) - 8));
 		}
 		for (int i = cats; i < 1; i++) {
 			critter(level, EntityTypes.CAT.create(level, EntitySpawnReason.EVENT), new Vec3(5.5, FLOOR + 1, 5.5));

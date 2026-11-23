@@ -5,7 +5,7 @@ import dev.rubymod.entity.LightVehicleEntity;
 
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 
-/** The Dirt Bike (orange, with a number plate and knobbly tyres) and the Quad (green, four fat wheels), handlebars that steer. */
+/** The Dirt Bike (orange, with a number plate and knobbly tyres; it leans into turns and pulls wheelies) and the Quad (green, four fat wheels), handlebars that steer. */
 public class LightVehicleRenderer extends ModelVehicleRenderer<LightVehicleEntity> {
 	private final PartsModel bike;
 	private final PartsModel quad;
@@ -23,6 +23,12 @@ public class LightVehicleRenderer extends ModelVehicleRenderer<LightVehicleEntit
 		super.extractRenderState(entity, state, partialTicks);
 		state.ramp = entity.isBike() ? 1 : 0;
 		state.steer *= 2.0F;
+		if (!entity.isBike()) {
+			return;
+		}
+		state.roll = entity.lean(partialTicks);
+		state.pitch = entity.wheelieAngle(partialTicks);
+		state.pitchPivot = 9.5F / 16.0F;
 	}
 
 	@Override

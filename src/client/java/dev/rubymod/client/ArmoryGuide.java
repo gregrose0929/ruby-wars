@@ -123,9 +123,9 @@ public final class ArmoryGuide {
 		add("jeep", "A fast four-seat car: W and S to drive, A and D to steer. Bullets barely scratch it; rockets and mines are what hurt it.",
 				"paint_kit", "landing_craft");
 		add("tank", "Slow, but heavily armored, with a big cannon (right-click with an empty hand to fire). Two seats.", "paint_kit");
-		add("dirt_bike", "The fastest way across the map: one seat and very nimble, but bullets hurt it more.", "paint_kit");
+		add("dirt_bike", "The fastest way across the map: one seat, and it rides like a real motorbike. W winds it up to speed, S brakes, it leans into turns, and Space pulls a wheelie. Bullets hurt it more.", "paint_kit");
 		add("quad", "A quick two-seat four-wheeler, faster than the jeep. Bullets hurt it more.", "paint_kit");
-		add("tunnel_borer", "A slow digging machine: drive it and it cuts a tunnel 3 blocks wide and 3 high. Dig under an enemy base (their Seismic Sensor can hear it).",
+		add("tunnel_borer", "A slow digging machine: hold W and its drill grinds out a tunnel 3 blocks wide and 3 high (harder rock takes longer). Dig under an enemy base (their Seismic Sensor can hear it).",
 				"seismic_sensor");
 		add("patrol_boat", "A fast four-seat boat for rivers and the coast. Right-click water to put it in.", "paint_kit");
 		add("gunboat", "A boat with a deck gun its driver aims and fires (left-click). Right-click water to put it in.", "paint_kit");

@@ -5949,7 +5949,8 @@ public final class AutoTest {
 			mc.player.setXRot(0);
 			mc.options.keyUp.setDown(true);
 		});
-		then(100, mc -> {
+		then(45, mc -> shot(mc, "borer-1b-grinding"));
+		then(55, mc -> {
 			mc.options.keyUp.setDown(false);
 			log("borer: after driving 5 s: at {}", mc.player.getVehicle() == null ? "not riding" : mc.player.getVehicle().blockPosition());
 			shot(mc, "borer-2-tunnel");
@@ -6203,6 +6204,36 @@ public final class AutoTest {
 			then(15, mc -> shot(mc, "bike-" + kind));
 			then(5, mc -> mc.options.setCameraType(CameraType.FIRST_PERSON));
 		}
+		// The Dirt Bike leaning into a turn, then pulling a wheelie.
+		then(5, mc -> {
+			mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			mc.options.keyUp.setDown(true);
+		});
+		then(30, mc -> {
+			log("bike: speed after 1.5 s from rolling: {}", mc.player.getVehicle() instanceof dev.rubymod.entity.LightVehicleEntity b ? b.bikeSpeed() : -1);
+			mc.options.keyLeft.setDown(true);
+		});
+		then(9, mc -> mc.player.setYRot(mc.player.getVehicle() == null ? 0 : mc.player.getVehicle().getYRot()));
+		then(1, mc -> {
+			log("bike: leaning {} degrees", mc.player.getVehicle() instanceof dev.rubymod.entity.LightVehicleEntity b ? b.lean(1) : 0);
+			shot(mc, "bike-lean");
+		});
+		then(2, mc -> {
+			mc.options.keyLeft.setDown(false);
+			mc.player.setYRot(mc.player.getVehicle() == null ? 0 : mc.player.getVehicle().getYRot());
+		});
+		then(15, mc -> mc.options.keyJump.setDown(true));
+		then(12, mc -> shot(mc, "bike-wheelie"));
+		then(2, mc -> {
+			mc.options.keyJump.setDown(false);
+			mc.options.keyUp.setDown(false);
+			mc.options.keyDown.setDown(true);
+		});
+		then(20, mc -> {
+			mc.options.keyDown.setDown(false);
+			log("bike: speed after braking 1 s: {}", mc.player.getVehicle() instanceof dev.rubymod.entity.LightVehicleEntity b ? b.bikeSpeed() : -1);
+			mc.options.setCameraType(CameraType.FIRST_PERSON);
+		});
 	}
 
 		/** The Battle Day sky: red, ash, flashes on the horizon; then back to normal. */

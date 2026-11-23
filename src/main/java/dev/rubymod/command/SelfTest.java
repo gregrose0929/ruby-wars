@@ -887,6 +887,82 @@ public final class SelfTest {
 			level.setBlockAndUpdate(sensor, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
 		}
 
+		// ----- No random waterfalls in the Ruby Wars world -----
+		{
+			boolean springs = false;
+			var plains = level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.BIOME).getOrThrow(net.minecraft.world.level.biome.Biomes.PLAINS);
+			for (var step : plains.value().getGenerationSettings().features()) {
+				for (var f : step) {
+					springs |= f.is(net.minecraft.data.worldgen.placement.MiscOverworldPlacements.SPRING_WATER);
+				}
+			}
+			check("springs: new land gets no water springs", !springs);
+			BlockPos at = new BlockPos(base.getX() + 400 - Math.floorMod(base.getX() + 400, 16) + 8, 250, base.getZ() + 400 - Math.floorMod(base.getZ() + 400, 16) + 8);
+			var stone = net.minecraft.world.level.block.Blocks.STONE.defaultBlockState();
+			var water = net.minecraft.world.level.block.Blocks.WATER.defaultBlockState();
+			for (int x = -1; x <= 1; x++) {
+				for (int y = -1; y <= 1; y++) {
+					for (int z = -1; z <= 1; z++) {
+						level.setBlock(at.offset(x, y, z), stone, 18);
+					}
+				}
+			}
+			level.setBlock(at, water, 18);
+			level.setBlock(at.east(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
+			// Next to it, a player's two-block pool (left alone).
+			BlockPos pool = at.offset(0, 0, 4);
+			level.setBlock(pool.below(), stone, 18);
+			level.setBlock(pool.offset(1, -1, 0), stone, 18);
+			level.setBlock(pool, water, 18);
+			level.setBlock(pool.east(), water, 18);
+			int n = dev.rubymod.world.Springs.clean(level, level.getChunkAt(at));
+			check("springs: a spring in a hillside is stopped up (" + n + ")", level.getBlockState(at).is(net.minecraft.world.level.block.Blocks.STONE));
+			check("springs: a player's pool is left alone", level.getBlockState(pool).is(net.minecraft.world.level.block.Blocks.WATER) && level.getBlockState(pool.east()).is(net.minecraft.world.level.block.Blocks.WATER));
+			for (int x = -1; x <= 2; x++) {
+				for (int y = -1; y <= 1; y++) {
+					for (int z = -1; z <= 5; z++) {
+						level.setBlock(at.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
+					}
+				}
+			}
+		}
+
+		// ----- The Dirt Bike rides like a motorbike -----
+		{
+			var bike = dev.rubymod.registry.ModEntities.DIRT_BIKE.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			bike.testThrottle(1, true);
+			float first = bike.bikeSpeed();
+			for (int i = 0; i < 9; i++) {
+				bike.testThrottle(1, true);
+			}
+			float half = bike.bikeSpeed();
+			for (int i = 0; i < 150; i++) {
+				bike.testThrottle(1, true);
+			}
+			float top = bike.bikeSpeed();
+			check("dirt bike: the throttle builds speed up (" + first + ", then " + half + ", then " + top + ")", first > 0 && first < 0.05F && half < top * 0.6F && top > 0.44F);
+			bike.testThrottle(0, true);
+			check("dirt bike: letting go coasts", bike.bikeSpeed() > top * 0.95F);
+			for (int i = 0; i < 20; i++) {
+				bike.testThrottle(0, false);
+			}
+			check("dirt bike: keeps its speed in the air", bike.bikeSpeed() > top * 0.95F);
+			for (int i = 0; i < 6; i++) {
+				bike.testThrottle(-1, true);
+			}
+			check("dirt bike: S brakes hard (" + bike.bikeSpeed() + ")", bike.bikeSpeed() < top * 0.6F && bike.bikeSpeed() >= 0);
+			for (int i = 0; i < 40; i++) {
+				bike.testThrottle(-1, true);
+			}
+			check("dirt bike: then only backs up slowly (" + bike.bikeSpeed() + ")", bike.bikeSpeed() < 0 && bike.bikeSpeed() > -0.11F);
+			float still = bike.testTurn(0);
+			float mid = bike.testTurn(0.15F);
+			float fast = bike.testTurn(top);
+			check("dirt bike: can't spin on the spot, turns tightest at a medium speed (" + still + ", " + mid + ", " + fast + ")",
+					still < 2 && mid > fast && fast > still);
+			bike.discard();
+		}
+
 		// ----- Fire: flamethrower and fire bombs -----
 		{
 			BlockPos inClaim = base.offset(4, 20, -4);

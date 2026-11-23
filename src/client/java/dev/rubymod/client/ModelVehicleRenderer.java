@@ -91,6 +91,17 @@ public abstract class ModelVehicleRenderer<E extends Entity> extends EntityRende
 		String name = texture(state);
 		pose.pushPose();
 		pose.rotateDegrees(Axis.YP, -state.yaw);
+		if (state.shakeX != 0 || state.shakeY != 0 || state.shakeZ != 0) {
+			pose.translate(state.shakeX, state.shakeY, state.shakeZ);
+		}
+		if (state.pitch != 0) {
+			pose.translate(0, 0, -state.pitchPivot);
+			pose.rotateDegrees(Axis.XP, -state.pitch);
+			pose.translate(0, 0, state.pitchPivot);
+		}
+		if (state.roll != 0) {
+			pose.rotateDegrees(Axis.ZP, state.roll);
+		}
 		pose.scale(-1.0F, -1.0F, 1.0F);
 		collector.submitModel(model, state, pose, tex(name), state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
 		collector.submitModel(model, state, pose, RenderTypes.eyes(tex(name + "_glow")), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);

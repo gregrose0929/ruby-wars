@@ -24,6 +24,23 @@ public abstract class AvatarRendererMixin {
 			float partialTicks, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
 		state.setData(dev.rubymod.client.Jetpack.WEARING,
 				entity.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(dev.rubymod.registry.ModItems.JETPACK));
+		// On a leaning Dirt Bike, the rider leans with it.
+		state.setData(BIKE_LEAN, entity.getVehicle() instanceof dev.rubymod.entity.LightVehicleEntity bike && bike.isBike()
+				? new float[] {bike.lean(partialTicks), bike.getYRot(partialTicks)} : null);
+	}
+
+	private static final net.fabricmc.fabric.api.client.rendering.v1.RenderStateDataKey<float[]> BIKE_LEAN =
+			net.fabricmc.fabric.api.client.rendering.v1.RenderStateDataKey.create(() -> "rubymod:bike_lean");
+
+	@Inject(method = "setupRotations(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V", at = @At("HEAD"))
+	private void rubymod$bikeLean(net.minecraft.client.renderer.entity.state.AvatarRenderState state, com.mojang.blaze3d.vertex.PoseStack pose, float bodyRot,
+			float scale, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+		float[] lean = state.getData(BIKE_LEAN);
+		if (lean != null && lean[0] != 0) {
+			pose.rotateDegrees(com.mojang.math.Axis.YP, -lean[1]);
+			pose.rotateDegrees(com.mojang.math.Axis.ZP, lean[0]);
+			pose.rotateDegrees(com.mojang.math.Axis.YP, lean[1]);
+		}
 	}
 
 	@Inject(method = "getArmPose(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/client/model/HumanoidModel$ArmPose;",

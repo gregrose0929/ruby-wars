@@ -33,7 +33,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Making the park look lovely, everywhere at once: glow-berry vines, roots and
  * lanterns hanging under the islands, flower patches, rocks, bushes and trees on open grass, warm lights in the hedges,
- * a big turning ruby over the fountain, and life in the sky (hot-air balloons, gulls, paper lanterns at night).
+ * a big turning ruby over the fountain, and life in the sky (hot-air balloons, paper lanterns at night).
  */
 final class Dressing {
 	private Dressing() {
@@ -41,7 +41,6 @@ final class Dressing {
 
 	private static final int R = 175;
 	private static final List<Mover> BALLOONS = new ArrayList<>();
-	private static final List<Mover> BIRDS = new ArrayList<>();
 	private static final List<Mover> LANTERNS = new ArrayList<>();
 	private static UUID ruby;
 
@@ -59,7 +58,6 @@ final class Dressing {
 
 	static void reset() {
 		BALLOONS.clear();
-		BIRDS.clear();
 		LANTERNS.clear();
 		ruby = null;
 	}
@@ -387,27 +385,6 @@ final class Dressing {
 				BALLOONS.add(m);
 			}
 		}
-		// Gulls, in little flocks circling over the big islands.
-		double[][] flocks = {{60, 20}, {40, -100}, {-60, -70}, {0, 60}, {-110, 0}};
-		for (double[] f : flocks) {
-			for (int k = 0; k < 4; k++) {
-				Mover m = new Mover();
-				m.cx = f[0] + random.nextDouble() * 10;
-				m.cz = f[1] + random.nextDouble() * 10;
-				m.r = 14 + random.nextDouble() * 12;
-				m.y = FLOOR + 32 + random.nextDouble() * 10;
-				m.speed = 0.012 + random.nextDouble() * 0.006;
-				m.a = random.nextDouble() * Math.PI * 2;
-				m.phase = random.nextInt(20);
-				Display.ItemDisplay d = HubPark.model(level, new Vec3(m.cx + Math.cos(m.a) * m.r, m.y, m.cz + Math.sin(m.a) * m.r), 0, "bird_up", 1.2F, 0);
-				if (d != null) {
-					((DisplayAccessor) d).rubymod$setViewRange(3.0F);
-					((DisplayAccessor) d).rubymod$setPosRotInterpolationDuration(5);
-					m.id = d.getUUID();
-					BIRDS.add(m);
-				}
-			}
-		}
 	}
 
 	static void tick(ServerLevel level, int tick) {
@@ -423,24 +400,6 @@ final class Dressing {
 				e.setYRot(e.getYRot() + 9);
 				if (tick % 40 == 0) {
 					level.sendParticles(ParticleTypes.END_ROD, 0.5, FLOOR + 8.6, 0.5, 3, 0.8, 0.8, 0.8, 0.01);
-				}
-			}
-		}
-		if (tick % 5 == 0) {
-			for (Mover m : BIRDS) {
-				Entity e = level.getEntity(m.id);
-				if (e == null) {
-					continue;
-				}
-				m.a += m.speed * 5;
-				double x = m.cx + Math.cos(m.a) * m.r;
-				double z = m.cz + Math.sin(m.a) * m.r;
-				double y = m.y + Math.sin(m.a * 3) * 1.5;
-				e.teleportTo(x, y, z);
-				// Flying round the circle: facing along it.
-				e.setYRot((float) Math.toDegrees(Math.atan2(Math.sin(m.a), Math.cos(m.a))) + 180);
-				if ((tick / 5 + m.phase) % 4 == 0) {
-					setModel(e, ((tick / 5 + m.phase) / 4) % 2 == 0 ? "bird_up" : "bird_down");
 				}
 			}
 		}
