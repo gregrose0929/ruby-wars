@@ -28,6 +28,8 @@ import net.minecraft.world.item.component.CustomData;
  * back in your inventory, with its paint and the damage it's taken (so it's no free repair). Your squad can pack yours
  * too. Vehicles from before this existed have no owner: those pack up when they're parked in a base you can use. Only
  * in the Ruby Wars world (the party games' and the Rift's vehicles stay put).
+ *
+ * Parked at home (in a base its owner can use), empty and left alone for a while, a damaged vehicle mends itself.
  */
 public final class PackUp {
 	private PackUp() {
@@ -124,6 +126,43 @@ public final class PackUp {
 		if (health > 0) {
 			vehicle.setHealth(Math.min(health, vehicle.getMaxHealth()));
 		}
+	}
+
+	// ----- Repairs at home -----
+
+	/** When each vehicle was last hit (game time): it only mends once it's been left alone a while. */
+	private static final java.util.Map<UUID, Long> LAST_HIT = new java.util.HashMap<>();
+
+	/** Seconds after the last hit before repairs start. */
+	public static final int MEND_AFTER = 10;
+
+	public static void hit(Mob vehicle) {
+		LAST_HIT.put(vehicle.getUUID(), vehicle.level().getGameTime());
+	}
+
+	/**
+	 * Once a second, on the server: a damaged vehicle parked in a base (its owner's, or one its owner can use; one with no
+	 * owner, any base), with nobody in it and not hit for a while, mends a little (empty to full in under a minute).
+	 * Whether it did.
+	 */
+	public static boolean mend(Mob vehicle) {
+		if (!(vehicle.level() instanceof ServerLevel level) || vehicle.isVehicle() || vehicle.getHealth() >= vehicle.getMaxHealth() || !vehicle.isAlive()) {
+			return false;
+		}
+		if (level.getGameTime() - LAST_HIT.getOrDefault(vehicle.getUUID(), -100000L) < MEND_AFTER * 20L) {
+			return false;
+		}
+		SeasonData.Claim base = Rules.baseAt(level, vehicle.blockPosition());
+		UUID owner = owner(vehicle);
+		if (base == null || base.destroyed || owner != null && !base.canUse(owner)) {
+			return false;
+		}
+		vehicle.setHealth(Math.min(vehicle.getMaxHealth(), vehicle.getHealth() + vehicle.getMaxHealth() * 0.02F));
+		if (level.getGameTime() % 40 < 20) {
+			level.sendParticles(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, vehicle.getX(), vehicle.getY() + vehicle.getBbHeight() * 0.7,
+					vehicle.getZ(), 3, vehicle.getBbWidth() * 0.4, 0.3, vehicle.getBbWidth() * 0.4, 0);
+		}
+		return true;
 	}
 
 	/** For the item's tooltip: how it was left (if it was packed up damaged), or null. */

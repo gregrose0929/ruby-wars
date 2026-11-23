@@ -28,7 +28,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Grappling Hook (Armory): right-click a block up to {@link #RANGE} blocks away and you're reeled in along the rope
  * (which you can see until you're there) and up over the edge, for the mountains, cliffs and ruins. Crouch to let go. No fall damage until you land. A short cooldown; it
- * wears out after a while.
+ * wears with use, but never breaks: it mends itself while you're not using it.
  */
 public class GrapplingHookItem extends Item {
 	public static final int RANGE = 40;
@@ -60,6 +60,10 @@ public class GrapplingHookItem extends Item {
 		if (p.getCooldowns().isOnCooldown(held) || p.isPassenger()) {
 			return InteractionResult.FAIL;
 		}
+		if (held.getDamageValue() >= held.getMaxDamage() - 1) {
+			p.sendOverlayMessage(Component.literal("The line's worn: it mends itself in a little while.").withStyle(ChatFormatting.GRAY));
+			return InteractionResult.FAIL;
+		}
 		Vec3 eye = p.getEyePosition();
 		var hit = server.clip(new ClipContext(eye, eye.add(p.getLookAngle().scale(RANGE)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
 		if (hit.getType() != HitResult.Type.BLOCK) {
@@ -74,7 +78,8 @@ public class GrapplingHookItem extends Item {
 		rope(server, p, hit.getLocation());
 		server.playSound(null, p.blockPosition(), SoundEvents.FISHING_BOBBER_THROW, SoundSource.PLAYERS, 1.0F, 0.6F);
 		server.playSound(null, BlockPos.containing(hit.getLocation()), SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 1.2F, 1.3F);
-		held.hurtAndBreak(1, p, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+		// It wears with use, but never breaks: it mends itself (see inventoryTick).
+		held.setDamageValue(Math.min(held.getMaxDamage() - 1, held.getDamageValue() + 1));
 		return InteractionResult.SUCCESS;
 	}
 
@@ -143,6 +148,23 @@ public class GrapplingHookItem extends Item {
 				rope(level, p, line.hook);
 			}
 		}
+	}
+
+	/** It mends itself while it's not on a line: a use back every two seconds. */
+	@Override
+	public void inventoryTick(ItemStack stack, ServerLevel level, net.minecraft.world.entity.Entity owner, EquipmentSlot slot) {
+		if (level.getGameTime() % 40 == 0) {
+			mend(stack, owner);
+		}
+	}
+
+	/** One step of mending (not while they're on the line). Whether it mended. */
+	public static boolean mend(ItemStack stack, net.minecraft.world.entity.Entity owner) {
+		if (stack.getDamageValue() <= 0 || PULLED.containsKey(owner.getUUID())) {
+			return false;
+		}
+		stack.setDamageValue(stack.getDamageValue() - 1);
+		return true;
 	}
 
 	/** For the self-test: is this player protected from the fall right now? */

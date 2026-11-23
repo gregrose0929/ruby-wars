@@ -4585,6 +4585,7 @@ public final class AutoTest {
 			case "hostsweep" -> hostSweepScript();
 			case "boatcheck" -> boatCheckScript();
 			case "jetcheck" -> jetCheckScript();
+			case "aimcheck" -> aimCheckScript();
 			case "lightcheck" -> lightCheckScript();
 			case "basecheck" -> baseCheckScript();
 			case "bridgecheck" -> bridgeCheckScript();
@@ -5982,6 +5983,55 @@ public final class AutoTest {
 			mc.player.setXRot(10);
 		});
 		then(20, mc -> shot(mc, "borer-3-out"));
+	}
+
+		/** Grenades thrown with a tap and with a full wind-up (how far each lands); the Rangefinder looked through and marked. */
+	private static void aimCheckScript() {
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+			command(mc, "clear @p");
+			command(mc, "give @p rubymod:smoke_grenade 2");
+			command(mc, "execute as @p at @s run tp @s ~ ~ ~ 0 -20");
+		});
+		for (int[] hold : new int[][] {{2}, {25}}) {
+			double[] from = new double[2];
+			then(hold[0] == 2 ? 200 : 60, mc -> {
+				mc.player.getInventory().setSelectedSlot(0);
+				mc.player.setYRot(0);
+				mc.player.setXRot(-20);
+				from[0] = mc.player.getX();
+				from[1] = mc.player.getZ();
+				mc.options.keyUse.setDown(true);
+			});
+			if (hold[0] > 10) {
+				then(hold[0] - 4, mc -> shot(mc, "aim-1-windup"));
+				then(4, mc -> mc.options.keyUse.setDown(false));
+			} else {
+				then(hold[0], mc -> mc.options.keyUse.setDown(false));
+			}
+			then(45, mc -> onServer(mc, server -> {
+				var p = me(server);
+				for (var g : p.level().getEntitiesOfClass(dev.rubymod.entity.GrenadeEntity.class, p.getBoundingBox().inflate(80))) {
+					log("aim: held {} ticks: grenade landed {} blocks away", hold[0], Math.round(Math.hypot(g.getX() - from[0], g.getZ() - from[1])));
+				}
+			}));
+		}
+		then(80, mc -> {
+			command(mc, "clear @p");
+			command(mc, "give @p rubymod:rangefinder");
+		});
+		then(20, mc -> {
+			mc.player.getInventory().setSelectedSlot(0);
+			mc.player.setXRot(3);
+			mc.options.keyUse.setDown(true);
+		});
+		then(25, mc -> shot(mc, "aim-2-rangefinder"));
+		then(3, mc -> mc.options.keyUse.setDown(false));
+		then(10, mc -> onServer(mc, server -> log("aim: rangefinder target {}", dev.rubymod.item.RangefinderItem.target(me(server)))));
+		then(40, mc -> mc.gui.setScreen(new dev.rubymod.client.map.MapScreen()));
+		then(30, mc -> shot(mc, "aim-3-map"));
+		then(5, mc -> mc.gui.setScreen(null));
 	}
 
 		/** The jetpack: climb until the landing reserve, drop and let it soften the landing; climb again and float down crouching. */

@@ -231,6 +231,10 @@ public final class Waypoints {
 					markers.add(new MorePayloads.Marker(p.name + "'s ping", p.pos.getX(), p.pos.getY(), p.pos.getZ(), (byte) 2));
 				}
 			}
+			BlockPos aimed = dev.rubymod.item.RangefinderItem.target(player);
+			if (aimed != null && Hub.inRubyWarsWorld(player)) {
+				markers.add(new MorePayloads.Marker("Target", aimed.getX(), aimed.getY(), aimed.getZ(), (byte) 11));
+			}
 			for (Global g : GLOBAL) {
 				if (g.side != null && !g.side.equals(id) && !Squads.same(id, g.side)) {
 					continue;

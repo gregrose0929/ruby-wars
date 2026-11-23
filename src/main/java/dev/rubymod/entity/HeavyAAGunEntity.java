@@ -202,6 +202,9 @@ public class HeavyAAGunEntity extends Mob {
 
 	@Override
 	public void tick() {
+		if (!level().isClientSide() && tickCount % 20 == 0) {
+			PackUp.mend(this);
+		}
 		super.tick();
 		if (level().isClientSide()) {
 			recoil++;
@@ -318,7 +321,11 @@ public class HeavyAAGunEntity extends Mob {
 		if (source.getEntity() != null && hasPassenger(source.getEntity())) {
 			return false;
 		}
-		return super.hurtServer(level, source, amount);
+		boolean hurt = super.hurtServer(level, source, amount);
+		if (hurt) {
+			PackUp.hit(this);
+		}
+		return hurt;
 	}
 
 	@Override

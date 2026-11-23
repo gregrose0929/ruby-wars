@@ -28,6 +28,8 @@ public abstract class AbstractClientPlayerMixin {
 		float value = cir.getReturnValueF();
 		if (dev.rubymod.client.VehicleHud.zoomed(mc)) {
 			value *= 0.3F; // Tank / AA gun sight.
+		} else if (self.isUsingItem() && self.getUseItem().getItem() instanceof dev.rubymod.item.RangefinderItem) {
+			value *= 0.12F; // Looking through the Rangefinder.
 		} else if (self.isUsingItem() && self.getUseItem().getItem() instanceof dev.rubymod.item.LockOnLauncherItem) {
 			value *= 0.7F;
 		} else if (firstPerson && GunItem.isAiming(self) && self.getUseItem().getItem() instanceof GunItem gun) {

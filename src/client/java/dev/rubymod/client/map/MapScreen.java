@@ -132,7 +132,7 @@ public class MapScreen extends Screen {
 				: new String[] {"Waypoint", "Grave", "Ping", "Supply drop", "Your Heart"};
 		int lx = x0 + size + 10;
 		if (lx + 92 < w) {
-			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 76);
+			dev.rubymod.client.ui.Ui.panel(g, lx - 4, y0 - 6, 96, names.length * 12 + 88);
 			for (int i = 0; i < names.length; i++) {
 				var icon = Markers.icon((byte) i);
 				if (icon.isEmpty()) {
@@ -156,7 +156,14 @@ public class MapScreen extends Screen {
 			g.text(font, "World event", lx + 11, ey, dev.rubymod.client.ui.Ui.DIM, false);
 			g.outline(lx + 2, ey + 14, 5, 5, 0xFFFFB040);
 			g.text(font, "Final circle", lx + 11, ey + 12, dev.rubymod.client.ui.Ui.DIM, false);
-			int cy = ey + 24 + 6;
+			// The Rangefinder's target.
+			g.pose().pushMatrix();
+			g.pose().translate(lx + 1, ey + 24);
+			g.pose().scale(0.5F, 0.5F);
+			g.item(Markers.icon((byte) 11), 0, 0);
+			g.pose().popMatrix();
+			g.text(font, "Target", lx + 11, ey + 24, dev.rubymod.client.ui.Ui.DIM, false);
+			int cy = ey + 36 + 6;
 			g.text(font, "Claims", lx + 2, cy, dev.rubymod.client.ui.Ui.GOLD, false);
 			int[] cc = squads ? new int[] {0xFF5BE37D, 0xFF55AAFF, 0xFFFF5050} : new int[] {0xFF5BE37D, 0xFFFF5050};
 			String[] cn = squads ? new String[] {"Yours", "Squad", "Other"} : new String[] {"Yours", "Others"};

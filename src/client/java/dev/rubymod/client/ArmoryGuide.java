@@ -67,9 +67,9 @@ public final class ArmoryGuide {
 		add("mortar_shell", "Shells for the Mortar. Right-click the Mortar holding them to fire at your marked target.", "mortar", "rangefinder");
 
 		// ----- Explosives -----
-		add("frag_grenade", "Throw it (right-click): it bounces, then explodes after 2.5 seconds.");
-		add("smoke_grenade", "Throw it (right-click): after 2.5 seconds it makes a thick cloud of smoke to hide in, or to cross open ground.");
-		add("fire_bomb", "Throw it (right-click): it shatters where it lands and sets everything round it on fire.");
+		add("frag_grenade", "Hold right-click to wind up, let go to throw (longer for farther): it bounces, then explodes after 2.5 seconds.");
+		add("smoke_grenade", "Hold right-click to wind up, let go to throw: after 2.5 seconds it makes a thick cloud of smoke to hide in, or to cross open ground.");
+		add("fire_bomb", "Hold right-click to wind up, let go to throw: it shatters where it lands and sets everything round it on fire.");
 		add("rocket_launcher", "Left-click to fire a rocket. Keep aiming (hold right-click) and the rocket follows your crosshair. Good against vehicles and walls.",
 				"rocket");
 		add("lancer", "Anti-tank launcher: hold right-click to lock on to a vehicle, then left-click to fire. A heavy warhead.", "at_missile");
@@ -80,12 +80,12 @@ public final class ArmoryGuide {
 		add("c4", "Right-click to throw a sticky charge: it sticks to walls and vehicles. Crouch and right-click to set off all of yours at once. Throw your last one and you're left holding a Detonator to set them off.");
 		add("mortar", "Place it in your base. Mark a target with the Rangefinder, then right-click the Mortar holding Mortar Shells: it lobs them there.",
 				"mortar_shell", "rangefinder");
-		add("rangefinder", "Right-click to mark the block you're looking at (up to 400 blocks away) as the target for your Mortar and Missile Silo.",
+		add("rangefinder", "Hold right-click to look through it, zoomed in; let go to mark the spot in the middle (up to 400 blocks away) as the target for your Mortar and Missile Silo. The target stays on your map.",
 				"mortar", "missile_silo");
 		add("missile_silo", "Mark a target with the Rangefinder, then right-click the silo holding a Cruise Missile: it flies high across the map and dives on it.",
 				"cruise_missile", "rangefinder");
 		add("cruise_missile", "Fired from a Missile Silo at the spot you marked. It breaks even concrete walls at once.", "missile_silo", "rangefinder");
-		add("air_strike_flare", "Throw it: ten seconds after it lands, a plane drops five bombs in a line through it, the way you threw it.");
+		add("air_strike_flare", "Hold right-click to wind up, let go to throw: ten seconds after it lands, a plane drops five bombs in a line through it, the way you threw it.");
 
 		// ----- Defenses -----
 		add("sandbags", "Cheap cover to hide behind: soaks up bullets, but one blast knocks it down.");
@@ -211,7 +211,7 @@ public final class ArmoryGuide {
 		add("heavy_rucksack", "A big backpack with 54 more slots. Right-click to open it.");
 		add("field_radio", "Talk to anyone on the same channel, anywhere on the map. Right-click to change channel. Needs Simple Voice Chat.");
 		add("jetpack", "Wear it in your chest slot. Jump, then hold Space to fly; W A S D to steer; crouch in the air to float gently down. It keeps a little fuel back to soften your landing, and refills on the ground.");
-		add("grappling_hook", "Right-click a block up to 40 blocks away and you're pulled up to it: cliffs, walls, mountains. Crouch to let go.");
+		add("grappling_hook", "Right-click a block up to 40 blocks away and you're pulled up to it: cliffs, walls, mountains. Crouch to let go. It never breaks: it mends itself while you're not using it.");
 		add("night_goggles", "Wear them on your head to see in the dark.");
 		add("ruby_helmet", "Ruby armor: a little stronger than iron. Repair it with rubies.", "ruby_chestplate", "ruby_leggings", "ruby_boots");
 		add("ruby_chestplate", "Ruby armor: a little stronger than iron. Repair it with rubies.", "ruby_helmet", "ruby_leggings", "ruby_boots");

@@ -1048,6 +1048,29 @@ public final class SelfTest {
 			alpha.getInventory().clearContent();
 		}
 
+		// ----- Vehicles mend at home; grenades wind up; the grappling hook mends -----
+		{
+			var jeep = dev.rubymod.registry.ModEntities.JEEP.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+			jeep.snapTo(base.getX() + 3.5, base.getY() + 1, base.getZ() + 3.5, 0, 0);
+			dev.rubymod.entity.PackUp.own(jeep, alpha);
+			level.addFreshEntity(jeep);
+			jeep.setHealth(20);
+			boolean mended = dev.rubymod.entity.PackUp.mend(jeep);
+			float after = jeep.getHealth();
+			dev.rubymod.entity.PackUp.hit(jeep);
+			boolean justHit = dev.rubymod.entity.PackUp.mend(jeep);
+			check("repairs: a damaged jeep parked at home mends (" + after + "), but not straight after being hit", mended && after > 20 && !justHit);
+			jeep.teleportTo(base.getX() + 300.5, base.getY() + 1, base.getZ() + 300.5);
+			check("repairs: out in the field it doesn't mend", !dev.rubymod.entity.PackUp.mend(jeep) || jeep.getHealth() >= jeep.getMaxHealth());
+			jeep.discard();
+			float tap = dev.rubymod.item.ThrowableWeaponItem.speed(dev.rubymod.item.ThrowableWeaponItem.power(1));
+			float full = dev.rubymod.item.ThrowableWeaponItem.speed(dev.rubymod.item.ThrowableWeaponItem.power(40));
+			check("grenades: a full wind-up throws over twice as hard as a tap (" + tap + ", " + full + ")", full > tap * 2);
+			ItemStack hook = new ItemStack(ModItems.GRAPPLING_HOOK);
+			hook.setDamageValue(hook.getMaxDamage() - 1);
+			check("grappling hook: a worn one mends itself", dev.rubymod.item.GrapplingHookItem.mend(hook, bravo) && hook.getDamageValue() == hook.getMaxDamage() - 2);
+		}
+
 		// ----- The flamethrower refills -----
 		{
 			ItemStack flamer = new ItemStack(ModItems.FLAMETHROWER);

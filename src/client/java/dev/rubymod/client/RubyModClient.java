@@ -315,6 +315,7 @@ public class RubyModClient implements ClientModInitializer {
 		HudElementRegistry.addFirst(RubyMod.id("night_goggles"), new GogglesHud());
 		HudElementRegistry.addLast(RubyMod.id("big_title"), new BigTitle());
 		HudElementRegistry.addLast(RubyMod.id("jetpack"), new Jetpack.Hud());
+		HudElementRegistry.addLast(RubyMod.id("aim"), new AimHud());
 		net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry.registerModelLayer(Jetpack.LAYER, Jetpack::layer);
 		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
 			if (renderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatar) {

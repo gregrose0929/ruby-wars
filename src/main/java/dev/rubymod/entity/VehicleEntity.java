@@ -380,6 +380,9 @@ public class VehicleEntity extends Mob {
 			return false; // Don't shoot your own ride.
 		}
 		boolean hurt = super.hurtServer(level, source, amount);
+		if (hurt) {
+			PackUp.hit(this);
+		}
 		if (hurt && getControllingPassenger() instanceof ServerPlayer driver) {
 			driver.sendOverlayMessage(Component.literal(vehicleName() + " armor: " + (int) getHealth() + " / " + (int) getMaxHealth()));
 		}
@@ -466,6 +469,9 @@ public class VehicleEntity extends Mob {
 			float health = getHealth() / getMaxHealth();
 			if (health < 0.5F && tickCount % 3 == 0) {
 				level.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + getBbHeight(), getZ(), 1, 0.3, 0.1, 0.3, 0.02);
+			}
+			if (tickCount % 20 == 0) {
+				PackUp.mend(this);
 			}
 			if (health < 0.25F && tickCount % 2 == 0) {
 				level.sendParticles(ParticleTypes.FLAME, getX(), getY() + getBbHeight() * 0.8, getZ(), 2, 0.5, 0.2, 0.5, 0.01);

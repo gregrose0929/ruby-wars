@@ -20,9 +20,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/** Right-click to mark the block you're looking at (up to 400 blocks) as your Mortar and Missile Silo target. */
+/**
+ * Hold right-click to look through it (zoomed right in), let go to mark the block in the middle (up to 400 blocks) as
+ * your Mortar and Missile Silo target. The target stays on your map and screen until you mark another.
+ */
 public class RangefinderItem extends Item {
-	private static final double RANGE = 400;
+	public static final double RANGE = 400;
 	private static final Map<UUID, BlockPos> TARGETS = new HashMap<>();
 
 	public RangefinderItem(Properties properties) {
@@ -38,8 +41,33 @@ public class RangefinderItem extends Item {
 		return TARGETS.get(player.getUUID());
 	}
 
+	/** Hold right-click to look through it (zoomed in), let go to mark what's in the middle. */
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
+		player.startUsingItem(hand);
+		return InteractionResult.CONSUME;
+	}
+
+	@Override
+	public int getUseDuration(net.minecraft.world.item.ItemStack stack, net.minecraft.world.entity.LivingEntity user) {
+		return 72000;
+	}
+
+	@Override
+	public net.minecraft.world.item.ItemUseAnimation getUseAnimation(net.minecraft.world.item.ItemStack stack) {
+		return net.minecraft.world.item.ItemUseAnimation.SPYGLASS;
+	}
+
+	@Override
+	public boolean releaseUsing(net.minecraft.world.item.ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity entity, int remaining) {
+		if (entity instanceof Player player) {
+			markLooked(level, player);
+		}
+		return true;
+	}
+
+	/** Mark the block in the middle of their view (and say how far it is). */
+	public static void markLooked(Level level, Player player) {
 		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
 			Vec3 eye = player.getEyePosition();
 			Vec3 end = eye.add(player.getLookAngle().scale(RANGE));
@@ -48,7 +76,7 @@ public class RangefinderItem extends Item {
 				serverPlayer.sendSystemMessage(Component.literal("Nothing in range."), true);
 			} else {
 				BlockPos pos = hit.getBlockPos();
-				TARGETS.put(player.getUUID(), pos);
+				TARGETS.put(player.getUUID(), pos.immutable());
 				int distance = (int) eye.distanceTo(hit.getLocation());
 				serverPlayer.sendSystemMessage(Component.literal("Target marked: " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()
 						+ "  (" + distance + " blocks)").withStyle(ChatFormatting.GOLD), true);
@@ -56,6 +84,5 @@ public class RangefinderItem extends Item {
 				serverLevel.sendParticles(serverPlayer, new DustParticleOptions(0xFF0000, 3.0F), true, true, at.x, at.y + 0.2, at.z, 20, 0.3, 0.3, 0.3, 0);
 			}
 		}
-		return InteractionResult.SUCCESS;
 	}
 }

@@ -101,6 +101,7 @@ public class Markers implements HudElement {
 			case 8 -> 0xFF5FC8E8;    // world event: Supply Cache
 			case 9 -> 0xFFE05AF0;    // world event: Ruby Shrine
 			case 10 -> 0xFFFF5050;   // world event: Ruby Meteor
+			case 11 -> 0xFFFF7A30;   // your Rangefinder target
 			default -> 0xFF6FB6FF;   // waypoint
 		};
 	}
@@ -128,6 +129,7 @@ public class Markers implements HudElement {
 			case 3 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BARREL);
 			case 8 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST);
 			case 9 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.AMETHYST_CLUSTER);
+			case 11 -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.TARGET);
 			case 10 -> net.minecraft.world.item.ItemStack.EMPTY; // drawn small by meteor() instead
 			default -> net.minecraft.world.item.ItemStack.EMPTY;
 		};
