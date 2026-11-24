@@ -12,9 +12,9 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * The season clock. Phase timers use real (wall-clock) time, so a scheduled build phase keeps counting while the server is
- * off. Battle Day is different: it's a family appointment. When its date comes it's "ready" and waits until everyone
- * with a Heart is on (or the admin calls it), and once it's going its clock pauses whenever nobody's on (and over a
- * restart), carrying on where it left off.
+ * off. Battle Day is different: it's a family appointment, and only ever starts when the admin starts it (/rubywars
+ * battle), once they've made sure everyone who wants to fight is on. A date only says it's "ready". Once it's going its
+ * clock pauses whenever nobody's on (and over a restart), carrying on where it left off.
  */
 public final class SeasonTicker {
 	private static final long MINUTE = 60_000L;
@@ -174,8 +174,8 @@ public final class SeasonTicker {
 	public static Component readyMessage(MinecraftServer server) {
 		int here = battlersHere(server);
 		int of = battlers().size();
-		return Component.literal("Battle Day is ready! It starts when everyone with a Heart is on (" + here + " of " + of + " here now), "
-				+ "or when the admin calls it.").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+		return Component.literal("Battle Day's date has come! It starts when the admin starts it (" + here + " of " + of
+				+ " with a Heart are on now).").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
 	}
 
 	/** Time the clock didn't tick (the server off, or asleep with nobody on) is added to anything waiting on a paused clock. */
@@ -264,19 +264,15 @@ public final class SeasonTicker {
 							.withStyle(ChatFormatting.GOLD));
 				}
 			} else if (data.phase == Phase.BUILD) {
-				// The date's come: Battle Day waits for the family (it never starts with people missing).
+				// The date's come: Battle Day waits for the admin to start it (never by itself).
 				data.battleReady = true;
 				data.phaseEndsAt = 0;
 				SeasonData.markDirty();
 				Alerts.broadcast(server, readyMessage(server));
-				Alerts.news(server, "Battle Day is ready: it starts when everyone's on.");
+				Alerts.news(server, "Battle Day's date has come: it starts when the admin starts it.");
 			} else {
 				BattleDirector.enterPhase(server, data.phase.next());
 			}
-		}
-		// Ready, and everyone with a Heart is here: a minute's countdown, then Battle Day.
-		if (data.phase == Phase.BUILD && data.battleReady && battleAt == 0 && !battlers().isEmpty() && battlersHere(server) == battlers().size()) {
-			callBattle(server, 60);
 		}
 
 		// A scheduled Battle Day: a heads-up the day before, and an hour before.

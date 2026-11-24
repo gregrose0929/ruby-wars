@@ -158,7 +158,7 @@ public final class SelfTest {
 			data.pausedRemaining = -1;
 			data.phaseEndsAt = dev.rubymod.game.SeasonTicker.now() - 1000;
 			dev.rubymod.game.SeasonTicker.tickSecond(server);
-			check("battle day: when its date comes it's ready and waits for everyone (" + data.phase + ", ready " + data.battleReady + ")",
+			check("battle day: when its date comes it's ready, and waits for the admin to start it (" + data.phase + ", ready " + data.battleReady + ")",
 					data.phase == Phase.BUILD && data.battleReady && !dev.rubymod.game.SeasonTicker.battleCalled());
 			data.battleReady = false;
 

@@ -178,7 +178,7 @@ public class GameHud implements HudElement {
 		Phase phase = ClientState.phase();
 		if (phase == Phase.BUILD && ClientState.hud.battleReady()) {
 			// The date's come: waiting for everyone.
-			topBanner(g, font, "BATTLE DAY READY  |  " + ClientState.hud.readyHere() + " of " + ClientState.hud.readyOf() + " here", w, GOLD);
+			topBanner(g, font, "BATTLE DAY READY  |  " + ClientState.hud.readyHere() + " of " + ClientState.hud.readyOf() + " on  |  the admin starts it", w, GOLD);
 			return;
 		}
 		StringBuilder text = new StringBuilder(phase.title().toUpperCase());

@@ -133,12 +133,12 @@ public final class Guide {
 			var hud = ClientState.hud;
 			int day = hud == null ? 0 : hud.day();
 			if (hud != null && hud.battleReady()) {
-				return "Battle Day is ready! It starts when everyone with a Heart is on (" + hud.readyHere() + " of " + hud.readyOf()
-						+ " here), or when the admin calls it." + order;
+				return "Battle Day's date has come! It starts when the admin starts it (" + hud.readyHere() + " of " + hud.readyOf()
+						+ " with a Heart are on)." + order;
 			}
 			long left = ClientState.secondsLeft();
-			String when = left >= 0 ? "Battle Day: in " + GameHud.formatTime(left) + " (the date you picked), once everyone's on."
-					: "Battle Day: when the admin calls it.";
+			String when = left >= 0 ? "Battle Day's date is in " + GameHud.formatTime(left) + "; it starts when the admin starts it."
+					: "Battle Day starts when the admin starts it.";
 			return "Build day " + day + ". " + when + " Missing a build evening costs nothing." + order;
 		}
 		if (phase == Phase.ENDED) {

@@ -56,7 +56,7 @@ public class SeasonData {
 	public long closeMs;
 	public long lastBackupAt;
 	public String winner = "";
-	/** The build phase's date has come: Battle Day starts once everyone with a Heart is on (or the admin calls it). */
+	/** The build phase's date has come: Battle Day is ready, and starts when the admin starts it. */
 	public boolean battleReady;
 	/** Battle Day's clock was paused because nobody was on (it carries on when someone's back). */
 	public boolean autoPaused;

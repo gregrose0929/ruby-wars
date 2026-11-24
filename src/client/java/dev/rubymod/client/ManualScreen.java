@@ -76,14 +76,14 @@ public class ManualScreen extends Screen {
 					"Respawns: in Lockdown and Open War you come back at your Heart while it stands (the line under the timer says so). "
 							+ "Heart gone, or Sudden Death: your next death knocks you out.",
 					"Knocked out? Watch: click for the next player, right-click for the one before, crouch to fly free. Or press H and play party games in the hub.",
-					"Battle Day is a family appointment: when its date comes it waits until everyone with a Heart is on, and its clock pauses whenever nobody's on. "
+					"Battle Day is a family appointment: it starts when the admin starts it (once everyone who wants to fight is on), and its clock pauses whenever nobody's on. "
 							+ "Have to go during Sudden Death? You sit the rest out (you didn't lose). If nobody fought at all, it's no contest.",
 					"When the season ends, everyone gets a wrap-up card: the winner, an award for everyone, and a \"Your base\" page with how your base held up and a "
 							+ "keepsake map of the season (saved in your screenshots folder). /rubywars recap shows it again. "
 							+ "Every winner goes up in the Hall of Champions, in the hub beside the path to Ruby Wars.",
 					"Each new season starts fresh: a fresh island, and everyone begins again with nothing in Ruby Wars (the hub and other games keep their things).",
 					"Mine Ruby Ore deep underground (or in the Ruby Crater) and spend rubies at an Armory.",
-					"No monsters and no hunger: just build and stay alive. Battle Day comes when the admin calls it (or on the date they set, once everyone's on).",
+					"No monsters and no hunger: just build and stay alive. Battle Day comes when the admin starts it.",
 					"Season Choices (Ruby Wars menu): pick a Battle Day team, vote on a Night Battle, and choose what your base is famous for."),
 			new Page("The Armory",
 					"Right-click an Armory. The tabs down the left are kinds of things: Your Heart, Guns, Ammo, Explosives, Defenses, Air Defense, "
