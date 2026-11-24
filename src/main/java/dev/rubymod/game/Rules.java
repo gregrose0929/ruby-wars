@@ -31,6 +31,20 @@ public final class Rules {
 				&& Commands.LEVEL_GAMEMASTERS.check(sp.createCommandSourceStack().permissions());
 	}
 
+	/** Is this base sitting Battle Day out (its owner wasn't on when it started, or had to go)? It stays protected. */
+	public static boolean sittingOut(SeasonData.Claim claim) {
+		if (claim == null || !phase().isBattle()) {
+			return false;
+		}
+		SeasonData.PlayerRecord owner = SeasonData.get().players.get(claim.owner);
+		return owner != null && owner.satOut;
+	}
+
+	/** Is this base protected right now: before Battle Day, or all through it for a base that's sitting it out? */
+	public static boolean protectedNow(SeasonData.Claim claim) {
+		return claim != null && (phase().claimsProtected() || sittingOut(claim));
+	}
+
 	/** Can this player break or place blocks at pos? */
 	public static boolean canBuild(Player player, Level level, BlockPos pos) {
 		if (isEliminated(player.getUUID())) {
@@ -39,11 +53,11 @@ public final class Rules {
 		if (isAdminBypass(player)) {
 			return true;
 		}
-		if (!phase().claimsProtected()) {
+		SeasonData.Claim claim = SeasonData.get().claimAt(dim(level), pos);
+		if (!protectedNow(claim)) {
 			return true;
 		}
-		SeasonData.Claim claim = SeasonData.get().claimAt(dim(level), pos);
-		return claim == null || claim.canUse(player.getUUID());
+		return claim.canUse(player.getUUID());
 	}
 
 	/** Ruby Wars blocks that are plain building material (anyone allowed to build somewhere may use them there). */
@@ -101,7 +115,7 @@ public final class Rules {
 				|| state.is(ModBlocks.MORTAR) || state.is(ModBlocks.RADAR_STATION) || state.is(ModBlocks.MISSILE_INTERCEPTOR)) {
 			return false;
 		}
-		return !phase().claimsProtected();
+		return !protectedNow(claim);
 	}
 
 	/** Can a weapon or explosion break the block at pos right now? */
@@ -113,24 +127,21 @@ public final class Rules {
 		if (state.is(ModBlocks.RUBY_HEART) || state.getBlock().defaultDestroyTime() < 0) {
 			return false;
 		}
-		if (!phase().claimsProtected()) {
-			return true;
-		}
-		return SeasonData.get().claimAt(dim(level), pos) == null;
+		return !protectedNow(SeasonData.get().claimAt(dim(level), pos));
 	}
 
 	/** Is pos inside a claim that's currently protected from fire and explosions? */
 	public static boolean isProtectedFromGriefing(Level level, BlockPos pos) {
-		return !level.isClientSide() && phase().claimsProtected() && SeasonData.get().claimAt(dim(level), pos) != null;
+		return !level.isClientSide() && protectedNow(SeasonData.get().claimAt(dim(level), pos));
 	}
 
 	/** Should fluid be stopped from flowing from one block into the next (crossing into a claim)? */
 	public static boolean blocksFlow(Level level, BlockPos from, BlockPos to) {
-		if (level.isClientSide() || !phase().claimsProtected()) {
+		if (level.isClientSide()) {
 			return false;
 		}
 		SeasonData.Claim target = SeasonData.get().claimAt(dim(level), to);
-		return target != null && target != SeasonData.get().claimAt(dim(level), from);
+		return protectedNow(target) && target != SeasonData.get().claimAt(dim(level), from);
 	}
 
 	/** Can attacker hurt victim? Only matters between two players. */
@@ -212,7 +223,8 @@ public final class Rules {
 		if (entity instanceof net.minecraft.world.entity.monster.Enemy) {
 			return true;
 		}
-		return phase().pvp() && isEnemyOf(claim, entity);
+		// A base sitting Battle Day out is out of the fight: its defenses leave players alone (it can't be attacked either).
+		return phase().pvp() && !sittingOut(claim) && isEnemyOf(claim, entity);
 	}
 
 	public static boolean isEnemyOf(SeasonData.Claim claim, Entity entity) {

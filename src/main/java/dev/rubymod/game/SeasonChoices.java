@@ -168,7 +168,7 @@ public final class SeasonChoices {
 		Map<String, List<String>> members = new LinkedHashMap<>();
 		for (Map.Entry<String, SeasonData.PlayerRecord> e : data.players.entrySet()) {
 			SeasonData.Claim claim = data.claimOf(UUID.fromString(e.getKey()));
-			if (!e.getValue().team.isEmpty() && claim != null && !claim.destroyed) {
+			if (!e.getValue().team.isEmpty() && !e.getValue().satOut && claim != null && !claim.destroyed) {
 				members.computeIfAbsent(e.getValue().team, k -> new ArrayList<>()).add(e.getKey());
 			}
 		}

@@ -173,6 +173,26 @@ public final class SelfTest {
 			data.autoPaused = false;
 			data.pausedRemaining = -1;
 
+			// Battle Day starts with Alpha away: Alpha sits it out from the start, and Alpha's base is safe all day.
+			data.phase = Phase.BUILD;
+			data.seasonCounted = false;
+			data.winner = "";
+			dev.rubymod.game.BattleDirector.enterPhase(server, Phase.LOCKDOWN);
+			SeasonData.Claim alphaBase = data.claimOf(alpha.getUUID());
+			data.phase = Phase.WAR;
+			int hpBefore = alphaBase.hp;
+			dev.rubymod.game.Claims.damageHeart(level, alphaBase, 50, bravo);
+			boolean safe = data.player(alpha.getUUID()).satOut && Rules.sittingOut(alphaBase) && alphaBase.hp == hpBefore
+					&& !Rules.canWeaponBreak(level, alphaBase.pos().above(2), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
+					&& !Rules.defenseTarget(alphaBase, bravo);
+			check("sitting out: away when Battle Day starts, your base is safe all day (hp " + alphaBase.hp + "/" + hpBefore + ")", safe);
+			for (SeasonData.PlayerRecord r : data.players.values()) {
+				r.satOut = false;
+				r.eliminated = false;
+				r.finished = 0;
+			}
+			data.phase = Phase.WAR;
+
 			// Sudden Death with everyone away: they sit it out, nobody's crowned, and nobody's both champion and out.
 			SeasonData.PlayerRecord c = testRecord(data, charlie, "TestCharlie", sky.offset(200, 0, 0));
 			data.pastChampions.clear();

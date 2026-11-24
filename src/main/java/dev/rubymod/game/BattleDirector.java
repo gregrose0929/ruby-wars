@@ -79,6 +79,20 @@ public final class BattleDirector {
 			}
 			case LOCKDOWN -> {
 				data.battleStartedAt = SeasonTicker.now();
+				// Anyone not here (or with no Heart) sits it out, their base kept safe all day. Back in Lockdown? They join in.
+				for (Map.Entry<String, SeasonData.PlayerRecord> entry : new java.util.ArrayList<>(data.players.entrySet())) {
+					SeasonData.PlayerRecord r = entry.getValue();
+					UUID id = UUID.fromString(entry.getKey());
+					SeasonData.Claim claim = data.claimOf(id);
+					boolean here = server.getPlayerList().getPlayer(id) != null;
+					if (!r.eliminated && (!here || claim == null || claim.destroyed)) {
+						r.satOut = true;
+						r.eliminated = true;
+						SeasonData.markDirty();
+						Alerts.broadcast(server, Component.literal(r.name + (claim == null || claim.destroyed ? " has no Heart, so" : " isn't on, so")
+								+ " sits this Battle Day out" + (claim == null || claim.destroyed ? "." : ": their base is safe all day.")).withStyle(ChatFormatting.GRAY));
+					}
+				}
 				SeasonChoices.onBattleDay(server);
 				FinalCircle.plan(server);
 				for (SeasonData.PlayerRecord record : data.players.values()) {
@@ -97,7 +111,7 @@ public final class BattleDirector {
 			}
 			case SUDDEN_DEATH -> {
 				for (SeasonData.Claim claim : data.claims.values()) {
-					if (!claim.destroyed) {
+					if (!claim.destroyed && !Rules.sittingOut(claim)) {
 						Claims.destroyHeart(overworld, claim, null);
 					}
 				}
@@ -252,13 +266,27 @@ public final class BattleDirector {
 			giveHeartIfNeeded(player);
 		}
 		Research.sync(player);
+		SeasonData.PlayerRecord me = data.player(player.getUUID());
+		SeasonData.Claim mine = data.claimOf(player.getUUID());
+		if (data.phase == Phase.LOCKDOWN && me != null && me.satOut && mine != null && !mine.destroyed) {
+			me.satOut = false;
+			me.eliminated = false;
+			me.finished = 0;
+			SeasonData.markDirty();
+			player.setGameMode(GameType.SURVIVAL);
+			Alerts.broadcast(player.level().getServer(), Component.literal(me.name + " made it in time and joins Battle Day!").withStyle(ChatFormatting.GOLD));
+			SeasonChoices.onBattleDay(player.level().getServer()); // their team (if they picked one) has them back
+		}
 		if (data.phase == Phase.BUILD && data.battleReady) {
 			player.sendSystemMessage(SeasonTicker.readyMessage(player.level().getServer()));
 		}
 		SeasonChoices.sync(player);
 		if (Rules.isEliminated(player.getUUID()) && data.phase.isBattle()) {
 			player.setGameMode(GameType.SPECTATOR);
-			player.sendSystemMessage(Component.literal("You've been eliminated this season. You can watch as a spectator.").withStyle(ChatFormatting.GRAY));
+			SeasonData.PlayerRecord out = data.player(player.getUUID());
+			player.sendSystemMessage(Component.literal(out != null && out.satOut
+					? "You're sitting this Battle Day out (your base is safe). You can watch as a spectator."
+					: "You've been eliminated this season. You can watch as a spectator.").withStyle(ChatFormatting.GRAY));
 		}
 	}
 

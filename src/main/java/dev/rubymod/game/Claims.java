@@ -108,7 +108,7 @@ public final class Claims {
 	}
 
 	public static void damageHeart(ServerLevel level, SeasonData.Claim claim, int damage, ServerPlayer attacker) {
-		if (claim.destroyed || !Rules.phase().raidWeaponsActive()) {
+		if (claim.destroyed || !Rules.phase().raidWeaponsActive() || Rules.sittingOut(claim)) {
 			return;
 		}
 		claim.hp = Math.max(0, claim.hp - damage);

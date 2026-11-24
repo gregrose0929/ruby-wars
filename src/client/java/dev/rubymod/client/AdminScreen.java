@@ -31,10 +31,8 @@ public class AdminScreen extends Screen {
 
 	public AdminScreen() {
 		super(Component.literal("Admin"));
-		actions.add(new Action("Season", "Start (until I say)", "rubywars start", false, "Start the build phase; Battle Day waits for you"));
-		actions.add(new Action("Season", "Start (1 week)", "rubywars start 1week", false, "Start, with Battle Day in a week"));
-		actions.add(new Action("Season", "Start (2 weeks)", "rubywars start 2weeks", false, "Start, with Battle Day in two weeks"));
-		actions.add(new Action("Battle Day", "Battle Day now", "rubywars battle", true, "A one-minute countdown, then Battle Day"));
+		actions.add(new Action("Season", "Start the season", "rubywars start", false, "Start the build phase; Battle Day starts when you start it"));
+		actions.add(new Action("Battle Day", "Battle Day now", "rubywars battle", true, "A one-minute countdown, then Battle Day (anyone not on sits it out, their base safe)"));
 		actions.add(new Action("Battle Day", "Call it off", "rubywars battle cancel", false, "Stop a Battle Day countdown"));
 		actions.add(new Action("Battle Day", "Pause timer", "rubywars pause", false, "Stop the clock"));
 		actions.add(new Action("Battle Day", "Resume timer", "rubywars resume", false, "Start the clock again"));
