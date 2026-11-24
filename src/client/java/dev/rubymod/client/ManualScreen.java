@@ -69,7 +69,7 @@ public class ManualScreen extends Screen {
 					"Depots: repairs, jeeps, tanks and a helicopter, and everyone picks an upgrade (J if you closed it). Wrecked? A spare truck restarts the stage."),
 			new Page("The Season",
 					"Build until everyone's ready, then survive one Battle Day. You each have your own base: the last one standing wins (or the last team, "
-							+ "if you picked teams on the Season Choices screen: same colour, same side).",
+							+ "if the admin turns teams on for the season: same colour, same side).",
 					"Place your Ruby Heart to claim land: nobody else can build there, and you're safe inside it until Battle Day. Outside the bases you can fight.",
 					"Battle Day: Lockdown (defenses arm), Open War (PvP, Hearts can be breached, you respawn at your Heart, and a supply drop every 15 minutes: told 30 seconds ahead, with a beam over the spot), "
 							+ "Sudden Death (Hearts shatter, the border closes on the final circle), Final Circle. The final circle is somewhere different each season: it's on your map (K) from Open War, and the top of the screen says if you're outside it.",
@@ -84,7 +84,7 @@ public class ManualScreen extends Screen {
 					"Each new season starts fresh: a fresh island, and everyone begins again with nothing in Ruby Wars (the hub and other games keep their things).",
 					"Mine Ruby Ore deep underground (or in the Ruby Crater) and spend rubies at an Armory.",
 					"No monsters and no hunger: just build and stay alive. Battle Day comes when the admin starts it.",
-					"Season Choices (Ruby Wars menu): pick a Battle Day team, vote on a Night Battle, and choose what your base is famous for."),
+					"Season Choices (Ruby Wars menu): fight on Battle Day or sit it out (your base stays safe), vote on a Night Battle, and choose what your base is famous for. If the admin turns teams on, you pick a team there too."),
 			new Page("The Armory",
 					"Right-click an Armory. The tabs down the left are kinds of things: Your Heart, Guns, Ammo, Explosives, Defenses, Air Defense, "
 							+ "Vehicles, Aircraft, Machines, Building, Security, Gear and Support.",

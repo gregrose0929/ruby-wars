@@ -48,6 +48,7 @@ public final class FreshStart {
 		data.autoPaused = false;
 		data.battleStartedAt = 0;
 		data.nightChoice = null;
+		data.teamsAllowed = false;
 		data.season = nextSeason;
 		data.pastChampions = champions;
 		data.freshSeason = nextSeason;

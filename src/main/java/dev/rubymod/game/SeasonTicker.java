@@ -322,7 +322,8 @@ public final class SeasonTicker {
 						: at == claim ? Payloads.HudSync.RESPAWN_HEART : Payloads.HudSync.RESPAWN_MATE;
 			}
 			int flags = respawn | (Squads.enabled() ? 8 : 0) | (Hub.where(player) == Hub.Where.RUBY_WARS ? 16 : 0)
-					| (data.phase == Phase.BUILD && data.battleReady ? 32 | Math.min(15, battlersHere(server)) << 8 | Math.min(15, battlers().size()) << 12 : 0);
+					| (data.phase == Phase.BUILD && data.battleReady ? 32 | Math.min(15, battlersHere(server)) << 8 | Math.min(15, battlers().size()) << 12 : 0)
+					| (data.player(player.getUUID()) != null && data.player(player.getUUID()).satOut ? 64 : 0);
 			ServerPlayNetworking.send(player, new Payloads.HudSync(data.phase.ordinal(), seconds, data.pausedRemaining >= 0, currentDay(), hp, max,
 					alive, out, flags));
 		}

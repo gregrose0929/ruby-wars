@@ -311,6 +311,11 @@ public class Payloads {
 			return (flags & 32) != 0;
 		}
 
+		/** Sitting Battle Day out (not knocked out). */
+		public boolean satOut() {
+			return (flags & 64) != 0;
+		}
+
 		/** While it's ready: how many of those with a Heart are on, and how many there are. */
 		public int readyHere() {
 			return (flags >> 8) & 15;

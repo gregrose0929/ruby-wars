@@ -17,7 +17,9 @@ import net.minecraft.server.level.ServerPlayer;
 /**
  * The season choices, made together on the Season Choices screen (or /rubywars choose):
  * <ul>
- * <li>Battle Day teams: pick Red, Blue or "on my own". Anyone who picked the same colour is on the same side on Battle Day
+ * <li>Battle Day: "I'll fight" or "I'll sit it out" (the second is like being away when it starts: your base is safe all
+ * day and you're not in the running). Until Battle Day starts anyone can change.</li>
+ * <li>Battle Day teams (only if the admin turns them on for the season: /rubywars teams on): pick Red, Blue or "on my own". Anyone who picked the same colour is on the same side on Battle Day
  * (each keeps their own base and Heart; teammates can't hurt each other, their defenses leave each other alone, they can
  * respawn at each other's Hearts, and they share the win). Decided when Battle Day starts; until then anyone can change.</li>
  * <li>Night Battle: everyone votes yes or no; the most votes win when Battle Day starts (a tie, or no votes, leaves it as the
@@ -51,6 +53,25 @@ public final class SeasonChoices {
 		};
 	}
 
+	/** /rubywars teams on|off: the admin decides whether there are Battle Day teams this season. Returns what to say. */
+	public static String setTeams(MinecraftServer server, boolean on) {
+		SeasonData data = SeasonData.get();
+		if (!battleChoicesOpen()) {
+			return "Teams are settled once Battle Day has started.";
+		}
+		data.teamsAllowed = on;
+		if (!on) {
+			for (SeasonData.PlayerRecord r : data.players.values()) {
+				r.team = "";
+			}
+		}
+		SeasonData.markDirty();
+		Alerts.broadcast(server, Component.literal(on ? "Battle Day teams are on this season: pick yours on the Season Choices screen (Ruby Wars menu)."
+				: "No Battle Day teams this season: everyone's on their own.").withStyle(ChatFormatting.AQUA));
+		syncAll(server);
+		return null;
+	}
+
 	/** Can the Battle Day choices (team, night) still be changed? Up until Battle Day starts. */
 	public static boolean battleChoicesOpen() {
 		Phase phase = SeasonData.get().phase;
@@ -66,6 +87,9 @@ public final class SeasonChoices {
 		SeasonData.PlayerRecord record = data.player(player.getUUID(), player.getName().getString());
 		switch (kind) {
 			case "team" -> {
+				if (!data.teamsAllowed) {
+					return "There are no teams this season (only the admin can turn them on).";
+				}
 				if (!battleChoicesOpen()) {
 					return "Teams were settled when Battle Day started.";
 				}
@@ -73,6 +97,12 @@ public final class SeasonChoices {
 					return "Pick red, blue or solo.";
 				}
 				record.team = value;
+			}
+			case "fight" -> {
+				if (!battleChoicesOpen()) {
+					return "That was settled when Battle Day started.";
+				}
+				record.sitOutChoice = value.equals("no");
 			}
 			case "night" -> {
 				if (!battleChoicesOpen()) {
@@ -94,7 +124,7 @@ public final class SeasonChoices {
 				record.theme = value;
 			}
 			default -> {
-				return "Choose team, night or theme.";
+				return "Choose fight, team, night or theme.";
 			}
 		}
 		SeasonData.markDirty();
@@ -130,24 +160,36 @@ public final class SeasonChoices {
 	/** A line on how things stand, for the screen. */
 	public static String summary() {
 		StringBuilder b = new StringBuilder();
-		for (Map.Entry<String, List<String>> e : sides().entrySet()) {
-			if (b.length() > 0) {
-				b.append("  |  ");
+		if (SeasonData.get().teamsAllowed) {
+			for (Map.Entry<String, List<String>> e : sides().entrySet()) {
+				if (b.length() > 0) {
+					b.append("  |  ");
+				}
+				b.append(teamName(e.getKey())).append(": ").append(String.join(", ", e.getValue()));
 			}
-			b.append(teamName(e.getKey())).append(": ").append(String.join(", ", e.getValue()));
-		}
-		if (b.length() == 0) {
-			b.append("No teams picked: everyone's on their own");
+			if (b.length() == 0) {
+				b.append("No teams picked yet");
+			}
+			b.append("  |  ");
 		}
 		int[] night = nightVotes();
-		b.append("  |  Night Battle: ").append(night[0]).append(" yes, ").append(night[1]).append(" no");
+		b.append("Night Battle: ").append(night[0]).append(" yes, ").append(night[1]).append(" no");
+		List<String> out = new ArrayList<>();
+		for (SeasonData.PlayerRecord r : SeasonData.get().players.values()) {
+			if (r.sitOutChoice) {
+				out.add(r.name);
+			}
+		}
+		if (!out.isEmpty()) {
+			b.append("  |  Sitting out: ").append(String.join(", ", out));
+		}
 		return b.toString();
 	}
 
 	public static void sync(ServerPlayer player) {
 		SeasonData.PlayerRecord r = SeasonData.get().player(player.getUUID());
 		Net.send(player, new MorePayloads.ChoicesState(r == null ? "" : r.team, r == null ? 0 : r.nightVote, r == null ? "" : r.theme,
-				battleChoicesOpen(), summary()));
+				battleChoicesOpen(), summary(), r != null && r.sitOutChoice, SeasonData.get().teamsAllowed));
 	}
 
 	public static void syncAll(MinecraftServer server) {
@@ -166,6 +208,9 @@ public final class SeasonChoices {
 		data.nightChoice = night[0] > night[1] ? Boolean.TRUE : night[1] > night[0] ? Boolean.FALSE : null;
 		data.squads.clear();
 		Map<String, List<String>> members = new LinkedHashMap<>();
+		if (!data.teamsAllowed) {
+			members.clear(); // no teams this season: everyone's on their own
+		} else
 		for (Map.Entry<String, SeasonData.PlayerRecord> e : data.players.entrySet()) {
 			SeasonData.Claim claim = data.claimOf(UUID.fromString(e.getKey()));
 			if (!e.getValue().team.isEmpty() && !e.getValue().satOut && claim != null && !claim.destroyed) {

@@ -64,6 +64,8 @@ public class SeasonData {
 	public long lastSecondAt;
 	/** When Battle Day began (wall time; 0: it hasn't). */
 	public long battleStartedAt;
+	/** The admin has turned Battle Day teams on for this season (/rubywars teams on): only then can anyone pick a team. */
+	public boolean teamsAllowed;
 	/** The family's pick for Battle Day at night (from the season choices): null until Battle Day starts, then the result. */
 	public Boolean nightChoice;
 
@@ -126,6 +128,8 @@ public class SeasonData {
 		// The season choices (see SeasonChoices): Battle Day team ("" on your own, "red", "blue"), Night Battle vote (0 none,
 		// 1 yes, 2 no), and what your base is famous for ("" nothing).
 		public String team = "";
+		/** Picked "I'll sit it out" for Battle Day (Season Choices): treated like being away, base safe all day. */
+		public boolean sitOutChoice;
 		public int nightVote;
 		public String theme = "";
 		// How your base held up on Battle Day (the wrap-up's "Your base" page).

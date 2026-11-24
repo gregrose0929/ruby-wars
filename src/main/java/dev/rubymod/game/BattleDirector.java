@@ -85,12 +85,18 @@ public final class BattleDirector {
 					UUID id = UUID.fromString(entry.getKey());
 					SeasonData.Claim claim = data.claimOf(id);
 					boolean here = server.getPlayerList().getPlayer(id) != null;
-					if (!r.eliminated && (!here || claim == null || claim.destroyed)) {
+					boolean noHeart = claim == null || claim.destroyed;
+					if (!r.eliminated && (!here || noHeart || r.sitOutChoice)) {
 						r.satOut = true;
 						r.eliminated = true;
 						SeasonData.markDirty();
-						Alerts.broadcast(server, Component.literal(r.name + (claim == null || claim.destroyed ? " has no Heart, so" : " isn't on, so")
-								+ " sits this Battle Day out" + (claim == null || claim.destroyed ? "." : ": their base is safe all day.")).withStyle(ChatFormatting.GRAY));
+						String why = noHeart ? " has no Heart, so" : r.sitOutChoice ? " chose to" : " isn't on, so";
+						Alerts.broadcast(server, Component.literal(r.name + why + " sit" + (r.sitOutChoice && !noHeart ? "" : "s") + " this Battle Day out"
+								+ (noHeart ? "." : ": their base is safe all day.")).withStyle(ChatFormatting.GRAY));
+						ServerPlayer online = server.getPlayerList().getPlayer(id);
+						if (online != null) {
+							watchInstead(online);
+						}
 					}
 				}
 				SeasonChoices.onBattleDay(server);
@@ -268,7 +274,7 @@ public final class BattleDirector {
 		Research.sync(player);
 		SeasonData.PlayerRecord me = data.player(player.getUUID());
 		SeasonData.Claim mine = data.claimOf(player.getUUID());
-		if (data.phase == Phase.LOCKDOWN && me != null && me.satOut && mine != null && !mine.destroyed) {
+		if (data.phase == Phase.LOCKDOWN && me != null && me.satOut && !me.sitOutChoice && mine != null && !mine.destroyed) {
 			me.satOut = false;
 			me.eliminated = false;
 			me.finished = 0;
@@ -405,6 +411,15 @@ public final class BattleDirector {
 			}
 		}
 		return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, heart);
+	}
+
+	/** Sitting Battle Day out while on: watch as a spectator (or go and play in the hub). */
+	private static void watchInstead(ServerPlayer player) {
+		if (Hub.inRubyWarsWorld(player)) {
+			player.setGameMode(GameType.SPECTATOR);
+		}
+		player.sendSystemMessage(Component.literal("You're sitting this Battle Day out (your base is safe). Watch, or press H for the hub and party games.")
+				.withStyle(ChatFormatting.GRAY));
 	}
 
 	/** Out of the running without losing: they weren't there (bedtime, dinner). The wrap-up says they sat this one out. */

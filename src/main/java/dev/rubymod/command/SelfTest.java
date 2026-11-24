@@ -186,6 +186,12 @@ public final class SelfTest {
 					&& !Rules.canWeaponBreak(level, alphaBase.pos().above(2), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState())
 					&& !Rules.defenseTarget(alphaBase, bravo);
 			check("sitting out: away when Battle Day starts, your base is safe all day (hp " + alphaBase.hp + "/" + hpBefore + ")", safe);
+			data.phase = Phase.BUILD;
+			String picked = dev.rubymod.game.SeasonChoices.choose(bravo, "fight", "no");
+			boolean chose = picked == null && data.player(bravo.getUUID()).sitOutChoice;
+			dev.rubymod.game.SeasonChoices.choose(bravo, "fight", "yes");
+			check("sitting out: you can choose to sit Battle Day out, and change your mind (" + picked + ")",
+					chose && !data.player(bravo.getUUID()).sitOutChoice);
 			for (SeasonData.PlayerRecord r : data.players.values()) {
 				r.satOut = false;
 				r.eliminated = false;
@@ -226,8 +232,15 @@ public final class SelfTest {
 			a = testRecord(data, alpha.getUUID(), "TestAlpha", sky);
 			b = testRecord(data, bravo.getUUID(), "TestBravo", sky.offset(100, 0, 0));
 			c = testRecord(data, charlie, "TestCharlie", sky.offset(200, 0, 0));
+			// No teams unless the admin turns them on.
+			data.teamsAllowed = false;
+			data.phase = Phase.BUILD;
+			String refused = dev.rubymod.game.SeasonChoices.choose(alpha, "team", "red");
 			a.team = "red";
 			b.team = "red";
+			dev.rubymod.game.SeasonChoices.onBattleDay(server);
+			check("teams: none unless the admin turns them on (" + refused + ")", refused != null && data.squads.isEmpty());
+			data.teamsAllowed = true;
 			c.team = "blue";
 			a.nightVote = 1;
 			b.nightVote = 1;
@@ -292,6 +305,7 @@ public final class SelfTest {
 			data.autoPaused = false;
 			data.battleStartedAt = 0;
 			data.nightChoice = null;
+			data.teamsAllowed = false;
 		}
 
 		// Plain belts are free; the clever belt parts still need Logistics.

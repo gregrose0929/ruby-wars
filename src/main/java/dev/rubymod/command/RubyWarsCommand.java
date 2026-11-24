@@ -84,6 +84,9 @@ public final class RubyWarsCommand {
 						.then(Commands.literal("days").then(Commands.argument("days", IntegerArgumentType.integer(1, 60))
 								.executes(c -> schedule(c, IntegerArgumentType.getInteger(c, "days") * 1440L)))))
 				.then(Commands.literal("admin").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::admin))
+				.then(Commands.literal("teams").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+						.then(Commands.literal("on").executes(c -> teams(c, true)))
+						.then(Commands.literal("off").executes(c -> teams(c, false))))
 				.then(Commands.literal("choose").then(Commands.argument("kind", com.mojang.brigadier.arguments.StringArgumentType.word())
 						.then(Commands.argument("value", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
 							String value = com.mojang.brigadier.arguments.StringArgumentType.getString(c, "value");
@@ -500,5 +503,15 @@ public final class RubyWarsCommand {
 		int nextSeason = dev.rubymod.game.FreshStart.resetSeason(c.getSource().getServer());
 		ok(c, "Reset to the lobby for Season " + nextSeason + ". Everyone starts fresh in Ruby Wars (the hub and other games keep their things).");
 		return ok(c, "To also clear the old bases off the island, run on the server: rubywars newseason. Then /rubywars admin (or /rubywars start) when everyone's ready.");
+	}
+
+	private static int teams(com.mojang.brigadier.context.CommandContext<net.minecraft.commands.CommandSourceStack> c, boolean on) {
+		String error = dev.rubymod.game.SeasonChoices.setTeams(c.getSource().getServer(), on);
+		if (error != null) {
+			c.getSource().sendFailure(Component.literal(error));
+			return 0;
+		}
+		c.getSource().sendSuccess(() -> Component.literal(on ? "Battle Day teams are on." : "Battle Day teams are off."), true);
+		return 1;
 	}
 }

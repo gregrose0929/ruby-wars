@@ -710,7 +710,7 @@ public final class MorePayloads {
 	 * Server -> client: the season wrap-up card. awards: "title|who|detail|item id" each; mine: "label|value" each.
 	 */
 	/** The Season Choices screen: your picks, whether Battle Day's choices are still open, and how everyone's picked. */
-	public record ChoicesState(String team, int night, String theme, boolean open, String summary) implements CustomPacketPayload {
+	public record ChoicesState(String team, int night, String theme, boolean open, String summary, boolean sitOut, boolean teams) implements CustomPacketPayload {
 		public static final Type<ChoicesState> TYPE = new Type<>(RubyMod.id("choices_state"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, ChoicesState> CODEC = StreamCodec.composite(
 				ByteBufCodecs.STRING_UTF8, ChoicesState::team,
@@ -718,6 +718,8 @@ public final class MorePayloads {
 				ByteBufCodecs.STRING_UTF8, ChoicesState::theme,
 				ByteBufCodecs.BOOL, ChoicesState::open,
 				ByteBufCodecs.STRING_UTF8, ChoicesState::summary,
+				ByteBufCodecs.BOOL, ChoicesState::sitOut,
+				ByteBufCodecs.BOOL, ChoicesState::teams,
 				ChoicesState::new);
 
 		@Override

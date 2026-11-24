@@ -6016,11 +6016,31 @@ public final class AutoTest {
 		then(10, mc -> mc.gui.setScreen(new SeasonChoicesScreen()));
 		then(20, mc -> shot(mc, "family-0-choices"));
 		then(5, mc -> {
+			mc.player.connection.sendCommand("rubywars teams on");
 			mc.player.connection.sendCommand("rubywars choose team red");
 			mc.player.connection.sendCommand("rubywars choose night yes");
 			mc.player.connection.sendCommand("rubywars choose theme walls");
+			mc.player.connection.sendCommand("rubywars choose fight no");
 		});
 		then(30, mc -> shot(mc, "family-1-chosen"));
+		then(5, mc -> mc.gui.setScreen(null));
+		then(5, mc -> onServer(mc, server -> dev.rubymod.game.BattleDirector.enterPhase(server, dev.rubymod.game.Phase.LOCKDOWN)));
+		then(40, mc -> {
+			log("family: sitting out at Battle Day: spectator {}", mc.player.isSpectator());
+			shot(mc, "family-1b-sitting-out");
+		});
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+			var data = dev.rubymod.game.SeasonData.get();
+			for (var r : data.players.values()) {
+				r.satOut = false;
+				r.eliminated = false;
+				r.sitOutChoice = false;
+			}
+			data.phase = dev.rubymod.game.Phase.BUILD;
+		}));
+		then(10, mc -> mc.gui.setScreen(new SeasonChoicesScreen()));
 		then(5, mc -> mc.gui.setScreen(null));
 		then(5, mc -> onServer(mc, server -> {
 			var data = dev.rubymod.game.SeasonData.get();

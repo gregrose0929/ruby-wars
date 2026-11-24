@@ -93,7 +93,7 @@ public class GameHud implements HudElement {
 
 		// Only in the Ruby Wars world, during the battle, while watching: not in the hub or another game, and not after the season.
 		if (ClientState.hud != null && ClientState.hud.eliminated() && ClientState.inRubyWarsWorld() && ClientState.phase().isBattle() && player.isSpectator()) {
-			String a = "KNOCKED OUT - watching the battle";
+			String a = ClientState.hud.satOut() ? "SITTING OUT - watching the battle" : "KNOCKED OUT - watching the battle";
 			String b = "Click: next player   Right-click: back   Crouch: fly free   H: party games in the hub";
 			int tw = Math.min(w - 8, Math.max(font.width(a), font.width(b)) + 16);
 			panel(g, w / 2 - tw / 2, h - 92, w / 2 + tw / 2, h - 62);
