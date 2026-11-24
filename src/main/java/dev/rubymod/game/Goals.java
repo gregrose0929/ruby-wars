@@ -62,11 +62,51 @@ public final class Goals {
 			new Goal("drive", "Drive 300 blocks", 300, 1),
 			new Goal("fly", "Fly 500 blocks", 500, 2),
 			new Goal("sail", "Sail 500 blocks", 500, 1),
-			new Goal("dig", "Dig with a Tunnel Borer", 50, 1));
+			new Goal("dig", "Dig with a Tunnel Borer", 50, 1),
+			// Chapter two, "Ready for Battle Day": opens after OPEN_AT goals above. No stars (you still pick your research
+			// with the ones above); finishing it all earns the Fortress Sparks fireworks.
+			new Goal("coverage", "See what your defenses cover (hold one)", 1, 0),
+			new Goal("airdef", "Air defense near your Heart", 1, 0),
+			new Goal("shield", "Put up a Shield Generator", 1, 0),
+			new Goal("holo", "Hide something with Holo Camo", 1, 0),
+			new Goal("sensor", "Place a Seismic Sensor or Radar", 1, 0),
+			new Goal("dummy", "Your defenses hit a Practice Dummy", 1, 0));
+
+	/** The first goal of chapter two ("Ready for Battle Day"). */
+	public static final String CHAPTER_TWO = "coverage";
+	/** Goals done in chapter one to open chapter two. */
+	public static final int OPEN_AT = 20;
+
+	private static boolean chapterTwo(String id) {
+		boolean two = false;
+		for (Goal g : ALL) {
+			two |= g.id().equals(CHAPTER_TWO);
+			if (g.id().equals(id)) {
+				return two;
+			}
+		}
+		return false;
+	}
+
+	/** How many chapter-one goals this player has done. */
+	private static int chapterOneDone(SeasonData.PlayerRecord r) {
+		int n = 0;
+		for (String id : r.goalsDone) {
+			if (byId(id) != null && !chapterTwo(id)) {
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/** Is "Ready for Battle Day" open for them? */
+	public static boolean chapterTwoOpen(SeasonData.PlayerRecord r) {
+		return r != null && r.goalsDone != null && chapterOneDone(r) >= OPEN_AT;
+	}
 
 	/** The J screen's headings: each starts just before its first goal. */
 	private static final Map<String, String> SECTIONS = Map.of("heart", "Your base", "ruby10", "Making rubies", "cache", "World events and Battle Day",
-			"drive", "Getting around");
+			"drive", "Getting around", CHAPTER_TWO, "Ready for Battle Day");
 
 	/** Machines that count as "working" for busy3 (makers, not power or defenses). */
 	private static final Map<UUID, Map<Long, Long>> WORKING = new HashMap<>();
@@ -134,15 +174,26 @@ public final class Goals {
 			sync(server, player);
 			return;
 		}
+		boolean wasOpen = chapterTwoOpen(r);
 		r.goalsDone.add(id);
 		r.researchPoints += goal.stars();
 		SeasonData.markDirty();
 		ServerPlayer p = server == null ? null : server.getPlayerList().getPlayer(player);
+		boolean two = chapterTwo(id);
 		if (p != null) {
 			advancement(p, id);
-			String stars = "★".repeat(goal.stars());
-			Alerts.toast(p, "minecraft:nether_star", "Goal done! +" + stars + " (J)", goal.title(), Alerts.GOLD);
-			p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.2F);
+			if (!two || wasOpen) {
+				String stars = goal.stars() > 0 ? " +" + "★".repeat(goal.stars()) : "";
+				Alerts.toast(p, two ? "rubymod:sentry_turret" : "minecraft:nether_star", (two ? "Ready for Battle Day!" : "Goal done!") + stars + " (J)",
+						goal.title(), Alerts.GOLD);
+				p.level().playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.6F, 1.2F);
+			}
+			if (!two && !wasOpen && chapterTwoOpen(r)) {
+				Alerts.toast(p, "rubymod:sentry_turret", "New goals: Ready for Battle Day (J)", "Get your base set for the big day", Alerts.GOLD);
+			}
+		}
+		if (two && chapterTwoOpen(r) || !two && !wasOpen && chapterTwoOpen(r)) {
+			chapterTwoFinished(server, player, r);
 		}
 		sync(server, player);
 	}
@@ -179,11 +230,39 @@ public final class Goals {
 		}
 	}
 
+	/** All of "Ready for Battle Day" done (and open): the Fortress Sparks, once a season. */
+	private static void chapterTwoFinished(MinecraftServer server, UUID player, SeasonData.PlayerRecord r) {
+		boolean two = false;
+		for (Goal g : ALL) {
+			two |= g.id().equals(CHAPTER_TWO);
+			if (two && !r.goalsDone.contains(g.id())) {
+				return;
+			}
+		}
+		if (r.goalsDone.contains("ready_all")) {
+			return;
+		}
+		r.goalsDone.add("ready_all");
+		SeasonData.markDirty();
+		Stats.battleReady(player, r.name);
+		ServerPlayer p = server == null ? null : server.getPlayerList().getPlayer(player);
+		if (p != null) {
+			Alerts.toast(p, "minecraft:firework_rocket", "Your base is ready for Battle Day!", "New fireworks: Fortress Sparks (I to pick them)", Alerts.GOLD);
+		}
+	}
+
 	/** For the research screen: "id|title|progress|target|stars|done" per goal, and "#Heading" before each group. */
 	public static List<String> describe(UUID player) {
 		SeasonData.PlayerRecord r = record(player);
 		List<String> out = new ArrayList<>();
 		for (Goal g : ALL) {
+			if (g.id().equals(CHAPTER_TWO) && !chapterTwoOpen(r)) {
+				// Not open yet: a line saying how to open it.
+				out.add("#Ready for Battle Day (opens later)");
+				int done = r == null ? 0 : Math.min(OPEN_AT, chapterOneDone(r));
+				out.add("ready_lock|Do " + OPEN_AT + " goals above to open these|" + done + "|" + OPEN_AT + "|0|false");
+				break;
+			}
 			if (SECTIONS.containsKey(g.id())) {
 				out.add("#" + SECTIONS.get(g.id()));
 			}

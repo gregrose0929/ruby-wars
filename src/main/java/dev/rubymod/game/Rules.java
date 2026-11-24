@@ -205,7 +205,7 @@ public final class Rules {
 		}
 		SeasonData.Claim claimA = SeasonData.get().claimOf(a);
 		SeasonData.Claim claimB = SeasonData.get().claimOf(b);
-		return (claimA != null && claimA.trusted.contains(b.toString())) || (claimB != null && claimB.trusted.contains(a.toString()));
+		return (claimA != null && claimA.activeTrusted().contains(b.toString())) || (claimB != null && claimB.activeTrusted().contains(a.toString()));
 	}
 
 	/** Is this entity an enemy of the claim's owner (used by turrets, mines, alarms)? */

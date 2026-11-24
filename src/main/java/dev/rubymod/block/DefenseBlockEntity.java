@@ -45,6 +45,20 @@ public class DefenseBlockEntity extends BlockEntity {
 	private static final double RADAR_RANGE = 96;
 	private static final double ALARM_RANGE = 12;
 
+	/** How far this kind of defense reaches (0: it has no range to show, like a camera or a tripwire). */
+	public static double reach(DefenseBlock.Kind kind) {
+		return switch (kind) {
+			case SENTRY_TURRET -> TURRET_RANGE;
+			case INTERCEPTOR -> INTERCEPT_RANGE;
+			case RADAR -> RADAR_RANGE;
+			case ALARM -> ALARM_RANGE;
+			case SEISMIC -> SEISMIC_RANGE;
+			case FLAK -> FLAK_RANGE;
+			case SAM -> SAM_RANGE;
+			default -> 0;
+		};
+	}
+
 	public int ammo;
 	public int charges = MAX_CHARGES;
 	private int cooldown;

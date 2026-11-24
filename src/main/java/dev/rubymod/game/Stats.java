@@ -47,6 +47,8 @@ public final class Stats {
 		/** Best Sky Race time in ticks (0: never finished). */
 		public int skyBest;
 		public int duelsWon;
+		/** Seasons you finished the "Ready for Battle Day" goals. */
+		public int battleReady;
 		public int riftRuns;
 		public int riftBestFloor;
 		public int riftWins;
@@ -325,6 +327,12 @@ public final class Stats {
 			out.put(e.getKey(), e.getValue().seasonsPlayed);
 		}
 		return out;
+	}
+
+	/** Finished a season's "Ready for Battle Day" goals. */
+	public static void battleReady(UUID id, String name) {
+		get(id, name).battleReady++;
+		changed(id);
 	}
 
 	public static void duelWon(UUID id, String name) {

@@ -66,6 +66,8 @@ public class SeasonData {
 	public long battleStartedAt;
 	/** The admin has turned Battle Day teams on for this season (/rubywars teams on): only then can anyone pick a team. */
 	public boolean teamsAllowed;
+	/** The admin has turned Spare Hearts on for this season (/rubywars spareheart on): see SpareHearts. Off unless they do. */
+	public boolean spareHeartsAllowed;
 	/** The family's pick for Battle Day at night (from the season choices): null until Battle Day starts, then the result. */
 	public Boolean nightChoice;
 
@@ -100,7 +102,12 @@ public class SeasonData {
 
 		public boolean canUse(UUID player) {
 			String id = player.toString();
-			return id.equals(owner) || trusted.contains(id) || Squads.same(UUID.fromString(owner), player);
+			return id.equals(owner) || activeTrusted().contains(id) || Squads.same(UUID.fromString(owner), player);
+		}
+
+		/** Who the owner trusts, as it counts right now: nobody on Battle Day (then only the admin's teams share a base). */
+		public java.util.Set<String> activeTrusted() {
+			return SeasonData.get().phase.isBattle() ? java.util.Set.of() : trusted;
 		}
 
 		public int radius() {
@@ -135,6 +142,17 @@ public class SeasonData {
 		// How your base held up on Battle Day (the wrap-up's "Your base" page).
 		public int defenseHits;
 		public int blocksLost;
+		/** Who broke your Heart in Open War ("" if nobody did, or it was something else). */
+		public String heartBrokenBy = "";
+		/** Your Heart lasted all of Open War, and only went when Sudden Death took every Heart. */
+		public boolean heartHeld;
+		/** Attacks on your base that didn't break your Heart (see DefenseCredit), how many got to the Heart, and what stopped them. */
+		/** Your Spare Heart (see SpareHearts): none, carried, put down (at spareAt), or lost. */
+		public int spareState;
+		public long spareAt;
+		public int attacksStopped;
+		public int stoppedAtHeart;
+		public java.util.Map<String, Integer> stoppedBy = new java.util.HashMap<>();
 		public long heartFellAt;
 		/** Owners of the enemy bases this player has found (they show on the map). */
 		public Set<String> discovered = new HashSet<>();

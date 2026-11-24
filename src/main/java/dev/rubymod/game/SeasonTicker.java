@@ -318,7 +318,7 @@ public final class SeasonTicker {
 			if (data.phase.isBattle() && !out) {
 				SeasonData.Claim at = BattleDirector.respawnHeart(player.getUUID());
 				respawn = !data.phase.heartsGiveRespawns() ? Payloads.HudSync.NO_RESPAWNS
-						: at == null ? Payloads.HudSync.LAST_LIFE
+						: at == null ? (SpareHearts.canRespawn(server, player.getUUID()) ? Payloads.HudSync.RESPAWN_HEART : Payloads.HudSync.LAST_LIFE)
 						: at == claim ? Payloads.HudSync.RESPAWN_HEART : Payloads.HudSync.RESPAWN_MATE;
 			}
 			int flags = respawn | (Squads.enabled() ? 8 : 0) | (Hub.where(player) == Hub.Where.RUBY_WARS ? 16 : 0)

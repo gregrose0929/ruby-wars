@@ -124,7 +124,7 @@ public final class Guide {
 	/** Where the season is, in a line. */
 	public static String season() {
 		Phase phase = ClientState.phase();
-		String order = " Battle Day goes: Lockdown (defenses on) > Open War > Sudden Death > Final Circle. It waits whenever nobody's on.";
+		String order = " Battle Day goes: Lockdown (bases still safe) > Open War > Sudden Death > Final Circle. It waits whenever nobody's on.";
 		if (phase == Phase.LOBBY) {
 			return "The season hasn't started yet (an admin starts it with /rubywars start). Pick your Season Choices in the Ruby Wars menu: "
 					+ "fight or sit Battle Day out, and a vote on a Night Battle.";

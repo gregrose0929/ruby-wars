@@ -10,7 +10,7 @@
 		"show_toast": false,
 		"frame": "goal",
 		"icon": {
-			"id": "rubymod:ruby_block"
+			"id": "minecraft:nether_star"
 		},
 		"title": "Hold a Ruby Shrine longest",
 		"description": "+2 stars to spend on upgrades"

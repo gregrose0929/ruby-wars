@@ -87,6 +87,7 @@ public class HoloBlock extends BaseEntityBlock {
 	public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity by, ItemStack stack) {
 		if (!level.isClientSide() && by instanceof ServerPlayer player && level.getBlockEntity(pos) instanceof HoloBlockEntity holo) {
 			holo.setOwner(player.getUUID());
+			dev.rubymod.game.Goals.add(level.getServer(), player.getUUID(), "holo", 1);
 			player.sendSystemMessage(Component.literal("Holo Camouflage placed. Right-click it with any block to copy its look; you can walk through it.")
 					.withStyle(ChatFormatting.AQUA), true);
 		}

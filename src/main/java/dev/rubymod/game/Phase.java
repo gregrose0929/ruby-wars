@@ -21,7 +21,7 @@ public enum Phase {
 		return title;
 	}
 
-	/** Battle Day is running: claims are open and defenses are on. */
+	/** Battle Day is running (Lockdown first, with bases still safe; then Open War opens them). */
 	public boolean isBattle() {
 		return this == LOCKDOWN || this == WAR || this == SUDDEN_DEATH || this == FINAL_CIRCLE;
 	}
@@ -31,9 +31,12 @@ public enum Phase {
 		return this == WAR || this == SUDDEN_DEATH || this == FINAL_CIRCLE;
 	}
 
-	/** Claims block other players from building and explosions from breaking blocks. */
+	/**
+	 * Claims block other players from building, opening things and explosions from breaking blocks: everywhere but Open
+	 * War and after (Lockdown keeps them, so nobody can take a base apart before its defenses are allowed to fight back).
+	 */
 	public boolean claimsProtected() {
-		return !isBattle();
+		return !pvp();
 	}
 
 	/** Raid weapons (rockets, mortars, missiles, breaching charges) can be used. */

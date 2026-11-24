@@ -285,7 +285,93 @@ public final class SelfTest {
 			dev.rubymod.game.BaseReport.defenseHit(data.claimOf(alpha.getUUID()));
 			check("base report: turret hits counted, and the Heart stood to the end (" + a.defenseHits + ", "
 					+ dev.rubymod.game.BaseReport.heartStood(alpha.getUUID()) + ")",
-					a.defenseHits == 1 && "To the end".equals(dev.rubymod.game.BaseReport.heartStood(alpha.getUUID())));
+					a.defenseHits == 1 && "Never broken".equals(dev.rubymod.game.BaseReport.heartStood(alpha.getUUID())));
+			a.heartHeld = true;
+			check("base report: a Heart that held all Open War says so (" + dev.rubymod.game.BaseReport.heartStood(alpha.getUUID()) + ")",
+					"Never broken: held to Sudden Death".equals(dev.rubymod.game.BaseReport.heartStood(alpha.getUUID())));
+			a.heartHeld = false;
+			a.heartFellAt = data.battleStartedAt + 23 * 60_000L;
+			a.heartBrokenBy = "TestBravo";
+			check("base report: a broken Heart says who and when (" + dev.rubymod.game.BaseReport.heartStood(alpha.getUUID()) + ")",
+					"Broken by TestBravo, 23 minutes in".equals(dev.rubymod.game.BaseReport.heartStood(alpha.getUUID())));
+			a.heartFellAt = 0;
+			a.heartBrokenBy = "";
+			SeasonData.PlayerRecord credit = new SeasonData.PlayerRecord();
+			credit.attacksStopped = 3;
+			credit.stoppedAtHeart = 1;
+			credit.stoppedBy.put("defenses", 2);
+			credit.stoppedBy.put("guards", 1);
+			check("defense credit: how far attacks got and what stopped them (" + dev.rubymod.game.DefenseCredit.stopped(credit) + " / "
+					+ dev.rubymod.game.DefenseCredit.stoppedBy(credit) + ")",
+					"3 (2 before the Heart, 1 at the Heart)".equals(dev.rubymod.game.DefenseCredit.stopped(credit))
+							&& "defenses 2, guards 1".equals(dev.rubymod.game.DefenseCredit.stoppedBy(credit)));
+
+			// Hearts: anything an enemy has wears one down, in Open War only; your own shots never do.
+			data.squads.clear();
+			a.eliminated = false;
+			a.satOut = false;
+			b.eliminated = false;
+			b.satOut = false;
+			ServerLevel heartLevel = (ServerLevel) alpha.level();
+			SeasonData.Claim ac = data.claimOf(alpha.getUUID());
+			ac.destroyed = false;
+			ac.hp = ac.maxHp();
+			int hp0 = ac.hp;
+			data.phase = Phase.WAR;
+			for (int i = 0; i < 10; i++) {
+				dev.rubymod.game.HeartDamage.bullet(heartLevel, ac.pos(), 30.0F, bravo);
+			}
+			int afterBullets = ac.hp;
+			dev.rubymod.game.HeartDamage.blast(heartLevel, net.minecraft.world.phys.Vec3.atCenterOf(ac.pos()), 3.0F, null, bravo);
+			int afterBlast = ac.hp;
+			dev.rubymod.game.HeartDamage.bullet(heartLevel, ac.pos(), 30.0F, alpha);
+			dev.rubymod.game.HeartDamage.blast(heartLevel, net.minecraft.world.phys.Vec3.atCenterOf(ac.pos()), 3.0F, null, alpha);
+			check("hearts: an enemy's bullets and blasts wear a Heart down, its owner's don't (" + hp0 + " > " + afterBullets + " > " + afterBlast
+					+ ", then " + ac.hp + ")", afterBullets == hp0 - 30 && afterBlast < afterBullets && afterBlast > 0 && ac.hp == afterBlast);
+			data.phase = Phase.LOCKDOWN;
+			int locked = ac.hp;
+			dev.rubymod.game.HeartDamage.bullet(heartLevel, ac.pos(), 30.0F, bravo);
+			check("hearts: nothing hurts a Heart in Lockdown", ac.hp == locked);
+			check("lockdown: bases stay safe until Open War", !Rules.canBuild(bravo, heartLevel, ac.pos().east(3)));
+			data.phase = Phase.WAR;
+			check("open war: bases open", Rules.canBuild(bravo, heartLevel, ac.pos().east(3)));
+			ac.hp = ac.maxHp();
+
+			// Trust counts in the build phase, not on Battle Day (only the admin's teams then).
+			ac.trusted.add(bravo.getUUID().toString());
+			boolean trustedInBattle = ac.canUse(bravo.getUUID());
+			data.phase = Phase.BUILD;
+			boolean trustedInBuild = ac.canUse(bravo.getUUID());
+			ac.trusted.remove(bravo.getUUID().toString());
+			check("trust: counts in the build phase, not on Battle Day", !trustedInBattle && trustedInBuild);
+
+			// Spare Hearts: only when the admin turns them on, once, in Open War.
+			data.phase = Phase.WAR;
+			a.spareState = 0;
+			b.spareState = 0;
+			data.spareHeartsAllowed = false;
+			dev.rubymod.game.SpareHearts.heartBroken(server, ac);
+			boolean offNone = a.spareState == 0;
+			data.spareHeartsAllowed = true;
+			dev.rubymod.game.SpareHearts.heartBroken(server, ac);
+			boolean carried = a.spareState == dev.rubymod.game.SpareHearts.CARRIED && dev.rubymod.game.SpareHearts.canRespawn(server, alpha.getUUID());
+			check("spare hearts: none unless the admin allows them, then one to come back to", offNone && carried);
+			data.spareHeartsAllowed = false;
+			a.spareState = 0;
+			for (int i = 0; i < alpha.getInventory().getContainerSize(); i++) {
+				if (alpha.getInventory().getItem(i).is(dev.rubymod.registry.ModBlocks.SPARE_HEART.asItem())) {
+					alpha.getInventory().setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+				}
+			}
+
+			// Sudden Death's border: three steps, each holding then moving.
+			check("border: Sudden Death closes in steps", dev.rubymod.game.FinalCircle.stepped(0.1) == 0
+					&& Math.abs(dev.rubymod.game.FinalCircle.stepped(1.0 / 3) - 1.0 / 3) < 1e-9 && dev.rubymod.game.FinalCircle.stepped(0.5) > 1.0 / 3
+					&& dev.rubymod.game.FinalCircle.stepped(1) == 1);
+
+			// Ready for Battle Day: shut until OPEN_AT goals are done.
+			boolean shut = dev.rubymod.game.Goals.describe(bravo.getUUID()).stream().anyMatch(l -> l.startsWith("ready_lock|"));
+			check("goals: Ready for Battle Day opens later", shut && !dev.rubymod.game.Goals.chapterTwoOpen(b));
 			data.nightChoice = null;
 		} finally {
 			data.claims.clear();

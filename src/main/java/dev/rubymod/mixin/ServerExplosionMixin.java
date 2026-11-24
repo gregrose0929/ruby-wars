@@ -25,6 +25,13 @@ public abstract class ServerExplosionMixin {
 	@Shadow
 	public abstract float radius();
 
+	/** Every blast near a Ruby Heart wears it down a little (Open War, enemies only: see HeartDamage). */
+	@Inject(method = "explode", at = @At("HEAD"))
+	private void rubymod$hurtHearts(CallbackInfoReturnable<Integer> cir) {
+		net.minecraft.world.level.Explosion self = (net.minecraft.world.level.Explosion) (Object) this;
+		dev.rubymod.game.HeartDamage.blast(level, self.center(), self.radius(), self.getDirectSourceEntity(), self.getIndirectSourceEntity());
+	}
+
 	@Inject(method = "calculateExplodedPositions", at = @At("RETURN"), cancellable = true)
 	private void rubymod$filterBlocks(CallbackInfoReturnable<List<BlockPos>> cir) {
 		cir.setReturnValue(Explosions.filter(level, cir.getReturnValue(), radius()));

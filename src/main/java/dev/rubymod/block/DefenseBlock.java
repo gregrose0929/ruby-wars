@@ -87,6 +87,14 @@ public class DefenseBlock extends BaseEntityBlock {
 		if (!level.isClientSide() && by instanceof ServerPlayer player && SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ()) != null) {
 			dev.rubymod.game.Goals.add(player.level().getServer(), player.getUUID(), "defense", 1);
 			dev.rubymod.game.Goals.add(player.level().getServer(), player.getUUID(), "defense5", 1);
+			SeasonData.Claim mine = SeasonData.get().claimOf(player.getUUID());
+			if ((kind == Kind.INTERCEPTOR || kind == Kind.FLAK || kind == Kind.SAM) && mine != null && !mine.destroyed
+					&& mine.pos().distSqr(pos) <= 16 * 16) {
+				dev.rubymod.game.Goals.add(player.level().getServer(), player.getUUID(), "airdef", 1);
+			}
+			if (kind == Kind.SEISMIC || kind == Kind.RADAR) {
+				dev.rubymod.game.Goals.add(player.level().getServer(), player.getUUID(), "sensor", 1);
+			}
 		}
 		if (!level.isClientSide() && by instanceof ServerPlayer player
 				&& SeasonData.get().claimAt(Rules.dim(level), pos.getX(), pos.getZ()) == null) {

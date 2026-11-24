@@ -69,7 +69,7 @@ public class BreachingChargeEntity extends ModProjectile {
 	private void detonate(ServerLevel level) {
 		SeasonData.Claim heart = SeasonData.get().heartAt(Rules.dim(level), attachedTo);
 		if (heart != null) {
-			dev.rubymod.game.Explosions.explode(level, null, getX(), getY(), getZ(), 3.0F, false);
+			dev.rubymod.game.Explosions.explode(level, this, getX(), getY(), getZ(), 3.0F, false); // (its own damage, below)
 			Claims.damageHeart(level, heart, GameConfig.get().breachingChargeDamage, getOwner() instanceof ServerPlayer p ? p : null);
 			discard();
 		} else {

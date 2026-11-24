@@ -75,7 +75,7 @@ public final class ArmoryGuide {
 		add("lancer", "Anti-tank launcher: hold right-click to lock on to a vehicle, then left-click to fire. A heavy warhead.", "at_missile");
 		add("skyhammer", "Anti-aircraft launcher: hold right-click to lock on to a plane or helicopter, then left-click to fire. Flares can fool it.",
 				"aa_missile");
-		add("breaching_charge", "Right-click a block to stick it there: it blows 5 seconds later. The only thing that can damage an enemy's Ruby Heart.",
+		add("breaching_charge", "Right-click a block to stick it there: it blows 5 seconds later. The hardest hit on an enemy's Ruby Heart (anything wears one down, this the fastest).",
 				"ruby_heart");
 		add("c4", "Right-click to throw a sticky charge: it sticks to walls and vehicles. Crouch and right-click to set off all of yours at once. Throw your last one and you're left holding a Detonator to set them off.");
 		add("mortar", "Place it in your base. Mark a target with the Rangefinder, then right-click the Mortar holding Mortar Shells: it lobs them there.",
@@ -92,7 +92,7 @@ public final class ArmoryGuide {
 		add("concrete_wall", "A tough wall block: takes 4 blasts. Cruise missiles break it at once.", "reinforced_concrete");
 		add("reinforced_concrete", "The toughest wall: takes 6 blasts, and grenades can't hurt it at all. Cruise missiles break it at once.", "concrete_wall");
 		add("reinforced_glass", "Bulletproof glass: see out, and stop small arms. Takes 2 blasts.");
-		add("blast_door", "A heavy door that only you (and players you trust) can open.");
+		add("blast_door", "A heavy door that only you (and players you trust, before Battle Day) can open.");
 		add("barbed_wire", "Slows down anyone who walks through it. Put it outside your walls.");
 		add("holo_camo", "Copies the look of any block. You can walk through it; enemies just see a wall.");
 		add("camo_net", "Hides what's under it from aircraft flying over.");
@@ -195,7 +195,7 @@ public final class ArmoryGuide {
 		add("floodlight", "A bright light for your base, so nobody sneaks up in the dark.");
 
 		// ----- Security -----
-		add("keycard_door", "A door that opens only for you, players you trust, and whoever carries your Keycard.", "keycard");
+		add("keycard_door", "A door that opens only for you, whoever carries your Keycard, and players you trust (not on Battle Day). Walk up and right-click it.", "keycard");
 		add("keycard_reader", "Gives a redstone signal for a few seconds when someone with your Keycard uses it. Put it next to a Ruby Piston for a secret gate.",
 				"keycard", "ruby_piston", "ruby_bearing");
 		add("keycard", "Right-click it in your base to make it your base's card. Whoever carries it can open your Keycard Doors and Readers.",

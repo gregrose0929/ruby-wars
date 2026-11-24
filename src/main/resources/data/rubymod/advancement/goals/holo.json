@@ -1,0 +1,23 @@
+{
+	"parent": "rubymod:goals/root",
+	"criteria": {
+		"done": {
+			"trigger": "minecraft:impossible"
+		}
+	},
+	"display": {
+		"announce_to_chat": false,
+		"show_toast": false,
+		"frame": "task",
+		"icon": {
+			"id": "rubymod:holo_camo"
+		},
+		"title": "Hide something with Holo Camo",
+		"description": "+0 stars to spend on upgrades"
+	},
+	"requirements": [
+		[
+			"done"
+		]
+	]
+}

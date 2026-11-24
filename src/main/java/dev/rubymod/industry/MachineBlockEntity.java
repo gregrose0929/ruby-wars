@@ -678,6 +678,14 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		return claim != null && claim.canUse(shooter.getUUID());
 	}
 
+	/**
+	 * A charge stuck to a block (a Breaching Charge, or stuck C4): the dome stops things flying in (rockets, shells,
+	 * bombs, missiles), not someone who got through the walls, turrets and mines to plant one.
+	 */
+	private static boolean planted(ModProjectile p) {
+		return p instanceof dev.rubymod.entity.BreachingChargeEntity || p instanceof dev.rubymod.entity.StickyChargeEntity s && s.isStuck();
+	}
+
 	private void tickShield(ServerLevel level) {
 		MachineKind kind = kind();
 		if (!Grid.consume(power(), kind.draw(tier))) {
@@ -689,7 +697,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 		Vec3 center = Vec3.atCenterOf(worldPosition);
 		if (ticks % 2 == 0) {
 			for (ModProjectile p : level.getEntitiesOfClass(ModProjectile.class, new AABB(center, center).inflate(r + 4),
-					p -> p.isAlive() && p.position().distanceTo(center) <= r && !friendly(p.getOwner()))) {
+					p -> p.isAlive() && p.position().distanceTo(center) <= r && !friendly(p.getOwner()) && !planted(p))) {
 				long cost = p instanceof CruiseMissileEntity ? 6000 : 1500;
 				if (!Grid.consume(power(), cost)) {
 					break;

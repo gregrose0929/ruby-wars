@@ -114,6 +114,13 @@ public class MachineBlock extends BaseEntityBlock {
 			if ("defense".equals(goal)) {
 				dev.rubymod.game.Goals.add(level.getServer(), player.getUUID(), "defense5", 1);
 			}
+			if (kind == MachineKind.SHIELD_GENERATOR) {
+				dev.rubymod.game.Goals.add(level.getServer(), player.getUUID(), "shield", 1);
+			}
+			dev.rubymod.game.SeasonData.Claim mine = dev.rubymod.game.SeasonData.get().claimOf(player.getUUID());
+			if (kind == MachineKind.POINT_DEFENSE && mine != null && !mine.destroyed && mine.pos().distSqr(pos) <= 16 * 16) {
+				dev.rubymod.game.Goals.add(level.getServer(), player.getUUID(), "airdef", 1);
+			}
 			if (kind == MachineKind.RUBY_DRILL) {
 				Grid.account(player.getUUID()).drills++;
 			}

@@ -98,15 +98,63 @@ public final class FinalCircle {
 		}
 	}
 
+	/** Sudden Death's border closes in this many announced steps: each one holds still for a while, then moves in. */
+	public static final int STEPS = 3;
+	/** The part of each step it holds still (the rest, it's moving). */
+	private static final double HOLD = 0.4;
+	/** The last step/stage announced (step * 2, +1 once it's moving), so each is said once. */
+	private static int announced = -1;
+
+	/** How far the border has closed (0 to 1) at time t (0 to 1) through the closing: in steps, holding then moving. */
+	public static double stepped(double t) {
+		if (t >= 1) {
+			return 1;
+		}
+		int step = (int) (t * STEPS);
+		double local = t * STEPS - step;
+		double move = local < HOLD ? 0 : (local - HOLD) / (1 - HOLD);
+		return (step + move) / STEPS;
+	}
+
+	/** Tell everyone: the border's holding (and when it moves), or moving now. Once a second. */
+	private static void announce(MinecraftServer server, double t, long ms) {
+		if (ms < 120_000L || t >= 1) {
+			return; // a quick close (an admin's shortcut): no steps to tell
+		}
+		int step = (int) (t * STEPS);
+		double local = t * STEPS - step;
+		boolean moving = local >= HOLD;
+		int stage = step * 2 + (moving ? 1 : 0);
+		long stepMs = ms / STEPS;
+		if (stage != announced) {
+			announced = stage;
+			String msg = moving ? "The border is closing in! (step " + (step + 1) + " of " + STEPS + ")"
+					: "Step " + (step + 1) + " of " + STEPS + ": the border holds for " + BaseReport.length((long) (stepMs * HOLD)) + ", then closes in. Get inside!";
+			Alerts.broadcast(server, net.minecraft.network.chat.Component.literal(msg).withStyle(net.minecraft.ChatFormatting.RED));
+		}
+		if (!moving) {
+			long left = (long) ((HOLD - local) * stepMs / 1000);
+			net.minecraft.network.chat.Component bar = net.minecraft.network.chat.Component.literal(
+					"Border moves in " + left / 60 + ":" + String.format(java.util.Locale.ROOT, "%02d", left % 60) + "  (step " + (step + 1) + " of " + STEPS + ")")
+					.withStyle(net.minecraft.ChatFormatting.RED);
+			for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+				p.sendSystemMessage(bar, true);
+			}
+		}
+	}
+
 	private static void apply(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
-		double t = Math.max(0, Math.min(1, (SeasonTicker.now() - data.closeStart) / (double) data.closeMs));
+		double raw = Math.max(0, Math.min(1, (SeasonTicker.now() - data.closeStart) / (double) data.closeMs));
+		announce(server, raw, data.closeMs);
+		double t = data.closeMs >= 120_000L ? stepped(raw) : raw;
 		WorldBorder border = server.overworld().getWorldBorder();
 		double end = GameConfig.get().borderEndSize;
 		border.setCenter(data.closeFromX + (data.finalX + 0.5 - data.closeFromX) * t, data.closeFromZ + (data.finalZ + 0.5 - data.closeFromZ) * t);
 		border.setSize(data.closeFromSize + (end - data.closeFromSize) * t);
 		if (t >= 1) {
 			data.closeMs = 0;
+			announced = -1;
 			SeasonData.markDirty();
 		}
 	}

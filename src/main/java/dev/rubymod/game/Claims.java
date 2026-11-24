@@ -107,19 +107,28 @@ public final class Claims {
 		Alerts.toast(owner, "rubymod:ruby_heart", "Ruby Heart picked up", "Your land is open until you place it again", Alerts.GOLD);
 	}
 
+	/** When each Heart's "under attack" alert may show again (a game tick). */
+	private static final java.util.Map<String, Long> NEXT_ALERT = new java.util.HashMap<>();
+
 	public static void damageHeart(ServerLevel level, SeasonData.Claim claim, int damage, ServerPlayer attacker) {
 		if (claim.destroyed || !Rules.phase().raidWeaponsActive() || Rules.sittingOut(claim)) {
 			return;
 		}
 		claim.hp = Math.max(0, claim.hp - damage);
 		SeasonData.markDirty();
+		DefenseCredit.heartHurt(claim, attacker);
 		if (attacker != null && !attacker.getUUID().toString().equals(claim.owner)) {
 			Goals.add(level.getServer(), attacker.getUUID(), "heartkill", 1);
 		}
 		// The owner and their squad (who respawn at this Heart too) all get the alert.
 		java.util.List<UUID> side = new java.util.ArrayList<>(Squads.mates(UUID.fromString(claim.owner)));
 		side.add(UUID.fromString(claim.owner));
-		for (UUID id : side) {
+		long now = level.getGameTime();
+		boolean alert = claim.hp <= 0 || now >= NEXT_ALERT.getOrDefault(claim.owner, 0L);
+		if (alert) {
+			NEXT_ALERT.put(claim.owner, now + 60);
+		}
+		for (UUID id : alert ? side : java.util.List.<UUID>of()) {
 			ServerPlayer p = level.getServer().getPlayerList().getPlayer(id);
 			if (p != null) {
 				String whose = id.toString().equals(claim.owner) ? "HEART UNDER ATTACK" : claim.ownerName.toUpperCase() + "'S HEART UNDER ATTACK";
@@ -138,7 +147,8 @@ public final class Claims {
 		}
 		claim.destroyed = true;
 		claim.hp = 0;
-		BaseReport.heartFell(claim);
+		BaseReport.heartFell(claim, attacker);
+		DefenseCredit.heartBroken(claim);
 		SeasonData.markDirty();
 		BlockPos pos = claim.pos();
 		if (level.getBlockState(pos).is(ModBlocks.RUBY_HEART)) {
@@ -156,9 +166,12 @@ public final class Claims {
 			ItemEntity loot = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, new ItemStack(ModItems.RUBY, 10));
 			level.addFreshEntity(loot);
 		}
+		SpareHearts.heartBroken(level.getServer(), claim);
 		ServerPlayer owner = level.getServer().getPlayerList().getPlayer(UUID.fromString(claim.owner));
+		SeasonData.PlayerRecord ownerRecord = SeasonData.get().players.get(claim.owner);
 		if (owner != null) {
-			Alerts.title(owner, "HEART DESTROYED", "Your next death eliminates you", ChatFormatting.DARK_RED);
+			boolean spare = ownerRecord != null && ownerRecord.spareState == SpareHearts.CARRIED;
+			Alerts.title(owner, "HEART DESTROYED", spare ? "Put your Spare Heart down on open ground" : "Your next death eliminates you", ChatFormatting.DARK_RED);
 		}
 	}
 

@@ -36,6 +36,8 @@ public class AdminScreen extends Screen {
 		actions.add(new Action("Battle Day", "Call it off", "rubywars battle cancel", false, "Stop a Battle Day countdown"));
 		actions.add(new Action("Battle Day", "Teams on", "rubywars teams on", false, "Let everyone pick a Battle Day team (Season Choices)"));
 		actions.add(new Action("Battle Day", "Teams off", "rubywars teams off", false, "No teams: everyone on their own (the default)"));
+		actions.add(new Action("Battle Day", "Spare Hearts on", "rubywars spareheart on", false, "Lose your Heart in Open War: get one Spare Heart to come back to"));
+		actions.add(new Action("Battle Day", "Spare Hearts off", "rubywars spareheart off", false, "Heart broken: next knockdown puts you out (the default)"));
 		actions.add(new Action("Battle Day", "Pause timer", "rubywars pause", false, "Stop the clock"));
 		actions.add(new Action("Battle Day", "Resume timer", "rubywars resume", false, "Start the clock again"));
 		actions.add(new Action("World events", "Supply Cache", "rubywars event cache", false, "A Supply Cache, told two minutes ahead (while building)"));
@@ -60,7 +62,32 @@ public class AdminScreen extends Screen {
 		super.extractRenderState(g, mouseX, mouseY, partial);
 		Ui.dim(g, width, height, Ui.ease(opened, 180));
 		int w = Math.min(360, width - 24);
-		int h = Math.min(height - 16, 236);
+		// How tall it needs to be: each section's heading, and its buttons three to a row.
+		int sections = 0;
+		int rowsNeeded = 0;
+		String last = null;
+		int inSection = 0;
+		for (Action a : actions) {
+			if (!a.section().equals(last)) {
+				rowsNeeded += (inSection + 2) / 3;
+				inSection = 0;
+				sections++;
+				last = a.section();
+			}
+			inSection++;
+		}
+		rowsNeeded += (inSection + 2) / 3;
+		int step = 18;
+		int bh = 16;
+		int head = 11;
+		int need = 28 + sections * head + rowsNeeded * step + 18;
+		int h = Math.min(height - 16, Math.max(236, need));
+		if (need > h) {
+			// A small window: squeeze the rows so it all fits.
+			step = 15;
+			bh = 13;
+			head = 10;
+		}
 		int x = (width - w) / 2;
 		int y = Ui.centre(height, h);
 		Ui.panel(g, x, y, w, h);
@@ -84,24 +111,24 @@ public class AdminScreen extends Screen {
 			Action a = actions.get(i);
 			if (!a.section().equals(section)) {
 				if (col != 0) {
-					cy += 18;
+					cy += step;
 				}
 				section = a.section();
 				Ui.section(g, section, x + 10, cy, w - 20);
-				cy += 11;
+				cy += head;
 				col = 0;
 			}
 			int bx = x + 10 + col * (bw + 4);
-			boxes.add(new int[] {bx, cy, bw, 16});
+			boxes.add(new int[] {bx, cy, bw, bh});
 			String label = armed == i ? "Click again" : a.label();
-			Ui.button(g, label, bx, cy, bw, 16, mouseX, mouseY, armed == i ? Ui.GOLD : Ui.RUBY, true);
-			if (Ui.inside(mouseX, mouseY, bx, cy, bw, 16)) {
+			Ui.button(g, label, bx, cy, bw, bh, mouseX, mouseY, armed == i ? Ui.GOLD : Ui.RUBY, true);
+			if (Ui.inside(mouseX, mouseY, bx, cy, bw, bh)) {
 				tip = List.of(a.label(), a.about(), "/" + a.command());
 			}
 			col++;
 			if (col == 3) {
 				col = 0;
-				cy += 18;
+				cy += step;
 			}
 		}
 		String foot = System.currentTimeMillis() - ranAt < 3000 ? "Ran /" + lastRan : "Buttons run /rubywars commands  -  Esc to close";

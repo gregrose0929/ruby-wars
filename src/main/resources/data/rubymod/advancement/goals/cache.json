@@ -10,7 +10,7 @@
 		"show_toast": false,
 		"frame": "goal",
 		"icon": {
-			"id": "minecraft:chest"
+			"id": "minecraft:nether_star"
 		},
 		"title": "Get to a Supply Cache",
 		"description": "+2 stars to spend on upgrades"

@@ -73,7 +73,7 @@ public class MineBlockEntity extends BlockEntity {
 			now.addAll(Squads.mates(owner));
 			SeasonData.Claim claim = SeasonData.get().claimOf(owner);
 			if (claim != null) {
-				for (String trusted : claim.trusted) {
+				for (String trusted : claim.activeTrusted()) {
 					now.add(UUID.fromString(trusted));
 				}
 			}

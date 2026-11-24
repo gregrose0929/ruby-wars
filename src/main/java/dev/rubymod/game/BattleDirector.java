@@ -105,9 +105,15 @@ public final class BattleDirector {
 					record.missilesUsed = 0;
 					record.killstreak = 0;
 				}
-				Alerts.broadcastTitle(server, "BATTLE DAY", "Lockdown: claims open, PvP in " + config.lockdownMinutes + " min", ChatFormatting.RED);
-				Alerts.broadcast(server, Component.literal("Battle Day has begun! Claims are open and defenses are online. "
-						+ "PvP starts in " + config.lockdownMinutes + " minutes.").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+				Alerts.broadcastTitle(server, "BATTLE DAY", "Lockdown: bases safe, Open War in " + config.lockdownMinutes + " min", ChatFormatting.RED);
+				Alerts.broadcast(server, Component.literal("Battle Day has begun! Bases stay safe for " + config.lockdownMinutes
+						+ " minutes: last touches, then get in position. Then Open War: PvP on, bases open, defenses fight.")
+						.withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+				boolean anyTrust = data.claims.values().stream().anyMatch(c -> !c.trusted.isEmpty());
+				if (anyTrust) {
+					Alerts.broadcast(server, Component.literal("On Battle Day, trust doesn't count: only teammates share a base.")
+							.withStyle(ChatFormatting.GRAY));
+				}
 				playToAll(server, SoundEvents.RAID_HORN.value(), 1.0F);
 			}
 			case WAR -> {
@@ -138,7 +144,8 @@ public final class BattleDirector {
 						Goals.add(server, UUID.fromString(entry.getKey()), "sudden", 1);
 					}
 				}
-				// The border closes on the final circle (on your map), sliding over as it shrinks.
+				SpareHearts.suddenDeath(server);
+				// The border closes on the final circle (on your map), in three steps.
 				FinalCircle.close(server, config.suddenDeathMinutes * 60_000L);
 				Alerts.broadcastTitle(server, "SUDDEN DEATH", "No more respawns. The border is closing on the final circle (your map).", ChatFormatting.DARK_RED);
 				playToAll(server, SoundEvents.WITHER_SPAWN, 1.0F);
@@ -360,7 +367,8 @@ public final class BattleDirector {
 		if (!data.phase.isBattle()) {
 			return;
 		}
-		boolean canRespawn = data.phase.heartsGiveRespawns() && respawnHeart(victim.getUUID()) != null;
+		boolean canRespawn = data.phase.heartsGiveRespawns()
+				&& (respawnHeart(victim.getUUID()) != null || SpareHearts.canRespawn(server, victim.getUUID()));
 		if (!canRespawn) {
 			eliminate(server, victim.getUUID(), record, null);
 		}
@@ -376,6 +384,10 @@ public final class BattleDirector {
 			return;
 		}
 		SeasonData.Claim claim = respawnHeart(player.getUUID());
+		if (claim == null && SpareHearts.respawn(player)) {
+			player.sendSystemMessage(Component.literal("Back at your Spare Heart.").withStyle(ChatFormatting.GREEN), true);
+			return;
+		}
 		if (claim != null) {
 			ServerLevel level = player.level().getServer().overworld();
 			BlockPos spot = safeSpotNear(level, claim.pos());
@@ -402,7 +414,7 @@ public final class BattleDirector {
 		return null;
 	}
 
-	private static BlockPos safeSpotNear(ServerLevel level, BlockPos heart) {
+	public static BlockPos safeSpotNear(ServerLevel level, BlockPos heart) {
 		for (int dy = 1; dy < 6; dy++) {
 			BlockPos p = heart.above(dy);
 			if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir()) {
@@ -609,7 +621,12 @@ public final class BattleDirector {
 			String stood = BaseReport.heartStood(player.getUUID());
 			if (!stood.isEmpty()) {
 				// (Lines starting "@" go on the wrap-up's "Your base" page.)
-				mine.add("@Heart stood on Battle Day|" + stood);
+				mine.add("@Your Heart on Battle Day|" + stood);
+				mine.add("@Attacks stopped|" + DefenseCredit.stopped(me));
+				String by = DefenseCredit.stoppedBy(me);
+				if (!by.isEmpty()) {
+					mine.add("@What stopped them|" + by);
+				}
 				mine.add("@Turret hits|" + me.defenseHits);
 				mine.add("@Base blocks blown up|" + String.format(java.util.Locale.ROOT, "%,d", me.blocksLost));
 			}
@@ -705,7 +722,13 @@ public final class BattleDirector {
 		// The build side: the busiest machines, and the toughest defenses.
 		award(awards, "Busiest factory", data, r -> (int) Math.min(Integer.MAX_VALUE, BaseReport.made(r)),
 				n -> String.format(java.util.Locale.ROOT, "%,d", n) + " things made", "rubymod:ruby_drill");
-		award(awards, "Toughest defenses", data, r -> r.defenseHits, n -> n + (n == 1 ? " turret hit" : " turret hits"), "rubymod:sentry_turret");
+		// Attacks stopped first, then turret hits.
+		award(awards, "Toughest defenses", data, r -> r.attacksStopped * 1000 + Math.min(999, r.defenseHits), n -> {
+			int stopped = n / 1000;
+			int hits = n % 1000;
+			String h = hits + (hits == 1 ? " turret hit" : " turret hits");
+			return stopped == 0 ? h : stopped + (stopped == 1 ? " attack stopped" : " attacks stopped") + (hits > 0 ? ", " + h : "");
+		}, "rubymod:sentry_turret");
 		// What each base was famous for (their own pick: recognition, not a contest).
 		for (SeasonData.PlayerRecord r : data.players.values()) {
 			if (!r.theme.isEmpty()) {

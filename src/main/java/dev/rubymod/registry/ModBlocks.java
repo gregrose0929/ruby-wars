@@ -46,6 +46,11 @@ public class ModBlocks {
 			props().mapColor(MapColor.DEEPSLATE).strength(4.5F, 3.0F).requiresCorrectToolForDrops().sound(SoundType.DEEPSLATE));
 
 	// --- Base ---
+	/** A Spare Heart (an admin option, see SpareHearts): somewhere to come back to after your Heart is broken. Anyone can break it. */
+	public static final Block SPARE_HEART = register("spare_heart", Block::new,
+			props().mapColor(MapColor.FIRE).strength(4.0F, 6.0F).sound(SoundType.AMETHYST).lightLevel(s -> 9).noOcclusion()
+					.pushReaction(PushReaction.IMMOVEABLE),
+			dev.rubymod.item.SpareHeartItem::new);
 	public static final Block RUBY_HEART = register("ruby_heart", RubyHeartBlock::new,
 			props().mapColor(MapColor.FIRE).strength(3.0F, 3_600_000.0F).sound(SoundType.AMETHYST).lightLevel(s -> 12)
 					.pushReaction(PushReaction.IMMOVEABLE),

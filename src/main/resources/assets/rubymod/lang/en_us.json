@@ -164,6 +164,8 @@
 	"block.rubymod.ruby_ore": "Ruby Ore",
 	"block.rubymod.deepslate_ruby_ore": "Deepslate Ruby Ore",
 	"block.rubymod.ruby_heart": "Ruby Heart",
+	"block.rubymod.spare_heart": "Spare Heart",
+	"block.rubymod.spare_heart.desc": "Your Heart was broken: put this down on open ground in Open War and you come back here while it stands. Anyone can break it.",
 	"block.rubymod.armory": "Armory",
 	"block.rubymod.sandbags": "Sandbags",
 	"block.rubymod.concrete_wall": "Concrete Wall",

@@ -50,6 +50,11 @@ public class StickyChargeEntity extends ModProjectile {
 	}
 
 	/** True if this player has charges out (then right-click detonates instead of throwing). */
+	/** Stuck to something (not flying): a Shield Generator lets it be. */
+	public boolean isStuck() {
+		return stuck;
+	}
+
 	public static boolean hasCharges(Player player) {
 		List<StickyChargeEntity> list = PLACED.get(player.getUUID());
 		if (list == null) {

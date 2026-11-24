@@ -21,6 +21,8 @@ ICONS = {
     "loader100": "rubymod:belt_loader", "busy3": "rubymod:constructor", "raid": "minecraft:shield", "raidclean": "minecraft:totem_of_undying",
     "knockout": "minecraft:iron_sword", "heartkill": "minecraft:tnt", "sudden": "minecraft:wither_skeleton_skull",
     "drive": "rubymod:jeep", "fly": "rubymod:jetpack", "sail": "minecraft:oak_boat", "dig": "rubymod:tunnel_borer",
+    "coverage": "rubymod:sentry_turret", "airdef": "rubymod:flak_cannon", "shield": "rubymod:shield_generator", "holo": "rubymod:holo_camo",
+    "sensor": "rubymod:seismic_sensor", "dummy": "rubymod:practice_dummy",
 }
 
 

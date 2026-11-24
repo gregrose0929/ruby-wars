@@ -71,7 +71,7 @@ public class ManualScreen extends Screen {
 					"Build until everyone's ready, then survive one Battle Day. You each have your own base: the last one standing wins (or the last team, "
 							+ "if the admin turns teams on for the season: same colour, same side).",
 					"Place your Ruby Heart to claim land: nobody else can build there, and you're safe inside it until Battle Day. Outside the bases you can fight.",
-					"Battle Day: Lockdown (defenses arm), Open War (PvP, Hearts can be breached, you respawn at your Heart, and a supply drop every 15 minutes: told 30 seconds ahead, with a beam over the spot), "
+					"Battle Day: Lockdown (bases still safe: last touches, get in position), Open War (PvP, bases open, Hearts can be worn down by anything: Breaching Charges hit hardest; you respawn at your Heart, and a supply drop every 15 minutes: told 30 seconds ahead, with a beam over the spot), "
 							+ "Sudden Death (Hearts shatter, the border closes on the final circle), Final Circle. The final circle is somewhere different each season: it's on your map (K) from Open War, and the top of the screen says if you're outside it.",
 					"Respawns: in Lockdown and Open War you come back at your Heart while it stands (the line under the timer says so). "
 							+ "Heart gone, or Sudden Death: your next death knocks you out.",

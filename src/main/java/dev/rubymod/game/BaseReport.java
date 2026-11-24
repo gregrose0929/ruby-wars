@@ -46,13 +46,20 @@ public final class BaseReport {
 		}
 	}
 
-	/** This base's Heart has gone (on Battle Day). */
-	public static void heartFell(SeasonData.Claim claim) {
+	/** This base's Heart has gone (on Battle Day): broken by someone, or taken by Sudden Death after it held all of Open War. */
+	public static void heartFell(SeasonData.Claim claim, net.minecraft.server.level.ServerPlayer attacker) {
 		SeasonData.PlayerRecord r = ownerOf(claim);
-		if (r != null && SeasonData.get().phase.isBattle() && r.heartFellAt == 0) {
-			r.heartFellAt = SeasonTicker.now();
-			SeasonData.markDirty();
+		SeasonData data = SeasonData.get();
+		if (r == null || !data.phase.isBattle() || r.heartFellAt != 0 || r.heartHeld) {
+			return;
 		}
+		if (attacker == null && data.phase != Phase.WAR && data.phase != Phase.LOCKDOWN) {
+			r.heartHeld = true;
+		} else {
+			r.heartFellAt = SeasonTicker.now();
+			r.heartBrokenBy = attacker == null ? "" : attacker.getName().getString();
+		}
+		SeasonData.markDirty();
 	}
 
 	/** "1 hour 10 minutes", "12 minutes", "under a minute". */
@@ -68,7 +75,10 @@ public final class BaseReport {
 		return hours.isEmpty() ? mins : mins.isEmpty() ? hours : hours + " " + mins;
 	}
 
-	/** How long this player's Heart stood on Battle Day ("to the end", or how long). Empty if Battle Day never came. */
+	/**
+	 * What happened to this player's Heart on Battle Day: "Never broken: held to Sudden Death", "Never broken", or
+	 * "Broken by Sam, 23 minutes in". Empty if Battle Day never came.
+	 */
 	public static String heartStood(UUID id) {
 		SeasonData data = SeasonData.get();
 		SeasonData.PlayerRecord r = data.players.get(id.toString());
@@ -76,10 +86,14 @@ public final class BaseReport {
 		if (r == null || claim == null || data.battleStartedAt == 0) {
 			return "";
 		}
-		if (r.heartFellAt == 0) {
-			return "To the end";
+		if (r.heartHeld) {
+			return "Never broken: held to Sudden Death";
 		}
-		return length(Math.max(0, r.heartFellAt - data.battleStartedAt));
+		if (r.heartFellAt == 0) {
+			return "Never broken";
+		}
+		String when = length(Math.max(0, r.heartFellAt - data.battleStartedAt)) + " in";
+		return r.heartBrokenBy == null || r.heartBrokenBy.isEmpty() ? "Broken, " + when : "Broken by " + r.heartBrokenBy + ", " + when;
 	}
 
 	/** Everything this player's machines made this season (see Production). */

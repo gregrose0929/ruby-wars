@@ -140,6 +140,7 @@ public final class Practice {
 			return;
 		}
 		s.hits.merge(by, 1, Integer::sum);
+		Goals.add(level.getServer(), java.util.UUID.fromString(s.claimOwner), "dummy", 1);
 		int n = s.total();
 		dummy.setCustomName(Component.literal("Practice Dummy: " + n + (n == 1 ? " hit" : " hits")).withStyle(ChatFormatting.GOLD));
 		level.sendParticles(ParticleTypes.CRIT, dummy.getX(), dummy.getY() + 1.2, dummy.getZ(), 6, 0.2, 0.3, 0.2, 0.2);

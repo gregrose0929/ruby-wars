@@ -175,6 +175,10 @@ public final class Gunfire {
 			BlockPos pos = blockHit.getBlockPos();
 			BlockState state = level.getBlockState(pos);
 			impact(level, blockHit, state, stats);
+			if (dev.rubymod.game.HeartDamage.bullet(level, pos, stats.damage(), shooter)) {
+				drawTracer(level, start, hitPos, stats);
+				return; // A Ruby Heart: it takes the hit (in Open War, from an enemy).
+			}
 			if (stats.special() == GunStats.Special.BREACH && isBreachable(state) && Rules.canWeaponBreak(level, pos, state)) {
 				level.destroyBlock(pos, false, shooter);
 			} else if (BlockDamage.hit(level, pos, stats.damage(), shooter)) {

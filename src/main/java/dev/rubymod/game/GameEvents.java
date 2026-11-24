@@ -230,6 +230,9 @@ public final class GameEvents {
 			Movers.tick();
 			NightBattle.tick(server);
 			VersionCheck.tick(server);
+			if (server.getTickCount() % 10 == 0) {
+				DefenseCoverage.tick(server, server.getTickCount() % 20 == 0);
+			}
 			if (server.getTickCount() % 20 == 0) {
 				SeasonTicker.tickSecond(server);
 				server.getAllLevels().forEach(dev.rubymod.gun.BlockDamage::heal);
@@ -248,6 +251,8 @@ public final class GameEvents {
 				TrainingGround.tick();
 				Waypoints.sync(server);
 				Goals.tickSecond(server);
+				DefenseCredit.tickSecond(server);
+				SpareHearts.tickSecond(server);
 				Hub.tickSecond(server);
 				if (!GameConfig.get().hunger) {
 					for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -493,6 +498,7 @@ public final class GameEvents {
 		});
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity instanceof ServerPlayer player) {
+				DefenseCredit.died(player.level().getServer(), player, source);
 				BattleDirector.onDeath(player, source);
 				BattleDirector.sendDeathInfo(player, source);
 			} else {
@@ -520,6 +526,15 @@ public final class GameEvents {
 			if (!Duels.onRespawn(newPlayer)) {
 				BattleDirector.onRespawn(newPlayer);
 			}
+		});
+
+		// Hitting an enemy's Ruby Heart in Open War wears it down (see HeartDamage).
+		net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
+			if (!level.isClientSide() && player instanceof ServerPlayer sp && level.getBlockState(pos).is(dev.rubymod.registry.ModBlocks.RUBY_HEART)
+					&& HeartDamage.swing(sp, level, pos)) {
+				return InteractionResult.SUCCESS;
+			}
+			return InteractionResult.PASS;
 		});
 
 		// --- Claim protection ---
@@ -655,7 +670,9 @@ public final class GameEvents {
 		}
 		boolean owner = claim.owner.equals(player.getUUID().toString());
 		if (Rules.phase().isBattle()) {
-			deny(player, owner ? "You can't move your Heart on Battle Day." : "Hearts can only be destroyed with a Breaching Charge.");
+			deny(player, owner ? "You can't move your Heart on Battle Day."
+					: !Rules.phase().raidWeaponsActive() ? "Hearts can be attacked once Open War starts."
+					: "A Heart doesn't break like a block: keep hitting it, shoot it or blow it up (Breaching Charges hit hardest).");
 			return false;
 		}
 		if (!owner && !Rules.isAdminBypass(player)) {

@@ -60,7 +60,7 @@ public class HoloBlockEntity extends BlockEntity {
 		Set<UUID> now = new HashSet<>(Squads.mates(owner));
 		SeasonData.Claim claim = SeasonData.get().claimOf(owner);
 		if (claim != null) {
-			for (String trusted : claim.trusted) {
+			for (String trusted : claim.activeTrusted()) {
 				now.add(UUID.fromString(trusted));
 			}
 		}

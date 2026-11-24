@@ -47,6 +47,8 @@ public final class Celebrations {
 			case "fw_rainbow" -> List.of(burst(FireworkExplosion.Shape.LARGE_BALL, ints(0xFF3030, 0xFF9020, 0xFFE030, 0x40D040, 0x3070FF, 0xA040FF),
 					ints(0xFFFFFF), true, false));
 			case "fw_duelist" -> List.of(burst(FireworkExplosion.Shape.BURST, ints(0xFF6020, 0xFFD040), ints(0xFF2000), true, false));
+			case "fw_fortress" -> List.of(burst(FireworkExplosion.Shape.STAR, ints(0x40A0FF, 0xFF4040), ints(0xFFD040), true, false),
+					burst(FireworkExplosion.Shape.SMALL_BALL, ints(0xFF4D88), ints(0xFFFFFF), false, true));
 			case "fw_champion" -> List.of(burst(FireworkExplosion.Shape.LARGE_BALL, ints(0xFFD040, 0xE0203A), ints(0xFFF0A0), true, true),
 					burst(FireworkExplosion.Shape.STAR, ints(0xFFFFFF), ints(0xFFD040), false, true));
 			default -> List.of();
