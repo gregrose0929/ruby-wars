@@ -113,6 +113,174 @@ public final class SelfTest {
 		}
 	}
 
+	/** A test season's player with a standing Heart far up in the sky (away from everything else). */
+	private static SeasonData.PlayerRecord testRecord(SeasonData data, UUID id, String name, BlockPos at) {
+		SeasonData.PlayerRecord r = new SeasonData.PlayerRecord();
+		r.name = name;
+		data.players.put(id.toString(), r);
+		SeasonData.Claim c = new SeasonData.Claim();
+		c.owner = id.toString();
+		c.ownerName = name;
+		c.dimension = "minecraft:overworld";
+		c.x = at.getX();
+		c.y = at.getY();
+		c.z = at.getZ();
+		c.hp = c.maxHp();
+		data.claims.put(id.toString(), c);
+		return r;
+	}
+
+	/** Battle Day as a family appointment, sitting out, no contest, teams, the night vote and the wrap-up's awards. */
+	private void seasonFlowChecks(ServerLevel level, FakePlayer alpha, FakePlayer bravo, BlockPos base) {
+		var server = level.getServer();
+		SeasonData data = SeasonData.get();
+		// Keep what's there and put it back after.
+		var claims = new java.util.LinkedHashMap<>(data.claims);
+		var players = new java.util.LinkedHashMap<>(data.players);
+		var squads = new java.util.LinkedHashMap<>(data.squads);
+		var champions = new ArrayList<>(data.pastChampions);
+		Phase phase = data.phase;
+		long ends = data.phaseEndsAt;
+		long paused = data.pausedRemaining;
+		long buildMinutes = data.buildMinutes;
+		String winner = data.winner;
+		boolean counted = data.seasonCounted;
+		UUID charlie = UUID.fromString("00000000-0000-0000-0000-0000000c4a71");
+		BlockPos sky = base.offset(2000, 0, 2000).atY(300);
+		try {
+			// Ready: the date's come with nobody on, and Battle Day waits.
+			data.claims.clear();
+			data.players.clear();
+			testRecord(data, alpha.getUUID(), "TestAlpha", sky);
+			testRecord(data, bravo.getUUID(), "TestBravo", sky.offset(100, 0, 0));
+			data.phase = Phase.BUILD;
+			data.buildMinutes = 60;
+			data.pausedRemaining = -1;
+			data.phaseEndsAt = dev.rubymod.game.SeasonTicker.now() - 1000;
+			dev.rubymod.game.SeasonTicker.tickSecond(server);
+			check("battle day: when its date comes it's ready and waits for everyone (" + data.phase + ", ready " + data.battleReady + ")",
+					data.phase == Phase.BUILD && data.battleReady && !dev.rubymod.game.SeasonTicker.battleCalled());
+			data.battleReady = false;
+
+			// Going: nobody's on, so its clock waits.
+			data.phase = Phase.WAR;
+			data.phaseEndsAt = dev.rubymod.game.SeasonTicker.now() + 600_000L;
+			data.pausedRemaining = -1;
+			data.nextSupplyDropAt = dev.rubymod.game.SeasonTicker.now() + 600_000L;
+			dev.rubymod.game.SeasonTicker.tickSecond(server);
+			check("battle day: its clock pauses while nobody's on (" + data.pausedRemaining + ", auto " + data.autoPaused + ")",
+					data.phase == Phase.WAR && data.pausedRemaining > 0 && data.autoPaused);
+			data.autoPaused = false;
+			data.pausedRemaining = -1;
+
+			// Sudden Death with everyone away: they sit it out, nobody's crowned, and nobody's both champion and out.
+			SeasonData.PlayerRecord c = testRecord(data, charlie, "TestCharlie", sky.offset(200, 0, 0));
+			data.pastChampions.clear();
+			data.seasonCounted = false;
+			data.winner = "";
+			dev.rubymod.game.BattleDirector.enterPhase(server, Phase.SUDDEN_DEATH);
+			SeasonData.PlayerRecord a = data.player(alpha.getUUID());
+			SeasonData.PlayerRecord b = data.player(bravo.getUUID());
+			check("sitting out: away for Sudden Death is sitting out, and with no fight it's no contest (" + data.phase + ", '" + data.winner + "', "
+					+ a.satOut + b.satOut + c.satOut + ", charlie out " + c.eliminated + ")",
+					data.phase == Phase.ENDED && data.winner.isEmpty() && a.satOut && b.satOut && !c.eliminated && data.pastChampions.isEmpty());
+
+			// Again, with a fight: the last one standing is the champion, and stays in.
+			data.claims.clear();
+			data.players.clear();
+			a = testRecord(data, alpha.getUUID(), "TestAlpha", sky);
+			b = testRecord(data, bravo.getUUID(), "TestBravo", sky.offset(100, 0, 0));
+			c = testRecord(data, charlie, "TestCharlie", sky.offset(200, 0, 0));
+			c.kills = 1;
+			data.phase = Phase.WAR;
+			data.seasonCounted = false;
+			data.winner = "";
+			dev.rubymod.game.BattleDirector.enterPhase(server, Phase.SUDDEN_DEATH);
+			check("champion: the last one standing wins and isn't also put out ('" + data.winner + "', out " + c.eliminated + ")",
+					data.phase == Phase.ENDED && "TestCharlie".equals(data.winner) && !c.eliminated && data.pastChampions.size() == 1);
+
+			// Teams and the night vote: two picked red, one blue (alone, so on their own); two voted for night.
+			data.claims.clear();
+			data.players.clear();
+			data.squads.clear();
+			a = testRecord(data, alpha.getUUID(), "TestAlpha", sky);
+			b = testRecord(data, bravo.getUUID(), "TestBravo", sky.offset(100, 0, 0));
+			c = testRecord(data, charlie, "TestCharlie", sky.offset(200, 0, 0));
+			a.team = "red";
+			b.team = "red";
+			c.team = "blue";
+			a.nightVote = 1;
+			b.nightVote = 1;
+			c.nightVote = 2;
+			data.phase = Phase.BUILD;
+			dev.rubymod.game.SeasonChoices.onBattleDay(server);
+			data.phase = Phase.WAR;
+			boolean teams = dev.rubymod.game.Squads.enabled() && dev.rubymod.game.Squads.same(alpha.getUUID(), bravo.getUUID())
+					&& !dev.rubymod.game.Squads.same(alpha.getUUID(), charlie) && data.squads.size() == 1;
+			check("teams: the same colour is one side, someone alone in a colour plays on their own", teams);
+			check("teams: teammates can't hurt each other", !Rules.canHurt(alpha, bravo));
+			check("night vote: the most votes win (" + data.nightChoice + ")", Boolean.TRUE.equals(data.nightChoice)
+					&& dev.rubymod.game.NightBattle.active());
+			// Red wins, with one of them already out: they win together.
+			c.kills = 0;
+			a.kills = 1;
+			b.eliminated = true;
+			data.seasonCounted = false;
+			data.winner = "";
+			dev.rubymod.game.BattleDirector.eliminate(server, charlie, c, null);
+			check("teams: the last team standing wins together ('" + data.winner + "', " + dev.rubymod.game.BattleDirector.onWinningSide(alpha.getUUID())
+					+ ", " + dev.rubymod.game.BattleDirector.onWinningSide(bravo.getUUID()) + ")",
+					"Red team".equals(data.winner) && dev.rubymod.game.BattleDirector.onWinningSide(alpha.getUUID())
+							&& dev.rubymod.game.BattleDirector.onWinningSide(bravo.getUUID()) && !dev.rubymod.game.BattleDirector.onWinningSide(charlie));
+
+			// The wrap-up: an award for everyone, and what each base is famous for.
+			a.theme = "walls";
+			List<String> awards = dev.rubymod.game.BattleDirector.awardsNow();
+			boolean everyone = true;
+			for (SeasonData.PlayerRecord r : data.players.values()) {
+				boolean has = false;
+				for (String aw : awards) {
+					has |= aw.split("[|]")[1].equals(r.name);
+				}
+				everyone &= has;
+			}
+			check("awards: everyone gets one, and a base's pick is recognised (" + awards.size() + ")", everyone
+					&& awards.stream().anyMatch(aw -> aw.startsWith("Famous for its walls|TestAlpha")));
+			// How your base held up.
+			data.phase = Phase.WAR;
+			data.battleStartedAt = dev.rubymod.game.SeasonTicker.now() - 3_600_000L;
+			dev.rubymod.game.BaseReport.defenseHit(data.claimOf(alpha.getUUID()));
+			check("base report: turret hits counted, and the Heart stood to the end (" + a.defenseHits + ", "
+					+ dev.rubymod.game.BaseReport.heartStood(alpha.getUUID()) + ")",
+					a.defenseHits == 1 && "To the end".equals(dev.rubymod.game.BaseReport.heartStood(alpha.getUUID())));
+			data.nightChoice = null;
+		} finally {
+			data.claims.clear();
+			data.claims.putAll(claims);
+			data.players.clear();
+			data.players.putAll(players);
+			data.squads.clear();
+			data.squads.putAll(squads);
+			data.pastChampions = champions;
+			data.phase = phase;
+			data.phaseEndsAt = ends;
+			data.pausedRemaining = paused;
+			data.buildMinutes = buildMinutes;
+			data.winner = winner;
+			data.seasonCounted = counted;
+			data.battleReady = false;
+			data.autoPaused = false;
+			data.battleStartedAt = 0;
+			data.nightChoice = null;
+		}
+
+		// Plain belts are free; the clever belt parts still need Logistics.
+		check("research: plain belts, ramps and loaders are free, sorters still need Logistics",
+				dev.rubymod.game.Research.lockFor("conveyor") == null && dev.rubymod.game.Research.lockFor("belt_ramp") == null
+						&& dev.rubymod.game.Research.lockFor("belt_loader") == null && dev.rubymod.game.Research.lockFor("belt_sorter") != null);
+		check("world events: a Ruby Shrine still needs two or more on", dev.rubymod.game.WorldEvents.shrinePlayers() >= 2);
+	}
+
 	/** Share of {@code n} drill hauls that are one of {@code items}. */
 	private static double share(int tier, int focus, dev.rubymod.industry.DrillSite site, int n, net.minecraft.world.item.Item... items) {
 		var random = net.minecraft.util.RandomSource.create(1234);
@@ -1112,6 +1280,9 @@ public final class SelfTest {
 			wand.setDamageValue(wand.getMaxDamage() - 1);
 			check("builder's wand: a worn one mends itself", dev.rubymod.item.BuildersWandItem.mend(wand) && wand.getDamageValue() == wand.getMaxDamage() - 2);
 		}
+
+		// ----- The family season: Battle Day waits, sitting out, no contest, teams, choices, awards -----
+		seasonFlowChecks(level, alpha, bravo, base);
 
 		// ----- Water, falls and ramming; aircraft ditching; hidden mines -----
 		{

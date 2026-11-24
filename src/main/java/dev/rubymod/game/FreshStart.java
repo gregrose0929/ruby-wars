@@ -44,6 +44,10 @@ public final class FreshStart {
 		data.buildStartedAt = 0;
 		data.buildMinutes = -1;
 		data.winner = "";
+		data.battleReady = false;
+		data.autoPaused = false;
+		data.battleStartedAt = 0;
+		data.nightChoice = null;
 		data.season = nextSeason;
 		data.pastChampions = champions;
 		data.freshSeason = nextSeason;

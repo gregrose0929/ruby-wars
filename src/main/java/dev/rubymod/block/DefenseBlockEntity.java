@@ -365,7 +365,9 @@ public class DefenseBlockEntity extends BlockEntity {
 		if (practice) {
 			dev.rubymod.game.Practice.hit(victim, "Sentry Turret"); // practice rounds are free
 		} else {
-			victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, owner(level, claim)), TURRET_DAMAGE);
+			if (victim.hurtServer(level, ModDamage.source(level, ModDamage.TURRET, null, owner(level, claim)), TURRET_DAMAGE)) {
+				dev.rubymod.game.BaseReport.defenseHit(claim);
+			}
 			ammo--;
 			ammoWarning(level, pos, claim, "Sentry Turret");
 		}

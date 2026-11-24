@@ -709,6 +709,23 @@ public final class MorePayloads {
 	/**
 	 * Server -> client: the season wrap-up card. awards: "title|who|detail|item id" each; mine: "label|value" each.
 	 */
+	/** The Season Choices screen: your picks, whether Battle Day's choices are still open, and how everyone's picked. */
+	public record ChoicesState(String team, int night, String theme, boolean open, String summary) implements CustomPacketPayload {
+		public static final Type<ChoicesState> TYPE = new Type<>(RubyMod.id("choices_state"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ChoicesState> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8, ChoicesState::team,
+				ByteBufCodecs.VAR_INT, ChoicesState::night,
+				ByteBufCodecs.STRING_UTF8, ChoicesState::theme,
+				ByteBufCodecs.BOOL, ChoicesState::open,
+				ByteBufCodecs.STRING_UTF8, ChoicesState::summary,
+				ChoicesState::new);
+
+		@Override
+		public Type<ChoicesState> type() {
+			return TYPE;
+		}
+	}
+
 	public record SeasonRecap(String title, String winner, List<String> awards, List<String> mine) implements CustomPacketPayload {
 		public static final Type<SeasonRecap> TYPE = new Type<>(RubyMod.id("season_recap"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SeasonRecap> CODEC = StreamCodec.composite(
@@ -741,6 +758,7 @@ public final class MorePayloads {
 		PayloadTypeRegistry.clientboundPlay().register(Note.TYPE, Note.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(VeteranSync.TYPE, VeteranSync.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(SeasonRecap.TYPE, SeasonRecap.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(ChoicesState.TYPE, ChoicesState.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(TravelAsk.TYPE, TravelAsk.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(PhotoAsk.TYPE, PhotoAsk.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(BookScreen.TYPE, BookScreen.CODEC);

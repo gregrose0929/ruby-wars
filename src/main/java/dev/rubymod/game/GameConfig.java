@@ -70,12 +70,11 @@ public class GameConfig {
 	public int graveLockSeconds = 300;
 	/** An unclaimed grave breaks open after this many minutes, spilling what's left. */
 	public int graveDecayMinutes = 60;
-	/** Research: advanced Armory gear starts locked (see Research). Squadmates share what they research. */
+	/** Research: advanced Armory gear starts locked (see Research). Everyone has their own tree. */
 	public boolean research = true;
-	public boolean squadsShareResearch = true;
 	/**
 	 * Build-phase world events (a Supply Cache, a Ruby Shrine, a Ruby Meteor, in turn): about this often (minutes),
-	 * counting only time with at least worldEventMinPlayers in Ruby Wars. 0: none.
+	 * counting only time with someone in Ruby Wars. 0: none. A Ruby Shrine needs worldEventMinPlayers on (never fewer than two).
 	 */
 	public int worldEventMinutes = 40;
 	public int worldEventMinPlayers = 2;

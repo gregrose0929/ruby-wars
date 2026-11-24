@@ -47,7 +47,9 @@ public final class NightBattle {
 	public static boolean forced;
 
 	public static boolean active() {
-		return forced || GameConfig.get().nightBattle && Rules.phase().isBattle();
+		// The family's vote (Season Choices) decides; with no vote, the server's setting does.
+		Boolean choice = SeasonData.get().nightChoice;
+		return forced || (choice != null ? choice : GameConfig.get().nightBattle) && Rules.phase().isBattle();
 	}
 
 	/** Night vision from the goggles: topped up while they're on, taken away as soon as they're off (a potion's left alone). */

@@ -340,6 +340,7 @@ public class RubyModClient implements ClientModInitializer {
 		dev.rubymod.client.BookScreen.register();
 		dev.rubymod.client.HostScreen.register();
 		dev.rubymod.client.SeasonRecapScreen.register();
+		dev.rubymod.client.SeasonChoicesScreen.register();
 		RubyToast.register();
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.rubymod.net.MorePayloads.VeteranSync.TYPE,
 				(p, c) -> dev.rubymod.game.Veterans.receive(p.lines()));

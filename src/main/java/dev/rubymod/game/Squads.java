@@ -14,11 +14,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Squads: up to {@code squadMaxSize} players who fight as one. Squadmates can't
- * shoot each other, share each other's claims (build, open, defenses ignore
- * them), respawn at any standing squad Heart, see each other on the map and
- * through walls, share pings, and win together: Battle Day ends when one squad
- * (or one solo player) is left.
+ * Sides on Battle Day. Ruby Wars has no squads to make or join any more: the only sides are the Battle Day teams the
+ * family picks on the Season Choices screen (SeasonChoices makes them when Battle Day starts). Teammates can't shoot
+ * each other, their defenses and doors leave each other alone, they can respawn at a teammate's standing Heart, see each
+ * other on the map, share pings, and win together: Battle Day ends when one team (or one player on their own) is left.
  */
 public final class Squads {
 	/** Pending invites: invited player -> squad name. */
@@ -37,9 +36,13 @@ public final class Squads {
 		return SeasonData.get().squads;
 	}
 
-	/** Ruby Wars has no squads: everyone plays on their own, and nobody shares a base. (The old squad code stays asleep.) */
+	/**
+	 * Ruby Wars has no squads to make: everyone builds on their own. The only sides are Battle Day teams, picked on the
+	 * Season Choices screen and made when Battle Day starts (see SeasonChoices); they last until the season's over.
+	 */
 	public static boolean enabled() {
-		return false;
+		SeasonData data = SeasonData.get();
+		return !data.squads.isEmpty() && (data.phase.isBattle() || data.phase == Phase.ENDED);
 	}
 
 	public static final String OFF = "Ruby Wars has no squads: everyone plays on their own.";
@@ -79,7 +82,7 @@ public final class Squads {
 	}
 
 	public static String create(ServerPlayer player, String name) {
-		if (!enabled()) {
+		if (!enabled() || SeasonData.get().phase.isBattle() || SeasonData.get().phase == Phase.ENDED) {
 			return OFF;
 		}
 		if (of(player.getUUID()) != null) {

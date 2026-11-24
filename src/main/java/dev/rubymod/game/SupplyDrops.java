@@ -55,6 +55,17 @@ public final class SupplyDrops {
 	}
 
 	private static final List<Drop> DROPS = new ArrayList<>();
+
+	/** The season clock was paused while the server wasn't ticking (off, or asleep): everything here waits that much longer. */
+	public static void shift(long ms) {
+		for (Drop drop : DROPS) {
+			drop.landsAt += ms;
+			drop.until += ms;
+			if (drop.emptiedAt >= 0) {
+				drop.emptiedAt += ms;
+			}
+		}
+	}
 	private static long skew;
 
 	private SupplyDrops() {

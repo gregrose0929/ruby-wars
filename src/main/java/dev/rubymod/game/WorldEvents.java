@@ -49,7 +49,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
  * it glows). Two or more in it and it's contested: nobody gets anything. Whoever held it longest gets a bonus.</li>
  * <li>Ruby Meteor: comes down on the spot, full of ruby ore and blocks.</li>
  * </ul>
- * Events only come while at least {@code worldEventMinPlayers} are in Ruby Wars (one alone has nobody to meet), about
+ * Events come while anyone is in Ruby Wars (a Ruby Shrine, a contest between you, needs {@link #shrinePlayers()} on), about
  * every {@code worldEventMinutes} of that time. Missing one costs nothing. Not saved: a restart ends it (a cache
  * left standing stays as a few free chests).
  */
@@ -96,6 +96,25 @@ public final class WorldEvents {
 	private static boolean bigOpen;
 	private static boolean refilled;
 	private static long openedAt;
+
+	/** How many need to be on for a Ruby Shrine (it's a contest between you: never fewer than two). */
+	public static int shrinePlayers() {
+		return Math.max(2, GameConfig.get().worldEventMinPlayers);
+	}
+
+	/** The season clock was paused while the server wasn't ticking: the event waits that much longer too. */
+	public static void shift(long ms) {
+		if (kind == null) {
+			return;
+		}
+		opensAt += ms;
+		if (open) {
+			openedAt += ms;
+		}
+		if (endsAt != Long.MAX_VALUE) {
+			endsAt += ms;
+		}
+	}
 	/** Time with enough players on since the last event (ms): the first comes ten minutes in. */
 	private static long played;
 	private static int rotation;
@@ -171,13 +190,19 @@ public final class WorldEvents {
 			return;
 		}
 		if (kind == null) {
-			if (!building || players.size() < Math.max(1, GameConfig.get().worldEventMinPlayers) || GameConfig.get().worldEventMinutes <= 0) {
+			// Supply Caches and Meteors come to anyone playing, even on their own; the Shrine (a contest to hold it alone)
+			// waits until enough of you are on.
+			if (!building || players.isEmpty() || GameConfig.get().worldEventMinutes <= 0) {
 				return;
 			}
 			played += 1000;
 			long every = GameConfig.get().worldEventMinutes * 60_000L;
 			if (played >= Math.min(every, 10 * 60_000L) && (played >= every || rotation == 0)) {
 				Kind next = Kind.values()[rotation % Kind.values().length];
+				if (next == Kind.SHRINE && players.size() < shrinePlayers()) {
+					rotation++;
+					next = Kind.values()[rotation % Kind.values().length];
+				}
 				if (begin(server, players, next, null, WARNING) == null) {
 					played = 0;
 					rotation++;

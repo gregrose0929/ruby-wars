@@ -11,8 +11,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * The season clock. Phase timers use real (wall-clock) time, so the 14-day
- * build phase keeps counting while the server is off or restarting.
+ * The season clock. Phase timers use real (wall-clock) time, so a scheduled build phase keeps counting while the server is
+ * off. Battle Day is different: it's a family appointment. When its date comes it's "ready" and waits until everyone
+ * with a Heart is on (or the admin calls it), and once it's going its clock pauses whenever nobody's on (and over a
+ * restart), carrying on where it left off.
  */
 public final class SeasonTicker {
 	private static final long MINUTE = 60_000L;
@@ -127,12 +129,115 @@ public final class SeasonTicker {
 		return d + (d == 1 ? " day" : " days") + (h > 0 ? " " + h + (h == 1 ? " hour" : " hours") : "");
 	}
 
+	/** For the self-test: is a Battle Day countdown running? */
+	public static boolean battleCalled() {
+		return battleAt != 0;
+	}
+
 	/** Heads-ups before a scheduled Battle Day: 1 = a day before, 2 = an hour before. */
 	private static int warned;
+
+	/** Everyone taking part in Battle Day: whoever has a standing Heart. */
+	public static java.util.List<java.util.UUID> battlers() {
+		java.util.List<java.util.UUID> out = new java.util.ArrayList<>();
+		for (SeasonData.Claim claim : SeasonData.get().claims.values()) {
+			if (!claim.destroyed) {
+				out.add(java.util.UUID.fromString(claim.owner));
+			}
+		}
+		return out;
+	}
+
+	/** How many of {@link #battlers()} are on the server. */
+	public static int battlersHere(MinecraftServer server) {
+		int n = 0;
+		for (java.util.UUID id : battlers()) {
+			if (server.getPlayerList().getPlayer(id) != null) {
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/** Anyone still in the battle on the server? (Nobody: Battle Day's clock waits.) */
+	private static boolean anyoneFighting(MinecraftServer server) {
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			SeasonData.PlayerRecord r = SeasonData.get().player(p.getUUID());
+			if (r != null && !r.eliminated) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** "Battle Day is ready" (to one player, or everyone). */
+	public static Component readyMessage(MinecraftServer server) {
+		int here = battlersHere(server);
+		int of = battlers().size();
+		return Component.literal("Battle Day is ready! It starts when everyone with a Heart is on (" + here + " of " + of + " here now), "
+				+ "or when the admin calls it.").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+	}
+
+	/** Time the clock didn't tick (the server off, or asleep with nobody on) is added to anything waiting on a paused clock. */
+	private static void catchUp(SeasonData data) {
+		long t = now();
+		long gap = data.lastSecondAt == 0 ? 1000 : t - data.lastSecondAt;
+		data.lastSecondAt = t;
+		if (gap <= 2500 || data.pausedRemaining < 0) {
+			return;
+		}
+		long extra = gap - 1000;
+		if (data.closeMs > 0) {
+			data.closeStart += extra;
+		}
+		if (data.nextSupplyDropAt != 0) {
+			data.nextSupplyDropAt += extra;
+		}
+		if (data.nextMeteorAt != 0) {
+			data.nextMeteorAt += extra;
+		}
+		SupplyDrops.shift(extra);
+		WorldEvents.shift(extra);
+		SeasonData.markDirty();
+		RubyMod.LOGGER.info("Season clock: {} s away while paused, added to what's waiting", extra / 1000);
+	}
+
+	/** Battle Day's clock waits while nobody's on, and carries on when someone's back. */
+	private static void battlePause(MinecraftServer server, SeasonData data) {
+		if (!data.phase.isBattle()) {
+			data.autoPaused = false;
+			return;
+		}
+		boolean anyone = anyoneFighting(server);
+		if (!anyone && data.pausedRemaining < 0) {
+			pause();
+			data.autoPaused = true;
+			RubyMod.LOGGER.info("Battle Day paused: nobody's on");
+		} else if (anyone && data.autoPaused) {
+			data.autoPaused = false;
+			if (data.pausedRemaining >= 0) {
+				resume();
+				Alerts.broadcast(server, Component.literal("Battle Day carries on where it left off.").withStyle(ChatFormatting.GOLD));
+			}
+		}
+	}
+
+	/** The server's shutting down: Battle Day's clock waits until it's back (and someone's on). */
+	public static void onStopping() {
+		SeasonData data = SeasonData.get();
+		if (data.phase.isBattle() && data.pausedRemaining < 0) {
+			pause();
+			data.autoPaused = true;
+		}
+		data.lastSecondAt = now();
+		SeasonData.markDirty();
+	}
 
 	/** Called once per second. */
 	public static void tickSecond(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
+		catchUp(data);
+		battlePause(server, data);
 		// A season begun under the old two-week limit carries on without one.
 		if (data.phase == Phase.BUILD && durationOf(Phase.BUILD) == 0 && data.phaseEndsAt != 0 && data.pausedRemaining < 0) {
 			data.phaseEndsAt = 0;
@@ -158,9 +263,20 @@ public final class SeasonTicker {
 					Alerts.broadcast(server, Component.literal("The build phase is over! Battle Day starts when an admin runs /rubywars phase lockdown.")
 							.withStyle(ChatFormatting.GOLD));
 				}
+			} else if (data.phase == Phase.BUILD) {
+				// The date's come: Battle Day waits for the family (it never starts with people missing).
+				data.battleReady = true;
+				data.phaseEndsAt = 0;
+				SeasonData.markDirty();
+				Alerts.broadcast(server, readyMessage(server));
+				Alerts.news(server, "Battle Day is ready: it starts when everyone's on.");
 			} else {
 				BattleDirector.enterPhase(server, data.phase.next());
 			}
+		}
+		// Ready, and everyone with a Heart is here: a minute's countdown, then Battle Day.
+		if (data.phase == Phase.BUILD && data.battleReady && battleAt == 0 && !battlers().isEmpty() && battlersHere(server) == battlers().size()) {
+			callBattle(server, 60);
 		}
 
 		// A scheduled Battle Day: a heads-up the day before, and an hour before.
@@ -209,7 +325,8 @@ public final class SeasonTicker {
 						: at == null ? Payloads.HudSync.LAST_LIFE
 						: at == claim ? Payloads.HudSync.RESPAWN_HEART : Payloads.HudSync.RESPAWN_MATE;
 			}
-			int flags = respawn | (Squads.enabled() ? 8 : 0) | (Hub.where(player) == Hub.Where.RUBY_WARS ? 16 : 0);
+			int flags = respawn | (Squads.enabled() ? 8 : 0) | (Hub.where(player) == Hub.Where.RUBY_WARS ? 16 : 0)
+					| (data.phase == Phase.BUILD && data.battleReady ? 32 | Math.min(15, battlersHere(server)) << 8 | Math.min(15, battlers().size()) << 12 : 0);
 			ServerPlayNetworking.send(player, new Payloads.HudSync(data.phase.ordinal(), seconds, data.pausedRemaining >= 0, currentDay(), hp, max,
 					alive, out, flags));
 		}

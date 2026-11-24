@@ -51,6 +51,33 @@ public final class MapCache {
 		return mc.gameDirectory.toPath().resolve("rubywars").resolve("maps").resolve(safe + ".bin.gz");
 	}
 
+	/** The Ruby Wars island as explored (for the season's keepsake map): what's loaded if you're there, else what's saved. */
+	public static Map<Long, int[]> overworldChunks(Minecraft mc) {
+		String overworld = net.minecraft.world.level.Level.OVERWORLD.identifier().toString();
+		if (overworld.equals(dimension)) {
+			return new HashMap<>(CHUNKS);
+		}
+		Map<Long, int[]> out = new HashMap<>();
+		java.nio.file.Path path = file(mc, overworld);
+		if (!java.nio.file.Files.exists(path)) {
+			return out;
+		}
+		try (var in = new java.io.DataInputStream(new java.util.zip.GZIPInputStream(java.nio.file.Files.newInputStream(path)))) {
+			int n = in.readInt();
+			for (int i = 0; i < n; i++) {
+				long key = in.readLong();
+				int[] colors = new int[256];
+				for (int j = 0; j < 256; j++) {
+					colors[j] = in.readInt();
+				}
+				out.put(key, colors);
+			}
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the map from {}", path, e);
+		}
+		return out;
+	}
+
 	/** Save what's been explored (called on leaving a world or dimension). */
 	public static void save() {
 		if (savedAs == null || CHUNKS.isEmpty()) {

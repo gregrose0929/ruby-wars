@@ -64,7 +64,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 	public static final int BACKED_UP = 6;
 
 	private static final UUID NOBODY = new UUID(0, 0);
-	/** Machines keep working at this fraction of their speed while unloaded (up to a day). */
+	/** Machines keep working at this fraction of their speed while unloaded (up to one Minecraft day: 20 real minutes). */
 	private static final double OFFLINE_RATE = 0.5;
 
 	private final NonNullList<ItemStack> items;
@@ -344,7 +344,7 @@ public class MachineBlockEntity extends BlockEntity implements WorldlyContainer,
 
 	/**
 	 * Back after being unloaded: drills, Refineries, Assemblers, Ammo Factories and Trade Depots do what they would
-	 * have (at half speed, up to a day), taking from silos touching them and filling silos (and, but for drills,
+	 * have (at half speed, up to one Minecraft day: 20 minutes), taking from silos touching them and filling silos (and, but for drills,
 	 * chests and machines) beside them, until they run out of work or room. What they made is told once, all
 	 * machines together ({@link AwayTime}).
 	 */

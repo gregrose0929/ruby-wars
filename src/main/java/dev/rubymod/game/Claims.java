@@ -138,6 +138,7 @@ public final class Claims {
 		}
 		claim.destroyed = true;
 		claim.hp = 0;
+		BaseReport.heartFell(claim);
 		SeasonData.markDirty();
 		BlockPos pos = claim.pos();
 		if (level.getBlockState(pos).is(ModBlocks.RUBY_HEART)) {

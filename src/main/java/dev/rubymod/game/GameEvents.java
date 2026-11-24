@@ -171,6 +171,7 @@ public final class GameEvents {
 			Collapse.clear();
 			Movers.finishAll();
 			NightBattle.clear();
+			SeasonTicker.onStopping();
 			SeasonData.save();
 			dev.rubymod.industry.Grid.saveIfDirty();
 			Stats.save();

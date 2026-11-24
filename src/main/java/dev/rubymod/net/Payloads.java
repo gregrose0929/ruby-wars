@@ -306,6 +306,20 @@ public class Payloads {
 			return (flags & 16) != 0;
 		}
 
+		/** The build phase's date has come: Battle Day is waiting for everyone with a Heart to be on. */
+		public boolean battleReady() {
+			return (flags & 32) != 0;
+		}
+
+		/** While it's ready: how many of those with a Heart are on, and how many there are. */
+		public int readyHere() {
+			return (flags >> 8) & 15;
+		}
+
+		public int readyOf() {
+			return (flags >> 12) & 15;
+		}
+
 		public static final Type<HudSync> TYPE = new Type<>(RubyMod.id("hud_sync"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, HudSync> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, HudSync::phase,

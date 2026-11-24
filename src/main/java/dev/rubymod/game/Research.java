@@ -17,12 +17,12 @@ import net.minecraft.sounds.SoundSource;
 
 /**
  * The research tree: advanced Armory gear starts locked. Research points (shown
- * as stars) come from finishing Goals (place your Heart, mine ruby, get to a Supply Cache,
- * win a duel...), never from time played; spend them on unlocks in four branches.
- * You can't unlock everything in one season, so squads split the tree.
+ * as stars) come from finishing Goals (place your Heart, mine ruby, get to a Supply Cache...),
+ * never from time played; spend them on unlocks in four branches. There are more unlocks
+ * than stars, so you pick what to research (your own: nobody shares a tree).
  *
- * Basic guns, the Heart, base blocks, basic industry and basic defenses never
- * need research.
+ * Basic guns, the Heart, base blocks, basic industry (plain belts, ramps and Belt Loaders
+ * included) and basic defenses never need research.
  */
 public final class Research {
 	/** One unlock. {@code items} are Armory item ids it opens up. */
@@ -54,8 +54,9 @@ public final class Research {
 				"shield_generator", "point_defense", "tesla_coil");
 		node("railgun", "Railgun", "Defense", 5, "shields", "railgun", "The Railgun Emplacement", "railgun");
 		// Engineering & support
-		node("logistics", "Logistics", "Support", 2, null, "conveyor", "Conveyors, Belt Loaders and Sorters, Constructor and Elevators", "conveyor", "belt_loader",
-				"belt_sorter", "belt_ramp", "belt_splitter", "belt_tunnel", "constructor", "elevator");
+		// (Plain belts, ramps and Belt Loaders are basic industry: always free. This opens the clever belt parts.)
+		node("logistics", "Logistics", "Support", 2, null, "belt_sorter", "Belt Sorters, Splitters and Tunnels, the Constructor and Elevators",
+				"belt_sorter", "belt_splitter", "belt_tunnel", "constructor", "elevator");
 		node("guards", "Hired Guards", "Support", 3, null, "guard_contract", "Guard Contracts (riflemen and AT gunners)",
 				"guard_contract", "at_guard_contract");
 		node("recon", "Recon", "Support", 2, null, "recon_drone", "Recon and Scout Drones, and the Mortar", "recon_drone", "scout_drone", "mortar", "mortar_shell");
@@ -87,21 +88,10 @@ public final class Research {
 		return node == null || has(player.getUUID(), node.id());
 	}
 
-	/** You (or a squadmate) researched it. */
+	/** You researched it (your own tree: Battle Day teammates don't share theirs). */
 	public static boolean has(UUID player, String node) {
 		SeasonData.PlayerRecord r = SeasonData.get().players.get(player.toString());
-		if (r != null && r.research.contains(node)) {
-			return true;
-		}
-		if (GameConfig.get().squadsShareResearch) {
-			for (UUID mate : Squads.mates(player)) {
-				SeasonData.PlayerRecord m = SeasonData.get().players.get(mate.toString());
-				if (m != null && m.research.contains(node)) {
-					return true;
-				}
-			}
-		}
-		return false;
+		return r != null && r.research.contains(node);
 	}
 
 	public static void addPoints(UUID player, int points) {
@@ -132,10 +122,6 @@ public final class Research {
 		SeasonData.markDirty();
 		player.level().playSound(null, player.blockPosition(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 1.0F, 1.2F);
 		Alerts.toast(player, "minecraft:enchanted_book", "Unlocked: " + node.title(), "New in the Armory: " + node.description(), Alerts.AQUA);
-		Squads.Squad squad = Squads.of(player.getUUID());
-		if (squad != null && GameConfig.get().squadsShareResearch) {
-			Squads.tell(player.level().getServer(), squad, player.getName().getString() + " researched " + node.title() + " for the squad.");
-		}
 		sync(player);
 		return null;
 	}

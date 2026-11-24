@@ -68,18 +68,23 @@ public class ManualScreen extends Screen {
 					"Each stage has a job: shoot the fallen logs, wreck the tanks, guard the bridge builders, dig out of the avalanche, beat the Iron Dreadnought.",
 					"Depots: repairs, jeeps, tanks and a helicopter, and everyone picks an upgrade (J if you closed it). Wrecked? A spare truck restarts the stage."),
 			new Page("The Season",
-					"Build until everyone's ready, then survive one Battle Day. Everyone plays on their own: the last player standing wins.",
+					"Build until everyone's ready, then survive one Battle Day. You each have your own base: the last one standing wins (or the last team, "
+							+ "if you picked teams on the Season Choices screen: same colour, same side).",
 					"Place your Ruby Heart to claim land: nobody else can build there, and you're safe inside it until Battle Day. Outside the bases you can fight.",
 					"Battle Day: Lockdown (defenses arm), Open War (PvP, Hearts can be breached, you respawn at your Heart, and a supply drop every 15 minutes: told 30 seconds ahead, with a beam over the spot), "
 							+ "Sudden Death (Hearts shatter, the border closes on the final circle), Final Circle. The final circle is somewhere different each season: it's on your map (K) from Open War, and the top of the screen says if you're outside it.",
 					"Respawns: in Lockdown and Open War you come back at your Heart while it stands (the line under the timer says so). "
 							+ "Heart gone, or Sudden Death: your next death knocks you out.",
 					"Knocked out? Watch: click for the next player, right-click for the one before, crouch to fly free. Or press H and play party games in the hub.",
-					"When the season ends, everyone gets a wrap-up card: the winner and a few awards. /rubywars recap shows it again. "
+					"Battle Day is a family appointment: when its date comes it waits until everyone with a Heart is on, and its clock pauses whenever nobody's on. "
+							+ "Have to go during Sudden Death? You sit the rest out (you didn't lose). If nobody fought at all, it's no contest.",
+					"When the season ends, everyone gets a wrap-up card: the winner, an award for everyone, and a \"Your base\" page with how your base held up and a "
+							+ "keepsake map of the season (saved in your screenshots folder). /rubywars recap shows it again. "
 							+ "Every winner goes up in the Hall of Champions, in the hub beside the path to Ruby Wars.",
 					"Each new season starts fresh: a fresh island, and everyone begins again with nothing in Ruby Wars (the hub and other games keep their things).",
 					"Mine Ruby Ore deep underground (or in the Ruby Crater) and spend rubies at an Armory.",
-					"No monsters and no hunger: just build and stay alive. Battle Day comes when the admin calls it (or on the date they set)."),
+					"No monsters and no hunger: just build and stay alive. Battle Day comes when the admin calls it (or on the date they set, once everyone's on).",
+					"Season Choices (Ruby Wars menu): pick a Battle Day team, vote on a Night Battle, and choose what your base is famous for."),
 			new Page("The Armory",
 					"Right-click an Armory. The tabs down the left are kinds of things: Your Heart, Guns, Ammo, Explosives, Defenses, Air Defense, "
 							+ "Vehicles, Aircraft, Machines, Building, Security, Gear and Support.",
@@ -89,7 +94,7 @@ public class ManualScreen extends Screen {
 			new Page("Machines & Belts",
 					"Your machines share your power: generators and solar panels fill it, Battery Banks hold more (see Power). Look at any machine to see how it's doing.",
 					"A Ruby Drill keeps what it digs until you collect it, and stops when it's full. A conveyor belt or an Ore Silo next to it takes its finds away.",
-					"While you're away, drills, Refineries, Assemblers and Trade Depots keep working at half speed (for up to a day, even when nobody's on the server), filling the silos next to them and sending things along their belts. When you're back, one note says what they made, and so does My Base.",
+					"While you're away, drills, Refineries, Assemblers and Trade Depots keep working at half speed (up to 20 minutes' worth, even when nobody's on the server), filling the silos next to them and sending things along their belts. When you're back, one note says what they made, and so does My Base.",
 					"Belts run the way their yellow arrows point and feed whatever is at the end: a chest, a Refinery, a Trade Depot.",
 					"The Trade Depot buys anything, and sells whatever a belt brings it. Its screen shows how close you are to your next ruby.",
 					"Stopped? The machine's screen says why and what to do (No power, Full, Needs fuel...)."),
@@ -172,7 +177,7 @@ public class ManualScreen extends Screen {
 					"Build up your base, make rubies, go to world events, fight on Battle Day, drive, fly and sail... Each goal counts once.",
 					"Spend stars on the UPGRADES tab. You can't afford everything, so pick the upgrades that suit how you play."),
 			new Page("World Events",
-					"While you build, something worth having turns up out between the bases every so often (when at least two of you are on). Everyone is told two minutes ahead (in the hub too, with a button to go back), it's on your map (K) with its time left, and a beacon's beam in its colour marks the spot.",
+					"While you build, something worth having turns up out between the bases every so often, even when you play on your own (a Ruby Shrine waits until two or more of you are on). Everyone is told two minutes ahead (in the hub too, with a button to go back), it's on your map (K) with its time left, and a beacon's beam in its colour marks the spot.",
 					"Supply Cache: a ring of chests full of Armory gear and rubies round a glass case. The case opens into a big chest 2 minutes later, and fresh supplies land 5 minutes in, so it's worth staying (or coming late). After 8 minutes it crumbles and what's left spills out.",
 					"Ruby Shrine: stand inside its ring of magenta carpet alone and a ruby goes into your bank every 5 seconds (everyone in it glows). Anyone else in it and it's contested. Whoever holds it longest gets 15 more (the banner shows who's ahead).",
 					"Ruby Meteor: comes down on the spot, full of ruby ore and blocks.",

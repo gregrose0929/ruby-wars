@@ -56,6 +56,16 @@ public class SeasonData {
 	public long closeMs;
 	public long lastBackupAt;
 	public String winner = "";
+	/** The build phase's date has come: Battle Day starts once everyone with a Heart is on (or the admin calls it). */
+	public boolean battleReady;
+	/** Battle Day's clock was paused because nobody was on (it carries on when someone's back). */
+	public boolean autoPaused;
+	/** When the season clock last ticked (wall time), so time the server spent off or asleep isn't counted on a paused clock. */
+	public long lastSecondAt;
+	/** When Battle Day began (wall time; 0: it hasn't). */
+	public long battleStartedAt;
+	/** The family's pick for Battle Day at night (from the season choices): null until Battle Day starts, then the result. */
+	public Boolean nightChoice;
 
 	public Map<String, Claim> claims = new LinkedHashMap<>();
 	public Map<String, PlayerRecord> players = new LinkedHashMap<>();
@@ -111,6 +121,17 @@ public class SeasonData {
 
 	public static class PlayerRecord {
 		public String name = "";
+		/** Not there for the end of Battle Day (offline when Sudden Death came, or had to go): out, but they sat it out, they didn't lose. */
+		public boolean satOut;
+		// The season choices (see SeasonChoices): Battle Day team ("" on your own, "red", "blue"), Night Battle vote (0 none,
+		// 1 yes, 2 no), and what your base is famous for ("" nothing).
+		public String team = "";
+		public int nightVote;
+		public String theme = "";
+		// How your base held up on Battle Day (the wrap-up's "Your base" page).
+		public int defenseHits;
+		public int blocksLost;
+		public long heartFellAt;
 		/** Owners of the enemy bases this player has found (they show on the map). */
 		public Set<String> discovered = new HashSet<>();
 		public boolean eliminated;

@@ -84,6 +84,18 @@ public final class RubyWarsCommand {
 						.then(Commands.literal("days").then(Commands.argument("days", IntegerArgumentType.integer(1, 60))
 								.executes(c -> schedule(c, IntegerArgumentType.getInteger(c, "days") * 1440L)))))
 				.then(Commands.literal("admin").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(RubyWarsCommand::admin))
+				.then(Commands.literal("choose").then(Commands.argument("kind", com.mojang.brigadier.arguments.StringArgumentType.word())
+						.then(Commands.argument("value", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(c -> {
+							String value = com.mojang.brigadier.arguments.StringArgumentType.getString(c, "value");
+							String error = dev.rubymod.game.SeasonChoices.choose(c.getSource().getPlayerOrException(),
+									com.mojang.brigadier.arguments.StringArgumentType.getString(c, "kind"),
+									value.equals("solo") || value.equals("none") ? "" : value);
+							if (error != null) {
+								c.getSource().sendFailure(Component.literal(error));
+								return 0;
+							}
+							return 1;
+						}))))
 				.then(Commands.literal("recap").executes(c -> {
 					String error = dev.rubymod.game.BattleDirector.sendRecap(c.getSource().getPlayerOrException());
 					if (error != null) {
@@ -214,7 +226,7 @@ public final class RubyWarsCommand {
 			source.sendSystemMessage(Component.literal("Day " + SeasonTicker.currentDay() + (length > 0 ? " of " + Math.max(1, length / 86_400_000L)
 					: " of the build phase (it ends when an admin runs /rubywars battle)")));
 			String event = dev.rubymod.game.WorldEvents.describe();
-			source.sendSystemMessage(Component.literal(event.isEmpty() ? "No world event on right now (they come when two or more of you are on)"
+			source.sendSystemMessage(Component.literal(event.isEmpty() ? "No world event on right now (they come every so often while you play)"
 					: "World event: " + event).withStyle(event.isEmpty() ? ChatFormatting.GRAY : ChatFormatting.AQUA));
 		}
 		if (data.phase.isBattle() || data.phase == Phase.ENDED) {

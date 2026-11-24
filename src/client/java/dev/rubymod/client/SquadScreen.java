@@ -15,9 +15,8 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.network.chat.Component;
 
 /**
- * The Squad screen (O): your squad and its members (with health when they're
- * near), make or leave a squad, and invite anyone online with one click. It runs
- * the same /squad commands you could type.
+ * The Team screen: who's on your Battle Day team (with health when they're near). Teams are picked on the Season Choices
+ * screen before Battle Day, so there's nothing to make or join here.
  */
 public class SquadScreen extends Screen {
 	private static final int W = 300;
@@ -49,43 +48,7 @@ public class SquadScreen extends Screen {
 
 	@Override
 	protected void init() {
-		inviteButtons.clear();
-		int x = left();
-		int y = top();
-		if (squad().isEmpty()) {
-			name = new EditBox(font, x + 16, y + 52, 168, 12, Component.literal("Squad name"));
-			name.setMaxLength(16);
-			name.setBordered(false);
-			name.setHint(Component.literal("Squad name"));
-			addRenderableWidget(name);
-			addRenderableWidget(new UiButton(x + 196, y + 46, 92, 20, "Create squad", Ui.RUBY, b -> {
-				if (!name.getValue().isBlank()) {
-					run("squad create " + name.getValue().trim());
-				}
-			}));
-		} else {
-			addRenderableWidget(new UiButton(x + W - 96, y + H - 28, 84, 18, "Leave squad", 0xFF5A606C, b -> run("squad leave")));
-		}
-		// Invite buttons for everyone online who isn't you or already a squadmate.
-		var connection = Minecraft.getInstance().getConnection();
-		if (connection != null && !squad().isEmpty()) {
-			int i = 0;
-			String me = Minecraft.getInstance().player.getName().getString();
-			for (PlayerInfo info : connection.getOnlinePlayers()) {
-				String player = info.getProfile().name();
-				boolean mate = ClientState.map != null && ClientState.map.mates().stream().anyMatch(m -> m.name().equals(player));
-				if (player.equals(me) || mate || i >= 6) {
-					continue;
-				}
-				Button b = new UiButton(x + 160, y + 48 + i * 20, 128, 18, "Invite " + player, Ui.GREEN, btn -> {
-					run("squad invite " + player);
-					btn.active = false;
-				});
-				inviteButtons.add(b);
-				addRenderableWidget(b);
-				i++;
-			}
-		}
+		// Teams come from the Season Choices (picked before Battle Day): nothing to make, join or leave here.
 	}
 
 	private void run(String command) {
@@ -104,18 +67,13 @@ public class SquadScreen extends Screen {
 		int y = top();
 		Ui.panel(g, x, y, W, H);
 		String squad = squad();
-		Ui.heading(g, squad.isEmpty() ? "Squad" : squad, x + 12, y + 10, Ui.TEXT, 1.5F, false);
+		Ui.heading(g, squad.isEmpty() ? "Battle Day" : squad, x + 12, y + 10, Ui.TEXT, 1.5F, false);
 		if (squad.isEmpty()) {
-			Ui.text(g, "You're not in a squad yet.", x + 12, y + 30, Ui.DIM);
-			Ui.inset(g, x + 10, y + 46, 180, 20);
-			Ui.section(g, "Join one", x + 12, y + 82, W - 24);
-			Ui.text(g, "Ask a friend to invite you, or type", x + 12, y + 96, Ui.DIM);
-			Ui.text(g, "/squad join <name>", x + 12, y + 108, Ui.GOLD);
-			Ui.section(g, "Why squad up?", x + 12, y + 128, W - 24);
-			Ui.wrap(g, "Up to 4 of you share claims, Hearts, upgrades and the win. You can't hurt each other.", x + 12, y + 142, W - 24, Ui.DIM,
+			Ui.text(g, "You're on your own this Battle Day.", x + 12, y + 34, Ui.DIM);
+			Ui.wrap(g, "Teams are picked before Battle Day, on the Season Choices screen (Ruby Wars menu).", x + 12, y + 52, W - 24, Ui.DIM,
 					y + H - 6);
 		} else {
-			Ui.section(g, "Members", x + 12, y + 32, 132);
+			Ui.section(g, "On your team", x + 12, y + 32, W - 24);
 			int my = y + 48;
 			Ui.icon(g, Ui.Icon.CROWN, x + 12, my - 1);
 			Ui.text(g, Minecraft.getInstance().player.getName().getString() + " (you)", x + 24, my, Ui.TEXT);
@@ -123,16 +81,14 @@ public class SquadScreen extends Screen {
 			if (ClientState.map != null) {
 				for (var mate : ClientState.map.mates()) {
 					Ui.icon(g, Ui.Icon.HEART, x + 12, my - 1);
-					Ui.text(g, mate.name(), x + 24, my, 80, Ui.TEXT);
-					Ui.bar(g, x + 106, my + 1, 40, 6, Math.max(0, Math.min(1, mate.health())), Ui.GREEN);
+					Ui.text(g, mate.name(), x + 24, my, 160, Ui.TEXT);
+					Ui.bar(g, x + 190, my + 1, 60, 6, Math.max(0, Math.min(1, mate.health())), Ui.GREEN);
 					my += 16;
 				}
 			}
-			Ui.section(g, "Invite", x + 160, y + 32, W - 172);
-			if (inviteButtons.isEmpty()) {
-				Ui.text(g, "Nobody else is online.", x + 160, y + 50, Ui.MUTED);
-			}
-			Ui.text(g, "Squad chat: /sc <message>", x + 12, y + H - 22, Ui.MUTED);
+			Ui.wrap(g, "You can't hurt each other, your defenses leave each other alone, you can respawn at each other's Hearts, and you win together.",
+					x + 12, my + 6, W - 24, Ui.DIM, y + H - 28);
+			Ui.text(g, "Team chat: /sc <message>", x + 12, y + H - 22, Ui.MUTED);
 		}
 		super.extractRenderState(g, mouseX, mouseY, partial);
 	}

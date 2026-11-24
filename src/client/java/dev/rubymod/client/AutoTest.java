@@ -4588,6 +4588,7 @@ public final class AutoTest {
 			case "aimcheck" -> aimCheckScript();
 			case "guardcheck" -> guardCheckScript();
 			case "realcheck" -> realCheckScript();
+			case "seasonscreens" -> seasonScreensScript();
 			case "lightcheck" -> lightCheckScript();
 			case "basecheck" -> baseCheckScript();
 			case "bridgecheck" -> bridgeCheckScript();
@@ -5985,6 +5986,74 @@ public final class AutoTest {
 			mc.player.setXRot(10);
 		});
 		then(20, mc -> shot(mc, "borer-3-out"));
+	}
+
+		/** The family season screens: Season Choices, Battle Day ready, and the wrap-up's two pages with the keepsake map. */
+	private static void seasonScreensScript() {
+		java.util.UUID other = java.util.UUID.fromString("00000000-0000-0000-0000-00000000f00d");
+		then(5, mc -> {
+			command(mc, "time set noon");
+			command(mc, "gamemode survival @a");
+		});
+		then(200, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var data = dev.rubymod.game.SeasonData.get();
+			data.phase = dev.rubymod.game.Phase.BUILD;
+			for (var entry : new String[][] {{p.getUUID().toString(), p.getName().getString()}, {other.toString(), "Sam"}}) {
+				var r = data.player(java.util.UUID.fromString(entry[0]), entry[1]);
+				var c = new dev.rubymod.game.SeasonData.Claim();
+				c.owner = entry[0];
+				c.ownerName = entry[1];
+				c.dimension = "minecraft:overworld";
+				c.x = p.getBlockX() + (entry[1].equals("Sam") ? 60 : 0);
+				c.y = p.getBlockY();
+				c.z = p.getBlockZ() + 10;
+				c.hp = c.maxHp();
+				data.claims.put(entry[0], c);
+			}
+			dev.rubymod.game.SeasonChoices.syncAll(server);
+		}));
+		then(10, mc -> mc.gui.setScreen(new SeasonChoicesScreen()));
+		then(20, mc -> shot(mc, "family-0-choices"));
+		then(5, mc -> {
+			mc.player.connection.sendCommand("rubywars choose team red");
+			mc.player.connection.sendCommand("rubywars choose night yes");
+			mc.player.connection.sendCommand("rubywars choose theme walls");
+		});
+		then(30, mc -> shot(mc, "family-1-chosen"));
+		then(5, mc -> mc.gui.setScreen(null));
+		then(5, mc -> onServer(mc, server -> {
+			var data = dev.rubymod.game.SeasonData.get();
+			data.battleReady = true;
+			data.phaseEndsAt = 0;
+		}));
+		then(60, mc -> shot(mc, "family-2-ready"));
+		then(5, mc -> onServer(mc, server -> {
+			var p = me(server);
+			var data = dev.rubymod.game.SeasonData.get();
+			data.battleReady = false;
+			data.phase = dev.rubymod.game.Phase.ENDED;
+			data.winner = p.getName().getString();
+			data.battleStartedAt = dev.rubymod.game.SeasonTicker.now() - 75 * 60_000L;
+			var me = data.player(p.getUUID());
+			me.kills = 2;
+			me.defenseHits = 14;
+			me.blocksLost = 230;
+			var sam = data.player(other);
+			sam.eliminated = true;
+			sam.finished = 2;
+			sam.heartFellAt = dev.rubymod.game.SeasonTicker.now() - 30 * 60_000L;
+			dev.rubymod.game.BattleDirector.sendRecap(p);
+		}));
+		then(40, mc -> shot(mc, "family-3-recap"));
+		then(5, mc -> {
+			if (mc.gui.screen() instanceof SeasonRecapScreen recap) {
+				recap.showPage(1);
+			}
+			log("family: keepsake map {} saved to {}", dev.rubymod.client.map.Keepsake.ready(), dev.rubymod.client.map.Keepsake.savedTo);
+		});
+		then(20, mc -> shot(mc, "family-4-base"));
+		then(5, mc -> mc.gui.setScreen(null));
 	}
 
 		/** Ramming a zombie with the jeep, driving into deep water (out you get), and a landmine drawn where it's seen. */

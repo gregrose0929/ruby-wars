@@ -29,7 +29,7 @@ public final class Guide {
 					"defense", false),
 			new Step("Spend stars on an upgrade", "Goals give stars. Press J, open UPGRADES and pick one: it unlocks tanks, jets and more "
 					+ "in the Armory.", "#research", false),
-			new Step("Get to a Supply Cache", "World events come when two or more of you are on: they're told two minutes ahead and marked on your map (K). Get there first, and watch out for the others.",
+			new Step("Get to a Supply Cache", "World events come while you play, even on your own: they're told two minutes ahead and marked on your map (K). Get there first!",
 					"cache", true));
 
 	private static final List<Step> GROW = List.of(
@@ -38,7 +38,7 @@ public final class Guide {
 			new Step("3 machines busy at once", "A drill, a Refinery and an Assembler working together. An Ore Silo next to a machine feeds it, no belts needed.", "busy3", false),
 			new Step("Machine to Mk III", "Open a machine and press Upgrade (it spends rubies). Higher tiers work faster.", "mk3", false),
 			new Step("Bank 100 rubies", "Rubies from the Trade Depot go straight into your bank. A Vault keeps them safer.", "bank500", false),
-			new Step("Hold a Ruby Shrine longest", "When a Ruby Shrine lights up, stand in its ring alone: rubies go into your bank, and the longest holder gets a bonus.",
+			new Step("Hold a Ruby Shrine longest", "Ruby Shrines come when two or more of you are on. Stand in its ring alone: rubies go into your bank, and the longest holder gets a bonus.",
 					"shrine", true));
 
 	private static final List<Step> READY = List.of(
@@ -124,16 +124,26 @@ public final class Guide {
 	/** Where the season is, in a line. */
 	public static String season() {
 		Phase phase = ClientState.phase();
+		String order = " Battle Day goes: Lockdown (defenses on) > Open War > Sudden Death > Final Circle. It waits whenever nobody's on.";
 		if (phase == Phase.LOBBY) {
-			return "The season hasn't started yet (an admin starts it with /rubywars start). Build away!";
+			return "The season hasn't started yet (an admin starts it with /rubywars start). Pick your Season Choices in the Ruby Wars menu: "
+					+ "teams, and a vote on a Night Battle.";
 		}
 		if (phase == Phase.BUILD) {
-			int day = ClientState.hud == null ? 0 : ClientState.hud.day();
-			return "Build day " + day + ". Watch for world events. Battle Day comes when the admin calls it: last player standing wins.";
+			var hud = ClientState.hud;
+			int day = hud == null ? 0 : hud.day();
+			if (hud != null && hud.battleReady()) {
+				return "Battle Day is ready! It starts when everyone with a Heart is on (" + hud.readyHere() + " of " + hud.readyOf()
+						+ " here), or when the admin calls it." + order;
+			}
+			long left = ClientState.secondsLeft();
+			String when = left >= 0 ? "Battle Day: in " + GameHud.formatTime(left) + " (the date you picked), once everyone's on."
+					: "Battle Day: when the admin calls it.";
+			return "Build day " + day + ". " + when + " Missing a build evening costs nothing." + order;
 		}
 		if (phase == Phase.ENDED) {
 			return "The season is over. A new one starts soon.";
 		}
-		return "It's Battle Day! Defend your Heart and take out the others.";
+		return "It's Battle Day! Defend your Heart and take out the others: the last one (or team) standing wins.";
 	}
 }

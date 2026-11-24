@@ -55,6 +55,8 @@ public final class BattleDirector {
 		SeasonData data = SeasonData.get();
 		data.phase = phase;
 		data.pausedRemaining = -1;
+		data.autoPaused = false;
+		data.battleReady = false;
 		long duration = SeasonTicker.durationOf(phase);
 		data.phaseEndsAt = duration > 0 ? SeasonTicker.now() + duration : 0;
 		SeasonData.markDirty();
@@ -76,6 +78,8 @@ public final class BattleDirector {
 				Alerts.news(server, "Season " + data.season + " has begun.");
 			}
 			case LOCKDOWN -> {
+				data.battleStartedAt = SeasonTicker.now();
+				SeasonChoices.onBattleDay(server);
 				FinalCircle.plan(server);
 				for (SeasonData.PlayerRecord record : data.players.values()) {
 					record.missilesUsed = 0;
@@ -97,10 +101,17 @@ public final class BattleDirector {
 						Claims.destroyHeart(overworld, claim, null);
 					}
 				}
-				for (Map.Entry<String, SeasonData.PlayerRecord> entry : data.players.entrySet()) {
-					if (!entry.getValue().eliminated && server.getPlayerList().getPlayer(UUID.fromString(entry.getKey())) == null) {
-						eliminate(server, UUID.fromString(entry.getKey()), entry.getValue(), "didn't show up for Sudden Death");
+				// Anyone not on now sits the rest out (out of the running so the day can end, but they didn't lose).
+				for (Map.Entry<String, SeasonData.PlayerRecord> entry : new java.util.ArrayList<>(data.players.entrySet())) {
+					if (data.phase != Phase.SUDDEN_DEATH) {
+						break; // that settled it (the last one standing won): nobody else is put out after the win
 					}
+					if (!entry.getValue().eliminated && server.getPlayerList().getPlayer(UUID.fromString(entry.getKey())) == null) {
+						sitOut(server, UUID.fromString(entry.getKey()), entry.getValue(), "wasn't on when Sudden Death began");
+					}
+				}
+				if (data.phase != Phase.SUDDEN_DEATH) {
+					return;
 				}
 				for (Map.Entry<String, SeasonData.PlayerRecord> entry : new java.util.ArrayList<>(data.players.entrySet())) {
 					if (!entry.getValue().eliminated) {
@@ -241,6 +252,10 @@ public final class BattleDirector {
 			giveHeartIfNeeded(player);
 		}
 		Research.sync(player);
+		if (data.phase == Phase.BUILD && data.battleReady) {
+			player.sendSystemMessage(SeasonTicker.readyMessage(player.level().getServer()));
+		}
+		SeasonChoices.sync(player);
 		if (Rules.isEliminated(player.getUUID()) && data.phase.isBattle()) {
 			player.setGameMode(GameType.SPECTATOR);
 			player.sendSystemMessage(Component.literal("You've been eliminated this season. You can watch as a spectator.").withStyle(ChatFormatting.GRAY));
@@ -255,7 +270,7 @@ public final class BattleDirector {
 		if (server.isRunning() && (data.phase == Phase.SUDDEN_DEATH || data.phase == Phase.FINAL_CIRCLE)) {
 			SeasonData.PlayerRecord record = data.player(player.getUUID());
 			if (record != null && !record.eliminated) {
-				eliminate(server, player.getUUID(), record, "left during " + data.phase.title());
+				sitOut(server, player.getUUID(), record, "had to go during " + data.phase.title());
 			}
 		}
 	}
@@ -364,8 +379,23 @@ public final class BattleDirector {
 		return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, heart);
 	}
 
+	/** Out of the running without losing: they weren't there (bedtime, dinner). The wrap-up says they sat this one out. */
+	public static void sitOut(MinecraftServer server, UUID id, SeasonData.PlayerRecord record, String why) {
+		if (record.eliminated || SeasonData.get().phase == Phase.ENDED) {
+			return;
+		}
+		record.satOut = true;
+		record.eliminated = true;
+		SeasonData.markDirty();
+		int left = aliveCount();
+		record.finished = left + 1;
+		Alerts.broadcast(server, Component.literal(record.name + " sits the rest of Battle Day out (" + why + "). " + left
+				+ (left == 1 ? " player is still in." : " players are still in.")).withStyle(ChatFormatting.GRAY));
+		checkForWinner(server);
+	}
+
 	public static void eliminate(MinecraftServer server, UUID id, SeasonData.PlayerRecord record, String reason) {
-		if (record.eliminated) {
+		if (record.eliminated || SeasonData.get().phase == Phase.ENDED) {
 			return;
 		}
 		record.eliminated = true;
@@ -413,8 +443,57 @@ public final class BattleDirector {
 		}
 	}
 
+	/** Did anybody actually fight this Battle Day (a knockdown, a Heart broken by someone, or someone knocked out, not just away)? */
+	public static boolean anyoneFought() {
+		for (SeasonData.PlayerRecord r : SeasonData.get().players.values()) {
+			if (r.kills > 0 || r.heartsDestroyed > 0 || r.eliminated && !r.satOut) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** On the side that won: the last one standing, or anyone on the winning team. */
+	public static boolean onWinningSide(UUID id) {
+		SeasonData data = SeasonData.get();
+		SeasonData.PlayerRecord r = data.player(id);
+		if (r == null || data.winner.isEmpty()) {
+			return false;
+		}
+		Squads.Squad squad = Squads.of(id);
+		return squad != null ? squad.name.equals(data.winner) : !r.eliminated && r.name.equals(data.winner);
+	}
+
+	/** " (Ann, Ben)" when the winner is a team, else "". */
+	private static String teamList(String winner) {
+		for (Squads.Squad squad : SeasonData.get().squads.values()) {
+			if (squad.name.equals(winner)) {
+				List<String> names = new ArrayList<>();
+				for (String id : squad.members) {
+					SeasonData.PlayerRecord r = SeasonData.get().players.get(id);
+					if (r != null) {
+						names.add(r.name);
+					}
+				}
+				return " (" + String.join(", ", names) + ")";
+			}
+		}
+		return "";
+	}
+
 	private static void announceWinner(MinecraftServer server) {
 		SeasonData data = SeasonData.get();
+		if (!anyoneFought()) {
+			// Nobody fought: nobody's crowned (and nobody "lost").
+			data.winner = "";
+			countSeason(server);
+			Alerts.broadcastTitle(server, "NO CONTEST", "Nobody fought this Battle Day", ChatFormatting.GRAY);
+			Alerts.broadcast(server, Component.literal("Season " + data.season + " ends with no contest: nobody fought, so nobody's crowned. "
+					+ "Try again next season!").withStyle(ChatFormatting.GRAY));
+			Alerts.news(server, "Season " + data.season + " ended with no contest.");
+			sendRecapToAll(server);
+			return;
+		}
 		countSeason(server);
 		if (data.winner.isEmpty()) {
 			Alerts.broadcastTitle(server, "NO SURVIVORS", "Season " + data.season + " ends in a draw", ChatFormatting.GRAY);
@@ -422,17 +501,19 @@ public final class BattleDirector {
 			sendRecapToAll(server);
 			return;
 		}
-		data.pastChampions.add("Season " + data.season + ": " + data.winner);
+		data.pastChampions.add("Season " + data.season + ": " + data.winner + teamList(data.winner));
+		// A team wins together: everyone on it, standing or not.
 		for (Map.Entry<String, SeasonData.PlayerRecord> e : data.players.entrySet()) {
-			if (!e.getValue().eliminated) {
+			if (onWinningSide(UUID.fromString(e.getKey()))) {
 				Stats.seasonWon(UUID.fromString(e.getKey()), e.getValue().name);
 			}
 		}
-		Alerts.broadcastTitle(server, data.winner.toUpperCase() + " WINS", "Champion of Season " + data.season, ChatFormatting.GOLD);
+		Alerts.broadcastTitle(server, data.winner.toUpperCase() + (data.winner.endsWith(" team") ? " WIN" : " WINS"), "Champion of Season " + data.season,
+				ChatFormatting.GOLD);
 		Alerts.news(server, data.winner + " won Season " + data.season + "!");
 		playToAll(server, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.0F);
 		Alerts.broadcast(server, Component.literal("=== Season " + data.season + " results ===").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
-		Alerts.broadcast(server, Component.literal("Champion: " + data.winner).withStyle(ChatFormatting.GOLD));
+		Alerts.broadcast(server, Component.literal("Champion: " + data.winner + teamList(data.winner)).withStyle(ChatFormatting.GOLD));
 		data.players.values().stream()
 				.sorted((a, b) -> Integer.compare(b.kills, a.kills))
 				.limit(5)
@@ -465,7 +546,9 @@ public final class BattleDirector {
 		SeasonData.PlayerRecord me = data.players.get(player.getUUID().toString());
 		if (me != null) {
 			int count = data.players.size();
-			String place = !me.eliminated ? (data.winner.isEmpty() ? "Still standing" : "Winner!") : ordinal(me.finished) + " of " + count;
+			String place = !anyoneFought() ? "No contest" : me.satOut ? "Sat this one out"
+					: !me.eliminated || onWinningSide(player.getUUID()) ? (data.winner.isEmpty() ? "Still standing" : "Winner!")
+					: ordinal(me.finished) + " of " + count;
 			mine.add("Finished|" + place);
 			mine.add("Knockdowns|" + me.kills);
 			mine.add("Times knocked down|" + me.deaths);
@@ -475,8 +558,27 @@ public final class BattleDirector {
 			mine.add("Rubies in the bank|" + String.format(java.util.Locale.ROOT, "%,d", dev.rubymod.industry.Grid.milliRubies(player.getUUID()) / 1000));
 			SeasonData.Claim claim = data.claimOf(player.getUUID());
 			mine.add("Your Heart|" + (claim == null ? "Never placed" : "Tier " + claim.tier + (claim.destroyed ? " (destroyed)" : " (standing)")));
+			// How your base held up on Battle Day.
+			String stood = BaseReport.heartStood(player.getUUID());
+			if (!stood.isEmpty()) {
+				// (Lines starting "@" go on the wrap-up's "Your base" page.)
+				mine.add("@Heart stood on Battle Day|" + stood);
+				mine.add("@Turret hits|" + me.defenseHits);
+				mine.add("@Base blocks blown up|" + String.format(java.util.Locale.ROOT, "%,d", me.blocksLost));
+			}
+			int battleGoals = 0;
+			for (String g : List.of("knockout", "heartkill", "sudden")) {
+				if (me.goalsDone.contains(g)) {
+					battleGoals++;
+				}
+			}
+			mine.add("@Battle Day goals|" + battleGoals + " of 3");
+			if (!me.theme.isEmpty()) {
+				mine.add("@Famous for|" + SeasonChoices.themeName(me.theme).replace("Its ", "its "));
+			}
 		}
-		Net.send(player, new dev.rubymod.net.MorePayloads.SeasonRecap("Season " + data.season + " is over!", data.winner, awards, mine));
+		Net.send(player, new dev.rubymod.net.MorePayloads.SeasonRecap("Season " + data.season + (anyoneFought() ? " is over!" : ": no contest"),
+				data.winner, awards, mine));
 		return null;
 	}
 
@@ -516,6 +618,11 @@ public final class BattleDirector {
 	}
 
 	/** The wrap-up card's awards: "title|who|detail|item id" each. */
+	/** For the self-test: the wrap-up's awards as they'd be now. */
+	public static List<String> awardsNow() {
+		return awards(SeasonData.get());
+	}
+
 	private static List<String> awards(SeasonData data) {
 		List<String> awards = new ArrayList<>();
 		award(awards, "Top fighter", data, r -> r.kills, n -> n + (n == 1 ? " knockdown" : " knockdowns"), "minecraft:iron_sword");
@@ -546,8 +653,44 @@ public final class BattleDirector {
 		if (big != null && bigTier > 1) {
 			awards.add("Biggest Heart|" + big + "|Tier " + bigTier + "|minecraft:beacon");
 		}
-		data.players.values().stream().filter(r -> r.finished == 2).findFirst()
+		data.players.values().stream().filter(r -> r.finished == 2 && !r.satOut).findFirst()
 				.ifPresent(r -> awards.add("Runner-up|" + r.name + "|So close!|minecraft:iron_ingot"));
+		// The build side: the busiest machines, and the toughest defenses.
+		award(awards, "Busiest factory", data, r -> (int) Math.min(Integer.MAX_VALUE, BaseReport.made(r)),
+				n -> String.format(java.util.Locale.ROOT, "%,d", n) + " things made", "rubymod:ruby_drill");
+		award(awards, "Toughest defenses", data, r -> r.defenseHits, n -> n + (n == 1 ? " turret hit" : " turret hits"), "rubymod:sentry_turret");
+		// What each base was famous for (their own pick: recognition, not a contest).
+		for (SeasonData.PlayerRecord r : data.players.values()) {
+			if (!r.theme.isEmpty()) {
+				String item = switch (r.theme) {
+					case "walls" -> "rubymod:reinforced_concrete";
+					case "factory" -> "rubymod:assembler";
+					case "garage" -> "rubymod:jeep";
+					default -> "rubymod:fighter_jet";
+				};
+				awards.add("Famous for " + SeasonChoices.themeName(r.theme).replace("Its ", "its ") + "|" + r.name + "|Their own pick|" + item);
+			}
+		}
+		// Everyone gets at least one.
+		for (SeasonData.PlayerRecord r : data.players.values()) {
+			boolean has = false;
+			for (String a : awards) {
+				if (a.split("[|]")[1].equals(r.name)) {
+					has = true;
+					break;
+				}
+			}
+			if (has) {
+				continue;
+			}
+			if (r.research.size() > 0) {
+				awards.add("Researcher|" + r.name + "|" + r.research.size() + (r.research.size() == 1 ? " upgrade" : " upgrades") + "|minecraft:enchanted_book");
+			} else if (!r.goalsDone.isEmpty()) {
+				awards.add("Busy builder|" + r.name + "|" + r.goalsDone.size() + (r.goalsDone.size() == 1 ? " goal done" : " goals done") + "|minecraft:bricks");
+			} else {
+				awards.add("Good sport|" + r.name + "|Played Season " + data.season + "|minecraft:emerald");
+			}
+		}
 		return awards;
 	}
 

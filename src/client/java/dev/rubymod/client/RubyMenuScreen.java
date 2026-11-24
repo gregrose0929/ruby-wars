@@ -35,13 +35,14 @@ public class RubyMenuScreen extends Screen {
 		tiles.add(new Tile("Guide & Goals", "J", "What to do next, stars, upgrades", "minecraft:nether_star", ResearchScreen::new));
 		if (ClientState.inRubyWarsWorld()) {
 			tiles.add(new Tile("My Base", "", "Your power and every machine", "rubymod:ruby_drill", BaseScreen::new));
+			tiles.add(new Tile("Season Choices", "", "Teams, a Night Battle vote, your base", "minecraft:white_banner", SeasonChoicesScreen::new));
 		}
 		tiles.add(new Tile("Profile", "I", "Your stats and cosmetics", "minecraft:player_head", ProfileScreen::new));
 		tiles.add(new Tile("Field Manual", "Y", "How everything works", "minecraft:book", ManualScreen::new));
 		tiles.add(new Tile("Games", "H", "The hub, Ruby Wars, party games", "minecraft:compass", ModeScreen::new));
 		tiles.add(new Tile("Settings", "", "HUD, minimap, toasts", "minecraft:comparator", SettingsScreen::new));
 		if (ClientState.hud != null && ClientState.hud.squads()) {
-			tiles.add(new Tile("Squad", "", "Your squad", "minecraft:shield", SquadScreen::new));
+			tiles.add(new Tile("Team", "", "Your Battle Day team", "minecraft:shield", SquadScreen::new));
 		}
 		var player = Minecraft.getInstance().player;
 		if (player != null && player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)) {

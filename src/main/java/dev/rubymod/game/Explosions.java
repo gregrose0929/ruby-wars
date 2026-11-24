@@ -145,6 +145,7 @@ public final class Explosions {
 			}
 			result.add(pos);
 		}
+		BaseReport.blocksBroken(level, result);
 		if (DEBUG && radius >= 3.0F && !positions.isEmpty()) {
 			dev.rubymod.RubyMod.LOGGER.info("[explosion] radius {} at {} kept {} of {} blocks (phase {})", radius,
 					positions.get(0), result.size(), positions.size(), Rules.phase());
