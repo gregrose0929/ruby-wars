@@ -1,0 +1,1890 @@
+package dev.rubymod.client;
+
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+
+import dev.rubymod.RubyMod;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.decoration.Mannequin;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * The help menu's films (How It Works): a short film of each Armory item in use, made by the test client ("clips"
+ * mode) on a clean stage in the sky. A film camera (an invisible armor stand) watches an actor (a mannequin with your
+ * look that copies you every tick: the game doesn't draw you while the camera is elsewhere). Every film is real
+ * gameplay: placing, using, firing and riding go through the game itself; a few things the camera can't follow (a
+ * vehicle's driving, a walk) are moved along by hand. tools/make_clips.py packs the frames into the help menu.
+ *
+ * RUBYMOD_CLIPS (a comma list of film ids or sections) films just those.
+ */
+final class HelpFilms {
+	private HelpFilms() {
+	}
+
+	// ----- State -----
+
+	private static String filming;
+	private static int frame;
+	private static int frameTicks;
+	private static int every = 2;
+	/** At most this many frames a film (the help screen's sheets have room for six rows of eight). */
+	private static final int MAX_FRAMES = 48;
+	private static BlockPos base;
+	private static int cameraId = -1;
+	private static Mannequin actor;
+	private static MinecraftServer srv;
+	/** Walking (or flying) by hand: this much a tick, and whether to turn to face that way. */
+	private static Vec3 walking;
+	private static boolean walkFacing = true;
+	private static final List<Mover> MOVERS = new ArrayList<>();
+	private static final List<String> INDEX = new ArrayList<>();
+	private static final String ONLY = System.getenv("RUBYMOD_CLIPS");
+
+	/** Something moved along by hand each tick (a vehicle being driven, a monster walking): speed, heading and climb. */
+	private static final class Mover {
+		final Entity entity;
+		double speed;
+		double max;
+		double accel;
+		float yaw;
+		float turn;
+		double climb;
+		int climbAfter;
+		int left;
+		int age;
+		/** A monster walking (by itself, with its own legs) to here. */
+		Vec3 dest;
+
+		Mover(Entity entity, double speed, float yaw, int left) {
+			this.entity = entity;
+			this.speed = speed;
+			this.max = speed;
+			this.yaw = yaw;
+			this.left = left;
+		}
+	}
+
+	// Cameras: where the film camera's eyes are, and what it looks at (offsets from the stage's middle).
+	private static final Vec3[] SIDE = {new Vec3(5, 2.6, 0.5), new Vec3(-0.5, 1.0, 3.5)};
+	private static final Vec3[] WIDE = {new Vec3(6, 3.4, -1.5), new Vec3(0, 1.2, 5.5)};
+	private static final Vec3[] SHOOT = {new Vec3(4.5, 2.8, -3.5), new Vec3(-0.5, 1.5, 7)};
+	private static final Vec3[] FAR = {new Vec3(13, 7, -4), new Vec3(0, 3, 9)};
+	private static final Vec3[] UP = {new Vec3(9, 3, -6), new Vec3(0, 9, 8)};
+
+	// ----- The per-tick work -----
+
+	static void tick(Minecraft mc) {
+		MinecraftServer server = mc.getSingleplayerServer();
+		if (server != null && base != null) {
+			server.execute(HelpFilms::serverTick);
+		}
+		if (filming != null && frameTicks++ % every == 0 && frame < MAX_FRAMES) {
+			AutoTest.shot(mc, "clip-" + filming + "-" + String.format(java.util.Locale.ROOT, "%02d", frame++));
+		}
+	}
+
+	private static void serverTick() {
+		if (srv == null) {
+			return;
+		}
+		ServerPlayer p = AutoTest.me(srv);
+		if (walking != null) {
+			float yaw = walkFacing ? (float) Math.toDegrees(Math.atan2(-walking.x, walking.z)) : p.getYRot();
+			if (walking.horizontalDistanceSqr() < 1e-6) {
+				yaw = p.getYRot();
+			}
+			p.teleportTo(p.level(), p.getX() + walking.x, p.getY() + walking.y, p.getZ() + walking.z, Set.of(), yaw, p.getXRot(), false);
+		}
+		Mannequin a = actor;
+		if (a != null && a.isAlive()) {
+			if (!a.isPassenger()) {
+				// A step behind you, so your own shots and throws don't hit it.
+				double r = Math.toRadians(p.getYRot());
+				a.snapTo(p.getX() + Math.sin(r) * 0.7, p.getY(), p.getZ() - Math.cos(r) * 0.7, p.getYRot(), p.getXRot());
+				a.setYHeadRot(p.getYHeadRot());
+				a.setYBodyRot(p.getYRot());
+			}
+			for (EquipmentSlot slot : new EquipmentSlot[] {EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST,
+					EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+				ItemStack have = p.getItemBySlot(slot);
+				if (!ItemStack.matches(have, a.getItemBySlot(slot))) {
+					a.setItemSlot(slot, have.copy());
+				}
+			}
+			a.setPose(p.isShiftKeyDown() ? net.minecraft.world.entity.Pose.CROUCHING : net.minecraft.world.entity.Pose.STANDING);
+		}
+		for (Iterator<Mover> it = MOVERS.iterator(); it.hasNext();) {
+			Mover m = it.next();
+			if (!m.entity.isAlive() || m.left-- <= 0) {
+				it.remove();
+				continue;
+			}
+			m.age++;
+			if (m.dest != null && m.entity instanceof net.minecraft.world.entity.Mob mob) {
+				if (m.age % 10 == 1) {
+					mob.getNavigation().moveTo(m.dest.x, m.dest.y, m.dest.z, 1.0);
+				}
+				continue;
+			}
+			m.speed = Math.min(m.max, m.speed + m.accel);
+			m.yaw += m.turn;
+			double rad = Math.toRadians(m.yaw);
+			double dx = -Math.sin(rad) * m.speed;
+			double dz = Math.cos(rad) * m.speed;
+			double dy = m.age > m.climbAfter ? m.climb : 0;
+			Entity e = m.entity;
+			if (isRide(e)) {
+				e.snapTo(e.getX() + dx, e.getY() + dy, e.getZ() + dz, m.yaw, e.getXRot());
+			} else {
+				e.teleportTo(e.getX() + dx, e.getY() + dy, e.getZ() + dz); // (a monster: told to the client as it goes)
+			}
+			e.setYRot(m.yaw);
+			if (e instanceof LivingEntity living) {
+				living.setYHeadRot(m.yaw);
+				living.setYBodyRot(m.yaw);
+			}
+			e.setDeltaMovement(dx, dy, dz);
+		}
+	}
+
+	// ----- Building blocks -----
+
+	static Item item(String id) {
+		return BuiltInRegistries.ITEM.getValue(id.contains(":") ? Identifier.parse(id) : RubyMod.id(id));
+	}
+
+	static Block block(String id) {
+		return BuiltInRegistries.BLOCK.getValue(id.contains(":") ? Identifier.parse(id) : RubyMod.id(id));
+	}
+
+	static ItemStack stack(String id, int count) {
+		return new ItemStack(item(id), count);
+	}
+
+	private static BlockPos at(int x, int y, int z) {
+		return base.offset(x, y, z);
+	}
+
+	private static void put(ServerLevel level, int x, int y, int z, BlockState state) {
+		level.setBlockAndUpdate(at(x, y, z), state);
+	}
+
+	/** A block, turned to face {@code facing} if it can. */
+	private static BlockState facing(String id, Direction facing) {
+		BlockState s = block(id).defaultBlockState();
+		if (s.hasProperty(BlockStateProperties.HORIZONTAL_FACING) && facing.getAxis().isHorizontal()) {
+			s = s.setValue(BlockStateProperties.HORIZONTAL_FACING, facing);
+		} else if (s.hasProperty(BlockStateProperties.FACING)) {
+			s = s.setValue(BlockStateProperties.FACING, facing);
+		}
+		return s;
+	}
+
+	/** A box of one block (inclusive corners). */
+	private static void box(ServerLevel level, int x1, int y1, int z1, int x2, int y2, int z2, BlockState state) {
+		for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+			for (int y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+				for (int z = Math.min(z1, z2); z <= Math.max(z1, z2); z++) {
+					put(level, x, y, z, state);
+				}
+			}
+		}
+	}
+
+	/** Films whose stage is your base (defenses, traps, locks and the like only work in one). */
+	private static final Set<String> IN_BASE = Set.of("sentry_turret", "tesla_coil", "mortar", "missile_silo", "flak_cannon", "sam_site",
+			"point_defense", "missile_interceptor", "shield_generator", "radar_station", "landmine", "claymore", "at_mine", "holo_camo", "blast_door",
+			"keycard_door", "keycard_reader", "security_camera", "laser_tripwire", "seismic_sensor", "alarm_block", "guard_contract",
+			"at_guard_contract", "ruby_drill", "blueprint", "armory");
+	private static String staging;
+
+	/** Your Heart under the stage's middle (so the stage is your base), or no base at all (so blasts break things). */
+	private static void heart(ServerPlayer p, boolean wanted) {
+		BlockPos h = at(0, -2, 4);
+		var data = dev.rubymod.game.SeasonData.get();
+		var claim = data.claimOf(p.getUUID());
+		if (!wanted) {
+			if (claim != null) {
+				data.claims.remove(claim.owner);
+				dev.rubymod.game.SeasonData.markDirty();
+			}
+			return;
+		}
+		p.level().setBlockAndUpdate(h, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
+		if (claim == null || claim.destroyed || !claim.pos().equals(h)) {
+			if (claim != null) {
+				data.claims.remove(claim.owner);
+			}
+			dev.rubymod.game.Claims.onHeartPlaced(p.level(), p, h);
+		}
+	}
+
+	/** A vehicle (or other ride) put down by the stage at (x, z), facing south. */
+	private static void ride(ServerPlayer p, String id, double x, double z) {
+		var type = BuiltInRegistries.ENTITY_TYPE.getValue(RubyMod.id(id));
+		Entity e = type.create(p.level(), EntitySpawnReason.COMMAND);
+		if (e != null) {
+			e.snapTo(base.getX() + 0.5 + x, base.getY() + 1, base.getZ() + 0.5 + z, 0, 0);
+			p.level().addFreshEntity(e);
+		}
+	}
+
+	/** A machine or defense of yours, put down by the stage (it's yours, as if you'd placed it). */
+	private static void owned(ServerPlayer p, int x, int y, int z, String id, Direction facing) {
+		put(p.level(), x, y, z, facing(id, facing));
+		var be = p.level().getBlockEntity(at(x, y, z));
+		if (be instanceof dev.rubymod.industry.MachineBlockEntity m) {
+			m.setOwner(p.getUUID());
+		}
+	}
+
+	private static void time(MinecraftServer server, String when) {
+		server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), "time set " + when);
+	}
+
+	private static final Direction S = Direction.SOUTH;
+	private static final Direction N = Direction.NORTH;
+
+	// ----- Steps (each one a step of the test client's script) -----
+
+	private static void then(int delay, Consumer<Minecraft> action) {
+		AutoTest.then(delay, action);
+	}
+
+	private static void wait(int ticks) {
+		then(ticks, mc -> {
+		});
+	}
+
+	private static void server(Consumer<ServerPlayer> action) {
+		then(0, mc -> AutoTest.onServer(mc, s -> action.accept(AutoTest.me(s))));
+	}
+
+	private static void holding(String id, int count) {
+		server(p -> {
+			p.getInventory().setItem(0, id == null ? ItemStack.EMPTY : stack(id, count));
+			p.getInventory().setSelectedSlot(0);
+		});
+		then(2, mc -> mc.player.getInventory().setSelectedSlot(0));
+	}
+
+	private static void holding(String id) {
+		holding(id, 1);
+	}
+
+	private static void offhand(String id, int count) {
+		server(p -> p.setItemSlot(EquipmentSlot.OFFHAND, stack(id, count)));
+	}
+
+	private static void wear(EquipmentSlot slot, String id) {
+		server(p -> p.setItemSlot(slot, stack(id, 1)));
+	}
+
+	/** Stand here (offsets from the middle), facing south. */
+	private static void stand(double x, double z) {
+		server(p -> p.teleportTo(p.level(), base.getX() + 0.5 + x, base.getY() + 1, base.getZ() + 0.5 + z, Set.of(), 0, 15, false));
+	}
+
+	/** Turn to look at this spot (offsets from the stage's middle). */
+	private static void face(double x, double y, double z) {
+		then(0, mc -> {
+			Vec3 target = Vec3.atBottomCenterOf(base).add(x, y, z);
+			Vec3 to = target.subtract(mc.player.getEyePosition());
+			float yaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z));
+			float pitch = (float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
+			mc.player.setYRot(yaw);
+			mc.player.setXRot(pitch);
+			AutoTest.onServer(mc, s -> {
+				ServerPlayer p = AutoTest.me(s);
+				p.teleportTo(p.level(), p.getX(), p.getY(), p.getZ(), Set.of(), yaw, pitch, false);
+			});
+		});
+	}
+
+	/** Walk this way for a while (south by default), turning to face it. */
+	private static void walk(int ticks, double dx, double dy, double dz) {
+		then(0, mc -> {
+			walking = new Vec3(dx, dy, dz);
+			walkFacing = true;
+		});
+		then(ticks, mc -> walking = null);
+	}
+
+	private static void walk(int ticks) {
+		walk(ticks, 0, 0, 0.2);
+	}
+
+	/** Step back (keep facing the way you are). */
+	private static void back(int ticks) {
+		then(0, mc -> {
+			walking = new Vec3(0, 0, -0.18);
+			walkFacing = false;
+		});
+		then(ticks, mc -> walking = null);
+	}
+
+	private static void swing() {
+		Mannequin a = actor;
+		if (a != null && srv != null) {
+			srv.execute(() -> a.swing(InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, true));
+		}
+	}
+
+	/** Right-click a block's face (as if you'd clicked it). */
+	private static void click(int x, int y, int z, Direction face) {
+		then(0, mc -> {
+			BlockPos pos = at(x, y, z);
+			var hit = new BlockHitResult(Vec3.atCenterOf(pos).add(Vec3.atLowerCornerOf(face.getUnitVec3i()).scale(0.5)), face, pos, false);
+			mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, hit);
+			swing();
+		});
+	}
+
+	/** Put what you're holding down on the floor here. */
+	private static void clickFloor(int x, int z) {
+		click(x, 0, z, Direction.UP);
+	}
+
+	private static void place(String id, int x, int z) {
+		holding(id, 16);
+		wait(4);
+		clickFloor(x, z);
+	}
+
+	/** Right-click with what you're holding (in the air). */
+	private static void use() {
+		then(0, mc -> {
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+			swing();
+		});
+	}
+
+	/** Hold right-click for a while, then let go. */
+	private static void holdUse(int ticks) {
+		then(0, mc -> {
+			mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+			mc.options.keyUse.setDown(true);
+		});
+		then(ticks, mc -> mc.options.keyUse.setDown(false));
+	}
+
+	private static void sneak(boolean on) {
+		then(0, mc -> {
+			mc.player.setShiftKeyDown(on);
+			AutoTest.onServer(mc, s -> AutoTest.me(s).setShiftKeyDown(on));
+		});
+	}
+
+	/** Pull the trigger, {@code shots} times, {@code gap} ticks apart (guns and the Rocket Launcher). */
+	private static void fire(int shots, int gap) {
+		for (int i = 0; i < shots; i++) {
+			then(i == 0 ? 0 : gap, mc -> AutoTest.onServer(mc, s -> {
+				ServerPlayer p = AutoTest.me(s);
+				ItemStack held = p.getMainHandItem();
+				if (held.getItem() instanceof dev.rubymod.gun.GunItem gun) {
+					dev.rubymod.gun.Gunfire.tryFire(p.level(), p, held, gun);
+				} else if (held.getItem() instanceof dev.rubymod.item.RocketLauncherItem) {
+					dev.rubymod.item.RocketLauncherItem.fire(p, held);
+				}
+			}));
+		}
+	}
+
+	/** The nearest entity (on the client) that passes {@code which}. */
+	private static Entity nearest(Minecraft mc, Predicate<Entity> which) {
+		Entity best = null;
+		for (Entity e : mc.level.entitiesForRendering()) {
+			if (e != mc.player && which.test(e) && (best == null || e.distanceToSqr(mc.player) < best.distanceToSqr(mc.player))) {
+				best = e;
+			}
+		}
+		return best;
+	}
+
+	private static boolean isRide(Entity e) {
+		return e instanceof dev.rubymod.entity.VehicleEntity || e instanceof dev.rubymod.entity.AircraftEntity
+				|| e instanceof dev.rubymod.entity.HeavyAAGunEntity;
+	}
+
+	/** Right-click an entity (a vehicle, say). */
+	private static void interact(Predicate<Entity> which) {
+		then(0, mc -> {
+			Entity e = nearest(mc, which);
+			if (e != null) {
+				mc.gameMode.interact(mc.player, e, new net.minecraft.world.phys.EntityHitResult(e, e.getBoundingBox().getCenter()), InteractionHand.MAIN_HAND);
+				swing();
+			}
+		});
+	}
+
+	/** Hit the nearest monster. */
+	private static void attack() {
+		then(0, mc -> {
+			Entity e = nearest(mc, x -> x instanceof net.minecraft.world.entity.monster.Monster);
+			if (e != null) {
+				mc.gameMode.attack(mc.player, e);
+				swing();
+			}
+		});
+	}
+
+	/** Dig at a block with what you're holding (in survival, the cracks spread till it breaks). */
+	private static void dig(int x, int y, int z, int ticks) {
+		then(0, mc -> {
+			mc.gameMode.startDestroyBlock(at(x, y, z), Direction.NORTH);
+			swing();
+		});
+		for (int i = 0; i < ticks; i++) {
+			int n = i;
+			then(1, mc -> {
+				mc.gameMode.continueDestroyBlock(at(x, y, z), Direction.NORTH);
+				if (n % 5 == 0) {
+					swing();
+				}
+			});
+		}
+	}
+
+	/** Get in the nearest vehicle (the actor does: the camera sees it). */
+	private static void getIn() {
+		server(p -> {
+			Mannequin a = actor;
+			if (a == null) {
+				return;
+			}
+			Entity best = null;
+			for (Entity e : p.level().getEntities((Entity) null, a.getBoundingBox().inflate(8), HelpFilms::isRide)) {
+				if (best == null || e.distanceToSqr(a) < best.distanceToSqr(a)) {
+					best = e;
+				}
+			}
+			if (best != null) {
+				a.startRiding(best, true, false);
+			}
+		});
+	}
+
+	/** Drive what the actor's in: speed (a tick), turning (degrees a tick), speeding up, and climbing after a while. */
+	private static void drive(int ticks, double speed, float turn, double accel, double climb, int climbAfter) {
+		server(p -> {
+			Mannequin a = actor;
+			Entity v = a == null ? null : a.getVehicle();
+			if (v != null) {
+				Mover m = new Mover(v, accel > 0 ? 0.02 : speed, v.getYRot(), ticks);
+				m.max = speed;
+				m.accel = accel;
+				m.turn = turn;
+				m.climb = climb;
+				m.climbAfter = climbAfter;
+				MOVERS.add(m);
+			}
+		});
+		wait(ticks);
+	}
+
+	/** A Husk (a monster that doesn't burn in the sun) walking this way: from (x, z), at this heading, for a while. */
+	private static void monster(double x, double z, float yaw, double speed, int ticks) {
+		server(p -> {
+			var husk = EntityTypes.HUSK.create(p.level(), EntitySpawnReason.COMMAND);
+			if (husk == null) {
+				return;
+			}
+			husk.addTag("rubymod_horde"); // (monsters are kept off the island otherwise)
+			husk.setPersistenceRequired();
+			husk.snapTo(base.getX() + 0.5 + x, base.getY() + 1, base.getZ() + 0.5 + z, yaw, 0);
+			p.level().addFreshEntity(husk);
+			Mover m = new Mover(husk, speed, yaw, ticks);
+			double rad = Math.toRadians(yaw);
+			m.dest = speed > 0 ? husk.position().add(-Math.sin(rad) * speed * ticks, 0, Math.cos(rad) * speed * ticks) : husk.position();
+			MOVERS.add(m);
+		});
+	}
+
+	/** A target drone circling overhead (air defenses practise on them anywhere). */
+	private static void drone(double x, double y, double z, double radius) {
+		server(p -> dev.rubymod.game.TrainingGround.drone(p.level(), Vec3.atBottomCenterOf(base).add(x, y, z), radius));
+	}
+
+	/** A shell lobbed in at the base from outside (by nobody), for the air defenses and the Shield to stop. */
+	private static void incoming(double fromX, double fromZ, double toX, double toZ) {
+		server(p -> {
+			Vec3 from = Vec3.atBottomCenterOf(base).add(fromX, 1, fromZ);
+			Vec3 to = Vec3.atBottomCenterOf(base).add(toX, 0, toZ);
+			p.level().addFreshEntity(dev.rubymod.entity.MortarShellEntity.launch(p.level(), null, from, to));
+		});
+	}
+
+	/** The trap at (x, z) goes off (as it would for an enemy stepping on it: the film's monster isn't one it waits for). */
+	private static void boom(int x, int z) {
+		server(p -> {
+			for (Entity e : p.level().getEntities((Entity) null, new AABB(base).inflate(30), e -> e instanceof net.minecraft.world.entity.monster.Monster)) {
+				AutoTest.log("boom: monster at {} (trap at {}, {})", e.position().subtract(Vec3.atBottomCenterOf(base)), x, z);
+			}
+			p.level().setBlockAndUpdate(at(x, 1, z), Blocks.AIR.defaultBlockState());
+			dev.rubymod.game.Explosions.explode(p.level(), null, base.getX() + x + 0.5, base.getY() + 1.2, base.getZ() + z + 0.5, 2.5F, false);
+		});
+	}
+
+	private static void closeScreen() {
+		then(0, mc -> mc.gui.setScreen(null));
+	}
+
+	// ----- A film -----
+
+	/**
+	 * One film: a fresh stage ({@code build} adds what's on it), the camera at {@code cam}, a frame every {@code every}
+	 * ticks, and {@code script} the steps.
+	 */
+	private static void film(String id, String section, int every, Vec3[] cam, Consumer<ServerPlayer> build, Runnable script) {
+		if (ONLY != null && java.util.Arrays.stream(ONLY.split(",")).noneMatch(s -> s.equals(id) || s.equals(section))) {
+			return;
+		}
+		then(0, mc -> staging = id);
+		stage(build, cam[0], cam[1]);
+		then(0, mc -> {
+			filming = id;
+			frame = 0;
+			frameTicks = 0;
+			HelpFilms.every = every;
+		});
+		script.run();
+		then(0, mc -> {
+			AutoTest.log("clip {}: {} frames", filming, frame);
+			INDEX.add("film " + id + " " + section);
+			filming = null;
+			walking = null;
+			mc.options.keyUse.setDown(false);
+			mc.player.setShiftKeyDown(false);
+		});
+	}
+
+	/** This item has the same film as another (ammo has its gun's). */
+	private static void alias(String id, String film, String section) {
+		if (ONLY == null || java.util.Arrays.stream(ONLY.split(",")).anyMatch(s -> s.equals(id) || s.equals(section) || s.equals(film))) {
+			then(0, mc -> INDEX.add("alias " + id + " " + film + " " + section));
+		}
+	}
+
+	private static void stage(Consumer<ServerPlayer> build, Vec3 cam, Vec3 look) {
+		then(5, mc -> {
+			cameraId = -1;
+			actor = null;
+			walking = null;
+			if (DronePilot.flying()) {
+				DronePilot.stop(mc);
+			}
+			mc.options.keyShift.setDown(false);
+			mc.setCameraEntity(mc.player);
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+			if (mc.gui.screen() != null) {
+				mc.gui.setScreen(null);
+			}
+		});
+		then(1, mc -> AutoTest.onServer(mc, server -> {
+			srv = server;
+			ServerPlayer p = AutoTest.me(server);
+			ServerLevel level = p.level();
+			if (base == null) {
+				base = p.blockPosition().atY(Math.min(level.getMaxY() - 40, p.getBlockY() + 60));
+			}
+			MOVERS.clear();
+			dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.LOBBY;
+			time(server, "noon");
+			for (Entity e : level.getEntities((Entity) null, new AABB(base).inflate(70), e -> !(e instanceof Player))) {
+				e.discard();
+			}
+			BlockState air = Blocks.AIR.defaultBlockState();
+			for (int x = -16; x <= 16; x++) {
+				for (int z = -12; z <= 24; z++) {
+					for (int y = -3; y <= 26; y++) {
+						BlockState s = air;
+						if (Math.abs(x) <= 12 && z >= -9 && z <= 20) {
+							s = y == 0 ? Blocks.GRASS_BLOCK.defaultBlockState() : y == -1 ? Blocks.DIRT.defaultBlockState()
+									: y < -1 ? Blocks.STONE.defaultBlockState() : air;
+						}
+						if (!level.getBlockState(at(x, y, z)).equals(s)) {
+							level.setBlock(at(x, y, z), s, 2);
+						}
+					}
+				}
+			}
+			p.setGameMode(GameType.CREATIVE);
+			p.getInventory().clearContent();
+			for (EquipmentSlot slot : EquipmentSlot.values()) {
+				if (slot != EquipmentSlot.MAINHAND && slot != EquipmentSlot.BODY && slot != EquipmentSlot.SADDLE) {
+					p.setItemSlot(slot, ItemStack.EMPTY);
+				}
+			}
+			p.setShiftKeyDown(false);
+			p.teleportTo(level, base.getX() + 0.5, base.getY() + 1, base.getZ() + 0.5, Set.of(), 0, 15, false);
+			heart(p, IN_BASE.contains(staging));
+			build.accept(p);
+			// The camera: eyes at cam, looking at look. The view is third person (so the actor's drawn), which sits 4
+			// blocks behind the stand's eyes: so the stand goes 4 blocks on.
+			ArmorStand stand = EntityTypes.ARMOR_STAND.create(level, EntitySpawnReason.COMMAND);
+			stand.setInvisible(true);
+			stand.setNoGravity(true);
+			stand.setSilent(true);
+			Vec3 middle = Vec3.atBottomCenterOf(base.above());
+			Vec3 eye = middle.add(cam);
+			Vec3 to = middle.add(look).subtract(eye);
+			float camYaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z));
+			float camPitch = (float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
+			Vec3 on = eye.add(to.normalize().scale(4));
+			stand.snapTo(on.x, on.y - stand.getEyeHeight(), on.z, camYaw, camPitch);
+			stand.setYHeadRot(camYaw);
+			level.addFreshEntity(stand);
+			cameraId = stand.getId();
+			Mannequin a = EntityTypes.MANNEQUIN.create(level, EntitySpawnReason.COMMAND);
+			a.snapTo(p.getX(), p.getY(), p.getZ(), 0, 15);
+			a.getEntityData().set(dev.rubymod.mixin.MannequinAccessor.rubymod$profile(),
+					net.minecraft.world.item.component.ResolvableProfile.createResolved(p.getGameProfile()));
+			((dev.rubymod.mixin.MannequinAccessor) a).rubymod$hideDescription(true);
+			a.setNoGravity(true);
+			a.setPermanentlyInvulnerable(true);
+			level.addFreshEntity(a);
+			actor = a;
+		}));
+		then(5, mc -> AutoTest.hold(m -> base != null && cameraId >= 0 && m.level.getEntity(cameraId) != null
+				&& m.player.distanceToSqr(Vec3.atBottomCenterOf(base.above())) < 2
+				&& m.level.getBlockState(base).is(Blocks.GRASS_BLOCK), 400));
+		then(30, mc -> {
+			var camera = mc.level.getEntity(cameraId);
+			if (camera != null) {
+				mc.setCameraEntity(camera);
+			}
+			mc.player.setYRot(0);
+			mc.player.setXRot(15);
+		});
+		wait(8);
+	}
+
+	// ----- Every film -----
+
+	static void script() {
+		then(5, mc -> {
+			AutoTest.command(mc, "time set noon");
+			AutoTest.command(mc, "weather clear");
+			AutoTest.command(mc, "gamerule doDaylightCycle false");
+			AutoTest.command(mc, "gamerule doMobSpawning false");
+			AutoTest.command(mc, "difficulty easy");
+			BattleSky.off = true; // Open War's red sky would tint the films that need Open War
+			if (!mc.gui.hud.isHidden()) {
+				mc.gui.hud.toggle();
+			}
+			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+		});
+		wait(100);
+
+		yourBase();
+		guns();
+		weapons();
+		defenses();
+		vehicles();
+		industry();
+		building();
+		security();
+		gear();
+
+		then(10, mc -> {
+			mc.setCameraEntity(mc.player);
+			if (mc.gui.hud.isHidden()) {
+				mc.gui.hud.toggle();
+			}
+			try {
+				Files.write(mc.gameDirectory.toPath().resolve("screenshots").resolve("clips-index.txt"), INDEX);
+			} catch (Exception e) {
+				RubyMod.LOGGER.error("Couldn't write the clips index", e);
+			}
+			mc.stop();
+		});
+	}
+
+	/** Use it, and look at its screen for a moment. */
+	private static void openIt(int x, int y, int z) {
+		holding(null);
+		wait(4);
+		click(x, y, z, N);
+		wait(18);
+		closeScreen();
+		wait(4);
+	}
+
+	private static void yourBase() {
+		String sec = "Your base";
+		film("armory", sec, 2, SIDE, p -> {
+		}, () -> {
+			place("armory", 0, 3);
+			wait(12);
+			openIt(0, 1, 3);
+		});
+	}
+
+	// ----- Guns -----
+
+	private static Consumer<ServerPlayer> range() {
+		return p -> box(p.level(), -2, 1, 11, 2, 3, 11, Blocks.TARGET.defaultBlockState());
+	}
+
+	private static void shoot(String gun, int shots, int gap, boolean scope) {
+		holding(gun);
+		wait(6);
+		face(0, 2, 11.5);
+		wait(4);
+		if (scope) {
+			then(0, mc -> {
+				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+				mc.options.keyUse.setDown(true);
+			});
+			wait(10);
+		}
+		fire(shots, gap);
+		wait(14);
+		if (scope) {
+			then(0, mc -> mc.options.keyUse.setDown(false));
+		}
+	}
+
+	private static void guns() {
+		String sec = "Guns";
+		film("service_pistol", sec, 2, SHOOT, range(), () -> shoot("service_pistol", 6, 5, false));
+		film("arr_rifle", sec, 2, SHOOT, range(), () -> shoot("arr_rifle", 18, 2, false));
+		film("combat_shotgun", sec, 2, SHOOT, range(), () -> shoot("combat_shotgun", 3, 14, false));
+		film("longshot_sniper", sec, 2, SHOOT, range(), () -> shoot("longshot_sniper", 2, 22, true));
+		film("ruby_blaster", sec, 2, SHOOT, range(), () -> shoot("ruby_blaster", 14, 3, false));
+		film("flamethrower", sec, 2, SIDE, p -> {
+			box(p.level(), -1, 1, 5, 1, 1, 6, Blocks.HAY_BLOCK.defaultBlockState());
+			put(p.level(), 0, 2, 5, Blocks.OAK_PLANKS.defaultBlockState());
+		}, () -> {
+			holding("flamethrower");
+			wait(6);
+			face(0, 1.3, 5.5);
+			holdUse(40);
+			wait(16);
+		});
+		String att = "Attachments";
+		for (String a : new String[] {"extended_mag", "red_dot_sight", "vertical_grip", "suppressor"}) {
+			film(a, att, 2, SHOOT, range(), () -> {
+				offhand("arr_rifle", 1);
+				holding(a);
+				wait(12);
+				use();
+				wait(10);
+				// The rifle (with it on) into your hand.
+				server(p -> {
+					ItemStack gun = p.getItemBySlot(EquipmentSlot.OFFHAND).copy();
+					p.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+					p.getInventory().setItem(0, gun);
+				});
+				wait(6);
+				face(0, 2, 11.5);
+				wait(4);
+				fire(10, 3);
+				wait(10);
+			});
+		}
+		String ammo = "For guns";
+		alias("light_ammo", "service_pistol", ammo);
+		alias("heavy_ammo", "arr_rifle", ammo);
+		alias("shotgun_shell", "combat_shotgun", ammo);
+		alias("sniper_round", "longshot_sniper", ammo);
+		alias("ruby_cell", "ruby_blaster", ammo);
+	}
+
+	// ----- Rockets, grenades, launchers, charges, artillery -----
+
+	private static void weapons() {
+		String sec = "Grenades";
+		for (String g : new String[] {"frag_grenade", "smoke_grenade", "fire_bomb"}) {
+			film(g, sec, 3, WIDE, p -> {
+			}, () -> {
+				holding(g, 4);
+				wait(6);
+				face(0, 2, 7);
+				holdUse(5);
+				wait(110);
+			});
+		}
+		film("air_strike_flare", "Artillery and strikes", 7, FAR, p -> {
+		}, () -> {
+			holding("air_strike_flare");
+			wait(6);
+			face(0, 4, 10);
+			holdUse(8);
+			wait(300);
+		});
+
+		sec = "Launchers";
+		film("rocket_launcher", sec, 2, SHOOT, p -> box(p.level(), -2, 1, 13, 2, 3, 13, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
+			holding("rocket_launcher");
+			wait(6);
+			face(0, 2, 13);
+			wait(4);
+			fire(1, 0);
+			wait(40);
+		});
+		film("lancer", sec, 2, WIDE, p -> ride(p, "jeep", 0, 13), () -> {
+			wait(4);
+			holding("lancer");
+			wait(4);
+			face(0, 1.5, 14.5);
+			wait(10);
+			server(p -> {
+				Entity target = null;
+				for (Entity e : p.level().getEntities((Entity) null, new AABB(at(0, 1, 14)).inflate(4), HelpFilms::isRide)) {
+					target = e;
+				}
+				if (p.getMainHandItem().getItem() instanceof dev.rubymod.item.LockOnLauncherItem l) {
+					l.fire(p, p.getMainHandItem(), target);
+				}
+			});
+			wait(50);
+		});
+		film("skyhammer", sec, 2, UP, p -> {
+		}, () -> {
+			drone(0, 16, 10, 6);
+			wait(20);
+			holding("skyhammer");
+			wait(4);
+			face(0, 16, 10);
+			server(p -> {
+				Entity target = null;
+				for (Entity e : p.level().getEntities((Entity) null, new AABB(at(0, 16, 10)).inflate(20),
+						e -> e instanceof dev.rubymod.entity.AircraftEntity)) {
+					target = e;
+				}
+				if (p.getMainHandItem().getItem() instanceof dev.rubymod.item.LockOnLauncherItem l) {
+					l.fire(p, p.getMainHandItem(), target);
+				}
+			});
+			wait(50);
+		});
+		alias("rocket", "rocket_launcher", "Rockets and shells");
+		alias("aa_missile", "skyhammer", "Rockets and shells");
+		alias("at_missile", "lancer", "Rockets and shells");
+
+		sec = "Breaking in";
+		film("breaching_charge", sec, 4, WIDE, p -> {
+			box(p.level(), -2, 1, 3, 2, 3, 3, Blocks.STONE_BRICKS.defaultBlockState());
+			dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.WAR;
+		}, () -> {
+			holding("breaching_charge");
+			wait(6);
+			click(0, 1, 3, N);
+			wait(4);
+			back(14);
+			wait(135);
+		});
+		film("c4", sec, 2, WIDE, p -> box(p.level(), -2, 1, 6, 2, 3, 6, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
+			holding("c4", 2);
+			wait(6);
+			face(0, 2, 6);
+			use();
+			wait(14);
+			back(12);
+			sneak(true);
+			wait(2);
+			use();
+			wait(2);
+			sneak(false);
+			wait(30);
+		});
+
+		sec = "Artillery and strikes";
+		film("mortar", sec, 2, FAR, p -> {
+			owned(p, 2, 1, 2, "mortar", S);
+			dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.WAR; // heavy weapons fire in Open War
+		}, () -> {
+			holding("rangefinder");
+			wait(6);
+			face(0, 0, 17);
+			holdUse(16);
+			server(p -> dev.rubymod.item.RangefinderItem.mark(p, at(0, 0, 17)));
+			wait(4);
+			holding("mortar_shell", 3);
+			wait(6);
+			click(2, 1, 2, N);
+			wait(70);
+		});
+		alias("rangefinder", "mortar", sec);
+		alias("mortar_shell", "mortar", "Rockets and shells");
+		film("missile_silo", sec, 2, new Vec3[] {new Vec3(7, 3, -3), new Vec3(1, 5, 4)}, p -> {
+			owned(p, 2, 1, 3, "missile_silo", S);
+			dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.WAR;
+		}, () -> {
+			server(p -> dev.rubymod.item.RangefinderItem.mark(p, at(0, 0, 17)));
+			holding("cruise_missile");
+			wait(6);
+			click(2, 1, 3, N);
+			wait(80);
+		});
+		alias("cruise_missile", "missile_silo", sec);
+	}
+
+	// ----- Walls, traps, turrets, air defenses -----
+
+	/** Build a little wall of it: three along, two high. */
+	private static void wallOf(String id) {
+		holding(id, 16);
+		wait(6);
+		for (int x = -1; x <= 1; x++) {
+			clickFloor(x, 3);
+			wait(4);
+		}
+		for (int x = -1; x <= 1; x++) {
+			click(x, 1, 3, Direction.UP);
+			wait(4);
+		}
+		wait(14);
+	}
+
+	private static void defenses() {
+		String sec = "Walls";
+		for (String w : new String[] {"sandbags", "concrete_wall", "reinforced_concrete", "reinforced_glass"}) {
+			film(w, sec, 2, SIDE, p -> {
+			}, () -> wallOf(w));
+		}
+		film("blast_door", sec, 2, SIDE, p -> {
+			box(p.level(), -3, 1, 4, 3, 3, 4, Blocks.STONE_BRICKS.defaultBlockState());
+			box(p.level(), 0, 1, 4, 0, 2, 4, Blocks.AIR.defaultBlockState());
+		}, () -> {
+			holding("blast_door");
+			wait(6);
+			walk(6);
+			clickFloor(0, 4);
+			wait(10);
+			holding(null);
+			click(0, 1, 4, N);
+			wait(8);
+			walk(20);
+			wait(8);
+		});
+		film("barbed_wire", sec, 2, SIDE, p -> {
+		}, () -> {
+			holding("barbed_wire", 8);
+			wait(6);
+			for (int x = -1; x <= 1; x++) {
+				clickFloor(x, 3);
+				wait(4);
+			}
+			wait(6);
+			walk(10);
+			walk(30, 0, 0, 0.05);
+		});
+		sec = "Hiding";
+		film("holo_camo", sec, 2, SIDE, p -> {
+			box(p.level(), -3, 1, 4, 3, 3, 4, Blocks.STONE_BRICKS.defaultBlockState());
+			box(p.level(), 0, 1, 4, 0, 2, 4, Blocks.AIR.defaultBlockState());
+		}, () -> {
+			walk(6);
+			holding("holo_camo", 8);
+			wait(4);
+			clickFloor(0, 4);
+			wait(4);
+			click(0, 1, 4, Direction.UP);
+			wait(6);
+			holding("minecraft:stone_bricks", 8);
+			wait(4);
+			click(0, 1, 4, N);
+			wait(4);
+			click(0, 2, 4, N);
+			wait(10);
+			walk(22);
+			wait(6);
+		});
+		film("camo_net", sec, 2, WIDE, p -> {
+			for (int[] c : new int[][] {{-2, 3}, {2, 3}, {-2, 7}, {2, 7}}) {
+				box(p.level(), c[0], 1, c[1], c[0], 2, c[1], Blocks.OAK_FENCE.defaultBlockState());
+			}
+		}, () -> {
+			server(p -> {
+			});
+			holding("camo_net", 16);
+			wait(6);
+			walk(10);
+			for (int x = -2; x <= 2; x++) {
+				click(x, 2, 3, Direction.UP);
+				wait(3);
+			}
+			for (int x = -2; x <= 2; x++) {
+				click(x, 2, 5, Direction.UP);
+				wait(3);
+			}
+			wait(14);
+		});
+
+		sec = "Traps";
+		film("landmine", sec, 3, WIDE, p -> {
+		}, () -> {
+			holding("landmine");
+			wait(6);
+			clickFloor(0, 4);
+			wait(6);
+			back(5);
+			monster(0, 9, 180, 0.1, 120);
+			wait(46);
+			boom(0, 4);
+			wait(20);
+		});
+		film("claymore", sec, 3, WIDE, p -> {
+		}, () -> {
+			holding("claymore");
+			wait(6);
+			clickFloor(0, 3);
+			wait(6);
+			back(5);
+			monster(0, 9, 180, 0.1, 120);
+			wait(50);
+			boom(0, 3);
+			wait(20);
+		});
+		film("at_mine", sec, 2, WIDE, p -> {
+		}, () -> {
+			holding("at_mine");
+			wait(6);
+			clickFloor(0, 5);
+			wait(6);
+			holding("jeep");
+			wait(4);
+			stand(3, 0);
+			wait(4);
+			clickFloor(3, 2);
+			wait(6);
+			getIn();
+			wait(4);
+			server(p -> {
+				Entity v = actor == null ? null : actor.getVehicle();
+				if (v != null) {
+					v.snapTo(base.getX() + 0.5, v.getY(), base.getZ() + 0.5, 0, 0);
+				}
+			});
+			server(p -> {
+				Entity v = actor == null ? null : actor.getVehicle();
+				if (v != null) {
+					MOVERS.add(new Mover(v, 0.25, 0, 60));
+				}
+			});
+			wait(20);
+			server(p -> {
+				p.level().setBlockAndUpdate(at(0, 1, 5), Blocks.AIR.defaultBlockState());
+				dev.rubymod.game.Explosions.explode(p.level(), null, base.getX() + 0.5, base.getY() + 1, base.getZ() + 5.5, 3.0F, false);
+			});
+			wait(40);
+		});
+
+		sec = "Turrets";
+		film("sentry_turret", sec, 2, SIDE, p -> {
+		}, () -> {
+			place("sentry_turret", 2, 4);
+			wait(8);
+			holding("heavy_ammo", 32);
+			wait(4);
+			click(2, 1, 4, N);
+			wait(6);
+			holding("practice_dummy");
+			wait(4);
+			clickFloor(0, 3);
+			wait(60);
+		});
+		alias("practice_dummy", "sentry_turret", sec);
+		film("tesla_coil", sec, 2, SIDE, p -> owned(p, -4, 1, 6, "solar_panel", S), () -> {
+			place("tesla_coil", 2, 5);
+			wait(8);
+			holding("practice_dummy");
+			wait(4);
+			clickFloor(0, 3);
+			wait(60);
+		});
+
+		sec = "Guns you man";
+		film("heavy_aa_gun", sec, 2, UP, p -> {
+		}, () -> {
+			drone(0, 18, 12, 8);
+			place("heavy_aa_gun", 0, 3);
+			wait(8);
+			walk(8);
+			getIn();
+			wait(10);
+			server(p -> {
+				Entity g = actor == null ? null : actor.getVehicle();
+				if (g instanceof dev.rubymod.entity.HeavyAAGunEntity gun) {
+					gun.setYRot(0);
+				}
+			});
+			wait(30);
+		});
+		film("railgun", sec, 2, WIDE, p -> {
+		}, () -> {
+			place("railgun", 0, 3);
+			wait(8);
+			walk(8);
+			getIn();
+			wait(30);
+		});
+
+		sec = "Automatic";
+		film("flak_cannon", sec, 3, UP, p -> {
+		}, () -> {
+			drone(0, 22, 12, 10);
+			place("flak_cannon", 2, 3);
+			wait(6);
+			holding("heavy_ammo", 32);
+			wait(4);
+			click(2, 1, 3, N);
+			wait(90);
+		});
+		film("sam_site", sec, 3, UP, p -> {
+		}, () -> {
+			drone(0, 26, 14, 12);
+			place("sam_site", 2, 3);
+			wait(6);
+			holding("ruby", 32);
+			wait(4);
+			click(2, 1, 3, N);
+			wait(90);
+		});
+		film("point_defense", sec, 2, WIDE, p -> owned(p, -4, 1, 2, "solar_panel", S), () -> {
+			place("point_defense", 2, 3);
+			wait(10);
+			incoming(0, 40, 0, 4);
+			wait(70);
+		});
+		film("missile_interceptor", sec, 2, WIDE, p -> dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.LOCKDOWN, () -> {
+			place("missile_interceptor", 2, 3);
+			wait(6);
+			holding("ruby", 32);
+			wait(4);
+			click(2, 1, 3, N);
+			wait(6);
+			incoming(0, 40, 0, 4);
+			wait(70);
+		});
+		film("shield_generator", sec, 2, WIDE, p -> owned(p, -4, 1, 2, "solar_panel", S), () -> {
+			place("shield_generator", 0, 3);
+			wait(10);
+			incoming(0, 40, 0, 4);
+			wait(70);
+		});
+		film("radar_station", "Early warning", 2, SIDE, p -> {
+		}, () -> {
+			place("radar_station", 0, 3);
+			wait(10);
+			monster(0, 14, 180, 0.1, 80);
+			wait(40);
+		});
+	}
+
+	// ----- Vehicles -----
+
+	private static void landVehicle(String id, double speed, float turn) {
+		place(id, 0, 4);
+		wait(8);
+		walk(10);
+		getIn();
+		wait(8);
+		drive(60, speed, turn, 0.01, 0, 0);
+	}
+
+	private static Consumer<ServerPlayer> water() {
+		return p -> {
+			box(p.level(), -10, -2, 3, 10, -2, 20, Blocks.SAND.defaultBlockState());
+			box(p.level(), -10, -1, 3, 10, 0, 20, Blocks.WATER.defaultBlockState());
+		};
+	}
+
+	private static void boat(String id) {
+		holding(id);
+		wait(6);
+		walk(5);
+		face(0, 0.5, 5);
+		wait(2);
+		use();
+		wait(8);
+		getIn();
+		wait(6);
+		drive(60, 0.3, 0.8F, 0.01, 0, 0);
+	}
+
+	private static void aircraft(String id, double speed, int climbAfter, double climb) {
+		place(id, 0, 3);
+		wait(10);
+		walk(6);
+		getIn();
+		wait(8);
+		drive(90, speed, 0, 0.012, climb, climbAfter);
+	}
+
+	private static void vehicles() {
+		String sec = "On land";
+		film("jeep", sec, 2, WIDE, p -> {
+		}, () -> landVehicle("jeep", 0.35, 1.5F));
+		film("tank", sec, 2, WIDE, p -> {
+		}, () -> {
+			landVehicle("tank", 0.15, 0);
+			server(p -> {
+				Entity v = actor == null ? null : actor.getVehicle();
+				if (v instanceof dev.rubymod.entity.VehicleEntity tank) {
+					tank.fireCannon(p);
+				}
+			});
+			wait(16);
+		});
+		film("dirt_bike", sec, 2, WIDE, p -> {
+		}, () -> landVehicle("dirt_bike", 0.45, 2.0F));
+		film("quad", sec, 2, WIDE, p -> {
+		}, () -> landVehicle("quad", 0.4, 1.8F));
+		film("tunnel_borer", sec, 3, WIDE, p -> box(p.level(), -4, 1, 8, 4, 6, 16, Blocks.STONE.defaultBlockState()), () -> {
+			place("tunnel_borer", 0, 4);
+			wait(8);
+			walk(10);
+			getIn();
+			wait(8);
+			// Its drill grinds a 3 x 3 tunnel as it goes (the film moves it along).
+			for (int i = 0; i < 20; i++) {
+				int z = 8 + i / 2;
+				then(4, mc -> AutoTest.onServer(mc, s -> {
+					ServerLevel level = AutoTest.me(s).level();
+					for (int x = -1; x <= 1; x++) {
+						for (int y = 1; y <= 3; y++) {
+							if (!level.getBlockState(at(x, y, z)).isAir()) {
+								level.destroyBlock(at(x, y, z), false);
+							}
+						}
+					}
+					Entity v = actor == null ? null : actor.getVehicle();
+					if (v != null) {
+						v.snapTo(v.getX(), v.getY(), Math.min(v.getZ() + 0.25, base.getZ() + z - 0.5), 0, 0);
+					}
+				}));
+			}
+			wait(10);
+		});
+		sec = "On water";
+		film("patrol_boat", sec, 2, WIDE, water(), () -> boat("patrol_boat"));
+		film("gunboat", sec, 2, WIDE, water(), () -> boat("gunboat"));
+		film("landing_craft", sec, 2, WIDE, water(), () -> boat("landing_craft"));
+		sec = "Aircraft";
+		film("fighter_jet", sec, 2, FAR, p -> {
+		}, () -> aircraft("fighter_jet", 0.8, 22, 0.25));
+		film("attack_jet", sec, 2, FAR, p -> {
+		}, () -> aircraft("attack_jet", 0.7, 26, 0.2));
+		film("bomber", sec, 2, FAR, p -> {
+		}, () -> aircraft("bomber", 0.6, 32, 0.15));
+		film("attack_heli", sec, 2, FAR, p -> {
+		}, () -> {
+			place("attack_heli", 0, 3);
+			wait(10);
+			walk(6);
+			getIn();
+			wait(8);
+			// Straight up, then away.
+			server(p -> {
+				Entity v = actor == null ? null : actor.getVehicle();
+				if (v != null) {
+					Mover m = new Mover(v, 0, 0, 30);
+					m.climb = 0.25;
+					MOVERS.add(m);
+				}
+			});
+			wait(30);
+			drive(50, 0.4, 0.5F, 0.02, 0.02, 0);
+		});
+		film("airfield_pad", "Airfield", 2, SIDE, p -> {
+		}, () -> {
+			place("airfield_pad", 0, 3);
+			wait(30);
+		});
+	}
+
+	// ----- Power, rubies, belts -----
+
+	private static void industry() {
+		String sec = "Power";
+		film("combustion_generator", sec, 2, SIDE, p -> {
+		}, () -> {
+			place("combustion_generator", 0, 3);
+			wait(6);
+			server(p -> dev.rubymod.industry.Belts.insert(p.level(), at(0, 1, 3), Direction.UP, stack("minecraft:coal", 16)));
+			wait(10);
+			openIt(0, 1, 3);
+			wait(20);
+		});
+		for (String m : new String[] {"solar_panel", "battery"}) {
+			film(m, sec, 2, SIDE, p -> {
+			}, () -> {
+				place(m, 0, 3);
+				wait(14);
+				openIt(0, 1, 3);
+			});
+		}
+		sec = "Making rubies";
+		film("ruby_drill", sec, 3, SIDE, p -> owned(p, -4, 1, 4, "solar_panel", S), () -> {
+			place("ruby_drill", 0, 3);
+			wait(60);
+			holding(null);
+			sneak(true);
+			wait(2);
+			click(0, 1, 3, N);
+			wait(4);
+			sneak(false);
+			wait(20);
+		});
+		for (String m : new String[] {"ore_refinery", "trade_depot", "vault", "ammo_factory"}) {
+			film(m, sec, 2, SIDE, p -> owned(p, -4, 1, 4, "solar_panel", S), () -> {
+				place(m, 0, 3);
+				wait(12);
+				openIt(0, 1, 3);
+			});
+		}
+		sec = "Mining and making";
+		film("prospector_pick", sec, 2, SIDE, p -> {
+			put(p.level(), 4, -1, 6, dev.rubymod.registry.ModBlocks.RUBY_ORE.defaultBlockState());
+		}, () -> {
+			holding("prospector_pick");
+			wait(8);
+			use();
+			wait(24);
+			use();
+			wait(24);
+		});
+		film("assembler", sec, 2, SIDE, p -> owned(p, -4, 1, 4, "solar_panel", S), () -> {
+			place("assembler", 0, 3);
+			wait(12);
+			openIt(0, 1, 3);
+		});
+		film("ore_silo", sec, 2, SIDE, p -> {
+		}, () -> {
+			place("ore_silo", 0, 3);
+			wait(8);
+			holding("minecraft:iron_ore", 64);
+			wait(4);
+			click(0, 1, 3, N);
+			wait(8);
+			click(0, 1, 3, N);
+			wait(20);
+		});
+
+		sec = "Moving things";
+		film("conveyor", sec, 2, SIDE, p -> {
+		}, () -> {
+			stand(-2, 0);
+			holding("conveyor", 16);
+			wait(6);
+			for (int z = 2; z <= 5; z++) {
+				clickFloor(0, z);
+				wait(4);
+			}
+			server(p -> {
+				for (int i = 0; i < 3; i++) {
+					ItemEntity drop = new ItemEntity(p.level(), base.getX() + 0.5, base.getY() + 1.3, base.getZ() + 2.5, stack("minecraft:iron_ingot", 1));
+					drop.setDeltaMovement(Vec3.ZERO);
+					drop.setPickUpDelay(400);
+					p.level().addFreshEntity(drop);
+				}
+			});
+			wait(50);
+		});
+		Consumer<ServerPlayer> chest = p -> {
+			put(p.level(), 0, 1, 3, Blocks.CHEST.defaultBlockState());
+			var c = dev.rubymod.industry.Belts.containerAt(p.level(), at(0, 1, 3));
+			if (c != null) {
+				for (int i = 0; i < 6; i++) {
+					c.setItem(i, stack(i % 2 == 0 ? "minecraft:iron_ingot" : "minecraft:gold_ingot", 16));
+				}
+			}
+		};
+		film("belt_loader", sec, 2, SIDE, chest, () -> {
+			stand(-2, 1);
+			holding("belt_loader");
+			wait(6);
+			clickFloor(0, 4);
+			wait(4);
+			holding("conveyor", 16);
+			wait(4);
+			for (int z = 5; z <= 6; z++) {
+				clickFloor(0, z);
+				wait(4);
+			}
+			wait(50);
+		});
+		film("belt_sorter", sec, 2, WIDE, p -> {
+			chest.accept(p);
+			put(p.level(), 0, 1, 4, facing("belt_loader", S));
+			put(p.level(), 0, 1, 5, facing("conveyor", S));
+			put(p.level(), 1, 1, 6, facing("conveyor", Direction.EAST));
+			put(p.level(), 2, 1, 6, facing("conveyor", Direction.EAST));
+			put(p.level(), 0, 1, 7, facing("conveyor", S));
+		}, () -> {
+			stand(-2, 2);
+			holding("belt_sorter");
+			wait(6);
+			clickFloor(0, 6);
+			wait(4);
+			holding("minecraft:gold_ingot");
+			wait(4);
+			click(0, 1, 6, N);
+			wait(60);
+		});
+		film("belt_splitter", sec, 2, WIDE, p -> {
+			chest.accept(p);
+			put(p.level(), 0, 1, 4, facing("belt_loader", S));
+			put(p.level(), 0, 1, 5, facing("conveyor", S));
+			put(p.level(), 1, 1, 6, facing("conveyor", Direction.EAST));
+			put(p.level(), -1, 1, 6, facing("conveyor", Direction.WEST));
+		}, () -> {
+			stand(-2, 2);
+			holding("belt_splitter");
+			wait(6);
+			clickFloor(0, 6);
+			wait(60);
+		});
+		film("belt_ramp", sec, 2, SIDE, p -> {
+			chest.accept(p);
+			put(p.level(), 0, 1, 4, facing("belt_loader", S));
+			put(p.level(), 0, 1, 5, facing("conveyor", S));
+			box(p.level(), -1, 1, 7, 1, 1, 9, Blocks.STONE_BRICKS.defaultBlockState());
+			put(p.level(), 0, 2, 7, facing("conveyor", S));
+			put(p.level(), 0, 2, 8, facing("conveyor", S));
+		}, () -> {
+			stand(-2, 2);
+			holding("belt_ramp", 4);
+			wait(6);
+			clickFloor(0, 6);
+			wait(60);
+		});
+		film("belt_tunnel", sec, 2, WIDE, p -> {
+			chest.accept(p);
+			put(p.level(), 0, 1, 4, facing("belt_loader", S));
+			box(p.level(), -2, 1, 7, 2, 3, 7, Blocks.STONE_BRICKS.defaultBlockState());
+			put(p.level(), 0, 1, 10, facing("conveyor", S));
+			put(p.level(), 0, 1, 11, facing("conveyor", S));
+		}, () -> {
+			stand(-2, 2);
+			holding("belt_tunnel", 2);
+			wait(6);
+			clickFloor(0, 5);
+			wait(6);
+			walk(20);
+			clickFloor(0, 9);
+			wait(60);
+		});
+		film("ruby_wrench", sec, 2, SIDE, p -> {
+			put(p.level(), 0, 1, 3, facing("conveyor", S));
+			put(p.level(), 0, 1, 4, facing("conveyor", S));
+		}, () -> {
+			holding("ruby_wrench");
+			wait(8);
+			click(0, 1, 3, Direction.UP);
+			wait(10);
+			click(0, 1, 3, Direction.UP);
+			wait(10);
+			sneak(true);
+			wait(2);
+			click(0, 1, 4, Direction.UP);
+			wait(4);
+			sneak(false);
+			wait(16);
+		});
+		film("elevator", sec, 2, WIDE, p -> {
+			box(p.level(), -1, 1, 3, 1, 5, 5, Blocks.STONE_BRICKS.defaultBlockState());
+			box(p.level(), -1, 1, 3, 1, 5, 3, Blocks.AIR.defaultBlockState());
+			put(p.level(), 0, 0, 3, block("elevator").defaultBlockState());
+			put(p.level(), 0, 5, 4, block("elevator").defaultBlockState());
+		}, () -> {
+			walk(15);
+			wait(10);
+			server(p -> dev.rubymod.game.Elevators.ride(p, true));
+			wait(30);
+			server(p -> dev.rubymod.game.Elevators.ride(p, false));
+			wait(20);
+		});
+	}
+
+	// ----- Building tools, copying, moving parts, lights -----
+
+	private static void building() {
+		String sec = "Building tools";
+		film("architect_wand", sec, 2, WIDE, p -> {
+		}, () -> {
+			offhand("minecraft:stone_bricks", 64);
+			holding("architect_wand");
+			wait(8);
+			clickFloor(-3, 4);
+			wait(8);
+			clickFloor(3, 4);
+			wait(30);
+		});
+		film("remodeler", sec, 2, SIDE, p -> box(p.level(), -2, 1, 4, 2, 3, 4, Blocks.COBBLESTONE.defaultBlockState()), () -> {
+			offhand("minecraft:stone_bricks", 64);
+			holding("remodeler");
+			wait(10);
+			click(0, 2, 4, N);
+			wait(30);
+		});
+		film("builders_wand", sec, 2, WIDE, p -> put(p.level(), 0, 1, 2, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
+			offhand("minecraft:stone_bricks", 64);
+			holding("builders_wand");
+			wait(10);
+			click(0, 1, 2, Direction.UP);
+			wait(22);
+			sneak(true);
+			wait(2);
+			click(0, 1, 2, Direction.UP);
+			wait(4);
+			sneak(false);
+			wait(24);
+		});
+		film("excavator", sec, 2, SIDE, p -> box(p.level(), -3, 1, 3, 3, 4, 6, Blocks.STONE.defaultBlockState()), () -> {
+			server(p -> p.setGameMode(GameType.SURVIVAL));
+			holding("excavator");
+			wait(8);
+			face(0, 2, 3);
+			dig(0, 2, 3, 26);
+			wait(6);
+			dig(0, 2, 4, 26);
+			wait(10);
+		});
+		sec = "Copying buildings";
+		film("blueprint", sec, 4, WIDE, p -> {
+			box(p.level(), -1, 1, 4, 1, 3, 6, Blocks.OAK_PLANKS.defaultBlockState());
+			box(p.level(), 0, 1, 4, 0, 2, 4, Blocks.AIR.defaultBlockState());
+			owned(p, 5, 1, 3, "constructor", S);
+			put(p.level(), 6, 1, 3, Blocks.CHEST.defaultBlockState());
+			var c = dev.rubymod.industry.Belts.containerAt(p.level(), at(6, 1, 3));
+			if (c != null) {
+				for (int i = 0; i < 4; i++) {
+					c.setItem(i, stack("minecraft:oak_planks", 64));
+				}
+			}
+			owned(p, 7, 1, 1, "solar_panel", S);
+		}, () -> {
+			holding("blueprint");
+			wait(6);
+			walk(4);
+			click(-1, 1, 4, N);
+			wait(6);
+			click(1, 3, 6, N);
+			wait(10);
+			server(p -> dev.rubymod.industry.Belts.insert(p.level(), at(5, 1, 3), Direction.UP, p.getMainHandItem().copy()));
+			wait(150);
+		});
+		alias("constructor", "blueprint", sec);
+		sec = "Moving parts";
+		film("ruby_piston", sec, 2, SIDE, p -> {
+			put(p.level(), -2, 1, 5, block("ruby_piston").defaultBlockState().setValue(dev.rubymod.block.RubyMoverBlock.FACING, Direction.EAST)
+					.setValue(dev.rubymod.block.RubyMoverBlock.DISTANCE, 2));
+			box(p.level(), -1, 1, 5, -1, 3, 5, Blocks.IRON_BLOCK.defaultBlockState());
+			put(p.level(), -3, 1, 5, Blocks.LEVER.defaultBlockState()
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACING, Direction.WEST));
+		}, () -> {
+			stand(-3, 2);
+			holding(null);
+			wait(8);
+			click(-3, 1, 5, N);
+			wait(40);
+			click(-3, 1, 5, N);
+			wait(30);
+		});
+		film("ruby_bearing", sec, 2, SIDE, p -> {
+			put(p.level(), 0, 1, 5, block("ruby_bearing").defaultBlockState().setValue(dev.rubymod.block.RubyMoverBlock.FACING, Direction.UP));
+			box(p.level(), 0, 2, 5, 3, 2, 5, Blocks.OAK_PLANKS.defaultBlockState());
+			put(p.level(), -1, 1, 5, Blocks.LEVER.defaultBlockState()
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.WALL)
+					.setValue(net.minecraft.world.level.block.LeverBlock.FACING, Direction.WEST));
+		}, () -> {
+			stand(-1, 2);
+			holding(null);
+			wait(8);
+			click(-1, 1, 5, N);
+			wait(60);
+		});
+		film("floodlight", "Lights", 2, WIDE, p -> time(p.level().getServer(), "midnight"), () -> {
+			place("floodlight", 0, 3);
+			wait(30);
+		});
+	}
+
+	// ----- Doors, cameras, alarms -----
+
+	private static void security() {
+		String sec = "Locked doors";
+		film("keycard_door", sec, 2, SIDE, p -> {
+			box(p.level(), -4, 1, 4, 4, 3, 4, Blocks.STONE_BRICKS.defaultBlockState());
+			var door = block("keycard_door").defaultBlockState()
+					.setValue(net.minecraft.world.level.block.DoorBlock.FACING, S);
+			p.level().setBlock(at(0, 1, 4), door.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+					net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 3);
+			p.level().setBlock(at(0, 2, 4), door.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+					net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 3);
+		}, () -> {
+			holding("keycard");
+			wait(6);
+			use();
+			wait(8);
+			walk(12);
+			click(0, 1, 4, N);
+			wait(8);
+			walk(22);
+			wait(8);
+		});
+		alias("keycard", "keycard_door", sec);
+		film("keycard_reader", sec, 2, SIDE, p -> {
+			put(p.level(), -2, 1, 5, block("ruby_piston").defaultBlockState().setValue(dev.rubymod.block.RubyMoverBlock.FACING, Direction.EAST)
+					.setValue(dev.rubymod.block.RubyMoverBlock.DISTANCE, 2));
+			box(p.level(), -1, 1, 5, -1, 3, 5, Blocks.IRON_BLOCK.defaultBlockState());
+		}, () -> {
+			stand(-2, 2);
+			holding("keycard_reader");
+			wait(6);
+			click(-2, 1, 5, Direction.UP);
+			wait(8);
+			holding("keycard");
+			wait(4);
+			use();
+			wait(6);
+			click(-2, 2, 5, N);
+			wait(50);
+		});
+		sec = "Watching and alarms";
+		film("security_camera", sec, 2, SIDE, p -> {
+			box(p.level(), 3, 1, 8, 3, 3, 8, Blocks.STONE_BRICKS.defaultBlockState());
+		}, () -> {
+			holding("security_camera");
+			wait(6);
+			walk(10);
+			click(3, 3, 8, N);
+			wait(6);
+			back(10);
+			place("monitor", -1, 3);
+			wait(6);
+			holding(null);
+			click(-1, 1, 3, N);
+			wait(30);
+			then(0, mc -> mc.options.keyShift.setDown(true));
+			wait(8);
+			then(0, mc -> {
+				mc.options.keyShift.setDown(false);
+				if (DronePilot.flying()) {
+					DronePilot.stop(mc);
+				}
+				mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+				var camera = mc.level.getEntity(cameraId);
+				if (camera != null) {
+					mc.setCameraEntity(camera);
+				}
+			});
+			wait(14);
+		});
+		alias("monitor", "security_camera", sec);
+		film("laser_tripwire", sec, 2, WIDE, p -> {
+			box(p.level(), 4, 1, 6, 4, 2, 6, Blocks.STONE_BRICKS.defaultBlockState());
+			put(p.level(), -5, 1, 6, Blocks.REDSTONE_LAMP.defaultBlockState());
+		}, () -> {
+			stand(-3, 3);
+			holding("laser_tripwire");
+			wait(6);
+			click(-5, 1, 6, Direction.EAST);
+			wait(10);
+			back(8);
+			monster(0, 14, 180, 0.12, 110);
+			wait(80);
+		});
+		film("seismic_sensor", sec, 2, SIDE, p -> {
+		}, () -> {
+			place("seismic_sensor", 0, 3);
+			wait(30);
+		});
+		film("alarm_block", sec, 2, WIDE, p -> {
+		}, () -> {
+			place("alarm_block", 0, 3);
+			wait(8);
+			monster(0, 16, 180, 0.12, 110);
+			wait(80);
+		});
+	}
+
+	// ----- Gear, guards, drones, paint -----
+
+	private static void gear() {
+		String sec = "Carrying and talking";
+		for (String b : new String[] {"field_pack", "heavy_rucksack"}) {
+			film(b, sec, 2, SIDE, p -> {
+			}, () -> {
+				holding(b);
+				wait(10);
+				use();
+				wait(20);
+				closeScreen();
+				wait(8);
+			});
+		}
+		film("field_radio", sec, 2, SIDE, p -> {
+		}, () -> {
+			holding("field_radio");
+			wait(10);
+			use();
+			wait(14);
+			use();
+			wait(14);
+		});
+		sec = "Getting around";
+		film("jetpack", sec, 2, UP, p -> {
+		}, () -> {
+			wear(EquipmentSlot.CHEST, "jetpack");
+			wait(10);
+			walk(30, 0, 0.3, 0.05);
+			walk(30, 0, 0.02, 0.25);
+			walk(20, 0, -0.25, 0.1);
+		});
+		film("grappling_hook", sec, 2, UP, p -> box(p.level(), -1, 1, 8, 1, 9, 9, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
+			holding("grappling_hook");
+			wait(6);
+			face(0, 9, 8);
+			use();
+			wait(4);
+			walk(22, 0, 0.36, 0.3);
+			wait(20);
+		});
+		film("night_goggles", sec, 2, SIDE, p -> time(p.level().getServer(), "midnight"), () -> {
+			holding("night_goggles");
+			wait(10);
+			use();
+			wear(EquipmentSlot.HEAD, "night_goggles");
+			wait(30);
+		});
+		sec = "Ruby armor and tools";
+		film("ruby_helmet", sec, 2, SIDE, p -> {
+		}, () -> {
+			for (String piece : new String[] {"ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"}) {
+				holding(piece);
+				wait(6);
+				use();
+				wait(8);
+			}
+			wear(EquipmentSlot.HEAD, "ruby_helmet");
+			wear(EquipmentSlot.CHEST, "ruby_chestplate");
+			wear(EquipmentSlot.LEGS, "ruby_leggings");
+			wear(EquipmentSlot.FEET, "ruby_boots");
+			wait(20);
+		});
+		alias("ruby_chestplate", "ruby_helmet", sec);
+		alias("ruby_leggings", "ruby_helmet", sec);
+		alias("ruby_boots", "ruby_helmet", sec);
+		film("ruby_sword", sec, 2, SIDE, p -> {
+		}, () -> {
+			monster(0, 2.5, 180, 0, 0);
+			holding("ruby_sword");
+			wait(10);
+			face(0, 1.5, 2.5);
+			for (int i = 0; i < 4; i++) {
+				attack();
+				wait(12);
+			}
+			wait(10);
+		});
+		film("ruby_pickaxe", sec, 2, SIDE, p -> box(p.level(), -1, 1, 2, 1, 2, 2, Blocks.STONE.defaultBlockState()), () -> {
+			server(p -> p.setGameMode(GameType.SURVIVAL));
+			holding("ruby_pickaxe");
+			wait(8);
+			face(0, 1.5, 2.5);
+			dig(0, 1, 2, 14);
+			dig(0, 2, 2, 14);
+			dig(1, 1, 2, 14);
+			wait(10);
+		});
+		sec = "Guards";
+		film("guard_contract", sec, 2, WIDE, p -> {
+		}, () -> {
+			holding("guard_contract");
+			wait(6);
+			clickFloor(0, 3);
+			wait(12);
+			monster(0, 17, 180, 0.06, 120);
+			wait(70);
+		});
+		film("at_guard_contract", sec, 2, WIDE, p -> {
+		}, () -> {
+			holding("at_guard_contract");
+			wait(6);
+			clickFloor(0, 3);
+			wait(12);
+			monster(0, 17, 180, 0.06, 120);
+			wait(70);
+		});
+		sec = "Drones";
+		film("recon_drone", sec, 3, UP, p -> {
+		}, () -> {
+			holding("recon_drone");
+			wait(8);
+			face(0, 8, 6);
+			use();
+			wait(90);
+		});
+		film("scout_drone", sec, 2, UP, p -> {
+		}, () -> {
+			holding("scout_drone");
+			wait(8);
+			use();
+			wait(30);
+			then(0, mc -> mc.options.keyShift.setDown(true));
+			wait(8);
+			then(0, mc -> {
+				mc.options.keyShift.setDown(false);
+				if (DronePilot.flying()) {
+					DronePilot.stop(mc);
+				}
+				mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+				var camera = mc.level.getEntity(cameraId);
+				if (camera != null) {
+					mc.setCameraEntity(camera);
+				}
+			});
+			wait(20);
+		});
+		sec = "Paint";
+		film("paint_kit", sec, 2, SIDE, p -> {
+		}, () -> {
+			place("jeep", 0, 4);
+			wait(8);
+			holding("paint_kit");
+			wait(6);
+			for (int i = 0; i < 3; i++) {
+				interact(HelpFilms::isRide);
+				wait(14);
+			}
+		});
+	}
+}

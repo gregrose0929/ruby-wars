@@ -57,24 +57,24 @@ public final class AutoTest {
 	private static java.util.function.Predicate<Minecraft> holdUntil;
 	private static int holdLeft;
 
-	private static void hold(java.util.function.Predicate<Minecraft> done, int maxTicks) {
+	static void hold(java.util.function.Predicate<Minecraft> done, int maxTicks) {
 		holdUntil = done;
 		holdLeft = maxTicks;
 	}
 
-	private static void then(int delay, Consumer<Minecraft> action) {
+	static void then(int delay, Consumer<Minecraft> action) {
 		at += delay;
 		STEPS.add(new Step(at, action));
 	}
 
-	private static void command(Minecraft mc, String command) {
+	static void command(Minecraft mc, String command) {
 		IntegratedServer server = mc.getSingleplayerServer();
 		if (server != null) {
 			server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
 		}
 	}
 
-	private static void shot(Minecraft mc, String name) {
+	static void shot(Minecraft mc, String name) {
 		Screenshot.grab(mc.gameDirectory, "autotest-" + name + ".png", mc.gameRenderer.mainRenderTarget(), 1,
 				message -> RubyMod.LOGGER.info("[autotest] screenshot {}: {}", name, message.getString()));
 	}
@@ -147,7 +147,7 @@ public final class AutoTest {
 		});
 	}
 
-	private static void log(String message, Object... args) {
+	static void log(String message, Object... args) {
 		RubyMod.LOGGER.info("[autotest] " + message, args);
 	}
 
@@ -172,7 +172,7 @@ public final class AutoTest {
 				+ mc.player.level().dimension().identifier() + ", " + mc.gameMode.getPlayerMode();
 	}
 
-	private static void onServer(Minecraft mc, java.util.function.Consumer<net.minecraft.server.MinecraftServer> action) {
+	static void onServer(Minecraft mc, java.util.function.Consumer<net.minecraft.server.MinecraftServer> action) {
 		var server = mc.getSingleplayerServer();
 		server.execute(() -> action.accept(server));
 	}
@@ -183,7 +183,7 @@ public final class AutoTest {
 		return dev.rubymod.game.party.PartyGames.byId(id);
 	}
 
-	private static net.minecraft.server.level.ServerPlayer me(net.minecraft.server.MinecraftServer server) {
+	static net.minecraft.server.level.ServerPlayer me(net.minecraft.server.MinecraftServer server) {
 		return server.getPlayerList().getPlayers().get(0);
 	}
 
@@ -4591,7 +4591,7 @@ public final class AutoTest {
 			case "seasonscreens" -> seasonScreensScript();
 			case "lightcheck" -> lightCheckScript();
 			case "basecheck" -> baseCheckScript();
-			case "clips" -> clipsScript();
+			case "clips" -> HelpFilms.script();
 			case "coveragecheck" -> {
 				then(5, mc -> {
 					command(mc, "time set noon");
@@ -4622,7 +4622,7 @@ public final class AutoTest {
 			}
 			case "howitworks" -> {
 				then(100, mc -> mc.gui.setScreen(new HowItWorksScreen()));
-				for (String id : new String[] {"keycard_door", "builders_wand", "sentry_turret"}) {
+				for (String id : new String[] {"jeep", "breaching_charge", "light_ammo", "security_camera"}) {
 					for (float at : new float[] {0.2F, 0.7F}) {
 						then(20, mc -> {
 							if (mc.gui.screen() instanceof HowItWorksScreen s) {
@@ -6799,248 +6799,6 @@ public final class AutoTest {
 		private static net.minecraft.core.BlockPos baseAt;
 
 	/** Moving base parts: a piston's push setting, a lift that carries the player, and a Keycard Reader gate. */
-	// --- Help clips: short films of how things work, for the help menu (tools/make_clips.py turns the frames into its animations) ---
-
-	/** The clip being filmed (null: none), and its frame count. A frame every CLIP_EVERY ticks. */
-	private static String clipId;
-	private static int clipFrame;
-	private static int clipTick;
-	private static final int CLIP_EVERY = 2;
-	private static net.minecraft.core.BlockPos clipBase;
-	/** The film camera (an invisible armor stand on the server; its id is the same on the client). */
-	private static int clipCamera = -1;
-	/** The actor: a mannequin with your look, copying you every tick (the game doesn't draw you while the film camera is on). */
-	private static net.minecraft.world.entity.decoration.Mannequin clipActor;
-
-	/** Walking south (the film camera isn't the player, so the keys don't move them: this does). */
-	private static boolean clipWalking;
-
-	private static void clipTick(Minecraft mc) {
-		var server = mc.getSingleplayerServer();
-		if (clipWalking && server != null) {
-			server.execute(() -> {
-				var p = me(server);
-				p.teleportTo(p.level(), p.getX(), p.getY(), p.getZ() + 0.2, java.util.Set.of(), p.getYRot(), p.getXRot(), false);
-			});
-		}
-		var actor = clipActor;
-		if (actor != null && server != null) {
-			server.execute(() -> {
-				var p = me(server);
-				actor.snapTo(p.getX(), p.getY(), p.getZ(), p.getYRot(), p.getXRot());
-				actor.setYHeadRot(p.getYHeadRot());
-				actor.setYBodyRot(p.getYRot());
-				actor.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, p.getMainHandItem().copy());
-				actor.setPose(p.isShiftKeyDown() ? net.minecraft.world.entity.Pose.CROUCHING : net.minecraft.world.entity.Pose.STANDING);
-			});
-		}
-		if (clipId != null && clipTick++ % CLIP_EVERY == 0) {
-			shot(mc, "clip-" + clipId + "-" + String.format(java.util.Locale.ROOT, "%02d", clipFrame++));
-		}
-	}
-
-	private static void filming(String id) {
-		then(0, mc -> {
-			clipId = id;
-			clipFrame = 0;
-			clipTick = 0;
-		});
-	}
-
-	private static void cut() {
-		then(0, mc -> {
-			log("clip {}: {} frames", clipId, clipFrame);
-			clipId = null;
-		});
-	}
-
-	/**
-	 * A clean stage up in the sky (a grass floor, nothing else), you on it facing south, and the film camera at
-	 * {@code cam} (offsets from the stage's middle) looking at {@code look}.
-	 */
-	private static void clipStage(Consumer<net.minecraft.server.level.ServerPlayer> build, float yaw, float pitch, Vec3 cam, Vec3 look) {
-		then(5, mc -> {
-			clipCamera = -1;
-			clipActor = null;
-			mc.setCameraEntity(mc.player);
-		});
-		then(1, mc -> onServer(mc, server -> {
-			var p = me(server);
-			var level = p.level();
-			if (clipBase == null) {
-				clipBase = p.blockPosition().atY(Math.min(level.getMaxY() - 30, p.getBlockY() + 60));
-			}
-			var b = clipBase;
-			for (int x = -12; x <= 12; x++) {
-				for (int z = -10; z <= 16; z++) {
-					for (int y = 0; y <= 22; y++) {
-						level.setBlockAndUpdate(b.offset(x, y, z), y == 0 && Math.abs(x) <= 9 && z >= -8 && z <= 14
-								? net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState()
-								: net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
-					}
-				}
-			}
-			for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, new net.minecraft.world.phys.AABB(b).inflate(20),
-					e -> !(e instanceof net.minecraft.world.entity.player.Player))) {
-				e.discard();
-			}
-			p.getInventory().clearContent();
-			p.teleportTo(level, b.getX() + 0.5, b.getY() + 1, b.getZ() + 0.5, java.util.Set.of(), yaw, pitch, false);
-			build.accept(p);
-			// The camera: eyes at cam, looking at look.
-			var stand = net.minecraft.world.entity.EntityTypes.ARMOR_STAND.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-			stand.setInvisible(true);
-			stand.setNoGravity(true);
-			stand.setSilent(true);
-			Vec3 middle = Vec3.atBottomCenterOf(b.above());
-			Vec3 eye = middle.add(cam);
-			Vec3 to = middle.add(look).subtract(eye);
-			float camYaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z));
-			float camPitch = (float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
-			// The view is third person (so you're drawn), which sits 4 blocks behind the stand's eyes: put it 4 blocks on.
-			Vec3 on = eye.add(to.normalize().scale(4));
-			stand.snapTo(on.x, on.y - stand.getEyeHeight(), on.z, camYaw, camPitch);
-			stand.setYHeadRot(camYaw);
-			level.addFreshEntity(stand);
-			clipCamera = stand.getId();
-			var actor = net.minecraft.world.entity.EntityTypes.MANNEQUIN.create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-			actor.snapTo(p.getX(), p.getY(), p.getZ(), yaw, pitch);
-			actor.getEntityData().set(dev.rubymod.mixin.MannequinAccessor.rubymod$profile(),
-					net.minecraft.world.item.component.ResolvableProfile.createResolved(p.getGameProfile()));
-			((dev.rubymod.mixin.MannequinAccessor) actor).rubymod$hideDescription(true);
-			actor.setNoGravity(true);
-			actor.setPermanentlyInvulnerable(true);
-			level.addFreshEntity(actor);
-			clipActor = actor;
-		}));
-		// Wait for the stage to be there on screen, then a moment more for it to draw.
-		then(5, mc -> hold(m -> clipBase != null && clipCamera >= 0 && m.player.distanceToSqr(Vec3.atBottomCenterOf(clipBase.above())) < 1
-				&& m.level.getBlockState(clipBase).is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK) && m.level.getEntity(clipCamera) != null, 400));
-		then(40, mc -> {
-			mc.player.setYRot(yaw);
-			mc.player.setXRot(pitch);
-			var camera = mc.level.getEntity(clipCamera);
-			if (camera != null) {
-				mc.setCameraEntity(camera);
-			}
-		});
-		then(10, mc -> {
-		});
-	}
-
-	/** Right-click a block (as if you'd clicked its given face). */
-	private static void clickBlock(Minecraft mc, net.minecraft.core.BlockPos pos, net.minecraft.core.Direction face) {
-		var hit = new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(pos).add(Vec3.atLowerCornerOf(face.getUnitVec3i()).scale(0.5)), face, pos, false);
-		mc.gameMode.useItemOn(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
-		var actor = clipActor;
-		if (actor != null) {
-			onServer(mc, server -> actor.swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, true));
-		}
-	}
-
-	/** Your Heart, in the stage's back corner (so it's your base). */
-	private static void clipHeart(net.minecraft.server.level.ServerPlayer p) {
-		var at = clipBase.offset(0, -2, 3);
-		p.level().setBlockAndUpdate(at, dev.rubymod.registry.ModBlocks.RUBY_HEART.defaultBlockState());
-		if (dev.rubymod.game.SeasonData.get().claimOf(p.getUUID()) == null) {
-			dev.rubymod.game.Claims.onHeartPlaced(p.level(), p, at);
-		}
-	}
-
-	private static void clipsScript() {
-		then(5, mc -> {
-			command(mc, "time set noon");
-			command(mc, "weather clear");
-			command(mc, "gamerule doDaylightCycle false");
-			command(mc, "gamemode survival @a");
-			command(mc, "effect give @a minecraft:resistance infinite 255 true");
-			if (!mc.gui.hud.isHidden()) {
-				mc.gui.hud.toggle();
-			}
-			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
-		});
-		then(100, mc -> {
-		});
-
-		// 1. Keycard Door: walk up with the Keycard, right-click, through.
-		clipStage(p -> {
-			clipHeart(p);
-			var level = p.level();
-			for (int x = -4; x <= 4; x++) {
-				for (int y = 1; y <= 3; y++) {
-					if (x != 0 || y == 3) {
-						level.setBlockAndUpdate(clipBase.offset(x, y, 4), net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState());
-					}
-				}
-			}
-			var door = dev.rubymod.registry.ModBlocks.KEYCARD_DOOR.defaultBlockState()
-					.setValue(net.minecraft.world.level.block.DoorBlock.FACING, net.minecraft.core.Direction.SOUTH);
-			level.setBlock(clipBase.offset(0, 1, 4), door.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
-					net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 3);
-			level.setBlock(clipBase.offset(0, 2, 4), door.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
-					net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER), 3);
-			p.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.KEYCARD));
-			p.getInventory().setSelectedSlot(0);
-		}, 0, 15, new Vec3(4.5, 2.4, 0.5), new Vec3(-0.5, 1.0, 3.5));
-		filming("keycard_door");
-		then(6, mc -> clipWalking = true);
-		then(12, mc -> clipWalking = false);
-		then(6, mc -> clickBlock(mc, clipBase.offset(0, 1, 4), net.minecraft.core.Direction.NORTH));
-		then(12, mc -> clipWalking = true);
-		then(22, mc -> clipWalking = false);
-		then(10, mc -> {
-		});
-		cut();
-
-		// 2. Builder's Wand: right-click a block to run it out in a line; sneak + right-click to build up.
-		clipStage(p -> {
-			var level = p.level();
-			level.setBlockAndUpdate(clipBase.offset(0, 1, 2), net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState());
-			p.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.BUILDERS_WAND));
-			p.getInventory().setItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 64));
-			p.getInventory().setSelectedSlot(0);
-		}, 0, 35, new Vec3(6.5, 4.0, -1.5), new Vec3(0, 2.0, 6));
-		filming("builders_wand");
-		then(10, mc -> clickBlock(mc, clipBase.offset(0, 1, 2), net.minecraft.core.Direction.UP));
-		then(24, mc -> {
-			mc.player.setShiftKeyDown(true);
-			onServer(mc, server -> me(server).setShiftKeyDown(true));
-		});
-		then(4, mc -> clickBlock(mc, clipBase.offset(0, 1, 2), net.minecraft.core.Direction.UP));
-		then(4, mc -> {
-			mc.player.setShiftKeyDown(false);
-			onServer(mc, server -> me(server).setShiftKeyDown(false));
-		});
-		then(24, mc -> {
-		});
-		cut();
-
-		// 3. Sentry Turret: put up a Practice Dummy near it, and it fires.
-		clipStage(p -> {
-			clipHeart(p);
-			p.level().setBlockAndUpdate(clipBase.offset(3, 1, 7), dev.rubymod.registry.ModBlocks.SENTRY_TURRET.defaultBlockState());
-			if (p.level().getBlockEntity(clipBase.offset(3, 1, 7)) instanceof dev.rubymod.block.DefenseBlockEntity turret) {
-				turret.ammo = 200;
-			}
-			p.getInventory().setItem(0, new net.minecraft.world.item.ItemStack(dev.rubymod.registry.ModItems.PRACTICE_DUMMY));
-			p.getInventory().setSelectedSlot(0);
-		}, 0, 30, new Vec3(-4.5, 2.6, 1.0), new Vec3(1.5, 1.0, 5));
-		filming("sentry_turret");
-		then(8, mc -> clickBlock(mc, clipBase.offset(0, 0, 3), net.minecraft.core.Direction.UP));
-		then(70, mc -> {
-		});
-		cut();
-
-		then(10, mc -> {
-			clipActor = null;
-			mc.setCameraEntity(mc.player);
-			if (mc.gui.hud.isHidden()) {
-				mc.gui.hud.toggle();
-			}
-			mc.stop();
-		});
-	}
-
 	private static void baseCheckScript() {
 		then(5, mc -> {
 			command(mc, "time set noon");
@@ -12780,7 +12538,7 @@ public final class AutoTest {
 			mc.player.setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
 			mc.player.setXRot((float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z))));
 		}
-		clipTick(mc);
+		HelpFilms.tick(mc);
 		while (cursor < STEPS.size() && STEPS.get(cursor).tick() <= tick) {
 			try {
 				STEPS.get(cursor).action().accept(mc);

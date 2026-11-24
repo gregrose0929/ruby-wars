@@ -143,7 +143,7 @@ public final class TrainingGround {
 
 	private static final List<DroneRespawn> RESPAWNS = new ArrayList<>();
 
-	private static void drone(ServerLevel level, Vec3 center, double radius) {
+	public static void drone(ServerLevel level, Vec3 center, double radius) {
 		AircraftEntity drone = AircraftEntity.targetDrone(level, center, radius);
 		drone.respawnAfterDeath();
 		level.addFreshEntity(drone);

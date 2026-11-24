@@ -71,7 +71,7 @@ public final class DronePilot {
 		recall = false;
 	}
 
-	private static void stop(Minecraft mc) {
+	static void stop(Minecraft mc) {
 		if (droneId >= 0) {
 			swallowUse = true;
 		}

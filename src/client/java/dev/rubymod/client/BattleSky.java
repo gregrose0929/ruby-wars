@@ -33,8 +33,11 @@ public final class BattleSky {
 	private static final List<Boom> BOOMS = new ArrayList<>();
 	private static int tick;
 
+	/** Never (the help films, filmed in Open War, keep a plain sky). */
+	public static boolean off;
+
 	private static boolean on(Minecraft mc) {
-		return mc.level != null && mc.level.dimension() == Level.OVERWORLD && (forced || ClientState.inRubyWarsWorld() && ClientState.phase().isBattle());
+		return !off && mc.level != null && mc.level.dimension() == Level.OVERWORLD && (forced || ClientState.inRubyWarsWorld() && ClientState.phase().isBattle());
 	}
 
 	public static void tick(Minecraft mc) {

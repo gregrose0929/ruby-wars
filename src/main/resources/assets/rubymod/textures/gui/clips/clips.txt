@@ -1,3 +1,121 @@
-builders_wand 33
-keycard_door 34
-sentry_turret 39
+armory 23 armory Your base
+service_pistol 26 service_pistol Guns
+arr_rifle 30 arr_rifle Guns
+combat_shotgun 27 combat_shotgun Guns
+longshot_sniper 29 longshot_sniper Guns
+ruby_blaster 33 ruby_blaster Guns
+flamethrower 32 flamethrower Guns
+extended_mag 36 extended_mag Attachments
+red_dot_sight 36 red_dot_sight Attachments
+vertical_grip 36 vertical_grip Attachments
+suppressor 36 suppressor Attachments
+frag_grenade 41 frag_grenade Grenades
+smoke_grenade 41 smoke_grenade Grenades
+fire_bomb 47 fire_bomb Grenades
+air_strike_flare 46 air_strike_flare Artillery and strikes
+rocket_launcher 26 rocket_launcher Launchers
+lancer 35 lancer Launchers
+skyhammer 38 skyhammer Launchers
+breaching_charge 41 breaching_charge Breaking in
+c4 34 c4 Breaking in
+mortar 48 mortar Artillery and strikes
+missile_silo 44 missile_silo Artillery and strikes
+sandbags 23 sandbags Walls
+concrete_wall 23 concrete_wall Walls
+reinforced_concrete 23 reinforced_concrete Walls
+reinforced_glass 23 reinforced_glass Walls
+blast_door 31 blast_door Walls
+barbed_wire 33 barbed_wire Walls
+holo_camo 35 holo_camo Hiding
+camo_net 31 camo_net Hiding
+landmine 29 landmine Traps
+claymore 30 claymore Traps
+at_mine 47 at_mine Traps
+sentry_turret 46 sentry_turret Turrets
+tesla_coil 40 tesla_coil Turrets
+heavy_aa_gun 31 heavy_aa_gun Guns you man
+railgun 26 railgun Guns you man
+flak_cannon 36 flak_cannon Automatic
+sam_site 36 sam_site Automatic
+point_defense 43 point_defense Automatic
+missile_interceptor 47 missile_interceptor Automatic
+shield_generator 43 shield_generator Automatic
+radar_station 28 radar_station Early warning
+jeep 46 jeep On land
+tank 48 tank On land
+dirt_bike 46 dirt_bike On land
+quad 46 quad On land
+tunnel_borer 41 tunnel_borer On land
+patrol_boat 45 patrol_boat On water
+gunboat 45 gunboat On water
+landing_craft 45 landing_craft On water
+fighter_jet 48 fighter_jet Aircraft
+attack_jet 48 attack_jet Aircraft
+bomber 48 bomber Aircraft
+attack_heli 48 attack_heli Aircraft
+airfield_pad 18 airfield_pad Airfield
+combustion_generator 35 combustion_generator Power
+solar_panel 24 solar_panel Power
+battery 24 battery Power
+ruby_drill 32 ruby_drill Making rubies
+ore_refinery 23 ore_refinery Making rubies
+trade_depot 23 trade_depot Making rubies
+vault 23 vault Making rubies
+ammo_factory 23 ammo_factory Making rubies
+prospector_pick 29 prospector_pick Mining and making
+assembler 23 assembler Mining and making
+ore_silo 24 ore_silo Mining and making
+conveyor 37 conveyor Moving things
+belt_loader 38 belt_loader Moving things
+belt_sorter 39 belt_sorter Moving things
+belt_splitter 34 belt_splitter Moving things
+belt_ramp 34 belt_ramp Moving things
+belt_tunnel 47 belt_tunnel Moving things
+ruby_wrench 26 ruby_wrench Moving things
+elevator 38 elevator Moving things
+architect_wand 24 architect_wand Building tools
+remodeler 21 remodeler Building tools
+builders_wand 32 builders_wand Building tools
+excavator 39 excavator Building tools
+blueprint 45 blueprint Copying buildings
+ruby_piston 40 ruby_piston Moving parts
+ruby_bearing 35 ruby_bearing Moving parts
+floodlight 18 floodlight Lights
+keycard_door 33 keycard_door Locked doors
+keycard_reader 39 keycard_reader Locked doors
+security_camera 48 security_camera Watching and alarms
+laser_tripwire 48 laser_tripwire Watching and alarms
+seismic_sensor 18 seismic_sensor Watching and alarms
+alarm_block 47 alarm_block Watching and alarms
+field_pack 20 field_pack Carrying and talking
+heavy_rucksack 20 heavy_rucksack Carrying and talking
+field_radio 20 field_radio Carrying and talking
+jetpack 45 jetpack Getting around
+grappling_hook 27 grappling_hook Getting around
+night_goggles 21 night_goggles Getting around
+ruby_helmet 42 ruby_helmet Ruby armor and tools
+ruby_sword 35 ruby_sword Ruby armor and tools
+ruby_pickaxe 31 ruby_pickaxe Ruby armor and tools
+guard_contract 45 guard_contract Guards
+at_guard_contract 45 at_guard_contract Guards
+recon_drone 34 recon_drone Drones
+scout_drone 34 scout_drone Drones
+paint_kit 32 paint_kit Paint
+light_ammo 26 service_pistol For guns
+heavy_ammo 30 arr_rifle For guns
+shotgun_shell 27 combat_shotgun For guns
+sniper_round 29 longshot_sniper For guns
+ruby_cell 33 ruby_blaster For guns
+rocket 26 rocket_launcher Rockets and shells
+aa_missile 38 skyhammer Rockets and shells
+at_missile 35 lancer Rockets and shells
+rangefinder 48 mortar Artillery and strikes
+mortar_shell 48 mortar Rockets and shells
+cruise_missile 44 missile_silo Artillery and strikes
+practice_dummy 46 sentry_turret Turrets
+constructor 45 blueprint Copying buildings
+keycard 33 keycard_door Locked doors
+monitor 48 security_camera Watching and alarms
+ruby_chestplate 42 ruby_helmet Ruby armor and tools
+ruby_leggings 42 ruby_helmet Ruby armor and tools
+ruby_boots 42 ruby_helmet Ruby armor and tools
