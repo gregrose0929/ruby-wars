@@ -347,7 +347,8 @@ public final class GameEvents {
 			}
 		});
 		ServerPlayNetworking.registerGlobalReceiver(Payloads.Reload.TYPE, (payload, context) -> {
-			if (context.player().getMainHandItem().getItem() instanceof dev.rubymod.item.ArchitectWandItem) {
+			if (context.player().getMainHandItem().getItem() instanceof dev.rubymod.item.ArchitectWandItem
+					|| context.player().getMainHandItem().getItem() instanceof dev.rubymod.item.BuildersWandItem) {
 				dev.rubymod.item.ArchitectWandItem.undo(context.player());
 			} else {
 				Gunfire.startReload(context.player());
@@ -659,10 +660,6 @@ public final class GameEvents {
 		}
 		if (!owner && !Rules.isAdminBypass(player)) {
 			deny(player, "That's " + claim.ownerName + "'s Ruby Heart.");
-			return false;
-		}
-		if (owner && Rules.phase() == Phase.BUILD && SeasonData.get().player(player.getUUID()).lastHeartMoveDay == SeasonTicker.currentDay()) {
-			deny(player, "You can only move your Heart once per day.");
 			return false;
 		}
 		ServerPlayer ownerPlayer = level.getServer().getPlayerList().getPlayer(java.util.UUID.fromString(claim.owner));

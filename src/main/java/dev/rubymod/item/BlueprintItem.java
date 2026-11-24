@@ -73,6 +73,8 @@ public class BlueprintItem extends Item {
 		}
 		stack.remove(ModComponents.CORNER);
 		stack.set(ModComponents.BLUEPRINT, data);
+		// Kept for next season too (just the design).
+		dev.rubymod.industry.BlueprintLibrary.remember(sp.level().getServer(), sp.getUUID(), stack);
 		stack.set(ModComponents.BLUEPRINT_AT, new BlockPos(Math.min(corner.getX(), pos.getX()), Math.min(corner.getY(), pos.getY()),
 				Math.min(corner.getZ(), pos.getZ())));
 		context.getLevel().playSound(null, pos, SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0F, 1.0F);

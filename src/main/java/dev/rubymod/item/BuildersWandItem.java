@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Right-click a block to extend it up to 16 blocks: a straight line in the
  * direction you're facing, or straight up while sneaking. Uses matching blocks
- * from your inventory.
+ * from your inventory. R undoes the last stretch (the blocks come back).
  */
 public class BuildersWandItem extends Item {
 	private static final int MAX = 16;
@@ -50,6 +50,7 @@ public class BuildersWandItem extends Item {
 		}
 		Direction direction = player.isShiftKeyDown() ? Direction.UP : player.getDirection();
 		int placed = 0;
+		java.util.List<ArchitectWandItem.Placed> done = new java.util.ArrayList<>();
 		BlockPos pos = origin;
 		for (int i = 0; i < MAX; i++) {
 			pos = pos.relative(direction);
@@ -60,9 +61,11 @@ public class BuildersWandItem extends Item {
 				break;
 			}
 			level.setBlockAndUpdate(pos, state);
+			done.add(new ArchitectWandItem.Placed(pos.immutable(), blockItem));
 			placed++;
 		}
 		if (placed > 0) {
+			ArchitectWandItem.remember(player, done);
 			level.playSound(null, origin, state.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 1.0F);
 			// It wears with use, but never breaks: it mends itself (see inventoryTick).
 			ItemStack wand = context.getItemInHand();
@@ -106,5 +109,6 @@ public class BuildersWandItem extends Item {
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
 		builder.accept(Component.literal("Right-click a block: extend it 16 blocks forward").withStyle(ChatFormatting.GRAY));
 		builder.accept(Component.literal("Sneak + right-click: build straight up").withStyle(ChatFormatting.GRAY));
+		builder.accept(Component.literal("R: undo the last stretch (the blocks come back)").withStyle(ChatFormatting.GRAY));
 	}
 }

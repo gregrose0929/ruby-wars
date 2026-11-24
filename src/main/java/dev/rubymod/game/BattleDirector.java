@@ -260,6 +260,10 @@ public final class BattleDirector {
 			player.getInventory().add(new ItemStack(ModItems.LIGHT_AMMO, 24));
 			player.sendSystemMessage(Component.literal("You got your Ruby Heart and a sidearm! Place the Heart where you want your base.")
 					.withStyle(ChatFormatting.GREEN));
+			// The season's start for them: their saved Blueprints come back (when this is a fresh season's start).
+			if (data.freshSeason == data.season) {
+				dev.rubymod.industry.BlueprintLibrary.giveBack(player);
+			}
 		}
 	}
 

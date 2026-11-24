@@ -43,7 +43,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public class ArchitectWandItem extends Item {
 	private static final int UNDO_DEPTH = 8;
 
-	private record Placed(BlockPos pos, Item item) {
+	public record Placed(BlockPos pos, Item item) {
 	}
 
 	private static final Map<UUID, Deque<List<Placed>>> HISTORY = new HashMap<>();
@@ -146,6 +146,18 @@ public class ArchitectWandItem extends Item {
 	}
 
 	/** R while holding the wand: take back the last build. */
+	/** Another building tool (the Builder's Wand) built these: R undoes them too. */
+	public static void remember(ServerPlayer player, List<Placed> placed) {
+		if (placed.isEmpty()) {
+			return;
+		}
+		Deque<List<Placed>> history = HISTORY.computeIfAbsent(player.getUUID(), k -> new ArrayDeque<>());
+		history.push(placed);
+		while (history.size() > UNDO_DEPTH) {
+			history.removeLast();
+		}
+	}
+
 	public static void undo(ServerPlayer player) {
 		Deque<List<Placed>> history = HISTORY.get(player.getUUID());
 		if (history == null || history.isEmpty()) {

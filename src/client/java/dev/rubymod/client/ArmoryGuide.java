@@ -184,7 +184,7 @@ public final class ArmoryGuide {
 				"concrete_wall", "reinforced_concrete");
 		add("builders_wand", "Right-click a block to stretch it 16 blocks forward; crouch and right-click to build straight up. It never breaks: it mends itself.");
 		add("excavator", "A pickaxe that digs a 3x3 hole at once: quick for rooms, basements and tunnels.");
-		add("blueprint", "Right-click two opposite corners of a building (up to 24 blocks across) to copy it. Then put it in a Constructor to build a copy.",
+		add("blueprint", "Right-click two opposite corners of a building (up to 24 blocks across) to copy it. Then put it in a Constructor to build a copy. Your Blueprints come with you to the next season.",
 				"constructor");
 		add("constructor", "Builds what's on a Blueprint, taking blocks from chests next to it. It can also repair your base where it was copied.",
 				"blueprint", "minecraft:chest");

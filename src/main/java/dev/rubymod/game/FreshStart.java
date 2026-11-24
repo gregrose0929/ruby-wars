@@ -137,6 +137,12 @@ public final class FreshStart {
 			return;
 		}
 		player.stopRiding();
+		// Blueprints are designs, not things: they're remembered, and come back when the new season starts.
+		for (var inv : new net.minecraft.world.Container[] {player.getInventory(), player.getEnderChestInventory()}) {
+			for (int i = 0; i < inv.getContainerSize(); i++) {
+				dev.rubymod.industry.BlueprintLibrary.remember(server, player.getUUID(), inv.getItem(i));
+			}
+		}
 		player.getInventory().clearContent();
 		player.getEnderChestInventory().clearContent();
 		player.setExperienceLevels(0);

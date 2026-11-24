@@ -308,6 +308,35 @@ public final class SelfTest {
 			data.teamsAllowed = false;
 		}
 
+		// Blueprints carry over to the next season (just the designs).
+		{
+			ItemStack print = new ItemStack(ModItems.BLUEPRINT);
+			BlockPos at = base.offset(-3, 1, -9);
+			level.setBlockAndUpdate(at, net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
+			print.set(dev.rubymod.registry.ModComponents.BLUEPRINT, dev.rubymod.industry.Blueprints.capture(level, at, at.offset(1, 1, 1)));
+			level.setBlockAndUpdate(at, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			dev.rubymod.industry.BlueprintLibrary.remember(level.getServer(), bravo.getUUID(), print);
+			dev.rubymod.industry.BlueprintLibrary.remember(level.getServer(), bravo.getUUID(), print);
+			int kept = dev.rubymod.industry.BlueprintLibrary.load(level.getServer(), bravo.getUUID()).size();
+			bravo.getInventory().clearContent();
+			int back = dev.rubymod.industry.BlueprintLibrary.giveBack(bravo);
+			boolean has = bravo.getInventory().contains(s -> s.is(ModItems.BLUEPRINT) && s.has(dev.rubymod.registry.ModComponents.BLUEPRINT));
+			check("blueprints: a filled one is kept (once), and comes back in a new season (" + kept + ", " + back + ")", kept == 1 && back == 1 && has);
+			bravo.getInventory().clearContent();
+		}
+		// The Builder's Wand's stretch can be undone (R), like the Architect's Wand.
+		{
+			BlockPos at = base.offset(-5, 1, -9);
+			level.setBlockAndUpdate(at, net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
+			alpha.getInventory().clearContent();
+			dev.rubymod.item.ArchitectWandItem.remember(alpha, List.of(new dev.rubymod.item.ArchitectWandItem.Placed(at,
+					net.minecraft.world.item.Items.COBBLESTONE)));
+			dev.rubymod.item.ArchitectWandItem.undo(alpha);
+			check("builder's wand: undo takes the stretch back, and the blocks come back", level.getBlockState(at).isAir()
+					&& alpha.getInventory().contains(s -> s.is(net.minecraft.world.item.Items.COBBLESTONE)));
+			alpha.getInventory().clearContent();
+		}
+
 		// Plain belts are free; the clever belt parts still need Logistics.
 		check("research: plain belts, ramps and loaders are free, sorters still need Logistics",
 				dev.rubymod.game.Research.lockFor("conveyor") == null && dev.rubymod.game.Research.lockFor("belt_ramp") == null

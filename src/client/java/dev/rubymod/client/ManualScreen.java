@@ -187,7 +187,8 @@ public class ManualScreen extends Screen {
 					"Recon Drones mark enemies for you. Paint Kits respray vehicles.",
 					"Guard Contracts hire a Rifleman or AT Gunner. Right-click a guard: follow / hold post. Sneak + right-click: pack up.",
 					"When you die your gear waits in a War Grave: only you can open it for 5 minutes.",
-					"Blueprints copy a structure; hold one to see where a Constructor would build it. The Armory sells ready-made ones too (Watchtower, Bunker, Gatehouse, Wall Section).",
+					"Blueprints copy a structure; hold one to see where a Constructor would build it. The Armory sells ready-made ones too (Watchtower, Bunker, Gatehouse, Wall Section). "
+							+ "Your own Blueprints come with you to each new season (just the designs: you gather the blocks again).",
 					"A Constructor with a Blueprint of your own base can repair it: press Build in front to switch to Repair in place, and it fills holes back in where they were (inside your base, never removing anything).",
 					"Architect's Wand shapes: line, wall, floor, solid box, hollow room, round tower, dome and staircase (sneak + right-click to switch).",
 					"Walls: Sandbags fall to one blast, Reinforced Glass takes 2, Concrete Wall 4, Reinforced Concrete 6 (and grenades can't hurt it). Cruise missiles break any of them. A damaged wall cracks, and looking at it says how many blasts it's taken (crouch and look at any wall to see its strength).",
