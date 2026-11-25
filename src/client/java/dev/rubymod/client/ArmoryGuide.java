@@ -29,6 +29,7 @@ public final class ArmoryGuide {
 
 	static {
 		// ----- Your Heart -----
+		add("ruby_heart", "Put it down to claim your base: the land round it is yours (its edge shows), and on Battle Day you come back here while it stands.");
 		add("heart_upgrade", "Makes your Ruby Heart stronger: a bigger base, more health, and room for more Ruby Drills. Each tier costs more.",
 				"ruby_heart", "ruby_drill");
 		add("armory", "Another shop just like this one. Put it anywhere in your base, so you never have to walk back to the first.");

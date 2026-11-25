@@ -11,6 +11,7 @@ repositories {
 	// for more information about repositories.
 	maven { url = "https://maven.maxhenkel.de/repository/public" }
 	maven { url = "https://api.modrinth.com/maven" }
+	mavenCentral()
 }
 
 loom {
@@ -37,6 +38,10 @@ dependencies {
 	// Run the dev client and test server with Simple Voice Chat, to exercise the Field Radio plugin.
 	localRuntime "maven.modrinth:simple-voice-chat:fabric-2.6.24+26.3"
 	localRuntime "maven.modrinth:lambdynamiclights:4.13.0+26.3"
+
+	// jcodec (pure Java H.264): the How It Works films are real video, made by tools (MakeFilms) and played in the help screen.
+	implementation "org.jcodec:jcodec:0.2.5"
+	include "org.jcodec:jcodec:0.2.5"
 }
 
 processResources {
@@ -116,4 +121,12 @@ publishing {
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
 	}
+}
+
+// How It Works films: the frames the "clips" client test filmed, made into H.264 videos (see MakeFilms).
+tasks.register("makeFilms", JavaExec) {
+	classpath = sourceSets.client.runtimeClasspath
+	mainClass = "dev.rubymod.client.MakeFilms"
+	workingDir = projectDir
+	jvmArgs "-Djava.awt.headless=true", "-Xmx2g"
 }

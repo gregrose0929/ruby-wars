@@ -1,0 +1,127 @@
+ruby_heart 82 ruby_heart.mp4 Your base
+heart_upgrade 110 heart_upgrade.mp4 Your base
+arr_rifle 64 arr_rifle.mp4 Guns
+longshot_sniper 74 longshot_sniper.mp4 Guns
+landmine 89 landmine.mp4 Traps
+sentry_turret 92 sentry_turret.mp4 Turrets
+jeep 112 jeep.mp4 On land
+patrol_boat 119 patrol_boat.mp4 On water
+fighter_jet 140 fighter_jet.mp4 Aircraft
+blueprint_watchtower 150 blueprint_watchtower.mp4 Ready-made plans
+heavy_ammo 64 arr_rifle.mp4 For guns
+sniper_round 74 longshot_sniper.mp4 For guns
+practice_dummy 92 sentry_turret.mp4 Turrets
+armory 54 armory.mp4 Your base
+service_pistol 56 service_pistol.mp4 Guns
+combat_shotgun 58 combat_shotgun.mp4 Guns
+ruby_blaster 65 ruby_blaster.mp4 Guns
+flamethrower 68 flamethrower.mp4 Guns
+extended_mag 73 extended_mag.mp4 Attachments
+red_dot_sight 73 red_dot_sight.mp4 Attachments
+vertical_grip 73 vertical_grip.mp4 Attachments
+suppressor 73 suppressor.mp4 Attachments
+frag_grenade 123 frag_grenade.mp4 Grenades
+smoke_grenade 123 smoke_grenade.mp4 Grenades
+fire_bomb 123 fire_bomb.mp4 Grenades
+air_strike_flare 158 air_strike_flare.mp4 Artillery and strikes
+rocket_launcher 52 rocket_launcher.mp4 Launchers
+lancer 70 lancer.mp4 Launchers
+skyhammer 76 skyhammer.mp4 Launchers
+breaching_charge 161 breaching_charge.mp4 Breaking in
+c4 72 c4.mp4 Breaking in
+mortar 116 mortar.mp4 Artillery and strikes
+missile_silo 108 missile_silo.mp4 Artillery and strikes
+sandbags 54 sandbags.mp4 Walls
+concrete_wall 54 concrete_wall.mp4 Walls
+reinforced_concrete 54 reinforced_concrete.mp4 Walls
+reinforced_glass 54 reinforced_glass.mp4 Walls
+blast_door 62 blast_door.mp4 Walls
+barbed_wire 66 barbed_wire.mp4 Walls
+holo_camo 70 holo_camo.mp4 Hiding
+camo_net 64 camo_net.mp4 Hiding
+claymore 93 claymore.mp4 Traps
+at_mine 94 at_mine.mp4 Traps
+tesla_coil 80 tesla_coil.mp4 Turrets
+heavy_aa_gun 62 heavy_aa_gun.mp4 Guns you man
+railgun 52 railgun.mp4 Guns you man
+flak_cannon 118 flak_cannon.mp4 Automatic
+sam_site 118 sam_site.mp4 Automatic
+point_defense 86 point_defense.mp4 Automatic
+missile_interceptor 94 missile_interceptor.mp4 Automatic
+shield_generator 86 shield_generator.mp4 Automatic
+radar_station 56 radar_station.mp4 Early warning
+tank 132 tank.mp4 On land
+dirt_bike 112 dirt_bike.mp4 On land
+quad 112 quad.mp4 On land
+tunnel_borer 122 tunnel_borer.mp4 On land
+gunboat 119 gunboat.mp4 On water
+landing_craft 119 landing_craft.mp4 On water
+attack_jet 140 attack_jet.mp4 Aircraft
+bomber 140 bomber.mp4 Aircraft
+attack_heli 120 attack_heli.mp4 Aircraft
+airfield_pad 36 airfield_pad.mp4 Airfield
+combustion_generator 78 combustion_generator.mp4 Power
+solar_panel 56 solar_panel.mp4 Power
+battery 56 battery.mp4 Power
+ruby_drill 94 ruby_drill.mp4 Making rubies
+ore_refinery 54 ore_refinery.mp4 Making rubies
+trade_depot 54 trade_depot.mp4 Making rubies
+vault 54 vault.mp4 Making rubies
+ammo_factory 54 ammo_factory.mp4 Making rubies
+prospector_pick 76 prospector_pick.mp4 Mining and making
+assembler 54 assembler.mp4 Mining and making
+ore_silo 48 ore_silo.mp4 Mining and making
+conveyor 74 conveyor.mp4 Moving things
+belt_loader 76 belt_loader.mp4 Moving things
+belt_sorter 78 belt_sorter.mp4 Moving things
+belt_splitter 68 belt_splitter.mp4 Moving things
+belt_ramp 68 belt_ramp.mp4 Moving things
+belt_tunnel 94 belt_tunnel.mp4 Moving things
+ruby_wrench 52 ruby_wrench.mp4 Moving things
+elevator 75 elevator.mp4 Moving things
+architect_wand 48 architect_wand.mp4 Building tools
+remodeler 42 remodeler.mp4 Building tools
+builders_wand 64 builders_wand.mp4 Building tools
+excavator 78 excavator.mp4 Building tools
+blueprint 83 blueprint.mp4 Copying buildings
+blueprint_bunker 150 blueprint_bunker.mp4 Ready-made plans
+blueprint_gatehouse 150 blueprint_gatehouse.mp4 Ready-made plans
+blueprint_wall_section 150 blueprint_wall_section.mp4 Ready-made plans
+ruby_piston 80 ruby_piston.mp4 Moving parts
+ruby_bearing 70 ruby_bearing.mp4 Moving parts
+floodlight 36 floodlight.mp4 Lights
+keycard_door 66 keycard_door.mp4 Locked doors
+keycard_reader 78 keycard_reader.mp4 Locked doors
+security_camera 110 security_camera.mp4 Watching and alarms
+laser_tripwire 106 laser_tripwire.mp4 Watching and alarms
+seismic_sensor 36 seismic_sensor.mp4 Watching and alarms
+alarm_block 94 alarm_block.mp4 Watching and alarms
+field_pack 46 field_pack.mp4 Carrying and talking
+heavy_rucksack 46 heavy_rucksack.mp4 Carrying and talking
+field_radio 40 field_radio.mp4 Carrying and talking
+jetpack 90 jetpack.mp4 Getting around
+grappling_hook 54 grappling_hook.mp4 Getting around
+night_goggles 72 night_goggles.mp4 Getting around
+ruby_helmet 84 ruby_helmet.mp4 Ruby armor and tools
+ruby_sword 70 ruby_sword.mp4 Ruby armor and tools
+ruby_pickaxe 62 ruby_pickaxe.mp4 Ruby armor and tools
+guard_contract 100 guard_contract.mp4 Guards
+at_guard_contract 100 at_guard_contract.mp4 Guards
+recon_drone 110 recon_drone.mp4 Drones
+scout_drone 78 scout_drone.mp4 Drones
+paint_kit 62 paint_kit.mp4 Paint
+light_ammo 56 service_pistol.mp4 For guns
+shotgun_shell 58 combat_shotgun.mp4 For guns
+ruby_cell 65 ruby_blaster.mp4 For guns
+rocket 52 rocket_launcher.mp4 Rockets and shells
+aa_missile 76 skyhammer.mp4 Rockets and shells
+at_missile 70 lancer.mp4 Rockets and shells
+rangefinder 116 mortar.mp4 Artillery and strikes
+mortar_shell 116 mortar.mp4 Rockets and shells
+cruise_missile 108 missile_silo.mp4 Artillery and strikes
+constructor 83 blueprint.mp4 Copying buildings
+keycard 66 keycard_door.mp4 Locked doors
+monitor 110 security_camera.mp4 Watching and alarms
+ruby_chestplate 84 ruby_helmet.mp4 Ruby armor and tools
+ruby_leggings 84 ruby_helmet.mp4 Ruby armor and tools
+ruby_boots 84 ruby_helmet.mp4 Ruby armor and tools

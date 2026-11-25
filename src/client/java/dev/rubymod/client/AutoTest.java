@@ -4622,16 +4622,14 @@ public final class AutoTest {
 			}
 			case "howitworks" -> {
 				then(100, mc -> mc.gui.setScreen(new HowItWorksScreen()));
-				for (String id : new String[] {"jeep", "breaching_charge", "light_ammo", "security_camera"}) {
-					for (float at : new float[] {0.2F, 0.7F}) {
-						then(20, mc -> {
-							if (mc.gui.screen() instanceof HowItWorksScreen s) {
-								s.pick(id);
-								s.seek(at);
-							}
-						});
-						then(2, mc -> shot(mc, "howitworks-" + id + "-" + Math.round(at * 10)));
-					}
+				for (String id : new String[] {"jeep", "breaching_charge", "light_ammo", "security_camera", "heart_upgrade", "blueprint_watchtower"}) {
+					then(10, mc -> {
+						if (mc.gui.screen() instanceof HowItWorksScreen s) {
+							s.pick(id);
+						}
+					});
+					then(30, mc -> shot(mc, "howitworks-" + id + "-a"));
+					then(40, mc -> shot(mc, "howitworks-" + id + "-b"));
 				}
 				then(5, mc -> command(mc, "op @a"));
 				then(20, mc -> mc.gui.setScreen(new AdminScreen()));

@@ -44,6 +44,9 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 	private final int[] buy = new int[4];
 	private final int[] ammo = new int[4];
 	private final int[] upgrades = new int[4];
+	private final int[] watch = new int[4];
+	/** The film for what's shown (How It Works), or null. */
+	private String watchId;
 
 	public ArmoryScreen(ArmoryMenu menu, Inventory inventory, Component title) {
 		super(menu, inventory, title, fitWidth(), height());
@@ -394,7 +397,13 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 		if (tagX > px) {
 			y += 15;
 		}
-		int textBottom = buttons ? bottom - 20 : bottom - 11;
+		watchId = buttons ? filmFor(stack) : null;
+		int textBottom = buttons ? bottom - (watchId != null ? 38 : 20) : bottom - 11;
+		set(watch, 0, 0, 0, 0);
+		if (watchId != null) {
+			set(watch, px, bottom - 34, pw, 15);
+			Ui.button(g, "Watch how it works", px, bottom - 34, pw, 15, mx, my, 0xFF3A5A8A, true);
+		}
 		// Locked: how to unlock it, first.
 		String unlock = lore(stack, "Unlock: ");
 		if (lock && unlock != null) {
@@ -444,6 +453,25 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			set(ammo, px + bw + 4, by, pw - bw - 4, 16);
 			Ui.button(g, "Buy ammo", px + bw + 4, by, pw - bw - 4, 16, mx, my, 0xFF8A6A2A, true);
 		}
+	}
+
+	/** The How It Works film for what's shown (the Heart upgrade, a ready-made plan, or the item), or null if it has none. */
+	private static String filmFor(ItemStack stack) {
+		String id;
+		if (stack.is(net.minecraft.world.item.Items.NETHER_STAR) && name(stack).contains("Upgrade Ruby Heart")) {
+			id = "heart_upgrade";
+		} else if (stack.is(dev.rubymod.registry.ModItems.BLUEPRINT) && name(stack).startsWith("Blueprint: ")) {
+			id = null;
+			for (var d : dev.rubymod.industry.ReadyBlueprints.ALL) {
+				if (name(stack).equals("Blueprint: " + d.title())) {
+					id = "blueprint_" + d.id();
+				}
+			}
+		} else {
+			var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+			id = key.getNamespace().equals(dev.rubymod.RubyMod.MOD_ID) ? key.getPath() : null;
+		}
+		return FilmPlayer.has(id) ? id : null;
 	}
 
 	/** The guide's words for what's shown (the Heart upgrade card has its own; ready-made plans keep their own list). */
@@ -620,6 +648,11 @@ public class ArmoryScreen extends AbstractContainerScreen<ArmoryMenu> {
 			if (event.hasShiftDown() && !locked(menu.display(card))) {
 				send(1000 + card);
 			}
+			return true;
+		}
+		if (selected >= 0 && watchId != null && in(watch, mx, my)) {
+			minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.4F, 1.2F);
+			minecraft.gui.setScreen(new HowItWorksScreen(watchId, this));
 			return true;
 		}
 		if (selected >= 0 && in(buy, mx, my)) {

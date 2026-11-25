@@ -28,7 +28,6 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.Mannequin;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
@@ -42,10 +41,15 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * The help menu's films (How It Works): a short film of each Armory item in use, made by the test client ("clips"
- * mode) on a clean stage in the sky. A film camera (an invisible armor stand) watches an actor (a mannequin with your
- * look that copies you every tick: the game doesn't draw you while the camera is elsewhere). Every film is real
- * gameplay: placing, using, firing and riding go through the game itself; a few things the camera can't follow (a
- * vehicle's driving, a walk) are moved along by hand. tools/make_clips.py packs the frames into the help menu.
+ * mode) on a stage in the sky dressed as a place (a base with its wall and Heart, a firing range, a river, a runway, a
+ * workshop), with trees round the edge. A film camera (an invisible armor stand that lives only on the client, so it
+ * glides smoothly, and can follow a vehicle or a flyer) watches an actor (a mannequin with your look that copies you
+ * every tick: the game doesn't draw you while the camera is elsewhere). Items whose point is what you see (a scope, the
+ * Rangefinder, the goggles, the Monitor, the drones, the Prospector Pick) cut to your own eyes, with the screen as you'd
+ * see it. A frame is taken every tick (20 a second); ./gradlew makeFilms makes them into videos (MakeFilms).
+ *
+ * Every film is real gameplay: placing, using, firing and riding go through the game itself; what the camera can't
+ * follow by itself (a vehicle's driving, a walk, a mine meant for players) is moved along by the film.
  *
  * RUBYMOD_CLIPS (a comma list of film ids or sections) films just those.
  */
@@ -58,11 +62,11 @@ final class HelpFilms {
 	private static String filming;
 	private static int frame;
 	private static int frameTicks;
-	private static int every = 2;
-	/** At most this many frames a film (the help screen's sheets have room for six rows of eight). */
-	private static final int MAX_FRAMES = 48;
+	private static int every = 1;
+	/** At most this many frames a film. */
+	private static final int MAX_FRAMES = 420;
 	private static BlockPos base;
-	private static int cameraId = -1;
+	private static int actorId = -1;
 	private static Mannequin actor;
 	private static MinecraftServer srv;
 	/** Walking (or flying) by hand: this much a tick, and whether to turn to face that way. */
@@ -72,7 +76,7 @@ final class HelpFilms {
 	private static final List<String> INDEX = new ArrayList<>();
 	private static final String ONLY = System.getenv("RUBYMOD_CLIPS");
 
-	/** Something moved along by hand each tick (a vehicle being driven, a monster walking): speed, heading and climb. */
+	/** Something moved along by hand each tick (a vehicle being driven): speed, heading and climb. */
 	private static final class Mover {
 		final Entity entity;
 		double speed;
@@ -96,12 +100,105 @@ final class HelpFilms {
 		}
 	}
 
-	// Cameras: where the film camera's eyes are, and what it looks at (offsets from the stage's middle).
-	private static final Vec3[] SIDE = {new Vec3(5, 2.6, 0.5), new Vec3(-0.5, 1.0, 3.5)};
-	private static final Vec3[] WIDE = {new Vec3(6, 3.4, -1.5), new Vec3(0, 1.2, 5.5)};
-	private static final Vec3[] SHOOT = {new Vec3(4.5, 2.8, -3.5), new Vec3(-0.5, 1.5, 7)};
-	private static final Vec3[] FAR = {new Vec3(13, 7, -4), new Vec3(0, 3, 9)};
-	private static final Vec3[] UP = {new Vec3(9, 3, -6), new Vec3(0, 9, 8)};
+	// ----- The camera -----
+
+	/**
+	 * Where the camera is: its eyes at {@code eye}, looking at {@code look} (offsets from the stage's middle); or, if
+	 * {@code follow}, gliding after the actor (or what they're riding), {@code eye} away from it ({@code chase}: turned
+	 * with its heading, so it stays behind).
+	 */
+	private record Cam(Vec3 eye, Vec3 look, boolean follow, boolean chase) {
+	}
+
+	private static Cam at(double ex, double ey, double ez, double lx, double ly, double lz) {
+		return new Cam(new Vec3(ex, ey, ez), new Vec3(lx, ly, lz), false, false);
+	}
+
+	private static final Cam SIDE = at(4.5, 2.3, 0.6, -0.5, 0.9, 3.5);
+	private static final Cam CLOSE = at(3.6, 2.2, -0.6, -0.3, 1.0, 2.2);
+	private static final Cam WIDE = at(6.5, 3.6, -2.0, 0, 1.0, 6);
+	private static final Cam SHOOT = at(3.6, 2.5, -2.8, -0.5, 1.4, 8);
+	private static final Cam UP = at(8, 2.5, -5, 0, 9, 8);
+	private static final Cam FOLLOW = new Cam(new Vec3(7, 3.2, -4), Vec3.ZERO, true, false);
+	private static final Cam CHASE = new Cam(new Vec3(3.5, 3.5, -9), Vec3.ZERO, true, true);
+	private static final Cam FLY = new Cam(new Vec3(12, 5, -12), Vec3.ZERO, true, false);
+
+	private static Cam cam = SIDE;
+	/** The film camera (client only), and where its eyes are now. */
+	private static ArmorStand camera;
+	private static int cameraCount;
+	private static Vec3 camEye;
+
+	private static void placeCamera(Minecraft mc) {
+		if (camera == null || base == null) {
+			return;
+		}
+		Vec3 middle = Vec3.atBottomCenterOf(base.above());
+		Vec3 eye;
+		Vec3 look;
+		if (cam.follow()) {
+			Entity t = mc.level.getEntity(actorId);
+			if (t != null && t.getVehicle() != null) {
+				t = t.getVehicle();
+			}
+			Vec3 target = t == null ? middle : t.position().add(0, Math.min(2.0, t.getBbHeight() * 0.6), 0);
+			Vec3 off = cam.eye();
+			if (cam.chase() && t != null) {
+				double r = Math.toRadians(t.getYRot());
+				double cos = Math.cos(r);
+				double sin = Math.sin(r);
+				off = new Vec3(off.x * cos - off.z * sin, off.y, off.x * sin + off.z * cos);
+			}
+			Vec3 want = target.add(off);
+			eye = camEye == null ? want : camEye.lerp(want, 0.2);
+			look = target;
+		} else {
+			eye = middle.add(cam.eye());
+			look = middle.add(cam.look());
+		}
+		camEye = eye;
+		Vec3 to = look.subtract(eye);
+		float yaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z));
+		float pitch = (float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
+		camera.setOldPosAndRot();
+		camera.setPos(eye.x, eye.y - camera.getEyeHeight(), eye.z);
+		camera.setYRot(yaw);
+		camera.setXRot(pitch);
+		camera.setYHeadRot(yaw);
+		camera.yHeadRotO = camera.yHeadRot;
+	}
+
+	/** Switch to another camera mid-film. */
+	private static void camera(Cam c) {
+		then(0, mc -> {
+			cam = c;
+			camEye = null;
+			placeCamera(mc);
+			if (camera != null) {
+				camera.setOldPosAndRot();
+			}
+		});
+	}
+
+	/** Cut to your own eyes (the screen as you'd see it, the HUD and all), or back to the film camera. */
+	private static void yourEyes(boolean on) {
+		then(0, mc -> {
+			mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+			if (on) {
+				mc.setCameraEntity(mc.player);
+				if (mc.gui.hud.isHidden()) {
+					mc.gui.hud.toggle();
+				}
+			} else {
+				if (!mc.gui.hud.isHidden()) {
+					mc.gui.hud.toggle();
+				}
+				if (camera != null) {
+					mc.setCameraEntity(camera);
+				}
+			}
+		});
+	}
 
 	// ----- The per-tick work -----
 
@@ -110,8 +207,11 @@ final class HelpFilms {
 		if (server != null && base != null) {
 			server.execute(HelpFilms::serverTick);
 		}
+		if (camera != null && mc.level != null) {
+			placeCamera(mc);
+		}
 		if (filming != null && frameTicks++ % every == 0 && frame < MAX_FRAMES) {
-			AutoTest.shot(mc, "clip-" + filming + "-" + String.format(java.util.Locale.ROOT, "%02d", frame++));
+			AutoTest.shot(mc, "clip-" + filming + "-" + String.format(java.util.Locale.ROOT, "%03d", frame++));
 		}
 	}
 
@@ -121,10 +221,7 @@ final class HelpFilms {
 		}
 		ServerPlayer p = AutoTest.me(srv);
 		if (walking != null) {
-			float yaw = walkFacing ? (float) Math.toDegrees(Math.atan2(-walking.x, walking.z)) : p.getYRot();
-			if (walking.horizontalDistanceSqr() < 1e-6) {
-				yaw = p.getYRot();
-			}
+			float yaw = walkFacing && walking.horizontalDistanceSqr() > 1e-6 ? (float) Math.toDegrees(Math.atan2(-walking.x, walking.z)) : p.getYRot();
 			p.teleportTo(p.level(), p.getX() + walking.x, p.getY() + walking.y, p.getZ() + walking.z, Set.of(), yaw, p.getXRot(), false);
 		}
 		Mannequin a = actor;
@@ -165,11 +262,7 @@ final class HelpFilms {
 			double dz = Math.cos(rad) * m.speed;
 			double dy = m.age > m.climbAfter ? m.climb : 0;
 			Entity e = m.entity;
-			if (isRide(e)) {
-				e.snapTo(e.getX() + dx, e.getY() + dy, e.getZ() + dz, m.yaw, e.getXRot());
-			} else {
-				e.teleportTo(e.getX() + dx, e.getY() + dy, e.getZ() + dz); // (a monster: told to the client as it goes)
-			}
+			e.snapTo(e.getX() + dx, e.getY() + dy, e.getZ() + dz, m.yaw, e.getXRot());
 			e.setYRot(m.yaw);
 			if (e instanceof LivingEntity living) {
 				living.setYHeadRot(m.yaw);
@@ -227,12 +320,15 @@ final class HelpFilms {
 	private static final Set<String> IN_BASE = Set.of("sentry_turret", "tesla_coil", "mortar", "missile_silo", "flak_cannon", "sam_site",
 			"point_defense", "missile_interceptor", "shield_generator", "radar_station", "landmine", "claymore", "at_mine", "holo_camo", "blast_door",
 			"keycard_door", "keycard_reader", "security_camera", "laser_tripwire", "seismic_sensor", "alarm_block", "guard_contract",
-			"at_guard_contract", "ruby_drill", "blueprint", "armory");
+			"at_guard_contract", "ruby_drill", "blueprint", "armory", "heart_upgrade", "blueprint_watchtower", "blueprint_bunker",
+			"blueprint_gatehouse", "blueprint_wall_section");
 	private static String staging;
+	/** Where the Heart stands in a base film (on show, by the wall). */
+	private static final int[] HEART = {-7, 1, 12};
 
-	/** Your Heart under the stage's middle (so the stage is your base), or no base at all (so blasts break things). */
+	/** Your Heart (so the stage is your base), or no base at all (so blasts break things). */
 	private static void heart(ServerPlayer p, boolean wanted) {
-		BlockPos h = at(0, -2, 4);
+		BlockPos h = at(HEART[0], HEART[1], HEART[2]);
 		var data = dev.rubymod.game.SeasonData.get();
 		var claim = data.claimOf(p.getUUID());
 		if (!wanted) {
@@ -248,6 +344,11 @@ final class HelpFilms {
 				data.claims.remove(claim.owner);
 			}
 			dev.rubymod.game.Claims.onHeartPlaced(p.level(), p, h);
+		}
+		claim = data.claimOf(p.getUUID());
+		if (claim != null && claim.tier != 1) {
+			claim.tier = 1;
+			claim.hp = claim.maxHp();
 		}
 	}
 
@@ -274,8 +375,121 @@ final class HelpFilms {
 		server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), "time set " + when);
 	}
 
+	private static void war() {
+		dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.WAR;
+	}
+
 	private static final Direction S = Direction.SOUTH;
 	private static final Direction N = Direction.NORTH;
+
+	// ----- Sets -----
+
+	private static final BlockState AIR = Blocks.AIR.defaultBlockState();
+
+	/** A tree: a trunk, and a round crown of leaves. */
+	private static void tree(ServerLevel l, int x, int z, int height) {
+		BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState().setValue(BlockStateProperties.PERSISTENT, true);
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dz = -2; dz <= 2; dz++) {
+				for (int dy = height - 2; dy <= height + 1; dy++) {
+					int r = Math.abs(dx) + Math.abs(dz);
+					if (r <= (dy > height ? 1 : dy == height - 2 ? 3 : 4) && !(Math.abs(dx) == 2 && Math.abs(dz) == 2)) {
+						put(l, x + dx, dy, z + dz, leaves);
+					}
+				}
+			}
+		}
+		box(l, x, 1, z, x, height, z, Blocks.OAK_LOG.defaultBlockState());
+	}
+
+	/** Trees round the edge, flowers and grass about: a place, not a test floor. The middle's left clear. */
+	private static void scenery(ServerLevel l) {
+		int[][] trees = {{-18, 4, 6}, {-17, 16, 5}, {-18, 28, 6}, {-16, 38, 5}, {18, 6, 5}, {17, 18, 6}, {18, 30, 5}, {16, 40, 6}, {-8, 42, 5},
+				{5, 43, 6}, {-2, 42, 5}};
+		for (int[] t : trees) {
+			tree(l, t[0], t[1], t[2]);
+		}
+		BlockState[] small = {Blocks.SHORT_GRASS.defaultBlockState(), Blocks.POPPY.defaultBlockState(), Blocks.DANDELION.defaultBlockState(),
+				Blocks.SHORT_GRASS.defaultBlockState(), Blocks.CORNFLOWER.defaultBlockState(), Blocks.SHORT_GRASS.defaultBlockState()};
+		for (int x = -19; x <= 19; x++) {
+			for (int z = -13; z <= 43; z++) {
+				int h = (x * 73856093) ^ (z * 19349663);
+				boolean middle = Math.abs(x) <= 9 && z >= -3 && z <= 22;
+				if (!middle && Math.floorMod(h, 7) == 0 && l.getBlockState(at(x, 1, z)).isAir() && l.getBlockState(at(x, 0, z)).is(Blocks.GRASS_BLOCK)) {
+					put(l, x, 1, z, small[Math.floorMod(h >> 3, small.length)]);
+				}
+			}
+		}
+	}
+
+	/** Your base: a wall across the back with a gateway and battlements, a tower at each end, lamps, and the Heart. */
+	private static void baseSet(ServerLevel l) {
+		BlockState wall = Blocks.STONE_BRICKS.defaultBlockState();
+		box(l, -12, 1, 18, 12, 3, 18, wall);
+		box(l, -1, 1, 18, 1, 3, 18, AIR);
+		for (int x = -12; x <= 12; x += 2) {
+			if (Math.abs(x) > 1) {
+				put(l, x, 4, 18, wall);
+			}
+		}
+		box(l, -14, 1, 17, -12, 6, 19, wall);
+		box(l, 12, 1, 17, 14, 6, 19, wall);
+		for (int x : new int[] {-3, 3}) {
+			box(l, x, 1, 16, x, 2, 16, Blocks.SPRUCE_FENCE.defaultBlockState());
+			put(l, x, 3, 16, Blocks.LANTERN.defaultBlockState());
+		}
+		box(l, -9, 0, 10, -5, 0, 14, Blocks.POLISHED_ANDESITE.defaultBlockState());
+		box(l, -8, 1, 15, -6, 1, 15, block("sandbags").defaultBlockState());
+	}
+
+	/** A firing range: a wall of targets, hay bales either side, and a sandbag line to shoot over. */
+	private static void rangeSet(ServerLevel l) {
+		box(l, -3, 1, 12, 3, 3, 12, Blocks.TARGET.defaultBlockState());
+		box(l, -5, 1, 12, -4, 2, 12, Blocks.HAY_BLOCK.defaultBlockState());
+		box(l, 4, 1, 12, 5, 2, 12, Blocks.HAY_BLOCK.defaultBlockState());
+		box(l, -3, 0, 2, 3, 0, 11, Blocks.COARSE_DIRT.defaultBlockState());
+		box(l, -2, 1, 2, 2, 1, 2, block("sandbags").defaultBlockState());
+		box(l, 0, 1, 2, 0, 1, 2, AIR);
+	}
+
+	/** A river with sandy banks, reeds and a little dock. */
+	private static void riverSet(ServerLevel l) {
+		box(l, -10, -3, 3, 10, -3, 44, Blocks.SAND.defaultBlockState());
+		box(l, -9, -2, 3, 9, 0, 44, Blocks.WATER.defaultBlockState());
+		box(l, -11, -2, 3, -10, 0, 44, Blocks.SAND.defaultBlockState());
+		box(l, 10, -2, 3, 11, 0, 44, Blocks.SAND.defaultBlockState());
+		for (int z = 6; z <= 40; z += 5) {
+			box(l, -11, 1, z, -11, 2, z, Blocks.SUGAR_CANE.defaultBlockState());
+			box(l, 11, 1, z + 2, 11, 2, z + 2, Blocks.SUGAR_CANE.defaultBlockState());
+		}
+		box(l, -2, 0, 1, 2, 0, 2, Blocks.SPRUCE_PLANKS.defaultBlockState());
+	}
+
+	/** A runway: a long grey strip with a dashed centre line and lights either side. */
+	private static void runwaySet(ServerLevel l) {
+		box(l, -4, 0, -2, 4, 0, 44, block("minecraft:gray_concrete").defaultBlockState());
+		for (int z = 0; z <= 44; z += 4) {
+			box(l, 0, 0, z, 0, 0, z + 1, block("minecraft:white_concrete").defaultBlockState());
+		}
+		for (int z = -2; z <= 44; z += 6) {
+			put(l, -5, 0, z, Blocks.SEA_LANTERN.defaultBlockState());
+			put(l, 5, 0, z, Blocks.SEA_LANTERN.defaultBlockState());
+		}
+	}
+
+	/** A workshop: a stone floor, lamps on posts, and a solar panel for power. */
+	private static void workshopSet(ServerPlayer p) {
+		ServerLevel l = p.level();
+		box(l, -6, 0, 0, 6, 0, 9, Blocks.SMOOTH_STONE.defaultBlockState());
+		for (int x : new int[] {-6, 6}) {
+			for (int z : new int[] {0, 9}) {
+				box(l, x, 1, z, x, 2, z, Blocks.SPRUCE_FENCE.defaultBlockState());
+				put(l, x, 3, z, Blocks.LANTERN.defaultBlockState());
+			}
+		}
+		owned(p, -5, 1, 5, "solar_panel", S);
+		owned(p, -5, 1, 7, "solar_panel", S);
+	}
 
 	// ----- Steps (each one a step of the test client's script) -----
 
@@ -514,7 +728,7 @@ final class HelpFilms {
 		wait(ticks);
 	}
 
-	/** A Husk (a monster that doesn't burn in the sun) walking this way: from (x, z), at this heading, for a while. */
+	/** A Husk (a monster that doesn't burn in the sun) walking this way by itself: from (x, z), at this heading, this far. */
 	private static void monster(double x, double z, float yaw, double speed, int ticks) {
 		server(p -> {
 			var husk = EntityTypes.HUSK.create(p.level(), EntitySpawnReason.COMMAND);
@@ -549,10 +763,7 @@ final class HelpFilms {
 	/** The trap at (x, z) goes off (as it would for an enemy stepping on it: the film's monster isn't one it waits for). */
 	private static void boom(int x, int z) {
 		server(p -> {
-			for (Entity e : p.level().getEntities((Entity) null, new AABB(base).inflate(30), e -> e instanceof net.minecraft.world.entity.monster.Monster)) {
-				AutoTest.log("boom: monster at {} (trap at {}, {})", e.position().subtract(Vec3.atBottomCenterOf(base)), x, z);
-			}
-			p.level().setBlockAndUpdate(at(x, 1, z), Blocks.AIR.defaultBlockState());
+			p.level().setBlockAndUpdate(at(x, 1, z), AIR);
 			dev.rubymod.game.Explosions.explode(p.level(), null, base.getX() + x + 0.5, base.getY() + 1.2, base.getZ() + z + 0.5, 2.5F, false);
 		});
 	}
@@ -561,18 +772,34 @@ final class HelpFilms {
 		then(0, mc -> mc.gui.setScreen(null));
 	}
 
+	/** Stop watching through a camera or flying a drone (the crouch key), and back to the film camera. */
+	private static void stopWatching() {
+		then(0, mc -> mc.options.keyShift.setDown(true));
+		wait(8);
+		then(0, mc -> {
+			mc.options.keyShift.setDown(false);
+			if (DronePilot.flying()) {
+				DronePilot.stop(mc);
+			}
+		});
+		yourEyes(false);
+	}
+
 	// ----- A film -----
 
+	private interface Build extends Consumer<ServerPlayer> {
+	}
+
 	/**
-	 * One film: a fresh stage ({@code build} adds what's on it), the camera at {@code cam}, a frame every {@code every}
-	 * ticks, and {@code script} the steps.
+	 * One film: a fresh stage ({@code build} adds what's on it), the camera {@code c}, a frame every {@code every} ticks
+	 * (1: real time), and {@code script} the steps.
 	 */
-	private static void film(String id, String section, int every, Vec3[] cam, Consumer<ServerPlayer> build, Runnable script) {
+	private static void film(String id, String section, int every, Cam c, Build build, Runnable script) {
 		if (ONLY != null && java.util.Arrays.stream(ONLY.split(",")).noneMatch(s -> s.equals(id) || s.equals(section))) {
 			return;
 		}
 		then(0, mc -> staging = id);
-		stage(build, cam[0], cam[1]);
+		stage(build, c);
 		then(0, mc -> {
 			filming = id;
 			frame = 0;
@@ -597,20 +824,29 @@ final class HelpFilms {
 		}
 	}
 
-	private static void stage(Consumer<ServerPlayer> build, Vec3 cam, Vec3 look) {
+	private static void stage(Build build, Cam c) {
 		then(5, mc -> {
-			cameraId = -1;
 			actor = null;
+			actorId = -1;
 			walking = null;
 			if (DronePilot.flying()) {
 				DronePilot.stop(mc);
 			}
 			mc.options.keyShift.setDown(false);
 			mc.setCameraEntity(mc.player);
-			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+			mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+			if (!mc.gui.hud.isHidden()) {
+				mc.gui.hud.toggle();
+			}
+			if (camera != null) {
+				mc.level.removeEntity(camera.getId(), Entity.RemovalReason.DISCARDED);
+				camera = null;
+			}
 			if (mc.gui.screen() != null) {
 				mc.gui.setScreen(null);
 			}
+			cam = c;
+			camEye = null;
 		});
 		then(1, mc -> AutoTest.onServer(mc, server -> {
 			srv = server;
@@ -622,17 +858,16 @@ final class HelpFilms {
 			MOVERS.clear();
 			dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.LOBBY;
 			time(server, "noon");
-			for (Entity e : level.getEntities((Entity) null, new AABB(base).inflate(70), e -> !(e instanceof Player))) {
+			for (Entity e : level.getEntities((Entity) null, new AABB(base).inflate(90), e -> !(e instanceof Player))) {
 				e.discard();
 			}
-			BlockState air = Blocks.AIR.defaultBlockState();
-			for (int x = -16; x <= 16; x++) {
-				for (int z = -12; z <= 24; z++) {
+			for (int x = -24; x <= 24; x++) {
+				for (int z = -16; z <= 48; z++) {
 					for (int y = -3; y <= 26; y++) {
-						BlockState s = air;
-						if (Math.abs(x) <= 12 && z >= -9 && z <= 20) {
+						BlockState s = AIR;
+						if (Math.abs(x) <= 20 && z >= -14 && z <= 44) {
 							s = y == 0 ? Blocks.GRASS_BLOCK.defaultBlockState() : y == -1 ? Blocks.DIRT.defaultBlockState()
-									: y < -1 ? Blocks.STONE.defaultBlockState() : air;
+									: y < -1 ? Blocks.STONE.defaultBlockState() : AIR;
 						}
 						if (!level.getBlockState(at(x, y, z)).equals(s)) {
 							level.setBlock(at(x, y, z), s, 2);
@@ -647,26 +882,15 @@ final class HelpFilms {
 					p.setItemSlot(slot, ItemStack.EMPTY);
 				}
 			}
+			p.removeAllEffects();
 			p.setShiftKeyDown(false);
 			p.teleportTo(level, base.getX() + 0.5, base.getY() + 1, base.getZ() + 0.5, Set.of(), 0, 15, false);
 			heart(p, IN_BASE.contains(staging));
+			if (IN_BASE.contains(staging)) {
+				baseSet(level);
+			}
 			build.accept(p);
-			// The camera: eyes at cam, looking at look. The view is third person (so the actor's drawn), which sits 4
-			// blocks behind the stand's eyes: so the stand goes 4 blocks on.
-			ArmorStand stand = EntityTypes.ARMOR_STAND.create(level, EntitySpawnReason.COMMAND);
-			stand.setInvisible(true);
-			stand.setNoGravity(true);
-			stand.setSilent(true);
-			Vec3 middle = Vec3.atBottomCenterOf(base.above());
-			Vec3 eye = middle.add(cam);
-			Vec3 to = middle.add(look).subtract(eye);
-			float camYaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z));
-			float camPitch = (float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
-			Vec3 on = eye.add(to.normalize().scale(4));
-			stand.snapTo(on.x, on.y - stand.getEyeHeight(), on.z, camYaw, camPitch);
-			stand.setYHeadRot(camYaw);
-			level.addFreshEntity(stand);
-			cameraId = stand.getId();
+			scenery(level);
 			Mannequin a = EntityTypes.MANNEQUIN.create(level, EntitySpawnReason.COMMAND);
 			a.snapTo(p.getX(), p.getY(), p.getZ(), 0, 15);
 			a.getEntityData().set(dev.rubymod.mixin.MannequinAccessor.rubymod$profile(),
@@ -676,15 +900,23 @@ final class HelpFilms {
 			a.setPermanentlyInvulnerable(true);
 			level.addFreshEntity(a);
 			actor = a;
+			actorId = a.getId();
 		}));
-		then(5, mc -> AutoTest.hold(m -> base != null && cameraId >= 0 && m.level.getEntity(cameraId) != null
+		then(5, mc -> AutoTest.hold(m -> base != null && actorId >= 0 && m.level.getEntity(actorId) != null
 				&& m.player.distanceToSqr(Vec3.atBottomCenterOf(base.above())) < 2
 				&& m.level.getBlockState(base).is(Blocks.GRASS_BLOCK), 400));
 		then(30, mc -> {
-			var camera = mc.level.getEntity(cameraId);
-			if (camera != null) {
-				mc.setCameraEntity(camera);
-			}
+			// The film camera: a stand that lives only here (so it can glide every tick).
+			ArmorStand stand = EntityTypes.ARMOR_STAND.create(mc.level, EntitySpawnReason.COMMAND);
+			stand.setInvisible(true);
+			stand.setNoGravity(true);
+			stand.setSilent(true);
+			stand.setId(Integer.MAX_VALUE - 4000 - (++cameraCount % 1000)); // (client-only: an id the server will never use)
+			mc.level.addEntity(stand);
+			camera = stand;
+			placeCamera(mc);
+			stand.setOldPosAndRot();
+			mc.setCameraEntity(stand);
 			mc.player.setYRot(0);
 			mc.player.setXRot(15);
 		});
@@ -704,7 +936,7 @@ final class HelpFilms {
 			if (!mc.gui.hud.isHidden()) {
 				mc.gui.hud.toggle();
 			}
-			mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+			mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
 		});
 		wait(100);
 
@@ -736,15 +968,32 @@ final class HelpFilms {
 	private static void openIt(int x, int y, int z) {
 		holding(null);
 		wait(4);
+		face(x + 0.5, y + 0.5, z + 0.5);
 		click(x, y, z, N);
-		wait(18);
+		wait(30);
 		closeScreen();
 		wait(4);
 	}
 
 	private static void yourBase() {
 		String sec = "Your base";
-		film("armory", sec, 2, SIDE, p -> {
+		// The Ruby Heart: put it down, and the land round it is yours (its edge shows).
+		film("ruby_heart", sec, 1, at(3.5, 3, -1.5, 0, 0.8, 2.5), p -> heart(p, false), () -> {
+			holding("ruby_heart");
+			wait(10);
+			clickFloor(0, 3);
+			wait(70);
+		});
+		// The Heart upgrade (bought at the Armory): a bigger base, more health.
+		film("heart_upgrade", sec, 1, at(0, 44, -30, -7, 0, 12), p -> {
+		}, () -> {
+			wait(30);
+			server(p -> dev.rubymod.game.Claims.upgrade(p));
+			wait(40);
+			server(p -> dev.rubymod.game.Claims.upgrade(p));
+			wait(40);
+		});
+		film("armory", sec, 1, SIDE, p -> {
 		}, () -> {
 			place("armory", 0, 3);
 			wait(12);
@@ -754,37 +1003,38 @@ final class HelpFilms {
 
 	// ----- Guns -----
 
-	private static Consumer<ServerPlayer> range() {
-		return p -> box(p.level(), -2, 1, 11, 2, 3, 11, Blocks.TARGET.defaultBlockState());
-	}
-
 	private static void shoot(String gun, int shots, int gap, boolean scope) {
 		holding(gun);
 		wait(6);
-		face(0, 2, 11.5);
+		face(0, 2, 12.5);
 		wait(4);
 		if (scope) {
+			// Down the scope: as you'd see it.
+			yourEyes(true);
 			then(0, mc -> {
 				mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
 				mc.options.keyUse.setDown(true);
 			});
-			wait(10);
+			wait(14);
 		}
 		fire(shots, gap);
 		wait(14);
 		if (scope) {
 			then(0, mc -> mc.options.keyUse.setDown(false));
+			yourEyes(false);
+			wait(10);
 		}
 	}
 
 	private static void guns() {
 		String sec = "Guns";
-		film("service_pistol", sec, 2, SHOOT, range(), () -> shoot("service_pistol", 6, 5, false));
-		film("arr_rifle", sec, 2, SHOOT, range(), () -> shoot("arr_rifle", 18, 2, false));
-		film("combat_shotgun", sec, 2, SHOOT, range(), () -> shoot("combat_shotgun", 3, 14, false));
-		film("longshot_sniper", sec, 2, SHOOT, range(), () -> shoot("longshot_sniper", 2, 22, true));
-		film("ruby_blaster", sec, 2, SHOOT, range(), () -> shoot("ruby_blaster", 14, 3, false));
-		film("flamethrower", sec, 2, SIDE, p -> {
+		Build range = p -> rangeSet(p.level());
+		film("service_pistol", sec, 1, SHOOT, range, () -> shoot("service_pistol", 6, 6, false));
+		film("arr_rifle", sec, 1, SHOOT, range, () -> shoot("arr_rifle", 20, 2, false));
+		film("combat_shotgun", sec, 1, SHOOT, range, () -> shoot("combat_shotgun", 3, 16, false));
+		film("longshot_sniper", sec, 1, SHOOT, range, () -> shoot("longshot_sniper", 2, 24, true));
+		film("ruby_blaster", sec, 1, SHOOT, range, () -> shoot("ruby_blaster", 14, 3, false));
+		film("flamethrower", sec, 1, SIDE, p -> {
 			box(p.level(), -1, 1, 5, 1, 1, 6, Blocks.HAY_BLOCK.defaultBlockState());
 			put(p.level(), 0, 2, 5, Blocks.OAK_PLANKS.defaultBlockState());
 		}, () -> {
@@ -792,11 +1042,11 @@ final class HelpFilms {
 			wait(6);
 			face(0, 1.3, 5.5);
 			holdUse(40);
-			wait(16);
+			wait(20);
 		});
 		String att = "Attachments";
 		for (String a : new String[] {"extended_mag", "red_dot_sight", "vertical_grip", "suppressor"}) {
-			film(a, att, 2, SHOOT, range(), () -> {
+			film(a, att, 1, SHOOT, range, () -> {
 				offhand("arr_rifle", 1);
 				holding(a);
 				wait(12);
@@ -809,10 +1059,10 @@ final class HelpFilms {
 					p.getInventory().setItem(0, gun);
 				});
 				wait(6);
-				face(0, 2, 11.5);
+				face(0, 2, 12.5);
 				wait(4);
 				fire(10, 3);
-				wait(10);
+				wait(12);
 			});
 		}
 		String ammo = "For guns";
@@ -828,7 +1078,7 @@ final class HelpFilms {
 	private static void weapons() {
 		String sec = "Grenades";
 		for (String g : new String[] {"frag_grenade", "smoke_grenade", "fire_bomb"}) {
-			film(g, sec, 3, WIDE, p -> {
+			film(g, sec, 1, WIDE, p -> {
 			}, () -> {
 				holding(g, 4);
 				wait(6);
@@ -837,7 +1087,7 @@ final class HelpFilms {
 				wait(110);
 			});
 		}
-		film("air_strike_flare", "Artillery and strikes", 7, FAR, p -> {
+		film("air_strike_flare", "Artillery and strikes", 2, at(13, 12, -10, 0, 2, 12), p -> {
 		}, () -> {
 			holding("air_strike_flare");
 			wait(6);
@@ -847,7 +1097,7 @@ final class HelpFilms {
 		});
 
 		sec = "Launchers";
-		film("rocket_launcher", sec, 2, SHOOT, p -> box(p.level(), -2, 1, 13, 2, 3, 13, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
+		film("rocket_launcher", sec, 1, SHOOT, p -> box(p.level(), -2, 1, 13, 2, 3, 13, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
 			holding("rocket_launcher");
 			wait(6);
 			face(0, 2, 13);
@@ -855,15 +1105,15 @@ final class HelpFilms {
 			fire(1, 0);
 			wait(40);
 		});
-		film("lancer", sec, 2, WIDE, p -> ride(p, "jeep", 0, 13), () -> {
+		film("lancer", sec, 1, WIDE, p -> ride(p, "jeep", 0, 13), () -> {
 			wait(4);
 			holding("lancer");
 			wait(4);
-			face(0, 1.5, 14.5);
+			face(0, 1.5, 13.5);
 			wait(10);
 			server(p -> {
 				Entity target = null;
-				for (Entity e : p.level().getEntities((Entity) null, new AABB(at(0, 1, 14)).inflate(4), HelpFilms::isRide)) {
+				for (Entity e : p.level().getEntities((Entity) null, new AABB(at(0, 1, 13)).inflate(4), HelpFilms::isRide)) {
 					target = e;
 				}
 				if (p.getMainHandItem().getItem() instanceof dev.rubymod.item.LockOnLauncherItem l) {
@@ -872,7 +1122,7 @@ final class HelpFilms {
 			});
 			wait(50);
 		});
-		film("skyhammer", sec, 2, UP, p -> {
+		film("skyhammer", sec, 1, UP, p -> {
 		}, () -> {
 			drone(0, 16, 10, 6);
 			wait(20);
@@ -896,9 +1146,9 @@ final class HelpFilms {
 		alias("at_missile", "lancer", "Rockets and shells");
 
 		sec = "Breaking in";
-		film("breaching_charge", sec, 4, WIDE, p -> {
+		film("breaching_charge", sec, 1, WIDE, p -> {
 			box(p.level(), -2, 1, 3, 2, 3, 3, Blocks.STONE_BRICKS.defaultBlockState());
-			dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.WAR;
+			war();
 		}, () -> {
 			holding("breaching_charge");
 			wait(6);
@@ -907,7 +1157,7 @@ final class HelpFilms {
 			back(14);
 			wait(135);
 		});
-		film("c4", sec, 2, WIDE, p -> box(p.level(), -2, 1, 6, 2, 3, 6, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
+		film("c4", sec, 1, WIDE, p -> box(p.level(), -2, 1, 6, 2, 3, 6, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
 			holding("c4", 2);
 			wait(6);
 			face(0, 2, 6);
@@ -919,19 +1169,22 @@ final class HelpFilms {
 			use();
 			wait(2);
 			sneak(false);
-			wait(30);
+			wait(34);
 		});
 
 		sec = "Artillery and strikes";
-		film("mortar", sec, 2, FAR, p -> {
+		film("mortar", sec, 1, at(9, 7, -4, 0, 2, 9), p -> {
 			owned(p, 2, 1, 2, "mortar", S);
-			dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.WAR; // heavy weapons fire in Open War
+			war(); // heavy weapons fire in Open War
 		}, () -> {
 			holding("rangefinder");
 			wait(6);
 			face(0, 0, 17);
-			holdUse(16);
+			// Through the Rangefinder: as you'd see it.
+			yourEyes(true);
+			holdUse(26);
 			server(p -> dev.rubymod.item.RangefinderItem.mark(p, at(0, 0, 17)));
+			yourEyes(false);
 			wait(4);
 			holding("mortar_shell", 3);
 			wait(6);
@@ -940,15 +1193,15 @@ final class HelpFilms {
 		});
 		alias("rangefinder", "mortar", sec);
 		alias("mortar_shell", "mortar", "Rockets and shells");
-		film("missile_silo", sec, 2, new Vec3[] {new Vec3(7, 3, -3), new Vec3(1, 5, 4)}, p -> {
+		film("missile_silo", sec, 1, at(7, 3, -3, 1, 5, 4), p -> {
 			owned(p, 2, 1, 3, "missile_silo", S);
-			dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.WAR;
+			war();
 		}, () -> {
 			server(p -> dev.rubymod.item.RangefinderItem.mark(p, at(0, 0, 17)));
 			holding("cruise_missile");
 			wait(6);
 			click(2, 1, 3, N);
-			wait(80);
+			wait(100);
 		});
 		alias("cruise_missile", "missile_silo", sec);
 	}
@@ -961,24 +1214,24 @@ final class HelpFilms {
 		wait(6);
 		for (int x = -1; x <= 1; x++) {
 			clickFloor(x, 3);
-			wait(4);
+			wait(5);
 		}
 		for (int x = -1; x <= 1; x++) {
 			click(x, 1, 3, Direction.UP);
-			wait(4);
+			wait(5);
 		}
-		wait(14);
+		wait(16);
 	}
 
 	private static void defenses() {
 		String sec = "Walls";
 		for (String w : new String[] {"sandbags", "concrete_wall", "reinforced_concrete", "reinforced_glass"}) {
-			film(w, sec, 2, SIDE, p -> {
+			film(w, sec, 1, CLOSE, p -> {
 			}, () -> wallOf(w));
 		}
-		film("blast_door", sec, 2, SIDE, p -> {
+		film("blast_door", sec, 1, SIDE, p -> {
 			box(p.level(), -3, 1, 4, 3, 3, 4, Blocks.STONE_BRICKS.defaultBlockState());
-			box(p.level(), 0, 1, 4, 0, 2, 4, Blocks.AIR.defaultBlockState());
+			box(p.level(), 0, 1, 4, 0, 2, 4, AIR);
 		}, () -> {
 			holding("blast_door");
 			wait(6);
@@ -991,7 +1244,7 @@ final class HelpFilms {
 			walk(20);
 			wait(8);
 		});
-		film("barbed_wire", sec, 2, SIDE, p -> {
+		film("barbed_wire", sec, 1, SIDE, p -> {
 		}, () -> {
 			holding("barbed_wire", 8);
 			wait(6);
@@ -1004,9 +1257,9 @@ final class HelpFilms {
 			walk(30, 0, 0, 0.05);
 		});
 		sec = "Hiding";
-		film("holo_camo", sec, 2, SIDE, p -> {
+		film("holo_camo", sec, 1, SIDE, p -> {
 			box(p.level(), -3, 1, 4, 3, 3, 4, Blocks.STONE_BRICKS.defaultBlockState());
-			box(p.level(), 0, 1, 4, 0, 2, 4, Blocks.AIR.defaultBlockState());
+			box(p.level(), 0, 1, 4, 0, 2, 4, AIR);
 		}, () -> {
 			walk(6);
 			holding("holo_camo", 8);
@@ -1024,13 +1277,12 @@ final class HelpFilms {
 			walk(22);
 			wait(6);
 		});
-		film("camo_net", sec, 2, WIDE, p -> {
+		film("camo_net", sec, 1, WIDE, p -> {
+			ride(p, "jeep", 0, 5);
 			for (int[] c : new int[][] {{-2, 3}, {2, 3}, {-2, 7}, {2, 7}}) {
 				box(p.level(), c[0], 1, c[1], c[0], 2, c[1], Blocks.OAK_FENCE.defaultBlockState());
 			}
 		}, () -> {
-			server(p -> {
-			});
 			holding("camo_net", 16);
 			wait(6);
 			walk(10);
@@ -1042,11 +1294,11 @@ final class HelpFilms {
 				click(x, 2, 5, Direction.UP);
 				wait(3);
 			}
-			wait(14);
+			wait(16);
 		});
 
 		sec = "Traps";
-		film("landmine", sec, 3, WIDE, p -> {
+		film("landmine", sec, 1, WIDE, p -> {
 		}, () -> {
 			holding("landmine");
 			wait(6);
@@ -1056,9 +1308,9 @@ final class HelpFilms {
 			monster(0, 9, 180, 0.1, 120);
 			wait(46);
 			boom(0, 4);
-			wait(20);
+			wait(24);
 		});
-		film("claymore", sec, 3, WIDE, p -> {
+		film("claymore", sec, 1, WIDE, p -> {
 		}, () -> {
 			holding("claymore");
 			wait(6);
@@ -1068,9 +1320,9 @@ final class HelpFilms {
 			monster(0, 9, 180, 0.1, 120);
 			wait(50);
 			boom(0, 3);
-			wait(20);
+			wait(24);
 		});
-		film("at_mine", sec, 2, WIDE, p -> {
+		film("at_mine", sec, 1, WIDE, p -> {
 		}, () -> {
 			holding("at_mine");
 			wait(6);
@@ -1088,24 +1340,19 @@ final class HelpFilms {
 				Entity v = actor == null ? null : actor.getVehicle();
 				if (v != null) {
 					v.snapTo(base.getX() + 0.5, v.getY(), base.getZ() + 0.5, 0, 0);
-				}
-			});
-			server(p -> {
-				Entity v = actor == null ? null : actor.getVehicle();
-				if (v != null) {
 					MOVERS.add(new Mover(v, 0.25, 0, 60));
 				}
 			});
 			wait(20);
 			server(p -> {
-				p.level().setBlockAndUpdate(at(0, 1, 5), Blocks.AIR.defaultBlockState());
+				p.level().setBlockAndUpdate(at(0, 1, 5), AIR);
 				dev.rubymod.game.Explosions.explode(p.level(), null, base.getX() + 0.5, base.getY() + 1, base.getZ() + 5.5, 3.0F, false);
 			});
 			wait(40);
 		});
 
 		sec = "Turrets";
-		film("sentry_turret", sec, 2, SIDE, p -> {
+		film("sentry_turret", sec, 1, SIDE, p -> {
 		}, () -> {
 			place("sentry_turret", 2, 4);
 			wait(8);
@@ -1119,7 +1366,7 @@ final class HelpFilms {
 			wait(60);
 		});
 		alias("practice_dummy", "sentry_turret", sec);
-		film("tesla_coil", sec, 2, SIDE, p -> owned(p, -4, 1, 6, "solar_panel", S), () -> {
+		film("tesla_coil", sec, 1, SIDE, p -> owned(p, -4, 1, 6, "solar_panel", S), () -> {
 			place("tesla_coil", 2, 5);
 			wait(8);
 			holding("practice_dummy");
@@ -1129,23 +1376,16 @@ final class HelpFilms {
 		});
 
 		sec = "Guns you man";
-		film("heavy_aa_gun", sec, 2, UP, p -> {
+		film("heavy_aa_gun", sec, 1, UP, p -> {
 		}, () -> {
 			drone(0, 18, 12, 8);
 			place("heavy_aa_gun", 0, 3);
 			wait(8);
 			walk(8);
 			getIn();
-			wait(10);
-			server(p -> {
-				Entity g = actor == null ? null : actor.getVehicle();
-				if (g instanceof dev.rubymod.entity.HeavyAAGunEntity gun) {
-					gun.setYRot(0);
-				}
-			});
-			wait(30);
+			wait(40);
 		});
-		film("railgun", sec, 2, WIDE, p -> {
+		film("railgun", sec, 1, WIDE, p -> {
 		}, () -> {
 			place("railgun", 0, 3);
 			wait(8);
@@ -1155,7 +1395,7 @@ final class HelpFilms {
 		});
 
 		sec = "Automatic";
-		film("flak_cannon", sec, 3, UP, p -> {
+		film("flak_cannon", sec, 1, UP, p -> {
 		}, () -> {
 			drone(0, 22, 12, 10);
 			place("flak_cannon", 2, 3);
@@ -1163,9 +1403,9 @@ final class HelpFilms {
 			holding("heavy_ammo", 32);
 			wait(4);
 			click(2, 1, 3, N);
-			wait(90);
+			wait(100);
 		});
-		film("sam_site", sec, 3, UP, p -> {
+		film("sam_site", sec, 1, UP, p -> {
 		}, () -> {
 			drone(0, 26, 14, 12);
 			place("sam_site", 2, 3);
@@ -1173,15 +1413,15 @@ final class HelpFilms {
 			holding("ruby", 32);
 			wait(4);
 			click(2, 1, 3, N);
-			wait(90);
+			wait(100);
 		});
-		film("point_defense", sec, 2, WIDE, p -> owned(p, -4, 1, 2, "solar_panel", S), () -> {
+		film("point_defense", sec, 1, WIDE, p -> owned(p, -4, 1, 2, "solar_panel", S), () -> {
 			place("point_defense", 2, 3);
 			wait(10);
 			incoming(0, 40, 0, 4);
 			wait(70);
 		});
-		film("missile_interceptor", sec, 2, WIDE, p -> dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.LOCKDOWN, () -> {
+		film("missile_interceptor", sec, 1, WIDE, p -> dev.rubymod.game.SeasonData.get().phase = dev.rubymod.game.Phase.LOCKDOWN, () -> {
 			place("missile_interceptor", 2, 3);
 			wait(6);
 			holding("ruby", 32);
@@ -1191,13 +1431,13 @@ final class HelpFilms {
 			incoming(0, 40, 0, 4);
 			wait(70);
 		});
-		film("shield_generator", sec, 2, WIDE, p -> owned(p, -4, 1, 2, "solar_panel", S), () -> {
+		film("shield_generator", sec, 1, WIDE, p -> owned(p, -4, 1, 2, "solar_panel", S), () -> {
 			place("shield_generator", 0, 3);
 			wait(10);
 			incoming(0, 40, 0, 4);
 			wait(70);
 		});
-		film("radar_station", "Early warning", 2, SIDE, p -> {
+		film("radar_station", "Early warning", 1, SIDE, p -> {
 		}, () -> {
 			place("radar_station", 0, 3);
 			wait(10);
@@ -1214,14 +1454,7 @@ final class HelpFilms {
 		walk(10);
 		getIn();
 		wait(8);
-		drive(60, speed, turn, 0.01, 0, 0);
-	}
-
-	private static Consumer<ServerPlayer> water() {
-		return p -> {
-			box(p.level(), -10, -2, 3, 10, -2, 20, Blocks.SAND.defaultBlockState());
-			box(p.level(), -10, -1, 3, 10, 0, 20, Blocks.WATER.defaultBlockState());
-		};
+		drive(80, speed, turn, 0.01, 0, 0);
 	}
 
 	private static void boat(String id) {
@@ -1234,7 +1467,7 @@ final class HelpFilms {
 		wait(8);
 		getIn();
 		wait(6);
-		drive(60, 0.3, 0.8F, 0.01, 0, 0);
+		drive(90, 0.3, 0.6F, 0.01, 0, 0);
 	}
 
 	private static void aircraft(String id, double speed, int climbAfter, double climb) {
@@ -1243,15 +1476,14 @@ final class HelpFilms {
 		walk(6);
 		getIn();
 		wait(8);
-		drive(90, speed, 0, 0.012, climb, climbAfter);
+		drive(110, speed, 0, 0.012, climb, climbAfter);
 	}
 
 	private static void vehicles() {
 		String sec = "On land";
-		film("jeep", sec, 2, WIDE, p -> {
-		}, () -> landVehicle("jeep", 0.35, 1.5F));
-		film("tank", sec, 2, WIDE, p -> {
-		}, () -> {
+		Build road = p -> box(p.level(), -2, 0, 2, 2, 0, 44, Blocks.DIRT_PATH.defaultBlockState());
+		film("jeep", sec, 1, FOLLOW, road, () -> landVehicle("jeep", 0.35, 0.8F));
+		film("tank", sec, 1, FOLLOW, road, () -> {
 			landVehicle("tank", 0.15, 0);
 			server(p -> {
 				Entity v = actor == null ? null : actor.getVehicle();
@@ -1259,13 +1491,11 @@ final class HelpFilms {
 					tank.fireCannon(p);
 				}
 			});
-			wait(16);
+			wait(20);
 		});
-		film("dirt_bike", sec, 2, WIDE, p -> {
-		}, () -> landVehicle("dirt_bike", 0.45, 2.0F));
-		film("quad", sec, 2, WIDE, p -> {
-		}, () -> landVehicle("quad", 0.4, 1.8F));
-		film("tunnel_borer", sec, 3, WIDE, p -> box(p.level(), -4, 1, 8, 4, 6, 16, Blocks.STONE.defaultBlockState()), () -> {
+		film("dirt_bike", sec, 1, FOLLOW, road, () -> landVehicle("dirt_bike", 0.45, 1.0F));
+		film("quad", sec, 1, FOLLOW, road, () -> landVehicle("quad", 0.4, 0.9F));
+		film("tunnel_borer", sec, 1, at(7, 4, 2, 0, 1.5, 9), p -> box(p.level(), -4, 1, 8, 4, 6, 16, Blocks.STONE.defaultBlockState()), () -> {
 			place("tunnel_borer", 0, 4);
 			wait(8);
 			walk(10);
@@ -1292,18 +1522,16 @@ final class HelpFilms {
 			wait(10);
 		});
 		sec = "On water";
-		film("patrol_boat", sec, 2, WIDE, water(), () -> boat("patrol_boat"));
-		film("gunboat", sec, 2, WIDE, water(), () -> boat("gunboat"));
-		film("landing_craft", sec, 2, WIDE, water(), () -> boat("landing_craft"));
+		Build river = p -> riverSet(p.level());
+		film("patrol_boat", sec, 1, FOLLOW, river, () -> boat("patrol_boat"));
+		film("gunboat", sec, 1, FOLLOW, river, () -> boat("gunboat"));
+		film("landing_craft", sec, 1, FOLLOW, river, () -> boat("landing_craft"));
 		sec = "Aircraft";
-		film("fighter_jet", sec, 2, FAR, p -> {
-		}, () -> aircraft("fighter_jet", 0.8, 22, 0.25));
-		film("attack_jet", sec, 2, FAR, p -> {
-		}, () -> aircraft("attack_jet", 0.7, 26, 0.2));
-		film("bomber", sec, 2, FAR, p -> {
-		}, () -> aircraft("bomber", 0.6, 32, 0.15));
-		film("attack_heli", sec, 2, FAR, p -> {
-		}, () -> {
+		Build runway = p -> runwaySet(p.level());
+		film("fighter_jet", sec, 1, FLY, runway, () -> aircraft("fighter_jet", 0.8, 22, 0.25));
+		film("attack_jet", sec, 1, FLY, runway, () -> aircraft("attack_jet", 0.7, 26, 0.2));
+		film("bomber", sec, 1, FLY, runway, () -> aircraft("bomber", 0.6, 32, 0.15));
+		film("attack_heli", sec, 1, FLY, p -> box(p.level(), -3, 0, 1, 3, 0, 6, block("minecraft:gray_concrete").defaultBlockState()), () -> {
 			place("attack_heli", 0, 3);
 			wait(10);
 			walk(6);
@@ -1319,10 +1547,9 @@ final class HelpFilms {
 				}
 			});
 			wait(30);
-			drive(50, 0.4, 0.5F, 0.02, 0.02, 0);
+			drive(60, 0.4, 0.5F, 0.02, 0.02, 0);
 		});
-		film("airfield_pad", "Airfield", 2, SIDE, p -> {
-		}, () -> {
+		film("airfield_pad", "Airfield", 1, SIDE, runway, () -> {
 			place("airfield_pad", 0, 3);
 			wait(30);
 		});
@@ -1332,8 +1559,8 @@ final class HelpFilms {
 
 	private static void industry() {
 		String sec = "Power";
-		film("combustion_generator", sec, 2, SIDE, p -> {
-		}, () -> {
+		Build shop = HelpFilms::workshopSet;
+		film("combustion_generator", sec, 1, SIDE, shop, () -> {
 			place("combustion_generator", 0, 3);
 			wait(6);
 			server(p -> dev.rubymod.industry.Belts.insert(p.level(), at(0, 1, 3), Direction.UP, stack("minecraft:coal", 16)));
@@ -1342,15 +1569,14 @@ final class HelpFilms {
 			wait(20);
 		});
 		for (String m : new String[] {"solar_panel", "battery"}) {
-			film(m, sec, 2, SIDE, p -> {
-			}, () -> {
+			film(m, sec, 1, SIDE, shop, () -> {
 				place(m, 0, 3);
 				wait(14);
 				openIt(0, 1, 3);
 			});
 		}
 		sec = "Making rubies";
-		film("ruby_drill", sec, 3, SIDE, p -> owned(p, -4, 1, 4, "solar_panel", S), () -> {
+		film("ruby_drill", sec, 1, SIDE, shop, () -> {
 			place("ruby_drill", 0, 3);
 			wait(60);
 			holding(null);
@@ -1362,30 +1588,32 @@ final class HelpFilms {
 			wait(20);
 		});
 		for (String m : new String[] {"ore_refinery", "trade_depot", "vault", "ammo_factory"}) {
-			film(m, sec, 2, SIDE, p -> owned(p, -4, 1, 4, "solar_panel", S), () -> {
+			film(m, sec, 1, SIDE, shop, () -> {
 				place(m, 0, 3);
 				wait(12);
 				openIt(0, 1, 3);
 			});
 		}
 		sec = "Mining and making";
-		film("prospector_pick", sec, 2, SIDE, p -> {
-			put(p.level(), 4, -1, 6, dev.rubymod.registry.ModBlocks.RUBY_ORE.defaultBlockState());
-		}, () -> {
+		film("prospector_pick", sec, 1, SIDE, p -> put(p.level(), 4, -1, 6, dev.rubymod.registry.ModBlocks.RUBY_ORE.defaultBlockState()), () -> {
 			holding("prospector_pick");
 			wait(8);
+			// The sparkles point the way: through your own eyes.
+			face(2, 0.5, 4);
+			yourEyes(true);
 			use();
-			wait(24);
+			wait(30);
 			use();
-			wait(24);
+			wait(30);
+			yourEyes(false);
+			wait(6);
 		});
-		film("assembler", sec, 2, SIDE, p -> owned(p, -4, 1, 4, "solar_panel", S), () -> {
+		film("assembler", sec, 1, SIDE, shop, () -> {
 			place("assembler", 0, 3);
 			wait(12);
 			openIt(0, 1, 3);
 		});
-		film("ore_silo", sec, 2, SIDE, p -> {
-		}, () -> {
+		film("ore_silo", sec, 1, SIDE, shop, () -> {
 			place("ore_silo", 0, 3);
 			wait(8);
 			holding("minecraft:iron_ore", 64);
@@ -1397,8 +1625,17 @@ final class HelpFilms {
 		});
 
 		sec = "Moving things";
-		film("conveyor", sec, 2, SIDE, p -> {
-		}, () -> {
+		Consumer<ServerPlayer> chest = p -> {
+			workshopSet(p);
+			put(p.level(), 0, 1, 3, Blocks.CHEST.defaultBlockState());
+			var c = dev.rubymod.industry.Belts.containerAt(p.level(), at(0, 1, 3));
+			if (c != null) {
+				for (int i = 0; i < 6; i++) {
+					c.setItem(i, stack(i % 2 == 0 ? "minecraft:iron_ingot" : "minecraft:gold_ingot", 16));
+				}
+			}
+		};
+		film("conveyor", sec, 1, SIDE, shop, () -> {
 			stand(-2, 0);
 			holding("conveyor", 16);
 			wait(6);
@@ -1416,16 +1653,7 @@ final class HelpFilms {
 			});
 			wait(50);
 		});
-		Consumer<ServerPlayer> chest = p -> {
-			put(p.level(), 0, 1, 3, Blocks.CHEST.defaultBlockState());
-			var c = dev.rubymod.industry.Belts.containerAt(p.level(), at(0, 1, 3));
-			if (c != null) {
-				for (int i = 0; i < 6; i++) {
-					c.setItem(i, stack(i % 2 == 0 ? "minecraft:iron_ingot" : "minecraft:gold_ingot", 16));
-				}
-			}
-		};
-		film("belt_loader", sec, 2, SIDE, chest, () -> {
+		film("belt_loader", sec, 1, SIDE, chest::accept, () -> {
 			stand(-2, 1);
 			holding("belt_loader");
 			wait(6);
@@ -1439,7 +1667,7 @@ final class HelpFilms {
 			}
 			wait(50);
 		});
-		film("belt_sorter", sec, 2, WIDE, p -> {
+		film("belt_sorter", sec, 1, WIDE, p -> {
 			chest.accept(p);
 			put(p.level(), 0, 1, 4, facing("belt_loader", S));
 			put(p.level(), 0, 1, 5, facing("conveyor", S));
@@ -1457,7 +1685,7 @@ final class HelpFilms {
 			click(0, 1, 6, N);
 			wait(60);
 		});
-		film("belt_splitter", sec, 2, WIDE, p -> {
+		film("belt_splitter", sec, 1, WIDE, p -> {
 			chest.accept(p);
 			put(p.level(), 0, 1, 4, facing("belt_loader", S));
 			put(p.level(), 0, 1, 5, facing("conveyor", S));
@@ -1470,7 +1698,7 @@ final class HelpFilms {
 			clickFloor(0, 6);
 			wait(60);
 		});
-		film("belt_ramp", sec, 2, SIDE, p -> {
+		film("belt_ramp", sec, 1, SIDE, p -> {
 			chest.accept(p);
 			put(p.level(), 0, 1, 4, facing("belt_loader", S));
 			put(p.level(), 0, 1, 5, facing("conveyor", S));
@@ -1484,7 +1712,7 @@ final class HelpFilms {
 			clickFloor(0, 6);
 			wait(60);
 		});
-		film("belt_tunnel", sec, 2, WIDE, p -> {
+		film("belt_tunnel", sec, 1, WIDE, p -> {
 			chest.accept(p);
 			put(p.level(), 0, 1, 4, facing("belt_loader", S));
 			box(p.level(), -2, 1, 7, 2, 3, 7, Blocks.STONE_BRICKS.defaultBlockState());
@@ -1500,7 +1728,8 @@ final class HelpFilms {
 			clickFloor(0, 9);
 			wait(60);
 		});
-		film("ruby_wrench", sec, 2, SIDE, p -> {
+		film("ruby_wrench", sec, 1, CLOSE, p -> {
+			workshopSet(p);
 			put(p.level(), 0, 1, 3, facing("conveyor", S));
 			put(p.level(), 0, 1, 4, facing("conveyor", S));
 		}, () -> {
@@ -1517,9 +1746,9 @@ final class HelpFilms {
 			sneak(false);
 			wait(16);
 		});
-		film("elevator", sec, 2, WIDE, p -> {
+		film("elevator", sec, 1, WIDE, p -> {
 			box(p.level(), -1, 1, 3, 1, 5, 5, Blocks.STONE_BRICKS.defaultBlockState());
-			box(p.level(), -1, 1, 3, 1, 5, 3, Blocks.AIR.defaultBlockState());
+			box(p.level(), -1, 1, 3, 1, 5, 3, AIR);
 			put(p.level(), 0, 0, 3, block("elevator").defaultBlockState());
 			put(p.level(), 0, 5, 4, block("elevator").defaultBlockState());
 		}, () -> {
@@ -1532,11 +1761,47 @@ final class HelpFilms {
 		});
 	}
 
-	// ----- Building tools, copying, moving parts, lights -----
+	// ----- Building tools, copying, ready-made plans, moving parts, lights -----
+
+	/** A Constructor (powered, with a chest of what's needed beside it) building a Blueprint. */
+	private static void construct(ServerPlayer p, ItemStack blueprint) {
+		owned(p, 5, 1, 2, "constructor", S);
+		owned(p, 8, 1, 0, "solar_panel", S);
+		owned(p, 9, 1, 0, "solar_panel", S);
+		put(p.level(), 6, 1, 2, Blocks.CHEST.defaultBlockState());
+		put(p.level(), 6, 1, 1, Blocks.CHEST.defaultBlockState());
+		var data = blueprint.get(dev.rubymod.registry.ModComponents.BLUEPRINT);
+		java.util.Map<Item, Integer> need = new java.util.LinkedHashMap<>();
+		if (data != null) {
+			for (int c : data.cells()) {
+				if (c >= 0 && c < data.palette().size()) {
+					Item it = data.palette().get(c).getBlock().asItem();
+					if (it != net.minecraft.world.item.Items.AIR) {
+						need.merge(it, 1, Integer::sum);
+					}
+				}
+			}
+		}
+		need.replaceAll((k, v) -> v + 16);
+		int slot = 0;
+		for (var e : need.entrySet()) {
+			int left = e.getValue();
+			while (left > 0 && slot < 54) {
+				var c = dev.rubymod.industry.Belts.containerAt(p.level(), at(6, 1, slot < 27 ? 2 : 1));
+				if (c == null) {
+					break;
+				}
+				int n = Math.min(64, left);
+				c.setItem(slot % 27, new ItemStack(e.getKey(), n));
+				left -= n;
+				slot++;
+			}
+		}
+	}
 
 	private static void building() {
 		String sec = "Building tools";
-		film("architect_wand", sec, 2, WIDE, p -> {
+		film("architect_wand", sec, 1, WIDE, p -> {
 		}, () -> {
 			offhand("minecraft:stone_bricks", 64);
 			holding("architect_wand");
@@ -1546,14 +1811,14 @@ final class HelpFilms {
 			clickFloor(3, 4);
 			wait(30);
 		});
-		film("remodeler", sec, 2, SIDE, p -> box(p.level(), -2, 1, 4, 2, 3, 4, Blocks.COBBLESTONE.defaultBlockState()), () -> {
+		film("remodeler", sec, 1, SIDE, p -> box(p.level(), -2, 1, 4, 2, 3, 4, Blocks.COBBLESTONE.defaultBlockState()), () -> {
 			offhand("minecraft:stone_bricks", 64);
 			holding("remodeler");
 			wait(10);
 			click(0, 2, 4, N);
 			wait(30);
 		});
-		film("builders_wand", sec, 2, WIDE, p -> put(p.level(), 0, 1, 2, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
+		film("builders_wand", sec, 1, WIDE, p -> put(p.level(), 0, 1, 2, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
 			offhand("minecraft:stone_bricks", 64);
 			holding("builders_wand");
 			wait(10);
@@ -1566,7 +1831,7 @@ final class HelpFilms {
 			sneak(false);
 			wait(24);
 		});
-		film("excavator", sec, 2, SIDE, p -> box(p.level(), -3, 1, 3, 3, 4, 6, Blocks.STONE.defaultBlockState()), () -> {
+		film("excavator", sec, 1, SIDE, p -> box(p.level(), -3, 1, 3, 3, 4, 6, Blocks.STONE.defaultBlockState()), () -> {
 			server(p -> p.setGameMode(GameType.SURVIVAL));
 			holding("excavator");
 			wait(8);
@@ -1577,9 +1842,9 @@ final class HelpFilms {
 			wait(10);
 		});
 		sec = "Copying buildings";
-		film("blueprint", sec, 4, WIDE, p -> {
+		film("blueprint", sec, 3, WIDE, p -> {
 			box(p.level(), -1, 1, 4, 1, 3, 6, Blocks.OAK_PLANKS.defaultBlockState());
-			box(p.level(), 0, 1, 4, 0, 2, 4, Blocks.AIR.defaultBlockState());
+			box(p.level(), 0, 1, 4, 0, 2, 4, AIR);
 			owned(p, 5, 1, 3, "constructor", S);
 			put(p.level(), 6, 1, 3, Blocks.CHEST.defaultBlockState());
 			var c = dev.rubymod.industry.Belts.containerAt(p.level(), at(6, 1, 3));
@@ -1596,13 +1861,23 @@ final class HelpFilms {
 			click(-1, 1, 4, N);
 			wait(6);
 			click(1, 3, 6, N);
+			wait(14);
+			// The hut's knocked down... and the Constructor builds it again from the copy.
+			server(p -> box(p.level(), -1, 1, 4, 1, 3, 6, AIR));
 			wait(10);
 			server(p -> dev.rubymod.industry.Belts.insert(p.level(), at(5, 1, 3), Direction.UP, p.getMainHandItem().copy()));
-			wait(150);
+			wait(220);
 		});
 		alias("constructor", "blueprint", sec);
+		sec = "Ready-made plans";
+		for (var design : dev.rubymod.industry.ReadyBlueprints.ALL) {
+			film("blueprint_" + design.id(), sec, 8, at(15, 9, -5, 3, 3, 6), p -> construct(p, dev.rubymod.industry.ReadyBlueprints.stack(design)), () -> {
+				server(p -> dev.rubymod.industry.Belts.insert(p.level(), at(5, 1, 2), Direction.UP, dev.rubymod.industry.ReadyBlueprints.stack(design)));
+				wait(1200);
+			});
+		}
 		sec = "Moving parts";
-		film("ruby_piston", sec, 2, SIDE, p -> {
+		film("ruby_piston", sec, 1, SIDE, p -> {
 			put(p.level(), -2, 1, 5, block("ruby_piston").defaultBlockState().setValue(dev.rubymod.block.RubyMoverBlock.FACING, Direction.EAST)
 					.setValue(dev.rubymod.block.RubyMoverBlock.DISTANCE, 2));
 			box(p.level(), -1, 1, 5, -1, 3, 5, Blocks.IRON_BLOCK.defaultBlockState());
@@ -1618,7 +1893,7 @@ final class HelpFilms {
 			click(-3, 1, 5, N);
 			wait(30);
 		});
-		film("ruby_bearing", sec, 2, SIDE, p -> {
+		film("ruby_bearing", sec, 1, SIDE, p -> {
 			put(p.level(), 0, 1, 5, block("ruby_bearing").defaultBlockState().setValue(dev.rubymod.block.RubyMoverBlock.FACING, Direction.UP));
 			box(p.level(), 0, 2, 5, 3, 2, 5, Blocks.OAK_PLANKS.defaultBlockState());
 			put(p.level(), -1, 1, 5, Blocks.LEVER.defaultBlockState()
@@ -1631,7 +1906,7 @@ final class HelpFilms {
 			click(-1, 1, 5, N);
 			wait(60);
 		});
-		film("floodlight", "Lights", 2, WIDE, p -> time(p.level().getServer(), "midnight"), () -> {
+		film("floodlight", "Lights", 1, WIDE, p -> time(p.level().getServer(), "midnight"), () -> {
 			place("floodlight", 0, 3);
 			wait(30);
 		});
@@ -1641,7 +1916,7 @@ final class HelpFilms {
 
 	private static void security() {
 		String sec = "Locked doors";
-		film("keycard_door", sec, 2, SIDE, p -> {
+		film("keycard_door", sec, 1, SIDE, p -> {
 			box(p.level(), -4, 1, 4, 4, 3, 4, Blocks.STONE_BRICKS.defaultBlockState());
 			var door = block("keycard_door").defaultBlockState()
 					.setValue(net.minecraft.world.level.block.DoorBlock.FACING, S);
@@ -1661,7 +1936,7 @@ final class HelpFilms {
 			wait(8);
 		});
 		alias("keycard", "keycard_door", sec);
-		film("keycard_reader", sec, 2, SIDE, p -> {
+		film("keycard_reader", sec, 1, SIDE, p -> {
 			put(p.level(), -2, 1, 5, block("ruby_piston").defaultBlockState().setValue(dev.rubymod.block.RubyMoverBlock.FACING, Direction.EAST)
 					.setValue(dev.rubymod.block.RubyMoverBlock.DISTANCE, 2));
 			box(p.level(), -1, 1, 5, -1, 3, 5, Blocks.IRON_BLOCK.defaultBlockState());
@@ -1679,37 +1954,29 @@ final class HelpFilms {
 			wait(50);
 		});
 		sec = "Watching and alarms";
-		film("security_camera", sec, 2, SIDE, p -> {
-			box(p.level(), 3, 1, 8, 3, 3, 8, Blocks.STONE_BRICKS.defaultBlockState());
-		}, () -> {
+		film("security_camera", sec, 1, SIDE, p -> box(p.level(), 2, 1, 5, 2, 3, 5, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
 			holding("security_camera");
 			wait(6);
-			walk(10);
-			click(3, 3, 8, N);
+			walk(8);
+			click(2, 3, 5, N);
 			wait(6);
-			back(10);
+			back(8);
 			place("monitor", -1, 3);
 			wait(6);
 			holding(null);
-			click(-1, 1, 3, N);
-			wait(30);
-			then(0, mc -> mc.options.keyShift.setDown(true));
-			wait(8);
+			// Through the camera, as you'd see it on the Monitor.
 			then(0, mc -> {
-				mc.options.keyShift.setDown(false);
-				if (DronePilot.flying()) {
-					DronePilot.stop(mc);
-				}
-				mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
-				var camera = mc.level.getEntity(cameraId);
-				if (camera != null) {
-					mc.setCameraEntity(camera);
+				if (mc.gui.hud.isHidden()) {
+					mc.gui.hud.toggle();
 				}
 			});
+			click(-1, 1, 3, N);
+			wait(40);
+			stopWatching();
 			wait(14);
 		});
 		alias("monitor", "security_camera", sec);
-		film("laser_tripwire", sec, 2, WIDE, p -> {
+		film("laser_tripwire", sec, 1, WIDE, p -> {
 			box(p.level(), 4, 1, 6, 4, 2, 6, Blocks.STONE_BRICKS.defaultBlockState());
 			put(p.level(), -5, 1, 6, Blocks.REDSTONE_LAMP.defaultBlockState());
 		}, () -> {
@@ -1722,12 +1989,12 @@ final class HelpFilms {
 			monster(0, 14, 180, 0.12, 110);
 			wait(80);
 		});
-		film("seismic_sensor", sec, 2, SIDE, p -> {
+		film("seismic_sensor", sec, 1, SIDE, p -> {
 		}, () -> {
 			place("seismic_sensor", 0, 3);
 			wait(30);
 		});
-		film("alarm_block", sec, 2, WIDE, p -> {
+		film("alarm_block", sec, 1, WIDE, p -> {
 		}, () -> {
 			place("alarm_block", 0, 3);
 			wait(8);
@@ -1741,17 +2008,19 @@ final class HelpFilms {
 	private static void gear() {
 		String sec = "Carrying and talking";
 		for (String b : new String[] {"field_pack", "heavy_rucksack"}) {
-			film(b, sec, 2, SIDE, p -> {
+			film(b, sec, 1, SIDE, p -> {
 			}, () -> {
 				holding(b);
 				wait(10);
+				yourEyes(true);
 				use();
-				wait(20);
+				wait(26);
 				closeScreen();
+				yourEyes(false);
 				wait(8);
 			});
 		}
-		film("field_radio", sec, 2, SIDE, p -> {
+		film("field_radio", sec, 1, CLOSE, p -> {
 		}, () -> {
 			holding("field_radio");
 			wait(10);
@@ -1761,7 +2030,7 @@ final class HelpFilms {
 			wait(14);
 		});
 		sec = "Getting around";
-		film("jetpack", sec, 2, UP, p -> {
+		film("jetpack", sec, 1, FOLLOW, p -> {
 		}, () -> {
 			wear(EquipmentSlot.CHEST, "jetpack");
 			wait(10);
@@ -1769,7 +2038,7 @@ final class HelpFilms {
 			walk(30, 0, 0.02, 0.25);
 			walk(20, 0, -0.25, 0.1);
 		});
-		film("grappling_hook", sec, 2, UP, p -> box(p.level(), -1, 1, 8, 1, 9, 9, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
+		film("grappling_hook", sec, 1, at(9, 4, -2, 0, 5, 7), p -> box(p.level(), -1, 1, 8, 1, 9, 9, Blocks.STONE_BRICKS.defaultBlockState()), () -> {
 			holding("grappling_hook");
 			wait(6);
 			face(0, 9, 8);
@@ -1778,15 +2047,24 @@ final class HelpFilms {
 			walk(22, 0, 0.36, 0.3);
 			wait(20);
 		});
-		film("night_goggles", sec, 2, SIDE, p -> time(p.level().getServer(), "midnight"), () -> {
+		film("night_goggles", sec, 1, SIDE, p -> {
+			time(p.level().getServer(), "midnight");
+			box(p.level(), -3, 1, 8, 3, 3, 8, Blocks.STONE_BRICKS.defaultBlockState());
+		}, () -> {
 			holding("night_goggles");
 			wait(10);
 			use();
 			wear(EquipmentSlot.HEAD, "night_goggles");
-			wait(30);
+			wait(14);
+			// What they do: as you'd see it.
+			face(0, 1.6, 8);
+			yourEyes(true);
+			wait(40);
+			yourEyes(false);
+			wait(6);
 		});
 		sec = "Ruby armor and tools";
-		film("ruby_helmet", sec, 2, SIDE, p -> {
+		film("ruby_helmet", sec, 1, CLOSE, p -> {
 		}, () -> {
 			for (String piece : new String[] {"ruby_helmet", "ruby_chestplate", "ruby_leggings", "ruby_boots"}) {
 				holding(piece);
@@ -1803,7 +2081,7 @@ final class HelpFilms {
 		alias("ruby_chestplate", "ruby_helmet", sec);
 		alias("ruby_leggings", "ruby_helmet", sec);
 		alias("ruby_boots", "ruby_helmet", sec);
-		film("ruby_sword", sec, 2, SIDE, p -> {
+		film("ruby_sword", sec, 1, SIDE, p -> {
 		}, () -> {
 			monster(0, 2.5, 180, 0, 0);
 			holding("ruby_sword");
@@ -1815,7 +2093,7 @@ final class HelpFilms {
 			}
 			wait(10);
 		});
-		film("ruby_pickaxe", sec, 2, SIDE, p -> box(p.level(), -1, 1, 2, 1, 2, 2, Blocks.STONE.defaultBlockState()), () -> {
+		film("ruby_pickaxe", sec, 1, SIDE, p -> box(p.level(), -1, 1, 2, 1, 2, 2, Blocks.STONE.defaultBlockState()), () -> {
 			server(p -> p.setGameMode(GameType.SURVIVAL));
 			holding("ruby_pickaxe");
 			wait(8);
@@ -1826,64 +2104,49 @@ final class HelpFilms {
 			wait(10);
 		});
 		sec = "Guards";
-		film("guard_contract", sec, 2, WIDE, p -> {
-		}, () -> {
-			holding("guard_contract");
-			wait(6);
-			clickFloor(0, 3);
-			wait(12);
-			monster(0, 17, 180, 0.06, 120);
-			wait(70);
-		});
-		film("at_guard_contract", sec, 2, WIDE, p -> {
-		}, () -> {
-			holding("at_guard_contract");
-			wait(6);
-			clickFloor(0, 3);
-			wait(12);
-			monster(0, 17, 180, 0.06, 120);
-			wait(70);
-		});
+		for (String g : new String[] {"guard_contract", "at_guard_contract"}) {
+			film(g, sec, 1, WIDE, p -> {
+			}, () -> {
+				holding(g);
+				wait(6);
+				clickFloor(0, 3);
+				wait(12);
+				monster(0, 15, 180, 0.06, 120);
+				wait(80);
+			});
+		}
 		sec = "Drones";
-		film("recon_drone", sec, 3, UP, p -> {
+		film("recon_drone", sec, 1, UP, p -> {
 		}, () -> {
 			holding("recon_drone");
 			wait(8);
 			face(0, 8, 6);
 			use();
-			wait(90);
+			wait(100);
 		});
-		film("scout_drone", sec, 2, UP, p -> {
+		film("scout_drone", sec, 1, UP, p -> {
 		}, () -> {
 			holding("scout_drone");
 			wait(8);
-			use();
-			wait(30);
-			then(0, mc -> mc.options.keyShift.setDown(true));
-			wait(8);
+			// Flying it: what the drone sees.
 			then(0, mc -> {
-				mc.options.keyShift.setDown(false);
-				if (DronePilot.flying()) {
-					DronePilot.stop(mc);
-				}
-				mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
-				var camera = mc.level.getEntity(cameraId);
-				if (camera != null) {
-					mc.setCameraEntity(camera);
+				if (mc.gui.hud.isHidden()) {
+					mc.gui.hud.toggle();
 				}
 			});
+			use();
+			wait(40);
+			stopWatching();
 			wait(20);
 		});
 		sec = "Paint";
-		film("paint_kit", sec, 2, SIDE, p -> {
-		}, () -> {
-			place("jeep", 0, 4);
-			wait(8);
+		film("paint_kit", sec, 1, CLOSE, p -> ride(p, "jeep", 0, 3.5), () -> {
+			wait(6);
 			holding("paint_kit");
 			wait(6);
 			for (int i = 0; i < 3; i++) {
 				interact(HelpFilms::isRide);
-				wait(14);
+				wait(16);
 			}
 		});
 	}
