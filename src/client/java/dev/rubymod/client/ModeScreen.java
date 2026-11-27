@@ -168,7 +168,7 @@ public class ModeScreen extends Screen {
 		if (info != null) {
 			for (String line : info.modes()) {
 				if (line.startsWith("game:")) {
-					String[] f = line.split("[|]", 7);
+					String[] f = line.split("[|]", 8);
 					if (f.length >= 5) {
 						party.add(f);
 					}
@@ -210,11 +210,13 @@ public class ModeScreen extends Screen {
 			boolean here = here(f[0]);
 			boolean hasBots = f.length >= 6 && !f[5].equals("-");
 			boolean hasPickups = f.length >= 7 && !f[6].equals("-");
-			// Narrow screens: shorter buttons, so the games' names still fit.
-			boolean slim = colW < 200;
+			boolean hasFfa = f.length >= 8 && !f[7].equals("-");
+			// Narrow screens (or three switches): shorter buttons, so the games' names still fit.
+			boolean slim = colW < 200 || hasFfa;
 			int botW = slim ? 30 : 46;
 			int pickW = slim ? 34 : 50;
-			int buttons = (hasBots ? botW + 4 : 0) + (hasPickups ? pickW + 4 : 0);
+			int ffaW = 34;
+			int buttons = (hasBots ? botW + 4 : 0) + (hasPickups ? pickW + 4 : 0) + (hasFfa ? ffaW + 4 : 0);
 			boolean overButtons = buttons > 0 && Ui.inside(mouseX, mouseY, rightX + colW - 6 - buttons, y + 1, buttons, rowH - 2);
 			boolean over = !here && !overButtons && Ui.inside(mouseX, mouseY, rightX + 7, y, colW - 14, rowH);
 			float hv = Ui.hover("party:" + f[0], over);
@@ -255,6 +257,16 @@ public class ModeScreen extends Screen {
 							: List.of("Pick-ups are off", "Just you, your vehicle and the enemy. Click to turn them on.");
 				}
 				click(px, y + 1, pickW, rowH - 2, "pickups:" + f[0].substring(5));
+			}
+			if (hasFfa) {
+				boolean on = f[7].equals("on");
+				int fx = rightX + colW - 10 - (hasBots ? botW + 4 : 0) - (hasPickups ? pickW + 4 : 0) - ffaW;
+				if (Ui.button(g, on ? "FFA" : "Teams", fx, y + 1, ffaW, rowH - 2, mouseX, mouseY, on ? Ui.GOLD : 0xFF5A606C, true)) {
+					tooltip = on ? List.of("Free for all", "Everyone for themselves: every other tank is an enemy. First to 10 knockouts wins.",
+							"Click for Red vs Blue (from the next round).")
+							: List.of("Red vs Blue", "Two teams. Click for a free for all: everyone for themselves (from the next round).");
+				}
+				click(fx, y + 1, ffaW, rowH - 2, "ffa:" + f[0].substring(5));
 			}
 			if (!here) {
 				click(rightX + 7, y, colW - 14, rowH, f[0]);
@@ -335,7 +347,7 @@ public class ModeScreen extends Screen {
 			int[] b = boxes.get(i);
 			if (Ui.inside(event.x(), event.y(), b[0], b[1], b[2], b[3])) {
 				String a = actions.get(i);
-				if (hit < 0 || a.startsWith("bots:") || a.startsWith("pickups:")) {
+				if (hit < 0 || a.startsWith("bots:") || a.startsWith("pickups:") || a.startsWith("ffa:")) {
 					hit = i;
 				}
 			}
@@ -346,7 +358,7 @@ public class ModeScreen extends Screen {
 				LighterPark.toggle();
 				return true;
 			}
-			if (action.startsWith("bots:") || action.startsWith("pickups:")) {
+			if (action.startsWith("bots:") || action.startsWith("pickups:") || action.startsWith("ffa:")) {
 				// Stays open: the server sends the picker back with the new setting.
 				ClientPlayNetworking.send(new MorePayloads.ModeSelect(action));
 			} else {

@@ -2097,6 +2097,69 @@ public final class AutoTest {
 			});
 			return;
 		}
+		if (mode.equals("tanksffa")) {
+			// Tank Battle as a free for all: the picker's switch, each player on their own, round the edge, a knockout scores.
+			then(100, mc -> mc.gui.setScreen(new ModeScreen()));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect("")));
+			then(60, mc -> shot(mc, "tanksffa-picker-off"));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect("ffa:tanks")));
+			then(60, mc -> {
+				shot(mc, "tanksffa-picker-on");
+				mc.gui.setScreen(null);
+			});
+			then(5, mc -> onServer(mc, server -> {
+				for (String line : dev.rubymod.game.party.PartyGames.lines()) {
+					if (line.startsWith("game:tanks|") || line.startsWith("game:ctf|")) {
+						log("tanksffa: picker line {}", line.replaceAll("^(game:[a-z]+)\\|.*\\|([^|]*\\|[^|]*\\|[^|]*)$", "$1 ... $2"));
+					}
+				}
+			}));
+			then(20, mc -> command(mc, "execute as @p run play tanks"));
+			then(10, mc -> onServer(mc, server -> dev.rubymod.game.party.PartyGames.addTestPlayer(pg("tanks"), partyBuddy(server))));
+			for (int i = 0; i < 20; i++) {
+				then(i == 0 ? 10 : 40, mc -> onServer(mc, server -> pg("tanks").skipLobby()));
+			}
+			then(30, mc -> shot(mc, "tanksffa-start"));
+			then(70, mc -> onServer(mc, server -> {
+				var me = me(server);
+				var buddy = partyBuddy(server);
+				var sb = server.getScoreboard();
+				var myTeam = sb.getPlayersTeam(me.getScoreboardName());
+				var buddyTeam = sb.getPlayersTeam(buddy.getScoreboardName());
+				log("tanksffa: {}", pg("tanks").debugState());
+				log("tanksffa: me hurts buddy {} | buddy hurts me {} | teamOf me {}", dev.rubymod.game.party.PartyGames.canHurt(me, buddy),
+						dev.rubymod.game.party.PartyGames.canHurt(buddy, me), dev.rubymod.game.party.PartyGames.teamOf(me));
+				log("tanksffa: colors me {} buddy {}", myTeam == null ? null : myTeam.getColor(), buddyTeam == null ? null : buddyTeam.getColor());
+				log("tanksffa: me at {} (from middle {}, {}) riding {} | buddy at {}", me.blockPosition().toShortString(), Math.round(me.getX() + 65000),
+						Math.round(me.getZ()), me.getVehicle(), buddy.blockPosition().toShortString());
+				// Buddy knocks me out (out of my tank, past the spawn protection): a point for Buddy.
+				me.stopRiding();
+				dev.rubymod.game.SpawnShield.clear(me);
+				me.hurtServer((net.minecraft.server.level.ServerLevel) me.level(), buddy.damageSources().playerAttack(buddy), 1000);
+			}));
+			then(20, mc -> onServer(mc, server -> log("tanksffa: after a knockout: {}", pg("tanks").debugState())));
+			then(20, mc -> shot(mc, "tanksffa-scored"));
+			then(5, mc -> mc.gui.setScreen(new ModeScreen()));
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect("")));
+			then(60, mc -> {
+				log("tanksffa: picker info {}", ModeScreen.info == null ? null : ModeScreen.info.modes().stream().filter(l -> l.startsWith("game:tanks")).toList());
+				shot(mc, "tanksffa-picker-in-game");
+				mc.gui.setScreen(null);
+			});
+			then(5, mc -> net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.rubymod.net.MorePayloads.ModeSelect("ffa:tanks")));
+			then(20, mc -> onServer(mc, server -> {
+				for (String line : dev.rubymod.game.party.PartyGames.lines()) {
+					if (line.startsWith("game:tanks|")) {
+						log("tanksffa: switched back: {}", line.substring(line.lastIndexOf('|') + 1));
+					}
+				}
+			}));
+			then(20, mc -> {
+				log("done");
+				mc.stop();
+			});
+			return;
+		}
 		if (mode.equals("hubfix")) {
 			// Signs saved in their old places move back over the gates; loose lanterns don't stay.
 			then(0, mc -> {

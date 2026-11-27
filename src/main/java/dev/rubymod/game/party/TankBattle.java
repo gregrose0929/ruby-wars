@@ -31,7 +31,88 @@ public class TankBattle extends PartyGame {
 	private final Map<UUID, Integer> boardIn = new HashMap<>();
 
 	public TankBattle() {
-		super("tanks", "Tank Battle", "Red vs Blue in tanks. First team to 10 knockouts wins!", "rubymod:tank", 1, true, true, true);
+		super("tanks", "Tank Battle", "Red vs Blue in tanks (or a free for all). First to 10 knockouts wins!", "rubymod:tank", 1, true, true, true);
+	}
+
+	@Override
+	protected boolean hasFreeForAll() {
+		return true;
+	}
+
+	/** A free for all's scores, best first: "Name 6  •  Name 4...". */
+	private String standings() {
+		java.util.List<Part> list = new java.util.ArrayList<>();
+		for (Part p : players.values()) {
+			if (!p.watching) {
+				list.add(p);
+			}
+		}
+		list.sort((a, b) -> b.score - a.score);
+		java.util.List<String> out = new java.util.ArrayList<>();
+		for (Part p : list.subList(0, Math.min(5, list.size()))) {
+			out.add(p.name + " " + p.score);
+		}
+		return String.join("  •  ", out);
+	}
+
+	/** The free-for-all leader (most knockouts), or null if nobody has any yet. */
+	private Part ffaLeader() {
+		Part best = null;
+		for (Part p : players.values()) {
+			if (!p.watching && p.score > 0 && (best == null || p.score > best.score)) {
+				best = p;
+			}
+		}
+		return best;
+	}
+
+	/** A free for all knockout: a point for whoever did it, and the round is theirs at 10. */
+	private void ffaScore(Part scorer, String what) {
+		scorer.score++;
+		tell(Component.literal(scorer.name + " " + what + " (" + scorer.name + ": " + scorer.score + ")").withStyle(colorOf(scorer)));
+		if (scorer.score >= WIN) {
+			endRound(scorer.name.toUpperCase() + " WINS!", standings(), colorOf(scorer), one(idOf(scorer)));
+		}
+	}
+
+	/**
+	 * A free for all's spawn: round the edge of the arena, facing the middle, as far from every other tank as twelve tries
+	 * find (high ground, like a ridge top or a roof, counts against a spot). Returns {x, z, yaw}.
+	 */
+	private double[] edgeSpot(UUID self) {
+		ServerLevel level = level();
+		BlockPos c = center();
+		var random = level.getRandom();
+		double[] best = null;
+		double bestScore = -1;
+		for (int tries = 0; tries < 12; tries++) {
+			int along = random.nextInt(161) - 80;
+			int out = 96 + random.nextInt(6);
+			int side = random.nextInt(4);
+			double dx = side == 0 || side == 1 ? along : side == 2 ? out : -out;
+			double dz = side == 0 ? out : side == 1 ? -out : along;
+			double x = c.getX() + dx + 0.5;
+			double z = c.getZ() + dz + 0.5;
+			double nearest = 999;
+			for (ServerPlayer o : online()) {
+				if (!o.getUUID().equals(self) && !o.isSpectator()) {
+					nearest = Math.min(nearest, Math.hypot(o.getX() - x, o.getZ() - z));
+				}
+			}
+			for (UUID id : botTanks.keySet()) {
+				if (level.getEntity(id) instanceof Entity bot) {
+					nearest = Math.min(nearest, Math.hypot(bot.getX() - x, bot.getZ() - z));
+				}
+			}
+			if (dev.rubymod.game.Hub.safeY(level, x, c.getY(), z) > c.getY() + 1.5) {
+				nearest *= 0.3;
+			}
+			if (nearest > bestScore) {
+				bestScore = nearest;
+				best = new double[] {x, z, Math.toDegrees(Math.atan2(dx, -dz))};
+			}
+		}
+		return best;
 	}
 
 	@Override
@@ -59,11 +140,19 @@ public class TankBattle extends PartyGame {
 		var random = level.getRandom();
 		double x = c.getX() + random.nextInt(141) - 70 + 0.5;
 		double z = c.getZ() + 92 + random.nextInt(10) + 0.5;
+		float yaw = 180;
+		if (ffaRound) {
+			// Free for all: the bots come in round the edge too, wherever's clear.
+			double[] spot = edgeSpot(null);
+			x = spot[0];
+			z = spot[1];
+			yaw = (float) spot[2];
+		}
 		Mob base = net.minecraft.world.entity.EntityTypes.RAVAGER.create(level, EntitySpawnReason.EVENT);
 		if (base == null) {
 			return;
 		}
-		base.snapTo(x, dev.rubymod.game.Hub.safeY(level, x, c.getY(), z), z, 180, 0);
+		base.snapTo(x, dev.rubymod.game.Hub.safeY(level, x, c.getY(), z), z, yaw, 0);
 		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.SCALE, 1.25);
 		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH, 120);
 		setAttr(base, net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED, 0.14);
@@ -74,12 +163,13 @@ public class TankBattle extends PartyGame {
 		base.setSilent(true);
 		base.setPersistenceRequired();
 		base.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.INVISIBILITY, -1, 0, false, false));
-		base.setCustomName(Component.literal("Blue Bot Tank").withStyle(ChatFormatting.BLUE, ChatFormatting.BOLD));
+		base.setCustomName(ffaRound ? Component.literal("Bot Tank").withStyle(ChatFormatting.GRAY, ChatFormatting.BOLD)
+				: Component.literal("Blue Bot Tank").withStyle(ChatFormatting.BLUE, ChatFormatting.BOLD));
 		base.addTag(tag());
 		base.addTag("rubymod_horde"); // allowed even with hostile mobs off
 		level.addFreshEntity(base);
 		spawned.add(base.getUUID());
-		var model = dev.rubymod.game.Props.model(level, base.position(), 180, "legion_tank", dev.rubymod.game.convoy.ConvoyModels.LEGION_TANK_SIZE,
+		var model = dev.rubymod.game.Props.model(level, base.position(), yaw, "legion_tank", dev.rubymod.game.convoy.ConvoyModels.LEGION_TANK_SIZE,
 				dev.rubymod.game.convoy.ConvoyModels.LEGION_TANK_Y, dev.rubymod.game.convoy.ConvoyModels.LEGION_TANK_Z, tag());
 		botTanks.put(base.getUUID(), new Object[] {model == null ? null : model.getUUID(), new int[] {80 + random.nextInt(60)}});
 	}
@@ -159,6 +249,18 @@ public class TankBattle extends PartyGame {
 		}
 		level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER, entity.getX(), entity.getY() + 1, entity.getZ(), 1, 0, 0, 0, 0);
 		level.playSound(null, entity.blockPosition(), net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), net.minecraft.sounds.SoundSource.HOSTILE, 3.0F, 0.7F);
+		if (ffaRound) {
+			// Free for all: a bot tank is a point for whoever knocked it out.
+			botReturns.add(roundTicks + 120);
+			if (source.getEntity() instanceof ServerPlayer k && players.get(k.getUUID()) instanceof Part kp && !kp.watching) {
+				kp.kills++;
+				k.sendOverlayMessage(Component.literal("Knocked out a bot tank!").withStyle(ChatFormatting.GREEN));
+				ffaScore(kp, "knocked out a bot tank");
+			} else {
+				tell(Component.literal("A bot tank is knocked out").withStyle(ChatFormatting.GRAY));
+			}
+			return;
+		}
 		kills[0]++;
 		if (source.getEntity() instanceof ServerPlayer k && players.containsKey(k.getUUID())) {
 			players.get(k.getUUID()).kills++;
@@ -231,11 +333,20 @@ public class TankBattle extends PartyGame {
 	@Override
 	protected String roundStatus() {
 		int left = Math.max(0, ROUND_TICKS - roundTicks) / 20;
-		return "Red " + kills[0] + " - " + kills[1] + " Blue  •  " + left / 60 + ":" + String.format("%02d", left % 60);
+		String clock = left / 60 + ":" + String.format("%02d", left % 60);
+		if (ffaRound) {
+			Part lead = ffaLeader();
+			return (lead == null ? "Free for all" : "Leader: " + lead.name + " " + lead.score) + "  •  " + clock;
+		}
+		return "Red " + kills[0] + " - " + kills[1] + " Blue  •  " + clock;
 	}
 
 	@Override
 	protected float barProgress() {
+		if (ffaRound) {
+			Part lead = ffaLeader();
+			return lead == null ? 0 : Math.min(1, lead.score / (float) WIN);
+		}
 		return Math.max(kills[0], kills[1]) / (float) WIN;
 	}
 
@@ -248,19 +359,25 @@ public class TankBattle extends PartyGame {
 		minesLeft.clear();
 		botTanks.clear();
 		botReturns.clear();
+		for (Part part : players.values()) {
+			part.score = 0;
+		}
 		versusBots = useBots();
 		if (versusBots) {
-			// Everyone on Red, against the Blue bot tanks.
-			for (ServerPlayer p : online()) {
-				Part part = players.get(p.getUUID());
-				part.team = 0;
-				joinTeam(p, 0);
+			if (!ffaRound) {
+				// Everyone on Red, against the Blue bot tanks.
+				for (ServerPlayer p : online()) {
+					Part part = players.get(p.getUUID());
+					part.team = 0;
+					joinTeam(p, 0);
+				}
 			}
 			int bots = Math.max(2, Math.min(4, activeCount() + 1));
 			for (int i = 0; i < bots; i++) {
 				spawnBotTank();
 			}
-			tell(Component.literal("You're all Red, against " + bots + " Blue bot tanks.").withStyle(ChatFormatting.RED));
+			tell(ffaRound ? Component.literal("Free for all, with " + bots + " bot tanks in it too.").withStyle(ChatFormatting.GOLD)
+					: Component.literal("You're all Red, against " + bots + " Blue bot tanks.").withStyle(ChatFormatting.RED));
 		}
 		tell(Component.literal("Map: " + MAPS[map]).withStyle(ChatFormatting.AQUA));
 		// Pick-ups out in the open, where it's dangerous to go and get them.
@@ -280,9 +397,14 @@ public class TankBattle extends PartyGame {
 		for (ServerPlayer p : online()) {
 			Part part = players.get(p.getUUID());
 			spawn(p, part);
-			dev.rubymod.game.Alerts.title(p, "YOU'RE " + teamName(part.team).toUpperCase(), pickupsOn ? "First team to 10 knockouts. Drive over the pick-ups!"
-					: "First team to 10 knockouts wins",
-					part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
+			if (ffaRound) {
+				dev.rubymod.game.Alerts.title(p, "FREE FOR ALL", pickupsOn ? "First to 10 knockouts. Drive over the pick-ups!" : "Every tank's an enemy. First to 10 knockouts wins",
+						colorOf(part));
+			} else {
+				dev.rubymod.game.Alerts.title(p, "YOU'RE " + teamName(part.team).toUpperCase(), pickupsOn ? "First team to 10 knockouts. Drive over the pick-ups!"
+						: "First team to 10 knockouts wins",
+						part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE);
+			}
 		}
 	}
 
@@ -292,10 +414,18 @@ public class TankBattle extends PartyGame {
 		BlockPos c = center();
 		int dir = part.team == 0 ? 1 : -1;
 		// Along your own back line, at the spot farthest from the other team (and your own tanks), with 5 seconds of protection.
+		// (A free for all: anywhere round the edge, away from everyone.)
 		double x = c.getX() + 0.5;
 		double z = c.getZ() - dir * (96 + player.getRandom().nextInt(10)) + 0.5;
+		float yaw = part.team == 0 ? 0 : 180;
 		double best = -1;
-		for (int tries = 0; tries < 10; tries++) {
+		if (ffaRound) {
+			double[] spot = edgeSpot(player.getUUID());
+			x = spot[0];
+			z = spot[1];
+			yaw = (float) spot[2];
+		}
+		for (int tries = 0; tries < (ffaRound ? 0 : 10); tries++) {
 			double tx = c.getX() + 0.5 + player.getRandom().nextInt(161) - 80;
 			double nearest = 999;
 			for (ServerPlayer o : online()) {
@@ -309,7 +439,6 @@ public class TankBattle extends PartyGame {
 				x = tx;
 			}
 		}
-		float yaw = part.team == 0 ? 0 : 180;
 		UUID old = tanks.remove(player.getUUID());
 		if (old != null && level.getEntity(old) instanceof Entity e && !e.isVehicle()) {
 			e.discard();
@@ -320,7 +449,10 @@ public class TankBattle extends PartyGame {
 		give(player, new ItemStack(ModItems.LANCER), new ItemStack(ModItems.AT_MISSILE, 4), gun(ModItems.ARR_RIFLE), new ItemStack(ModItems.HEAVY_AMMO, 64));
 		Mob tank = ModEntities.TANK.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
 		if (tank != null) {
-			tank.snapTo(x, dev.rubymod.game.Hub.safeY(level, x, c.getY(), z + dir * 3), z + dir * 3, yaw, 0);
+			// Parked 3 blocks ahead of you.
+			double tx = x - Math.sin(Math.toRadians(yaw)) * 3;
+			double tz = z + Math.cos(Math.toRadians(yaw)) * 3;
+			tank.snapTo(tx, dev.rubymod.game.Hub.safeY(level, tx, c.getY(), tz), tz, yaw, 0);
 			if (tank instanceof dev.rubymod.entity.VehicleEntity v) {
 				v.shield(dev.rubymod.game.SpawnShield.TICKS);
 			}
@@ -362,8 +494,7 @@ public class TankBattle extends PartyGame {
 			}
 		}
 		Part part = players.get(player.getUUID());
-		tell(Component.literal(part.name + " grabbed " + pickup.kind.toUpperCase().replace("RAPID", "RAPID FIRE") + "!")
-				.withStyle(part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE));
+		tell(Component.literal(part.name + " grabbed " + pickup.kind.toUpperCase().replace("RAPID", "RAPID FIRE") + "!").withStyle(colorOf(part)));
 		return true;
 	}
 
@@ -451,6 +582,17 @@ public class TankBattle extends PartyGame {
 	@Override
 	protected void onDowned(ServerPlayer victim, Part part, Entity killer) {
 		part.respawnIn = 100;
+		if (ffaRound) {
+			// Free for all: a point for whoever knocked you out (a crash, your own shell or a bot: no point for anyone).
+			Part kp = killer instanceof ServerPlayer k && k != victim ? players.get(k.getUUID()) : null;
+			if (kp != null && !kp.watching) {
+				((ServerPlayer) killer).sendOverlayMessage(Component.literal("Knocked out " + part.name + "!").withStyle(ChatFormatting.GREEN));
+				ffaScore(kp, "knocked out " + part.name);
+			} else {
+				tell(Component.literal(part.name + " is knocked out").withStyle(colorOf(part)));
+			}
+			return;
+		}
 		int other = 1 - part.team;
 		if (killer instanceof ServerPlayer k && players.containsKey(k.getUUID()) && players.get(k.getUUID()).team == other) {
 			kills[other]++;
@@ -496,7 +638,21 @@ public class TankBattle extends PartyGame {
 				p.startRiding(tank, true, true);
 			}
 		}
-		if (roundTicks >= ROUND_TICKS) {
+		if (roundTicks >= ROUND_TICKS && ffaRound) {
+			// Time's up: most knockouts wins (level at the top: a draw).
+			Part lead = ffaLeader();
+			int tied = 0;
+			for (Part p : players.values()) {
+				if (lead != null && !p.watching && p.score == lead.score) {
+					tied++;
+				}
+			}
+			if (lead == null || tied > 1) {
+				endRound("DRAW", "Time's up: " + standings(), ChatFormatting.GOLD, java.util.List.<UUID>of());
+			} else {
+				endRound(lead.name.toUpperCase() + " WINS!", "Time's up: " + standings(), colorOf(lead), one(idOf(lead)));
+			}
+		} else if (roundTicks >= ROUND_TICKS) {
 			String head = kills[0] == kills[1] ? "DRAW" : (kills[0] > kills[1] ? "RED" : "BLUE") + " WINS!";
 			endRound(head, "Time's up: Red " + kills[0] + " - " + kills[1] + " Blue", ChatFormatting.GOLD,
 					kills[0] == kills[1] ? java.util.List.<UUID>of() : teamIds(kills[0] > kills[1] ? 0 : 1));

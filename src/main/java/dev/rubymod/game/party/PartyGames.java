@@ -125,6 +125,18 @@ public final class PartyGames {
 		for (PartyGame game : ALL) {
 			game.pickupsOn = pickups.contains(game.id);
 		}
+		ffaFile = botsFile.resolveSibling("party_ffa_on.txt");
+		List<String> ffa = new ArrayList<>();
+		try {
+			if (java.nio.file.Files.exists(ffaFile)) {
+				ffa = java.nio.file.Files.readAllLines(ffaFile);
+			}
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't read the party free-for-all settings", e);
+		}
+		for (PartyGame game : ALL) {
+			game.ffaOn = ffa.contains(game.id);
+		}
 		for (PartyGame game : ALL) {
 			game.attach(server);
 			game.reset();
@@ -260,7 +272,7 @@ public final class PartyGames {
 	/** The player's team in a team party game, or -1. */
 	public static int teamOf(Player player) {
 		PartyGame game = of(player);
-		if (game == null || !game.teams) {
+		if (game == null || !game.teamsNow()) {
 			return -1;
 		}
 		PartyGame.Part part = game.players.get(player.getUUID());
@@ -317,7 +329,8 @@ public final class PartyGames {
 		List<String> lines = new ArrayList<>();
 		for (PartyGame game : ALL) {
 			lines.add("game:" + game.id + "|" + game.title + "|" + game.status() + "|" + game.icon + "|" + game.about + "|"
-					+ (game.hasBots() ? game.botsOn ? "on" : "off" : "-") + "|" + (game.hasPickups() ? game.pickupsOn ? "on" : "off" : "-"));
+					+ (game.hasBots() ? game.botsOn ? "on" : "off" : "-") + "|" + (game.hasPickups() ? game.pickupsOn ? "on" : "off" : "-") + "|"
+					+ (game.hasFreeForAll() ? game.ffaOn ? "on" : "off" : "-"));
 		}
 		return lines;
 	}
@@ -345,6 +358,38 @@ public final class PartyGames {
 		}
 		var message = net.minecraft.network.chat.Component.literal(player.getName().getString() + " turned pick-ups " + (game.pickupsOn ? "ON" : "OFF")
 				+ " for " + game.title + ". It starts next round.").withStyle(net.minecraft.ChatFormatting.YELLOW);
+		player.sendSystemMessage(message);
+		for (ServerPlayer p : game.online()) {
+			if (p != player) {
+				p.sendSystemMessage(message);
+			}
+		}
+	}
+
+	private static java.nio.file.Path ffaFile;
+
+	/** The game picker's Free for all button: everyone for themselves, or back to Red vs Blue (from the next round). */
+	public static void toggleFreeForAll(ServerPlayer player, String id) {
+		PartyGame game = byId(id);
+		if (game == null || !game.hasFreeForAll()) {
+			return;
+		}
+		game.ffaOn = !game.ffaOn;
+		List<String> on = new ArrayList<>();
+		for (PartyGame g : ALL) {
+			if (g.hasFreeForAll() && g.ffaOn) {
+				on.add(g.id);
+			}
+		}
+		try {
+			java.nio.file.Files.createDirectories(ffaFile.getParent());
+			dev.rubymod.game.SafeFiles.write(ffaFile, String.join(System.lineSeparator(), on) + System.lineSeparator());
+		} catch (java.io.IOException e) {
+			dev.rubymod.RubyMod.LOGGER.warn("Couldn't save the party free-for-all settings", e);
+		}
+		var message = net.minecraft.network.chat.Component.literal(player.getName().getString() + " turned free for all " + (game.ffaOn ? "ON" : "OFF")
+				+ " for " + game.title + (game.ffaOn ? ": everyone for themselves." : ": back to Red vs Blue.") + " It starts next round.")
+				.withStyle(net.minecraft.ChatFormatting.YELLOW);
 		player.sendSystemMessage(message);
 		for (ServerPlayer p : game.online()) {
 			if (p != player) {

@@ -470,7 +470,7 @@ public abstract class PartyGame {
 		clearPlayer(player);
 		if (phase == Phase.PLAYING) {
 			if (joinMidRound) {
-				part.team = smallerTeam();
+				part.team = ffaRound ? freeSlot(part) : smallerTeam();
 				joinTeam(player, part.team);
 				spawn(player, part);
 				tell(Component.literal(part.name + " joined " + title + "!").withStyle(ChatFormatting.GREEN));
@@ -705,10 +705,11 @@ public abstract class PartyGame {
 		if (timer <= 0) {
 			phase = Phase.PLAYING;
 			roundTicks = 0;
+			ffaRound = teams && hasFreeForAll() && ffaOn;
 			int i = 0;
 			for (ServerPlayer p : online()) {
 				Part part = players.get(p.getUUID());
-				part.team = teams ? i++ % 2 : 0;
+				part.team = ffaRound ? i++ % TEAM_SLOTS : teams ? i++ % 2 : 0;
 				joinTeam(p, part.team);
 			}
 			startRound();
@@ -837,7 +838,7 @@ public abstract class PartyGame {
 		if (a == null || v == null || phase != Phase.PLAYING || a.watching || v.watching) {
 			return false;
 		}
-		return !teams || a.team != v.team;
+		return !teamsNow() || a.team != v.team;
 	}
 
 	// ----- Helpers -----
@@ -867,6 +868,53 @@ public abstract class PartyGame {
 	/** This game has pick-ups that can be switched off. */
 	protected boolean hasPickups() {
 		return false;
+	}
+
+	/** Free for all switched on for this game in the game picker (saved): everyone for themselves instead of Red vs Blue. */
+	boolean ffaOn;
+	/** This round is a free for all (decided as it starts, so flipping the switch waits for the next round). */
+	protected boolean ffaRound;
+
+	/** This team game can be played as a free for all instead. */
+	protected boolean hasFreeForAll() {
+		return false;
+	}
+
+	/** Red vs Blue this round: a team game, and not a free for all. */
+	protected boolean teamsNow() {
+		return teams && !ffaRound;
+	}
+
+	/** A free for all's name colors, one per player (more players than colors share them). */
+	private static final TeamColor[] FFA_COLORS = {TeamColor.RED, TeamColor.BLUE, TeamColor.GREEN, TeamColor.YELLOW, TeamColor.LIGHT_PURPLE,
+		TeamColor.AQUA, TeamColor.GOLD, TeamColor.WHITE};
+	private static final ChatFormatting[] FFA_CHAT = {ChatFormatting.RED, ChatFormatting.BLUE, ChatFormatting.GREEN, ChatFormatting.YELLOW,
+		ChatFormatting.LIGHT_PURPLE, ChatFormatting.AQUA, ChatFormatting.GOLD, ChatFormatting.WHITE};
+	/** Scoreboard teams a game can make (Red and Blue, or one per player in a free for all). */
+	private static final int TEAM_SLOTS = 16;
+
+	/** A player's color in chat: their team's, or their own in a free for all. */
+	protected ChatFormatting colorOf(Part part) {
+		if (ffaRound) {
+			return FFA_CHAT[part.team % FFA_CHAT.length];
+		}
+		return part.team == 0 ? ChatFormatting.RED : ChatFormatting.BLUE;
+	}
+
+	/** In a free for all, the lowest player number nobody else in the round has (so a newcomer gets a color of their own). */
+	private int freeSlot(Part self) {
+		for (int slot = 0; slot < TEAM_SLOTS; slot++) {
+			boolean used = false;
+			for (Part p : players.values()) {
+				if (p != self && !p.watching && p.team == slot) {
+					used = true;
+				}
+			}
+			if (!used) {
+				return slot;
+			}
+		}
+		return TEAM_SLOTS - 1;
 	}
 
 	/** Bring bots in this round: switched on, or someone's playing alone. */
@@ -1052,7 +1100,7 @@ public abstract class PartyGame {
 	}
 
 	protected int smallerTeam() {
-		if (!teams) {
+		if (!teamsNow()) {
 			return 0;
 		}
 		long red = players.values().stream().filter(p -> !p.watching && p.team == 0).count();
@@ -1117,8 +1165,8 @@ public abstract class PartyGame {
 		if (t == null) {
 			t = scoreboard.addPlayerTeam(name);
 		}
-		t.setColor(Optional.of(teams ? (team == 0 ? TeamColor.RED : TeamColor.BLUE) : TeamColor.WHITE));
-		t.setAllowFriendlyFire(!teams);
+		t.setColor(Optional.of(ffaRound ? FFA_COLORS[team % FFA_COLORS.length] : teams ? (team == 0 ? TeamColor.RED : TeamColor.BLUE) : TeamColor.WHITE));
+		t.setAllowFriendlyFire(!teamsNow());
 		t.setNameTagVisibility(hideNames() ? Team.Visibility.NEVER : Team.Visibility.ALWAYS);
 		scoreboard.addPlayerToTeam(player.getScoreboardName(), t);
 	}
@@ -1141,7 +1189,7 @@ public abstract class PartyGame {
 
 	protected void leaveTeams(ServerPlayer player) {
 		var scoreboard = server.getScoreboard();
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < TEAM_SLOTS; i++) {
 			PlayerTeam t = scoreboard.getPlayerTeam(scoreboardTeam(i));
 			if (t != null && t.getPlayers().contains(player.getScoreboardName())) {
 				scoreboard.removePlayerFromTeam(player.getScoreboardName(), t);
@@ -1151,7 +1199,7 @@ public abstract class PartyGame {
 
 	private void removeTeams() {
 		var scoreboard = server.getScoreboard();
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < TEAM_SLOTS; i++) {
 			PlayerTeam t = scoreboard.getPlayerTeam(scoreboardTeam(i));
 			if (t != null) {
 				scoreboard.removePlayerTeam(t);

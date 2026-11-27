@@ -317,6 +317,8 @@ public final class GameEvents {
 				dev.rubymod.game.party.PartyGames.toggleBots(player, payload.mode().substring(5));
 			} else if (payload.mode().startsWith("pickups:")) {
 				dev.rubymod.game.party.PartyGames.togglePickups(player, payload.mode().substring(8));
+			} else if (payload.mode().startsWith("ffa:")) {
+				dev.rubymod.game.party.PartyGames.toggleFreeForAll(player, payload.mode().substring(4));
 			} else if (!payload.mode().isEmpty()) {
 				String error = Hub.go(player, payload.mode());
 				if (error != null) {
