@@ -87,6 +87,7 @@ public final class Claims {
 		Alerts.toast(player, "rubymod:ruby_heart", "Ruby Heart placed", "Your land: " + (claim.radius() * 2 + 1) + "x" + (claim.radius() * 2 + 1)
 				+ " blocks, just yours", Alerts.GREEN);
 		StarterBase.maybeBuild(level, player, pos);
+		StarterBase.armoryIfMissing(level, player, pos, claim.radius());
 	}
 
 	/** The owner picked their Heart back up (build phase only). */

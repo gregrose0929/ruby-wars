@@ -278,6 +278,7 @@ public final class GameEvents {
 			}
 			Storms.onJoin(handler.getPlayer());
 			VersionCheck.onJoin(handler.getPlayer());
+			StarterBase.unlockRecipes(handler.getPlayer());
 			// Moving a player to another dimension while they're still being added to the world
 			// breaks them, so duel restores and hub routing wait a few ticks.
 			Hub.queueJoin(handler.getPlayer());

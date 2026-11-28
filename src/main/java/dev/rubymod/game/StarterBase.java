@@ -74,6 +74,64 @@ public final class StarterBase {
 		}
 	}
 
+	/**
+	 * Every Heart put down comes with an Armory (moved your Heart, or the first one got broken): one appears beside it, unless
+	 * there's an Armory in this base already or you're carrying one. Returns where it went (null: none needed, or in your inventory).
+	 */
+	public static BlockPos armoryIfMissing(ServerLevel level, ServerPlayer player, BlockPos heart, int radius) {
+		if (carryingArmory(player) || armoryNear(level, heart, radius)) {
+			return null;
+		}
+		List<String> missed = new ArrayList<>();
+		pad(level, heart.offset(0, 0, -3));
+		BlockPos at = place(level, player, heart.offset(0, 0, -3), ModBlocks.ARMORY, missed);
+		Alerts.toast(player, "rubymod:armory", at != null ? "An Armory for your base" : "An Armory: in your inventory",
+				"Right-click it to buy, and upgrade your Heart", Alerts.GOLD);
+		return at;
+	}
+
+	private static boolean carryingArmory(ServerPlayer player) {
+		var inv = player.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			if (inv.getItem(i).is(ModBlocks.ARMORY.asItem())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** An Armory anywhere in the base around this Heart (a little below it to well above it). */
+	public static boolean armoryNear(ServerLevel level, BlockPos heart, int radius) {
+		BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+		for (int x = -radius; x <= radius; x++) {
+			for (int z = -radius; z <= radius; z++) {
+				if (!level.hasChunk((heart.getX() + x) >> 4, (heart.getZ() + z) >> 4)) {
+					continue;
+				}
+				for (int y = -12; y <= 24; y++) {
+					m.set(heart.getX() + x, heart.getY() + y, heart.getZ() + z);
+					if (level.getBlockState(m).is(ModBlocks.ARMORY)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/** Every Ruby Wars recipe into the player's recipe book (the green book in the crafting screen): nothing else teaches them. */
+	public static void unlockRecipes(ServerPlayer player) {
+		List<net.minecraft.world.item.crafting.RecipeHolder<?>> ours = new ArrayList<>();
+		for (net.minecraft.world.item.crafting.RecipeHolder<?> r : player.level().getServer().getRecipeManager().getRecipes()) {
+			if (r.id().identifier().getNamespace().equals(dev.rubymod.RubyMod.MOD_ID) && !player.getRecipeBook().contains(r.id())) {
+				ours.add(r);
+			}
+		}
+		if (!ours.isEmpty()) {
+			player.awardRecipes(ours);
+		}
+	}
+
 	/** Clear a spot (plants, earth, stone; never anything with contents, or someone's build) and give it firm ground. */
 	private static void pad(ServerLevel level, BlockPos at) {
 		for (int dy = 0; dy < 3; dy++) {

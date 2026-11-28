@@ -1153,6 +1153,24 @@ public final class SelfTest {
 		Claims.onHeartPlaced(level, alpha, base);
 		SeasonData.Claim claim = data.claimOf(alpha.getUUID());
 		check("claims: Heart creates a claim", claim != null && claim.hp == claim.maxHp());
+		{
+			check("starter base: an Armory beside the Heart", dev.rubymod.game.StarterBase.armoryNear(level, base, claim.radius()));
+			check("starter base: no second Armory while there's one", dev.rubymod.game.StarterBase.armoryIfMissing(level, alpha, base, claim.radius()) == null);
+			BlockPos armory = null;
+			for (BlockPos p : BlockPos.betweenClosed(base.offset(-6, -4, -6), base.offset(6, 4, 6))) {
+				if (level.getBlockState(p).is(ModBlocks.ARMORY)) {
+					armory = p.immutable();
+				}
+			}
+			if (armory != null) {
+				level.setBlockAndUpdate(armory, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+			BlockPos again = dev.rubymod.game.StarterBase.armoryIfMissing(level, alpha, base, claim.radius());
+			check("starter base: a Heart with no Armory in its base gets one (" + again + ")", again != null && level.getBlockState(again).is(ModBlocks.ARMORY));
+			dev.rubymod.game.StarterBase.unlockRecipes(alpha);
+			var armoryRecipe = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, dev.rubymod.RubyMod.id("armory"));
+			check("recipes: the Armory is in the recipe book", alpha.getRecipeBook().contains(armoryRecipe));
+		}
 		check("claims: Alpha can't place a second Heart", Claims.placementProblem(level, alpha, base.offset(200, 0, 0)) != null);
 		check("claims: Bravo can't claim right next door", Claims.placementProblem(level, bravo, base.offset(10, 0, 10)) != null);
 		String whyFar = Claims.placementProblem(level, bravo, base.offset(200, 0, 0));
